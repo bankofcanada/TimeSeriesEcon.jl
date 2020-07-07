@@ -1,0 +1,7 @@
+vscode_workspace*
+*.db
+*.jld2
+*.svg
+*.pdf
+*.html
+various.jl

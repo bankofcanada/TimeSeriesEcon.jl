@@ -1,0 +1,13 @@
+name = "TSeries"
+uuid = "9c187df2-533e-11ea-01ef-e50afef8adb0"
+authors = ["Atai Akunov <aakunov@bank-banque-canada.ca>"]
+version = "0.1.0"
+
+[deps]
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
