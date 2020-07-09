@@ -1,5 +1,5 @@
 using Test
-using TSeries
+using TimeSeriesEcon
 
 ts_m = Series(mm(2018, 1), collect(1.0:12.0))
 ts_q = Series(qq(2018, 1):qq(2020, 4), collect(1:12))
@@ -36,8 +36,8 @@ end
     @test ts_m[mm(2018, 6):mm(2019, 12)] == ts_m[6:12]
 
     # fully out of boundary
-    @test ts_m[mm(2017, 1)] == nothing
-    @test ts_m[mm(2017, 1):mm(2017, 3)] == nothing
+    @test ts_m[mm(2017, 1)] === nothing
+    @test ts_m[mm(2017, 1):mm(2017, 3)] === nothing
 end
 
 @testset "Quarterly Access" begin

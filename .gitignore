@@ -5,3 +5,5 @@ vscode_workspace*
 *.pdf
 *.html
 various.jl
+Manifest.toml
+archive

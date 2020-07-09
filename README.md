@@ -1,9 +1,10 @@
-### TSeries.jl
+### TimeSeriesEcon.jl
 
 Install:
 
 ```julia-repl
 
-using Pkg; Pkg.add("http://aegitlab/cea-aec-julia/TSeries.jl.git")
+using Pkg; 
+Pkg.add("http://aegitlab/cea-aec-julia/TimeSeriesEcon.jl.git")
 
 ```

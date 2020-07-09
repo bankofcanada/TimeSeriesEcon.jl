@@ -56,7 +56,7 @@ function getstart(s::Series{T}) where T <: Quarterly
 end
 
 function getend(s::Series{T}) where T <: Quarterly
-    if TSeries.period(lastdate(s)) == ppy(s)
+    if TimeSeriesEcon.period(lastdate(s)) == ppy(s)
         return lastdate(s)
     else
         y = year(lastdate(s)) - 1
