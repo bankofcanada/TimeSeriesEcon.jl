@@ -5,7 +5,7 @@ ts_m = Series(mm(2018, 1), collect(1.0:12.0))
 ts_q = Series(qq(2018, 1):qq(2020, 4), collect(1:12))
 ts_y = Series(yy(2018), collect(1:12))
 
-@testset "Series Construction" begin
+@testset "Series: Construction" begin
     @test ts_m.firstdate == mm(2018, 1)
     @test ts_m.values == collect(1.0:12.0)
 
@@ -17,7 +17,7 @@ ts_y = Series(yy(2018), collect(1:12))
 end
 
 
-@testset "Monthly Access" begin
+@testset "Series: Monthly Access" begin
     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
     @test ts_m[mm(2018, 1):mm(2018, 12)].firstdate == mm(2018, 1)
 
@@ -40,7 +40,7 @@ end
     @test ts_m[mm(2017, 1):mm(2017, 3)] === nothing
 end
 
-@testset "Quarterly Access" begin
+@testset "Series: Quarterly Access" begin
     @test ts_q[qq(2018, 1):qq(2020, 4)] == ts_q
 
     # access outside of ts boundaries
@@ -58,7 +58,7 @@ end
     @test ts_q[qq(2017, 1):qq(2017, 3)] == nothing
 end
 
-@testset "Yearly Access" begin
+@testset "Series: Yearly Access" begin
     @test ts_y[yy(2018):yy(2029)] == ts_y
 
     # access outside of ts boundaries
@@ -77,29 +77,7 @@ end
 end
 
 # ts_m = Series(mm(2018, 1), collect(1.0:12.0))
-@testset "Monthly Setting" begin
-    # begin
-    #     ts_m = Series(mm(2018, 1), collect(1.0:12.0))
-    #     ts_m[mm(2018, 1)] = 100;
-    #     @test ts_m[mm(2018, 1)].values == [100]
-    # end
-    #
-    # begin
-    #     ts_m = Series(mm(2018, 1), collect(1.0:12.0))
-    #     ts_m[mm(2017, 1)] = 100;
-    #     @test ts_m[mm(2017, 1)].values == [100]
-    #     @test ts_m.firstdate == mm(2017, 1)
-    #     @test isequal(ts_m.values, vcat([100], fill(NaN, 11), collect(1.0:12.0)))
-    # end
-
-    # begin
-    #     ts_m = Series(mm(2018, 1), collect(1.0:12.0))
-    #     ts_m[mm(2019, 2)] = 100;
-    #     @test ts_m[mm(2019, 2)].values == [100]
-    #     @test ts_m.firstdate == mm(2018, 1)
-    #     @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [100]))
-    # end
-
+@testset "Series: Monthly Setting" begin
     begin
         ts_m = Series(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
         ts_m[mm(2019, 2):mm(2019, 4)] = 1;
@@ -131,11 +109,9 @@ end
         @test ts_m.firstdate == mm(2017, 10)
         @test isequal(ts_m.values, vcat([9, 10], [NaN], collect(1.0:12.0)))
     end
-
-
 end
 
-@testset "Addition" begin
+@testset "Series: Addition" begin
     x = Series(ii(1), [7, 7, 7])
     y = Series(ii(3), [2, 4, 5])
     @test x + y == Series(ii(3), [9])
@@ -145,36 +121,59 @@ end
     @test x + y == Series(ii(2), [9, 11])
 end
 
+@testset "Series: Iris related" begin
+    # IRIS based assignment of values from other Series
+    x = Series(qq(2020, 1), zeros(3));
+    y = Series(qq(2020, 1), ones(3));
+    x[qq(2020, 1):qq(2020, 2)] = y;
+    @test x == Series(qq(2020, 1), [1, 1, 0])
+
+    # IRIS related: shift
+    x = Series(qq(2020, 1), zeros(3));
+    @test shift(x, 1) == Series(qq(2019, 4), zeros(3))
+
+    shift!(x, 1)
+    @test x == Series(qq(2019, 4), zeros(3))
+
+    # IRIS related: nanrm!
+    x = Series(qq(2020, 1), [NaN, 123, NaN]);
+    nanrm!(x)
+    @test x == Series(qq(2020, 2), [123])
 
 
-# @test length(ts) == 12
-# @test ts[10] == 10.0
-#
-# ts[1] = 1000
-# @test ts[1] == 1000
-#
-# @test (mm(2018, 1) < mm(2018, 2)) == true
-#
-# ts[mm(2017, 8):mm(2017, 11)] = [-1, -1.0, -1, -1]
-# @test ts[mm(2017, 8):mm(2017, 11)] == [-1.0, -1.0, -1.0, -1.0]
-# @test isequal(ts[mm(2017, 12)], [NaN])
-#
-# ts[mm(2019, 2):mm(2019, 11)] = -10
+    # TODO
+    # - pct
+    # - apct
 
 
 
-#
-# ts[mm(2019, 2):mm(2019, 11)]
-#
-# ts[mm(2018, 1)]
-#
-# ts[mm(2019, 6)] = -1;ts
-#
-# ts[mm(2017, 6)] = -1;ts
-#
-# ts[mm(2017, 8)] = 1000;ts
-#
-# ts[mm(2017, 1):mm(2050, 1)]
-#
-#
-# mm(2018, 1):mm(2018, 12) |> typeof
+end
+
+@testset "Series: firstdate & lastdate" begin
+    x = Series(qq(2020, 1), zeros(4));
+    @test firstdate(x) == qq(2020, 1)
+    @test lastdate(x) == qq(2020, 4)
+end
+
+@testset "MIT constructors: mm, qq, yy, ii" begin
+    @test mm(2020, 1) == MIT{Monthly}(2020*12)
+    @test qq(2020, 1) == MIT{Quarterly}(2020*4)
+    @test yy(2020) == MIT{Yearly}(2020)
+    @test ii(2020) == MIT{Unit}(2020)
+end
+
+@testset "MIT: year, period" begin
+    @test year(mm(2020, 12)) == 2020
+    @test period(mm(2020, 12)) == 12
+end
+
+@testset "MIT: mitrange" begin
+    @test mitrange( Series(qq(2020, 1), ones(4)) ) == qq(2020, 1):qq(2020, 4)
+end
+
+@testset "MIT: ppy" begin
+    @test ppy(Quarterly) == 4
+    @test ppy(qq(2020, 1)) == 4
+    @test ppy( Series(qq(2020, 1), ones(1)) ) == 4
+
+end
