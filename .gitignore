@@ -7,3 +7,6 @@ vscode_workspace*
 various.jl
 Manifest.toml
 archive
+
+docs/build
+docs/Manifest.toml

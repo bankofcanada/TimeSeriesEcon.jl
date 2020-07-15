@@ -33,7 +33,7 @@ low-Frequency discrete macroeconomic time-series data.
     - `mitrange(x::Series)`: returns a `UnitRange{MIT{Frequency}}` for the given `x`
     - `firstdate(x::Series)`: returns `MIT{Frequency}` first date associated with `x`  
     - `lastdate(x::Series)`: returns `MIT{Frequency}` last date associated with `x`
-    - `ppy(x::Series)': returns the number of periods per year for `x::Series`. (`ppy` also accepts `x::MIT` and `x::Frequency`) 
+    - `ppy(x::Series)`: returns the number of periods per year for `x::Series`. (`ppy` also accepts `x::MIT` and `x::Frequency`) 
     - `shift(x::Series, i::Int64)`: shifts the dates of `x` by `firstdate(x) - i`
     - `shift!`: in-place version of `shift`
     - `pct(x::Series, shift_value::Int64; islog::Bool = false)`: calculates percent rate of change of `x::Series`
