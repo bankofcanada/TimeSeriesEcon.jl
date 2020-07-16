@@ -263,3 +263,11 @@ end
 Base.sub_with_overflow(x::MIT{T}, y::MIT{T}) where T <: Frequency = begin
     Base.checked_ssub_int(reinterpret(Int64, x), reinterpret(Int64, y))
 end
+
+# ----------------------------------------
+# 3 MIT Exceptions and Errors
+# ----------------------------------------
+
+Base.:(+)(x::MIT{T}, y::MIT{S}) where T <: Frequency where S <: Frequency = throw(
+    ArgumentError("`MIT` addition is not defined, but you can add `Integer` to `MIT`.")
+)

@@ -3,7 +3,13 @@ push!(LOAD_PATH,"../src/")
 
 using Documenter, TimeSeriesEcon
 
-makedocs(sitename = "TimeSeriesEcon Documentation",
+makedocs(sitename = "TimeSeriesEcon.jl",
          format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
-         modules = [TimeSeriesEcon]
+         modules = [TimeSeriesEcon],
+         pages = [
+        "Home" => "index.md",
+        "Examples" => "examples.md",
+        "MIT" => "mit.md",
+        "Series" => "series.md"
+    ]
 )
