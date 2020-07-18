@@ -261,9 +261,9 @@ end
 #-------------------------------------------------------------------------------
 
 """
-    firstdate(::Series)
+    firstdate(x::Series)
 
-Returns `MIT` indicating the first date in the series.
+Return an `MIT` indicating the first date in the series.
 
 ### Examples
 ```julia-repl
@@ -274,9 +274,9 @@ julia> firstdate(Series(qq(2020, 1), ones(10)))
 firstdate(s::Series{T}) where T <: Frequency = s.firstdate
 
 """
-    lastdate(::Series)
+    lastdate(x::Series)
 
-Returns `MIT` indicating the last date in the series.
+Return an `MIT` indicating the last date in the series.
 
 ### Examples
 ```julia-repl
@@ -326,6 +326,17 @@ function Base.hcat(tuple_of_ts::Vararg{Series{T}, N}) where T <: Frequency where
     return  reshaped_array
 end
 
+"""
+    mitrange(x::Series)
+
+Return an `UnitRange{MIT{<:Frequency}}` associated with `x`.
+
+### Examples
+```julia-repl
+julia> mitrange(Series(qq(2020, 1), ones(4)))
+2020Q1:2020Q4
+```
+"""
 function mitrange(ts::Series{T}) where T <: Frequency
     return ts.firstdate:lastdate(ts)
 end
@@ -361,6 +372,8 @@ Base.:(+)(a::Number, ts::Series{T}) where T <: Frequency = Series(ts.firstdate, 
 Base.:(-)(ts::Series{T}, a::Number) where T <: Frequency = Series(ts.firstdate, ts.values .- a)
 
 """
+    diff(x::Series, k::Int64 = -1)
+
 Same as Iris implementation of diff
 """
 function Base.diff(ts::Series{T}, k::Int64 = -1) where T <: Frequency
@@ -398,31 +411,68 @@ function Base.:(^)(ts::Series{T}, s::IntOrFloat) where T <: Frequency
     Series(ts.firstdate, ts.values .^ s)
 end
 
-# function pct(ts::Series{T}) where T <: Frequency
-#
-# end
 
 
 """
-    shift/shift! firstdate by k::Int64 periods
+    shift(x::Series, n::Int64)
+
+Shift dates of `x` back by `k` periods. 
+__Note:__ The implementation of is similar to IRIS `ts{1}`.
+
+Examples
+```julia-repl
+julia> shift(Series(qq(2020, 1), ones(4)), 1)
+Series{Quarterly} of length 4
+2019Q4: 1.0
+2020Q1: 1.0
+2020Q2: 1.0
+2020Q3: 1.0
+
+
+julia> shift(Series(qq(2020, 1), ones(4)), -1)
+Series{Quarterly} of length 4
+2020Q2: 1.0
+2020Q3: 1.0
+2020Q4: 1.0
+2021Q1: 1.0
+```
+
+See also: [`shift!`](@ref)
 """
 function shift(ts::Series{T}, k::Int64) where T <: Frequency
     return Series(ts.firstdate - k, ts.values)
 end
 
+"""
+    shift!(x::Series, n::Int64)
+
+Shift dates of `x` back by `k` periods, in-place. 
+__Note:__ The implementation of is similar to IRIS `ts{1}`.
+
+Examples
+```julia-repl
+julia> x = Series(qq(2020, 1), ones(4));
+
+julia> shift!(x, 1);
+
+julia> x
+Series{Quarterly} of length 4
+2019Q4: 1.0
+2020Q1: 1.0
+2020Q2: 1.0
+2020Q3: 1.0
+```
+
+See also: [`shift`](@ref)
+"""
 function shift!(ts::Series{T}, k::Int64) where T <: Frequency
     ts.firstdate = ts.firstdate - k
     return ts
 end
 
-"""
-pct, apct, round, ppy
-"""
+# `ppy` docstrings provided in momentintime.jl
 ppy(m::MIT{T}) where T <: Frequency = ppy(T)
-
-function ppy(ts::Series{T}) where T <: Frequency
-    ppy(T)
-end
+ppy(ts::Series{T}) where T <: Frequency = ppy(T)
 
 
 function Base.:(/)(x::Series{T}, y::Series{T}) where T <: Frequency
@@ -443,6 +493,24 @@ function Base.:(*)(x::Series{T}, y::Series{T}) where T <: Frequency
     Series(firstdate, values)
 end
 
+"""
+    pct(x::Series, shift_value::Int64, islog::Bool)
+
+Calculate percentage growth in `x` given a `shift_value`.
+__Note:__ The implementation is similar to IRIS.
+
+Examples
+```julia-repl
+julia> x = Series(yy(2000), Vector(1:4));
+
+julia> pct(x, -1)
+Series{Yearly} of length 3
+2001Y: 100.0
+2002Y: 50.0
+2003Y: 33.33333333333333
+```
+See also: [`apct`](@ref)
+"""
 function pct(ts::Series{T}, shift_value::Int64; islog::Bool = false) where T <: Frequency
     if islog
         a = exp(ts);
@@ -457,13 +525,34 @@ function pct(ts::Series{T}, shift_value::Int64; islog::Bool = false) where T <: 
     Series(result.firstdate, result.values)
 end
 
-
-
 Base.round(ts::Series{T}; digits = 2) where T <: Frequency = begin
     values = (x -> round(x, digits=digits)).(ts.values)
     Series(ts.firstdate, values)
 end
 
+"""
+    apct(x::Series, islog::Bool)
+
+Calculate annualised percent rate of change in `x`.
+__Note:__ The implementation is similar to IRIS.
+
+Examples
+```julia-repl
+julia> x = Series(qq(2018, 1), Vector(1:8));
+
+julia> apct(x)
+Series{Quarterly} of length 7
+2018Q2: 1500.0
+2018Q3: 406.25
+2018Q4: 216.04938271604937
+2019Q1: 144.140625
+2019Q2: 107.35999999999999
+2019Q3: 85.26234567901243
+2019Q4: 70.59558517284461
+```
+
+See also: [`pct`](@ref)
+"""
 function apct(ts::Series{T}, islog::Bool = false) where T <: Frequency
     if islog
         a = exp(ts);
@@ -493,9 +582,12 @@ end
 
 
 """
-rm nans
-"""
+    leftcropnan!(x::Series)
 
+Remove `NaN` values from starting at the beginning of `x`, in-place.
+
+__Note__: an internal function.
+"""
 function leftcropnan!(s::Series{T}) where T <: Frequency
     while isequal(s[firstdate(s)], NaN)
         popfirst!(s.values)
@@ -504,7 +596,13 @@ function leftcropnan!(s::Series{T}) where T <: Frequency
     return s
 end
 
+"""
+rightcropnan!(x::Series)
 
+Remove `NaN` values from the end of `x`
+
+__Note__: an internal function.
+"""
 function rightcropnan!(s::Series{T}) where T <: Frequency
     while isequal(s[lastdate(s)], NaN)
         pop!(s.values)
@@ -512,6 +610,24 @@ function rightcropnan!(s::Series{T}) where T <: Frequency
     return s
 end
 
+
+"""
+    nanrm!(s::Series, type::Symbol)
+
+Remove `NaN` values that are either at the beginning of the `s` and/or end of `x`.
+
+Examples
+```
+julia> s = Series(yy(2018), [NaN, NaN, 1, 2, NaN]);
+
+julia> nanrm!(s);
+
+julia> s
+Series{Yearly} of length 2
+2020Y: 1.0
+2021Y: 2.0
+```
+"""
 function nanrm!(s::Series{T}, type::Symbol=:both) where T <: Frequency
     if type == :left
         leftcropnan!(s)

@@ -57,11 +57,13 @@ Returns the number of periods per year for a given `Frequency`, `MIT`, and `Seri
 
 ### Examples
 ```julia-repl
-julia> ppy(Quarterly) # Frequency
+julia> ppy(Quarterly)                   # Frequency
 4
-julia> ppy(mm(2020, 1)) # MIT
+
+julia> ppy(mm(2020, 1))                 # MIT
 12
-julia> ppy( Series(yy(2020), ones(3)) ) # Series
+
+julia> ppy(Series(yy(2020), ones(3)))   # Series
 1
 ```
 """
@@ -69,6 +71,7 @@ ppy(::Type{T}) where T <: Monthly   = 12
 ppy(::Type{T}) where T <: Quarterly = 4
 ppy(::Type{T}) where T <: Yearly    = 1
 ppy(::Type{T}) where T <: Unit      = 1
+
 
 # ----------------------------------------
 # 2. MIT{T} - main workhorse of date declaration in TimeSeriesEcon.jl
