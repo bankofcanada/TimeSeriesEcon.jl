@@ -3,7 +3,7 @@
 
 This package is part of the StateSpaceEcon ecosystem.
 TimeSeriesEcon.jl provides functionality to work with
-low-Frequency discrete macroeconomic time-TSeries data.
+low-Frequency discrete macroeconomic time-series data.
 
 ### Frequencies (abstract type):
  - Unit

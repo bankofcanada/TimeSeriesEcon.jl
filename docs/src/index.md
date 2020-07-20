@@ -1,7 +1,7 @@
 # Home
 
 ```@contents
-Pages = ["examples.md", "mit.md", "TSeries.md"]
+Pages = ["examples.md", "mit.md", "tseries.md"]
 
 ```
 

@@ -7,7 +7,7 @@ const IntOrFloat = Union{Int64, Float64}
 """
     struct TSeries{Frequency} <: AbstractVector{Float64}
 
-Data structure representing a time-TSeries vector. The following 
+Data structure representing a time-series vector. The following 
 operations are allowed:
 
  - indexing using `MIT` (aka "moment-in-time") and `UnitRange{MIT}`
