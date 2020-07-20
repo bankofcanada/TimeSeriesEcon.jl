@@ -3,7 +3,7 @@
 
 This package is part of the StateSpaceEcon ecosystem.
 TimeSeriesEcon.jl provides functionality to work with
-low-Frequency discrete macroeconomic time-series data.
+low-Frequency discrete macroeconomic time-TSeries data.
 
 ### Frequencies (abstract type):
  - Unit
@@ -15,7 +15,7 @@ low-Frequency discrete macroeconomic time-series data.
 
  - `MIT{Frequency}` (aka "Moment In Time")
      - a primitive type denoting monthly, quarterly, and yearly dates
- - `Series{Frequency}`
+ - `TSeries{Frequency}`
      - an `AbstractVector` that can be indexed using `MIT`
 
 ### Functions:
@@ -29,21 +29,21 @@ low-Frequency discrete macroeconomic time-series data.
     - `period(x::MIT)`: returns a `Int64` period value associated with `x`
 
 
- - Functions operating on `Series`
-    - `mitrange(x::Series)`: returns a `UnitRange{MIT{Frequency}}` for the given `x`
-    - `firstdate(x::Series)`: returns `MIT{Frequency}` first date associated with `x`  
-    - `lastdate(x::Series)`: returns `MIT{Frequency}` last date associated with `x`
-    - `ppy(x::Series)`: returns the number of periods per year for `x::Series`. (`ppy` also accepts `x::MIT` and `x::Frequency`) 
-    - `shift(x::Series, i::Int64)`: shifts the dates of `x` by `firstdate(x) - i`
+ - Functions operating on `TSeries`
+    - `mitrange(x::TSeries)`: returns a `UnitRange{MIT{Frequency}}` for the given `x`
+    - `firstdate(x::TSeries)`: returns `MIT{Frequency}` first date associated with `x`  
+    - `lastdate(x::TSeries)`: returns `MIT{Frequency}` last date associated with `x`
+    - `ppy(x::TSeries)`: returns the number of periods per year for `x::TSeries`. (`ppy` also accepts `x::MIT` and `x::Frequency`) 
+    - `shift(x::TSeries, i::Int64)`: shifts the dates of `x` by `firstdate(x) - i`
     - `shift!`: in-place version of `shift`
-    - `pct(x::Series, shift_value::Int64; islog::Bool = false)`: calculates percent rate of change of `x::Series`
-    - `apct(x::Series, islog::Bool = false)`: calculates annualized percent rate of change of `x::Series`
-    - `nanrm!(x::Series, type::Symbol=:both)`: removes `NaN` from `x::Series`
+    - `pct(x::TSeries, shift_value::Int64; islog::Bool = false)`: calculates percent rate of change of `x::TSeries`
+    - `apct(x::TSeries, islog::Bool = false)`: calculates annualized percent rate of change of `x::TSeries`
+    - `nanrm!(x::TSeries, type::Symbol=:both)`: removes `NaN` from `x::TSeries`
 """
 module TimeSeriesEcon
 
 include("momentintime.jl")
-include("series.jl")
+include("tseries.jl")
 include("recursive.jl")
 include("convert.jl")
 
@@ -53,8 +53,8 @@ export mm, qq, yy, ii
 export Monthly, Quarterly, Yearly, Frequency, Unit
 export year, period
 
-# Defined in src/series.jl
-export Series
+# Defined in src/TSeries.jl
+export TSeries
 export mitrange
 export shift, shift!
 export ppy

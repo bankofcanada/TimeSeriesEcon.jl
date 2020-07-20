@@ -10,6 +10,6 @@ makedocs(sitename = "TimeSeriesEcon.jl",
         "Home" => "index.md",
         "Examples" => "examples.md",
         "MIT" => "mit.md",
-        "Series" => "series.md"
+        "TSeries" => "tseries.md"
     ]
 )

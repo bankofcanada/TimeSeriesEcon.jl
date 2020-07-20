@@ -1,11 +1,11 @@
 using Test
 using TimeSeriesEcon
 
-ts_m = Series(mm(2018, 1), collect(1.0:12.0))
-ts_q = Series(qq(2018, 1):qq(2020, 4), collect(1:12))
-ts_y = Series(yy(2018), collect(1:12))
+ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
+ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
+ts_y = TSeries(yy(2018), collect(1:12))
 
-@testset "Series: Construction" begin
+@testset "TSeries: Construction" begin
     @test ts_m.firstdate == mm(2018, 1)
     @test ts_m.values == collect(1.0:12.0)
 
@@ -17,7 +17,7 @@ ts_y = Series(yy(2018), collect(1:12))
 end
 
 
-@testset "Series: Monthly Access" begin
+@testset "TSeries: Monthly Access" begin
     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
     @test ts_m[mm(2018, 1):mm(2018, 12)].firstdate == mm(2018, 1)
 
@@ -40,7 +40,7 @@ end
     @test ts_m[mm(2017, 1):mm(2017, 3)] === nothing
 end
 
-@testset "Series: Quarterly Access" begin
+@testset "TSeries: Quarterly Access" begin
     @test ts_q[qq(2018, 1):qq(2020, 4)] == ts_q
 
     # access outside of ts boundaries
@@ -58,7 +58,7 @@ end
     @test ts_q[qq(2017, 1):qq(2017, 3)] == nothing
 end
 
-@testset "Series: Yearly Access" begin
+@testset "TSeries: Yearly Access" begin
     @test ts_y[yy(2018):yy(2029)] == ts_y
 
     # access outside of ts boundaries
@@ -76,10 +76,10 @@ end
     @test ts_y[yy(2010):yy(2017)] == nothing
 end
 
-# ts_m = Series(mm(2018, 1), collect(1.0:12.0))
-@testset "Series: Monthly Setting" begin
+# ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
+@testset "TSeries: Monthly Setting" begin
     begin
-        ts_m = Series(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
         ts_m[mm(2019, 2):mm(2019, 4)] = 1;
         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [1, 1, 1]
         @test ts_m.firstdate == mm(2018, 1)
@@ -87,7 +87,7 @@ end
     end
 
     begin
-        ts_m = Series(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
         ts_m[mm(2017, 10):mm(2017, 11)] = 1;
         @test ts_m[mm(2017, 10):mm(2017, 11)].values == [1, 1]
         @test ts_m.firstdate == mm(2017, 10)
@@ -95,7 +95,7 @@ end
     end
 
     begin
-        ts_m = Series(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
         ts_m[mm(2019, 2):mm(2019, 4)] = [9, 10, 11];
         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [9, 10, 11]
         @test ts_m.firstdate == mm(2018, 1)
@@ -103,7 +103,7 @@ end
     end
 
     begin
-        ts_m = Series(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
         ts_m[mm(2017, 10):mm(2017, 11)] = [9, 10];
         @test ts_m[mm(2017, 10):mm(2017, 11)].values == [9, 10]
         @test ts_m.firstdate == mm(2017, 10)
@@ -111,34 +111,34 @@ end
     end
 end
 
-@testset "Series: Addition" begin
-    x = Series(ii(1), [7, 7, 7])
-    y = Series(ii(3), [2, 4, 5])
-    @test x + y == Series(ii(3), [9])
+@testset "TSeries: Addition" begin
+    x = TSeries(ii(1), [7, 7, 7])
+    y = TSeries(ii(3), [2, 4, 5])
+    @test x + y == TSeries(ii(3), [9])
 
-    x = Series(ii(1), [7, 7, 7])
-    y = Series(ii(2), [2, 4, 5])
-    @test x + y == Series(ii(2), [9, 11])
+    x = TSeries(ii(1), [7, 7, 7])
+    y = TSeries(ii(2), [2, 4, 5])
+    @test x + y == TSeries(ii(2), [9, 11])
 end
 
-@testset "Series: Iris related" begin
-    # IRIS based assignment of values from other Series
-    x = Series(qq(2020, 1), zeros(3));
-    y = Series(qq(2020, 1), ones(3));
+@testset "TSeries: Iris related" begin
+    # IRIS based assignment of values from other TSeries
+    x = TSeries(qq(2020, 1), zeros(3));
+    y = TSeries(qq(2020, 1), ones(3));
     x[qq(2020, 1):qq(2020, 2)] = y;
-    @test x == Series(qq(2020, 1), [1, 1, 0])
+    @test x == TSeries(qq(2020, 1), [1, 1, 0])
 
     # IRIS related: shift
-    x = Series(qq(2020, 1), zeros(3));
-    @test shift(x, 1) == Series(qq(2019, 4), zeros(3))
+    x = TSeries(qq(2020, 1), zeros(3));
+    @test shift(x, 1) == TSeries(qq(2019, 4), zeros(3))
 
     shift!(x, 1)
-    @test x == Series(qq(2019, 4), zeros(3))
+    @test x == TSeries(qq(2019, 4), zeros(3))
 
     # IRIS related: nanrm!
-    x = Series(qq(2020, 1), [NaN, 123, NaN]);
+    x = TSeries(qq(2020, 1), [NaN, 123, NaN]);
     nanrm!(x)
-    @test x == Series(qq(2020, 2), [123])
+    @test x == TSeries(qq(2020, 2), [123])
 
 
     # TODO
@@ -149,8 +149,8 @@ end
 
 end
 
-@testset "Series: firstdate & lastdate" begin
-    x = Series(qq(2020, 1), zeros(4));
+@testset "TSeries: firstdate & lastdate" begin
+    x = TSeries(qq(2020, 1), zeros(4));
     @test firstdate(x) == qq(2020, 1)
     @test lastdate(x) == qq(2020, 4)
 end
@@ -168,12 +168,12 @@ end
 end
 
 @testset "MIT: mitrange" begin
-    @test mitrange( Series(qq(2020, 1), ones(4)) ) == qq(2020, 1):qq(2020, 4)
+    @test mitrange( TSeries(qq(2020, 1), ones(4)) ) == qq(2020, 1):qq(2020, 4)
 end
 
 @testset "MIT: ppy" begin
     @test ppy(Quarterly) == 4
     @test ppy(qq(2020, 1)) == 4
-    @test ppy( Series(qq(2020, 1), ones(1)) ) == 4
+    @test ppy( TSeries(qq(2020, 1), ones(1)) ) == 4
 
 end

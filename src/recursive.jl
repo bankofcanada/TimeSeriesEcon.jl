@@ -6,7 +6,7 @@ Computes recursive calculations for the given `eqn` and `rng`.
 
 ### Examples
 ```julia-repl
-julia> s = Series(ii(1), zeros(1));
+julia> s = TSeries(ii(1), zeros(1));
 
 julia> # Initial values
 
@@ -17,7 +17,7 @@ julia> s[ii(2)] = 1;
 julia> @rec s[t] = s[t-1] + s[t-2] ii(3):ii(10)
 
 julia> s
-Series{Unit} of length 10
+TSeries{Unit} of length 10
 ii(1): 0.0
 ii(2): 1.0
 ii(3): 1.0

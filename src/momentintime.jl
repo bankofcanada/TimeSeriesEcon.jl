@@ -52,7 +52,7 @@ abstract type Unit <: Frequency end
 """
     ppy(::Frequency)
 
-Returns the number of periods per year for a given `Frequency`, `MIT`, and `Series`
+Returns the number of periods per year for a given `Frequency`, `MIT`, and `TSeries`
 
 
 ### Examples
@@ -63,7 +63,7 @@ julia> ppy(Quarterly)                   # Frequency
 julia> ppy(mm(2020, 1))                 # MIT
 12
 
-julia> ppy(Series(yy(2020), ones(3)))   # Series
+julia> ppy(TSeries(yy(2020), ones(3)))   # TSeries
 1
 ```
 """

@@ -1,7 +1,7 @@
 import Statistics: mean
 
 
-function getstart(s::Series{T}) where T <: Monthly
+function getstart(s::TSeries{T}) where T <: Monthly
     if period(s.firstdate) in [1, 4, 7, 10]
         return s.firstdate
     elseif 1 < period(s.firstdate) < 4
@@ -22,7 +22,7 @@ function getstart(s::Series{T}) where T <: Monthly
         # return qq(year(s.firstdate) + 1, 1)
 end
 
-function getend(s::Series{T}) where T <: Monthly
+function getend(s::TSeries{T}) where T <: Monthly
     if period(lastdate(s)) in [12, 3, 6, 9]
         return lastdate(s)
     elseif 1 <= period(lastdate(s)) < 3
@@ -43,7 +43,7 @@ function getend(s::Series{T}) where T <: Monthly
         # return qq(year(s.firstdate) + 1, 1)
 end
 
-function getstart(s::Series{T}) where T <: Quarterly
+function getstart(s::TSeries{T}) where T <: Quarterly
     if period(s.firstdate) == 1
         return s.firstdate
     else
@@ -55,7 +55,7 @@ function getstart(s::Series{T}) where T <: Quarterly
     end
 end
 
-function getend(s::Series{T}) where T <: Quarterly
+function getend(s::TSeries{T}) where T <: Quarterly
     if TimeSeriesEcon.period(lastdate(s)) == ppy(s)
         return lastdate(s)
     else
@@ -67,13 +67,13 @@ function getend(s::Series{T}) where T <: Quarterly
 end
 
 
-function crop(s::Series{T}) where T <: Union{Quarterly, Monthly}
-    getstart(s) <= getend(s) || error("Series can't be cropped. start:$(getstart(s)) > end:$(getend(s))")
+function crop(s::TSeries{T}) where T <: Union{Quarterly, Monthly}
+    getstart(s) <= getend(s) || error("TSeries can't be cropped. start:$(getstart(s)) > end:$(getend(s))")
 
     return s[getstart(s):getend(s)]
 end
 
-function Base.convert(::Type{Series{Yearly}}, s::Series{Quarterly})
+function Base.convert(::Type{TSeries{Yearly}}, s::TSeries{Quarterly})
     values = Vector{Float64}()
 
     for i in 1:4:length(crop(s))
@@ -82,10 +82,10 @@ function Base.convert(::Type{Series{Yearly}}, s::Series{Quarterly})
 
     firstdate = year(crop(s).firstdate) |> yy
 
-    return Series(firstdate, values)
+    return TSeries(firstdate, values)
 end
 
-function Base.convert(::Type{Series{Quarterly}}, s::Series{Monthly})
+function Base.convert(::Type{TSeries{Quarterly}}, s::TSeries{Monthly})
     values = Vector{Float64}()
 
     for i in 1:3:length(crop(s))
@@ -96,28 +96,28 @@ function Base.convert(::Type{Series{Quarterly}}, s::Series{Monthly})
     p = period(crop(s).firstdate) |>
         x -> div(x - 1, 3) + 1
 
-    return Series(qq(y, p), values)
+    return TSeries(qq(y, p), values)
 end
 
-function Base.convert(::Type{Series{Yearly}}, s::Series{Monthly})
-    convert(Series{Quarterly}, s) |>
-        x -> convert(Series{Yearly}, x)
+function Base.convert(::Type{TSeries{Yearly}}, s::TSeries{Monthly})
+    convert(TSeries{Quarterly}, s) |>
+        x -> convert(TSeries{Yearly}, x)
 end
 
 # Arbitrary function
 
-function Base.convert(::Type{Series{Yearly}}, s::Series{Quarterly}, f::Symbol)
+function Base.convert(::Type{TSeries{Yearly}}, s::TSeries{Quarterly}, f::Symbol)
     values = Vector{Float64}()
     for i in 1:4:length(crop(s))
         push!(values, eval(f)(crop(s)[i:i+3]))
     end
     firstdate = year(crop(s).firstdate) |> yy
-    return Series(firstdate, values)
+    return TSeries(firstdate, values)
 end
 
 
-# convert(Series{Yearly}, s)
-# convert(Series{Yearly}, p)
+# convert(TSeries{Yearly}, s)
+# convert(TSeries{Yearly}, p)
 
 # function mode(a)
 #     isempty(a) && throw(ArgumentError("mode is not defined for empty collections"))
