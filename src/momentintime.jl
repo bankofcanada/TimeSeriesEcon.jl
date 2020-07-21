@@ -98,9 +98,17 @@ function MIT{T}(x::Int64) where T <: Frequency
     reinterpret(MIT{T}, x)
 end
 
+# converting to Int is just the internal representation
 Int64(x::MIT{T}) where T <: Frequency = reinterpret(Int64, x)
-
 Base.promote_rule(::Type{MIT{S}}, ::Type{T}) where S <: Frequency where T <: Integer = Int64
+
+# converting to Float has whole part equal to the year and fractional part 
+# equal to the fraction of the year for the period
+(T::Type{<:AbstractFloat})(x::MIT{F}) where F <: Frequency = year(x) + (period(x)-1) / ppy(F)
+Base.promote_rule(::Type{MIT{F}}, ::Type{T}) where F <: Frequency where T <:AbstractFloat = T
+
+Base.one(::MIT{F}) where F <: Frequency = Int(1)
+Base.one(::Type{MIT{F}}) where F <: Frequency = Int(1)
 
 """
     year(::MIT)

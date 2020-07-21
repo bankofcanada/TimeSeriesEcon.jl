@@ -286,6 +286,8 @@ julia> lastdate(TSeries(qq(2020, 1), ones(10)))
 """
 lastdate(s::TSeries{T}) where T <: Frequency = (s.firstdate + length(s) - 1)
 
+# 
+Base.range(t::TSeries) = firstdate(t):lastdate(t)
 
 """
     Horizonatal Concatenation of `TSeries`
@@ -470,9 +472,23 @@ function shift!(ts::TSeries{T}, k::Int64) where T <: Frequency
     return ts
 end
 
-# `ppy` docstrings provided in momentintime.jl
-ppy(m::MIT{T}) where T <: Frequency = ppy(T)
+"""
+    ppy(::MIT)
+    ppy(::Type{MIT})
+
+When applied to an [`MIT`](@ref) instance or type, return the `ppy` of its frequency.
+"""
+ppy(::MIT{F}) where F <: Frequency = ppy(F)
+ppy(::Type{MIT{F}}) where F <: Frequency = ppy(F)
+
+"""
+    ppy(::TSeries)
+    ppy(::Type{TSeries})
+
+When applied to a [`TSeries`](@ref) instance or type, return the `ppy` of its frequency.
+"""
 ppy(ts::TSeries{T}) where T <: Frequency = ppy(T)
+ppy(::Type{TSeries{T}}) where T <: Frequency = ppy(T)
 
 
 function Base.:(/)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
