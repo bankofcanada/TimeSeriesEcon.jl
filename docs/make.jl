@@ -13,3 +13,7 @@ makedocs(sitename = "TimeSeriesEcon.jl",
         "TSeries" => "tseries.md"
     ]
 )
+
+deploydocs(
+    repo = "https://github.com/bankofcanada/TimeSeriesEcon.jl.git",
+)
