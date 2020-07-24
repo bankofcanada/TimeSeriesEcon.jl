@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>TSeries · TimeSeriesEcon.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">TimeSeriesEcon.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../examples/">Examples</a></li><li><a class="tocitem" href="../mit/">MIT</a></li><li class="is-active"><a class="tocitem" href>TSeries</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>TSeries</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>TSeries</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/bankofcanada/TimeSeriesEcon.jl/blob/master/docs/src/tseries.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="TSeries"><a class="docs-heading-anchor" href="#TSeries">TSeries</a><a id="TSeries-1"></a><a class="docs-heading-anchor-permalink" href="#TSeries" title="Permalink"></a></h1><pre><code class="language-julia">s = TSeries(mm(2020, 1), ones(10));</code></pre><p>And, of course, we can reference specific functions.</p><article class="docstring"><header><a class="docstring-binding" id="TimeSeriesEcon.TSeries" href="#TimeSeriesEcon.TSeries"><code>TimeSeriesEcon.TSeries</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">struct TSeries{Frequency} &lt;: AbstractVector{Float64}</code></pre><p>Data structure representing a time-series vector. The following  operations are allowed:</p><ul><li>indexing using <code>MIT</code> (aka &quot;moment-in-time&quot;) and <code>UnitRange{MIT}</code></li><li>assignment using <code>MIT</code> and <code>UnitRange{MIT}</code></li></ul><p>In addition, most of the operations available to Julia vectors (+, -, *, etc.) are supported by <code>TSeries</code> as well.</p><p><strong>Examples</strong></p><ul><li>Create <code>TSeries</code></li></ul><pre><code class="language-julia-repl">julia&gt; x = TSeries(qq(2020, 1), ones(4))
+TSeries{Quarterly} of length 4
+2020Q1: 1.0
+2020Q2: 1.0
+2020Q3: 1.0
+2020Q4: 1.0</code></pre><ul><li>Index into <code>TSeries</code></li></ul><pre><code class="language-julia-repl">julia&gt; x[qq(2020, 1)]
+1.0
+
+julia&gt; x[qq(2020, 1):qq(2020, 2)]
+TSeries{Quarterly} of length 2
+2020Q1: 1.0
+2020Q2: 1.0</code></pre><ul><li>Assignment using <code>MIT</code></li></ul><pre><code class="language-julia-repl">julia&gt; x[qq(2020, 1)] = 100; x
+TSeries{Quarterly} of length 4
+2020Q1: 100.0
+2020Q2: 1.0
+2020Q3: 1.0
+2020Q4: 1.0
+
+julia&gt; x[qq(2020, 1):qq(2020, 2)] = 100; x
+TSeries{Quarterly} of length 4
+2020Q1: 100.0
+2020Q2: 100.0
+2020Q3: 1.0
+2020Q4: 1.0</code></pre><ul><li>Arithmetic Operations on <code>TSeries</code></li></ul><pre><code class="language-julia-repl">julia&gt; x = TSeries(qq(2020, 1), ones(4))
+TSeries{Quarterly} of length 4
+2020Q1: 1.0
+2020Q2: 1.0
+2020Q3: 1.0
+2020Q4: 1.0
+
+julia&gt; 2*x + 98
+TSeries{Quarterly} of length 4
+2020Q1: 100.0
+2020Q2: 100.0
+2020Q3: 100.0
+2020Q4: 100.0
+
+julia&gt; log(exp(x))
+TSeries{Quarterly} of length 4
+2020Q1: 1.0
+2020Q2: 1.0
+2020Q3: 1.0
+2020Q4: 1.0</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/bankofcanada/TimeSeriesEcon.jl/blob/4f2228108fa75699f4785ec32553158720816bf7/src/tseries.jl#L7-L81">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../mit/">« MIT</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 24 July 2020 14:02">Friday 24 July 2020</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
