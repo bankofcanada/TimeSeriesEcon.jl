@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/bankofcanada/TimeSeriesEcon.jl.svg?token=YqWsQuowmx6VN8LWn3m7&branch=master)](https://travis-ci.com/bankofcanada/TimeSeriesEcon.jl)
+[![Build Status](https://travis-ci.org/bankofcanada/TimeSeriesEcon.jl.svg?branch=master)](https://travis-ci.org/bankofcanada/TimeSeriesEcon.jl)
 [![codecov](https://codecov.io/gh/bankofcanada/TimeSeriesEcon.jl/branch/master/graph/badge.svg?token=2E0JD0FS4U)](https://codecov.io/gh/bankofcanada/TimeSeriesEcon.jl)
 
 ### TimeSeriesEcon.jl
