@@ -15,5 +15,5 @@ makedocs(sitename = "TimeSeriesEcon.jl",
 )
 
 deploydocs(
-    repo = "https://github.com/bankofcanada/TimeSeriesEcon.jl.git",
+    repo = "github.com/bankofcanada/TimeSeriesEcon.jl.git",
 )
