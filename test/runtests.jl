@@ -16,6 +16,16 @@ ts_y = TSeries(yy(2018), collect(1:12))
     @test ts_y.values == collect(1.0:12.0)
 end
 
+@testset "show" begin
+    for nrow = [3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30]
+        let io = IOBuffer()
+            t = TSeries(qq(2010, 1), rand(24))
+            show(IOContext(io, :displaysize=>(nrow,80)), t)
+            @test length(readlines(seek(io,0))) == max(2, min(length(t)+1, nrow-3))
+        end
+    end
+end
+
 @testset "frequencyof" begin
     @test frequencyof(qq(2000,1)) == Quarterly
     @test frequencyof(mm(2000,1)) == Monthly
