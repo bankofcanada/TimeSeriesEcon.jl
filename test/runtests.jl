@@ -17,10 +17,10 @@ ts_y = TSeries(yy(2018), collect(1:12))
 end
 
 @testset "show" begin
-    for nrow = [3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30]
+    for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], Iterators.cycle((qq(2010,1), mm(2010,1), yy(2010), ii(1))))
         let io = IOBuffer()
-            t = TSeries(qq(2010, 1), rand(24))
-            show(IOContext(io, :displaysize=>(nrow,80)), t)
+            t = TSeries(fd, rand(24))
+            show(IOContext(io, :displaysize=>(nrow,80)), MIME"text/plain"(), t)
             @test length(readlines(seek(io,0))) == max(2, min(length(t)+1, nrow-3))
         end
     end
