@@ -107,21 +107,33 @@ end
 # Base.show
 #-------------------------------------------------------------------------------
 
-# printing inline
-Base.show(io::IO, ::MIME"text/plain", ts::TSeries{T}) where T <: Frequency = begin
-    println(io, "TSeries{", T, "} of length ", length(ts))
+Base.summary(io::IO, t::TSeries) = isempty(t) ? 
+        print(io, "Empty ", frequencyof(t), " TSeries") : 
+        print(IOContext(io, :compact=>true), length(t.values), "-element ", frequencyof(t), " TSeries from ", t.firstdate)
 
-    for (i, v) in zip(ts.firstdate:ts.firstdate + length(ts) - 1, ts.values)
-        println(io, i, ": ", v)
-    end
-end
-
-#printing in repl
-Base.show(io::IO, ts::TSeries{T}) where T <: Frequency = begin
-    println(io, "TSeries{", T, "} of length ", length(ts))
-
-    for (i, v) in zip(ts.firstdate:ts.firstdate + length(ts) - 1, ts.values)
-        println(io, i, ": ", v)
+Base.show(io::IO, ::MIME"text/plain", t::TSeries) = show(io, t)
+function Base.show(io::IO, t::TSeries)
+    summary(io, t)
+    isempty(t) && return
+    print(io, ":")
+    limit = get(io, :limit, true)
+    nval = length(t.values)
+    from = t.firstdate
+    nrow, ncol = displaysize(io)
+    if limit && nval > nrow - 5
+        top = div(nrow - 5, 2)
+        bot = nval - nrow + 6 + top
+        for i = 1:top
+            print(io, "\n", lpad(from+(i-1), 8), " : ", t.values[i])
+        end
+        print(io, "\n    ⋮")
+        for i = bot:nval
+            print(io, "\n", lpad(from+(i-1), 8), " : ", t.values[i])
+        end
+    else
+        for i = 1:nval
+            print(io, "\n", lpad(from+(i-1), 8), " : ", t.values[i])
+        end
     end
 end
 
