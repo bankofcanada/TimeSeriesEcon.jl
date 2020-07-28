@@ -98,6 +98,16 @@ function MIT{T}(x::Int64) where T <: Frequency
     reinterpret(MIT{T}, x)
 end
 
+export frequencyof
+"""
+    frequencyof(::MIT)
+    frequencyof(::Type{MIT})
+
+Return the Frequency type of the given MIT instance of type.
+"""
+frequencyof(::MIT{T}) where T <: Frequency = T
+frequencyof(::Type{MIT{T}}) where T <: Frequency = T
+
 # converting to Int is just the internal representation
 Int64(x::MIT{T}) where T <: Frequency = reinterpret(Int64, x)
 Base.promote_rule(::Type{MIT{S}}, ::Type{T}) where S <: Frequency where T <: Integer = Int64

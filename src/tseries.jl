@@ -659,4 +659,11 @@ function nanrm!(s::TSeries{T}, type::Symbol=:both) where T <: Frequency
 end
 
 
+"""
+Can be applied to a [`TSeries`](@ref) instance or a range of MIT to return its [`Frequency`](@ref).
+"""
+frequencyof(::TSeries{T}) where T <: Frequency = T
+frequencyof(::Type{TSeries{T}}) where T <: Frequency = T
+frequencyof(::AbstractUnitRange{MIT{T}}) where T <: Frequency = T
+frequencyof(::Type{<:AbstractUnitRange{MIT{T}}}) where T <: Frequency = T
 
