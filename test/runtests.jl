@@ -16,6 +16,14 @@ ts_y = TSeries(yy(2018), collect(1:12))
     @test ts_y.values == collect(1.0:12.0)
 end
 
+@testset "frequencyof" begin
+    @test frequencyof(qq(2000,1)) == Quarterly
+    @test frequencyof(mm(2000,1)) == Monthly
+    @test frequencyof(yy(2000)) == Yearly
+    @test frequencyof(ii(1)) == Unit
+    @test frequencyof(qq(2001,1):qq(2002,1)) == Quarterly
+    @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
+end
 
 @testset "TSeries: Monthly Access" begin
     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
