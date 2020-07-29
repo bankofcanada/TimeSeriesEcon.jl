@@ -1,11 +1,16 @@
 using Test
 using TimeSeriesEcon
 
+ts_u = TSeries(1:5)
 ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
 ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
 ts_y = TSeries(yy(2018), collect(1:12))
 
 @testset "TSeries: Construction" begin
+
+    @test ts_u.firstdate == ii(1)
+    @test ts_u.values == 1:5
+
     @test ts_m.firstdate == mm(2018, 1)
     @test ts_m.values == collect(1.0:12.0)
 

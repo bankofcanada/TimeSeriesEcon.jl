@@ -86,6 +86,8 @@ end
 # Might be inefficient
 TSeries(fd::MIT, v::AbstractVector{<:Number}) = TSeries(fd, Vector{Float64}(v))
 
+TSeries(v::AbstractVector{<:Number}) = TSeries(ii(1), v)
+
 # TSeries constructor with a range and data
 function TSeries(I::AbstractUnitRange{<:MIT}, V::AbstractVector{<:Number})
     if length(I) ≠ length(V)
