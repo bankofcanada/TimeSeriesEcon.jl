@@ -1,11 +1,33 @@
 # MIT aka "Moment in Time"
 
-```julia
-yy(2020)
+```@docs
+MIT
 ```
 
-And, of course, we can reference specific functions.
+```@docs
+mm
+```
 
 ```@docs
-mm(x, y)
+qq
+```
+
+```@docs
+yy
+```
+
+```@docs
+ii
+```
+
+```@docs
+year
+```
+
+```@docs
+period
+```
+
+```@docs
+frequencyof
 ```

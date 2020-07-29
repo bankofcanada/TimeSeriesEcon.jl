@@ -8,9 +8,10 @@ makedocs(sitename = "TimeSeriesEcon.jl",
          modules = [TimeSeriesEcon],
          pages = [
         "Home" => "index.md",
-        "Examples" => "examples.md",
+        "Quickstart" => "quickstart.md",
         "MIT" => "mit.md",
-        "TSeries" => "tseries.md"
+        "TSeries" => "tseries.md",
+        "Frequency" => "frequency.md"
     ]
 )
 

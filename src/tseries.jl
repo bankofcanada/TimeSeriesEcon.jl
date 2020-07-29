@@ -525,6 +525,7 @@ end
     pct(x::TSeries, shift_value::Int64, islog::Bool)
 
 Calculate percentage growth in `x` given a `shift_value`.
+
 __Note:__ The implementation is similar to IRIS.
 
 Examples
@@ -562,6 +563,7 @@ end
     apct(x::TSeries, islog::Bool)
 
 Calculate annualised percent rate of change in `x`.
+
 __Note:__ The implementation is similar to IRIS.
 
 Examples

@@ -27,6 +27,7 @@ low-Frequency discrete macroeconomic time-series data.
     - `ii(x::Int)`: returns a unit `MIT` type instance
     - `year(x::MIT)`: returns a `Int64` year value associated with `x`
     - `period(x::MIT)`: returns a `Int64` period value associated with `x`
+    - `frequencyof(x::MIT)`: returns `<: Frequency` assosicated wtih `x`
 
 
  - Functions operating on `TSeries`

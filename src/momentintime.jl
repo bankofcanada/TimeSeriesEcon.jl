@@ -77,7 +77,7 @@ ppy(::Type{T}) where T <: Unit      = 1
 # 2. MIT{T} - main workhorse of date declaration in TimeSeriesEcon.jl
 # ----------------------------------------
 """
-    MIT{Frequency} <: Signed 64
+    MIT{Frequency}(x::Int64)
 
 MIT is a primitive type (Signed 64) representing a discrete date.
 
@@ -121,9 +121,9 @@ Base.one(::MIT{F}) where F <: Frequency = Int(1)
 Base.one(::Type{MIT{F}}) where F <: Frequency = Int(1)
 
 """
-    year(::MIT)
+    year(x::MIT)
 
-Returns ::Int64 representing year for a given `MIT`
+Return `::Int64` representing year for a given `MIT`
 
 __Note:__ an internal method for now.
 
@@ -138,9 +138,9 @@ function year(x::MIT{T}) where T <: Frequency
 end
 
 """
-    period(::MIT)
+    period(x::MIT)
 
-Returns ::Int64 representing period for a given `MIT`
+Return `::Int64` representing period for a given `MIT`
 
 ### Examples
 ```
@@ -174,7 +174,7 @@ Base.string(m::MIT{T}) where T <: Frequency = repr(m)
 
 
 """
-    ii(::Int64)
+    ii(x::Int64)
 
 Represents an _Integer_ date and return `MIT{Unit}` type instance
 

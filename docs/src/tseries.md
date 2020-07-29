@@ -1,11 +1,45 @@
 # TSeries
 
-```julia
-s = TSeries(mm(2020, 1), ones(10));
-```
-
-And, of course, we can reference specific functions.
-
 ```@docs
 TSeries
+```
+
+```@docs
+mitrange
+```
+
+```@docs
+firstdate
+```
+
+```@docs
+lastdate
+```
+
+```@docs
+ppy
+```
+
+```@docs
+shift
+```
+
+```@docs
+shift!
+```
+
+```@docs
+pct
+```
+
+```@docs
+apct
+```
+
+```@docs
+nanrm!
+```
+
+```@docs
+@rec
 ```
