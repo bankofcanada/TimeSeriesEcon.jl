@@ -1,5 +1,3 @@
-const IntOrFloat = Union{Int64, Float64}
-
 #-------------------------------------------------------------------------------
 # TSeries struct and constructors
 #-------------------------------------------------------------------------------
@@ -79,28 +77,27 @@ TSeries{Quarterly} of length 4
 2020Q4: 1.0
 ```
 """
-mutable struct TSeries{T <: Frequency} <: AbstractVector{Float64}
+mutable struct TSeries{T <: Frequency, C <: AbstractVector{Float64}} <: AbstractVector{Float64}
     firstdate::MIT{T}
-    values::Vector{Float64}
+    values::C
 end
 
-# TSeries constructor for values == Vector{Int64}
-function TSeries(fd::MIT{T}, v::Vector{Int64}) where T <: Frequency
-    TSeries{T}(fd, Vector{Float64}(v))
-end
+# We work only with Float64. All other numbers are converted to it.
+# Might be inefficient
+TSeries(fd::MIT, v::AbstractVector{<:Number}) = TSeries(fd, Vector{Float64}(v))
 
-# TSeries constructor with a range
-function TSeries(I::UnitRange{MIT{T}}, V::Vector{S}) where T <: Frequency where S <: IntOrFloat
-    # check that I and v have the same length
-    Int64(I.stop - I.start) + 1 == length(V) || error("Date range and vector length don't match.")
-    # use the inner constructor
-    TSeries{T}(I.start, V)
+# TSeries constructor with a range and data
+function TSeries(I::AbstractUnitRange{<:MIT}, V::AbstractVector{<:Number})
+    if length(I) ≠ length(V)
+        throw(ArgumentError("Range and data lengths don't match."))
+    end
+    TSeries(first(I), V)
 end
 
 # TSeries constructor with a range and a single value
-function TSeries(I::UnitRange{MIT{T}}, v::Number) where T <: Frequency 
+function TSeries(I::AbstractUnitRange{<:MIT}, v::Number)
     # use the inner constructor
-    TSeries{T}(I.start, fill(Float64(v), length(I)))
+    TSeries(I.start, fill(Float64(v), length(I)))
 end
 
 #-------------------------------------------------------------------------------
@@ -142,13 +139,13 @@ end
 #-------------------------------------------------------------------------------
 
 
-"""
-Since `TSeries` is a subtype of `AbstractVector`, we have to provide implementations for `size`, `getindex`, and `setindex!`
-"""
+# """
+# Since `TSeries` is a subtype of `AbstractVector`, we have to provide implementations for `size`, `getindex`, and `setindex!`
+# """
 Base.:(==)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency = (x.firstdate == y.firstdate && isequal(x.values, y.values))
-Base.size(ts::TSeries{T}) where T <: Frequency = (length(ts.values), )
-Base.getindex(ts::TSeries{T}, i::Int64) where T <: Frequency = ts.values[i]
-Base.setindex!(ts::TSeries{T}, v::IntOrFloat, i::Int64) where T <: Frequency = (ts.values[i] = v)
+Base.size(ts::TSeries) = size(ts.values)
+Base.getindex(ts::TSeries, i::Int64) = ts.values[i]
+Base.setindex!(ts::TSeries, v::Number, i::Int64) = (ts.values[i] = v)
 
 """
 `getindex` using `MIT`
@@ -166,18 +163,16 @@ end
 """
 `getindex` using `Vector{MIT}`. Note the difference between `Vector{MIT}` and `UnitRange{MIT}`
 """
-Base.getindex(s::TSeries{T},v::Vector{TimeSeriesEcon.MIT{T}}) where T <: Frequency = begin
+Base.getindex(s::TSeries{T},v::AbstractVector{MIT{T}}) where T <: Frequency = begin
     [s[i] for i in v]
 end
 
 """
 `getindex` using `UnitRange{MIT}`
 """
-Base.getindex(ts::TSeries{T}, I::UnitRange{MIT{T}}) where T <: Frequency = begin
+Base.getindex(ts::TSeries{T}, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
 
-    I_int = I .- ts.firstdate |>
-        x -> Int64(x.start):Int64(x.stop) |>
-        x -> x .+ 1
+    I_int = I .- ts.firstdate .+ 1
 
     I_common = intersect(I_int, 1:length(ts))
 
@@ -194,7 +189,7 @@ end
 """
 `setindex` a value using `MIT`
 """
-Base.setindex!(ts::TSeries{T}, v::IntOrFloat, mit::MIT{T}) where T <: Frequency = begin
+Base.setindex!(ts::TSeries{T}, v::Number, mit::MIT{T}) where T <: Frequency = begin
     # Step 1: find the `distance` between
     # - mit::MIT{T} and
     # - ts.firstdate::MIT{T}
@@ -219,7 +214,7 @@ end
 """
 `setindex` a value using `UnitRange{MIT}`
 """
-Base.setindex!(ts::TSeries{T}, v::IntOrFloat, I::UnitRange{MIT{T}}) where T <: Frequency = begin
+Base.setindex!(ts::TSeries{T}, v::Number, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
     for i in I
         ts[i] = v
     end
@@ -228,17 +223,17 @@ end
 """
 `setindex` a vector using `UnitRange{MIT}`
 """
-Base.setindex!(ts::TSeries{T}, v::Vector{Float64}, I::UnitRange{MIT{T}}) where T <: Frequency = begin
+Base.setindex!(ts::TSeries{T}, v::AbstractVector{<:Number}, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
     for (i, val) in zip(I, v)
         ts[i] = val
     end
 end
 
-Base.setindex!(ts::TSeries{T}, v::Vector{Int64}, I::UnitRange{MIT{T}}) where T <: Frequency = begin
-    for (i, val) in zip(I, v)
-        ts[i] = val
-    end
-end
+# Base.setindex!(ts::TSeries{T}, v::Vector{Int64}, I::UnitRange{MIT{T}}) where T <: Frequency = begin
+#     for (i, val) in zip(I, v)
+#         ts[i] = val
+#     end
+# end
 
 
 
@@ -255,18 +250,18 @@ end
 """
 `setindex` values from other `TSeries` using `UnitRange{MIT}`
 """
-Base.setindex!(ts::TSeries{T}, v::TSeries{T}, I::UnitRange{MIT{T}}) where T <: Frequency = begin
+Base.setindex!(ts::TSeries{T}, v::TSeries{T}, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
     commonrange = intersect(I, mitrange(v))
     ts[commonrange] = v[commonrange].values
 end
 
-"""
-`setindex` values from other `Vector` using `MIT`
-"""
-Base.setindex!(ts::TSeries{T}, v::Vector{S}, mit::MIT{T}) where T <: Frequency where S <: Union{Int64, Float64} = begin
-    length(v) == 1 || error(v, " can contain only one element.")
-    ts[mit] = v[mit][1]
-end
+# """
+# `setindex` values from other `Vector` using `MIT`
+# """
+# Base.setindex!(ts::TSeries{T}, v::AbstractVector{<:Number}, mit::MIT{T}) where T <: Frequency = begin
+#     length(v) == 1 || error(v, " can contain only one element.")
+#     ts[mit] = v[mit][1]
+# end
 
 #-------------------------------------------------------------------------------
 # Operations
@@ -283,7 +278,7 @@ julia> firstdate(TSeries(qq(2020, 1), ones(10)))
 2020Q1
 ```
 """
-firstdate(s::TSeries{T}) where T <: Frequency = s.firstdate
+firstdate(s::TSeries) = s.firstdate
 
 """
     lastdate(x::TSeries)
@@ -296,10 +291,10 @@ julia> lastdate(TSeries(qq(2020, 1), ones(10)))
 2022Q2
 ```
 """
-lastdate(s::TSeries{T}) where T <: Frequency = (s.firstdate + length(s) - 1)
+lastdate(s::TSeries) = (s.firstdate + length(s) - 1)
 
 # 
-Base.range(t::TSeries) = firstdate(t):lastdate(t)
+# Base.range(t::TSeries) = firstdate(t):lastdate(t)
 
 """
     Horizonatal Concatenation of `TSeries`
@@ -351,28 +346,25 @@ julia> mitrange(TSeries(qq(2020, 1), ones(4)))
 2020Q1:2020Q4
 ```
 """
-function mitrange(ts::TSeries{T}) where T <: Frequency
-    return ts.firstdate:lastdate(ts)
-end
+mitrange(ts::TSeries) = firstdate(ts):lastdate(ts)
 
 function Base.:(+)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
     # I = intersect(x.firstdate:lastdate(x), y.firstdate:lastdate(y))
     I = intersect(mitrange(x), mitrange(y))
 
     I.start <= I.stop || error("There are no dates in common, operation can't be performed.")
-    TSeries{T}(I.start, x[I].values + y[I].values)
+    TSeries(I.start, x[I].values + y[I].values)
 end
 
 function Base.:(-)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
     # I = intersect(x.firstdate:lastdate(x), y.firstdate:lastdate(y))
     I = intersect(mitrange(x), mitrange(y))
     I.start <= I.stop || error("There are no dates in common, operation can't be performed.")
-    TSeries{T}(I.start, x[I].values - y[I].values)
+    TSeries(I.start, x[I].values - y[I].values)
 end
 
-function Base.:(-)(x::IntOrFloat, y::TSeries{T}) where T <: Frequency
-
-    TSeries{T}(y.firstdate, x .- y)
+function Base.:(-)(x::Number, y::TSeries)
+    TSeries(y.firstdate, Float64(x) .- y)
 end
 
 Base.:(-)(s::TSeries{T}) where T <: Frequency = TSeries(s.firstdate, -s.values)
@@ -402,26 +394,26 @@ end
     3 * ts
     ts * 3 returns timeseries with every element multiplied by 3
 """
-function Base.:(*)(ts::TSeries{T}, s::IntOrFloat) where T <: Frequency
-    TSeries(ts.firstdate, ts.values .* s)
+function Base.:(*)(ts::TSeries{T}, s::Number) where T <: Frequency
+    TSeries(ts.firstdate, ts.values .* Float64(s))
 end
 
-function Base.:(*)(s::IntOrFloat, ts::TSeries{T}) where T <: Frequency
-    TSeries(ts.firstdate, ts.values .* s)
+function Base.:(*)(s::Number, ts::TSeries{T}) where T <: Frequency
+    TSeries(ts.firstdate, ts.values .* Float64(s))
 end
 
 """
     ts / 3 returns timeseries with every element divided by 3
 """
-function Base.:(/)(ts::TSeries{T}, s::IntOrFloat) where T <: Frequency
-    TSeries(ts.firstdate, ts.values ./ s)
+function Base.:(/)(ts::TSeries{T}, s::Number) where T <: Frequency
+    TSeries(ts.firstdate, ts.values ./ Float64(s))
 end
 
-function Base.:(/)(s::IntOrFloat, ts::TSeries{T}) where T <: Frequency
-    TSeries(ts.firstdate, s ./ ts.values)
+function Base.:(/)(s::Number, ts::TSeries{T}) where T <: Frequency
+    TSeries(ts.firstdate, Float64(s) ./ ts.values)
 end
 
-function Base.:(^)(ts::TSeries{T}, s::IntOrFloat) where T <: Frequency
+function Base.:(^)(ts::TSeries{T}, s::Number) where T <: Frequency
     TSeries(ts.firstdate, ts.values .^ s)
 end
 
@@ -499,7 +491,7 @@ ppy(::Type{MIT{F}}) where F <: Frequency = ppy(F)
 
 When applied to a [`TSeries`](@ref) instance or type, return the `ppy` of its frequency.
 """
-ppy(ts::TSeries{T}) where T <: Frequency = ppy(T)
+ppy(::TSeries{T}) where T <: Frequency = ppy(T)
 ppy(::Type{TSeries{T}}) where T <: Frequency = ppy(T)
 
 
@@ -539,7 +531,7 @@ TSeries{Yearly} of length 3
 ```
 See also: [`apct`](@ref)
 """
-function pct(ts::TSeries{T}, shift_value::Int64; islog::Bool = false) where T <: Frequency
+function pct(ts::TSeries, shift_value::Int64; islog::Bool = false)
     if islog
         a = exp(ts);
         b = shift(exp(ts), shift_value);
@@ -553,7 +545,7 @@ function pct(ts::TSeries{T}, shift_value::Int64; islog::Bool = false) where T <:
     TSeries(result.firstdate, result.values)
 end
 
-Base.round(ts::TSeries{T}; digits = 2) where T <: Frequency = begin
+Base.round(ts::TSeries; digits = 2) = begin
     values = (x -> round(x, digits=digits)).(ts.values)
     TSeries(ts.firstdate, values)
 end
@@ -581,7 +573,7 @@ TSeries{Quarterly} of length 7
 
 See also: [`pct`](@ref)
 """
-function apct(ts::TSeries{T}, islog::Bool = false) where T <: Frequency
+function apct(ts::TSeries, islog::Bool = false)
     if islog
         a = exp(ts);
         b = shift(exp(ts), - 1);
@@ -599,11 +591,11 @@ function apct(ts::TSeries{T}, islog::Bool = false) where T <: Frequency
 end
 
 
-function Base.cumsum(s::TSeries{T}) where T <: Frequency
+function Base.cumsum(s::TSeries)
     TSeries(s.firstdate, cumsum(s.values))
 end
 
-function Base.cumsum!(s::TSeries{T}) where T <: Frequency
+function Base.cumsum!(s::TSeries)
     s.values = cumsum(s.values)
     return s
 end
@@ -616,7 +608,7 @@ Remove `NaN` values from starting at the beginning of `x`, in-place.
 
 __Note__: an internal function.
 """
-function leftcropnan!(s::TSeries{T}) where T <: Frequency
+function leftcropnan!(s::TSeries)
     while isequal(s[firstdate(s)], NaN)
         popfirst!(s.values)
         s.firstdate = s.firstdate + 1
@@ -631,7 +623,7 @@ Remove `NaN` values from the end of `x`
 
 __Note__: an internal function.
 """
-function rightcropnan!(s::TSeries{T}) where T <: Frequency
+function rightcropnan!(s::TSeries)
     while isequal(s[lastdate(s)], NaN)
         pop!(s.values)
     end
@@ -656,7 +648,7 @@ TSeries{Yearly} of length 2
 2021Y: 2.0
 ```
 """
-function nanrm!(s::TSeries{T}, type::Symbol=:both) where T <: Frequency
+function nanrm!(s::TSeries, type::Symbol=:both)
     if type == :left
         leftcropnan!(s)
     elseif type == :right
