@@ -98,14 +98,24 @@ function MIT{T}(x::Int64) where T <: Frequency
     reinterpret(MIT{T}, x)
 end
 
+export frequencyof
+"""
+    frequencyof(::MIT)
+    frequencyof(::Type{MIT})
+
+Return the Frequency type of the given MIT instance of type.
+"""
+frequencyof(::MIT{T}) where T <: Frequency = T
+frequencyof(::Type{MIT{T}}) where T <: Frequency = T
+
 # converting to Int is just the internal representation
 Int64(x::MIT{T}) where T <: Frequency = reinterpret(Int64, x)
 Base.promote_rule(::Type{MIT{S}}, ::Type{T}) where S <: Frequency where T <: Integer = Int64
 
 # converting to Float has whole part equal to the year and fractional part 
 # equal to the fraction of the year for the period
-(T::Type{<:AbstractFloat})(x::MIT{F}) where F <: Frequency = year(x) + (period(x)-1) / ppy(F)
-Base.promote_rule(::Type{MIT{F}}, ::Type{T}) where F <: Frequency where T <:AbstractFloat = T
+(T::Type{<:AbstractFloat})(x::MIT{F}) where F <: Frequency = year(x) + (period(x) - 1) / ppy(F)
+Base.promote_rule(::Type{MIT{F}}, ::Type{T}) where F <: Frequency where T <: AbstractFloat = T
 
 Base.one(::MIT{F}) where F <: Frequency = Int(1)
 Base.one(::Type{MIT{F}}) where F <: Frequency = Int(1)
@@ -142,20 +152,20 @@ function period(x::MIT{T}) where T <: Frequency
     1 + rem(reinterpret(Int64, x), ppy(T))
 end
 
-Base.show(io::IO, x::MIT{T}) where T <: Frequency = begin
-    print(io, year(x), string(T)[1], period(x))
-end
-
-Base.show(io::IO, x::MIT{T}) where T <: Yearly = begin
-    print(io, year(x), string(T)[1])
-end
-
-Base.show(io::IO, x::MIT{T}) where T <: Unit = begin
-    print(io, "ii(", Int64(x), ")")
+function Base.show(io::IO, x::MIT)
+    F = first("$(frequencyof(x))")
+    Y = year(x)
+    Y = get(io, :compact, true) ? string(year(x)) : lpad(Y, 4)
+    np = ppy(x)
+    if np == 1 
+        print(io, Y, F)
+    else
+        n = length(string(np))
+        print(io, Y, F, rpad(period(x), n))
+    end
 end
 
 Base.string(m::MIT{T}) where T <: Frequency = repr(m)
-
 
 # ----------------------------------------
 # 2.1 MIT{T} constructors
@@ -180,7 +190,7 @@ julia> typeof(ii(123))
 MIT{Unit}
 ```
 """
-ii(x::Int64) = MIT{Unit}(x*ppy(Unit))
+ii(x::Int64) = MIT{Unit}(x * ppy(Unit))
 
 """
     mm(y::Int64, p::Int64)
@@ -198,7 +208,7 @@ julia> mm(2020, 1) + 5
 """
 mm(y, p) = begin
     1 <= p <= 12 || error("Monthly period ", p, " must be in 1:12.")
-    MIT{Monthly}(y*ppy(Monthly) + p -1)
+    MIT{Monthly}(y * ppy(Monthly) + p - 1)
 end
 
 """
@@ -217,7 +227,7 @@ julia> qq(2020, 1) + 5
 """
 qq(y, p) = begin
     1 <= p <= 4 || error("Quarterly period ", p, " must be in 1:4")
-    MIT{Quarterly}(y*ppy(Quarterly) + p - 1)
+    MIT{Quarterly}(y * ppy(Quarterly) + p - 1)
 end
 
 """
@@ -234,7 +244,7 @@ julia> yy(2020) + 5
 2025Y
 ```
 """
-yy(y; p=1) = MIT{Yearly}(y*ppy(Yearly) + p - 1)
+yy(y; p=1) = MIT{Yearly}(y * ppy(Yearly) + p - 1)
 
 # ----------------------------------------
 # 2.2 MIT{T} operations

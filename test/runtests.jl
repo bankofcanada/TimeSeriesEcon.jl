@@ -16,6 +16,24 @@ ts_y = TSeries(yy(2018), collect(1:12))
     @test ts_y.values == collect(1.0:12.0)
 end
 
+@testset "show" begin
+    for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], Iterators.cycle((qq(2010,1), mm(2010,1), yy(2010), ii(1))))
+        let io = IOBuffer()
+            t = TSeries(fd, rand(24))
+            show(IOContext(io, :displaysize=>(nrow,80)), MIME"text/plain"(), t)
+            @test length(readlines(seek(io,0))) == max(2, min(length(t)+1, nrow-3))
+        end
+    end
+end
+
+@testset "frequencyof" begin
+    @test frequencyof(qq(2000,1)) == Quarterly
+    @test frequencyof(mm(2000,1)) == Monthly
+    @test frequencyof(yy(2000)) == Yearly
+    @test frequencyof(ii(1)) == Unit
+    @test frequencyof(qq(2001,1):qq(2002,1)) == Quarterly
+    @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
+end
 
 @testset "TSeries: Monthly Access" begin
     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
