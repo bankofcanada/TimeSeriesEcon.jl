@@ -1,6 +1,28 @@
 using Test
 using TimeSeriesEcon
 
+@testset "FPConst" begin
+    @test 1U == ii(1)
+    @test 2000Y == yy(2000)
+    @test 1999Q1 == qq(1999,1)
+    @test 1999Q2 == qq(1999,2)
+    @test 1999Q3 == qq(1999,3)
+    @test 1999Q4 == qq(1999,4)
+    @test 1988M12 == mm(1988,12)
+    @test 1988M11 == mm(1988,11)
+    @test 1988M10 == mm(1988,10)
+    @test 1988M9 == mm(1988,9)
+    @test 1988M8 == mm(1988,8)
+    @test 1988M7 == mm(1988,7)
+    @test 1988M6 == mm(1988,6)
+    @test 1988M5 == mm(1988,5)
+    @test 1988M4 == mm(1988,4)
+    @test 1988M3 == mm(1988,3)
+    @test 1988M2 == mm(1988,2)
+    @test 1988M1 == mm(1988,1)
+end
+
+
 ts_u = TSeries(1:5)
 ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
 ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
