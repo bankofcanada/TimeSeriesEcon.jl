@@ -19,6 +19,17 @@ ts_y = TSeries(yy(2018), collect(1:12))
 
     @test ts_y.firstdate == yy(2018)
     @test ts_y.values == collect(1.0:12.0)
+
+    # Make sure if lengths are different we get an error
+    @test_throws ArgumentError TSeries(ii(1):ii(5), 1:6)
+
+    let t = TSeries(ii(1):ii(5), 3.7)
+        @test t == fill(3.7, 5)
+        @test t[2:4] == fill(3.7, 3)
+        @test (t[2:4] .= 2.5) == fill(2.5, 3)
+        @test (t[3] = 5) == 5
+        @test t == [3.7, 2.5, 5.0, 2.5, 3.7]
+    end
 end
 
 @testset "show" begin
