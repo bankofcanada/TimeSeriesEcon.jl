@@ -35,6 +35,12 @@ end
     @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
 end
 
+@testset "TSeries: Index using begin end" begin
+    @test ts_m[begin] == 1
+    @test ts_m[end] == 12
+    @test ts_m[begin:end] == ts_m
+end
+
 @testset "TSeries: Monthly Access" begin
     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
     @test ts_m[mm(2018, 1):mm(2018, 12)].firstdate == mm(2018, 1)

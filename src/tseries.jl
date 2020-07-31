@@ -150,6 +150,10 @@ Base.size(ts::TSeries{T}) where T <: Frequency = (length(ts.values), )
 Base.getindex(ts::TSeries{T}, i::Int64) where T <: Frequency = ts.values[i]
 Base.setindex!(ts::TSeries{T}, v::IntOrFloat, i::Int64) where T <: Frequency = (ts.values[i] = v)
 
+## Index using `begin` and `end` - e.g. `x[end]`
+Base.firstindex(x::TSeries) = firstdate(x)
+Base.lastindex(x::TSeries) = lastdate(x)
+
 """
 `getindex` using `MIT`
 """
