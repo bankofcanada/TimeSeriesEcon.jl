@@ -149,6 +149,21 @@ Base.size(ts::TSeries) = size(ts.values)
 Base.getindex(ts::TSeries, i::Int64) = ts.values[i]
 Base.setindex!(ts::TSeries, v::Number, i::Int64) = (ts.values[i] = v)
 
+Base.axes(t::TSeries) = (mitrange(t),)
+Base.axes1(t::TSeries) = mitrange(t)
+Base.axes(r::AbstractUnitRange{<:MIT}) = (r,)
+Base.axes1(r::AbstractUnitRange{<:MIT}) = r
+
+function Base.view(t::TSeries, I::AbstractUnitRange{<:MIT})
+    @boundscheck  checkbounds(t, I)
+    TSeries(I, @inbounds view(t.values, I .- t.firstdate .+ 1))
+end
+
+Base.similar(t::TSeries) = TSeries(firstdate(t), similar(getfield(t, :values)))
+Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
+Base.IndexStyle(::TSeries) = IndexLinear()
+
+
 """
 `getindex` using `MIT`
 """
