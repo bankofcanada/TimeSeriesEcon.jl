@@ -43,14 +43,63 @@ ts_y = TSeries(yy(2018), collect(1:12))
     @test ts_y.values == collect(1.0:12.0)
 
     # Make sure if lengths are different we get an error
-    @test_throws ArgumentError TSeries(ii(1):ii(5), 1:6)
+    @test_throws ArgumentError TSeries(1U:5U, 1:6)
 
-    let t = TSeries(ii(1):ii(5), 3.7)
-        @test t == fill(3.7, 5)
-        @test t[2:4] == fill(3.7, 3)
-        @test (t[2:4] .= 2.5) == fill(2.5, 3)
-        @test (t[3] = 5) == 5
-        @test t == [3.7, 2.5, 5.0, 2.5, 3.7]
+    let t = TSeries(2U, rand(5))
+        @test firstdate(t) == 2U
+        @test lastdate(t) == 6U
+        @test length(t.values) == 5
+        @test length(t) == 5
+    end
+
+    let t = TSeries(1991Q1:1992Q4)
+        @test true
+        @test length(t) == length(t.values) == 8
+        @test firstindex(t) == firstdate(t) == 1991Q1
+        @test lastindex(t) == lastdate(t) == 1992Q4
+    end
+
+end
+
+@testset "Int indexing" begin
+    let t = TSeries(4U:8U, rand(5))
+        @test t.firstdate == 4U && lastdate(t) == 8U
+        # test access
+        @test t[1] isa Number 
+        @test t[1] == t.values[1]
+        @test t[2:4] isa TSeries{frequencyof(t),Vector{Float64}}
+        @test t[2:4].values == t.values[2:4]
+        @test t[[1,3,4]] isa Vector{Float64}
+        @test t[[1,3,4]] == t.values[[1,3,4]]
+        # test assignment
+        @test begin
+            t[2:4] = 2.5
+            t.values[2:4] == fill(2.5, 3)
+        end
+        @test 5 == (t[3] = 5)
+        @test t.values == [first(t), 2.5, 5.0, 2.5, last(t)]
+    end
+end
+
+@testset "Views" begin
+    let t = TSeries(2010M1, rand(20))
+        @test axes(t) == (2010M1 - 1 .+ (1:20),)
+        @test Base.axes1(t) == 2010M1 - 1 .+ (1:20)
+        z = similar(t)
+        @test z isa typeof(t)
+        @test z.firstdate == t.firstdate
+        @test z != t
+        z = copy(t)
+        @test z == t
+        z[3:5] += 0.2
+        @test z != t
+        z = view(t, 2:5)
+        c = view(t, 2010M2:2010M5)
+        @test c == z
+        @test z == t[2:5]
+        z[1:3] += 0.5
+        @test z == t[2:5]
+        @test c == z
     end
 end
 

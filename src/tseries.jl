@@ -86,7 +86,10 @@ end
 # Might be inefficient
 TSeries(fd::MIT, v::AbstractVector{<:Number}) = TSeries(fd, Vector{Float64}(v))
 
-TSeries(v::AbstractVector{<:Number}) = TSeries(ii(1), v)
+TSeries(v::AbstractVector{<:Number}) = TSeries(1U, v)
+
+TSeries(I::AbstractUnitRange{<:MIT}) = TSeries(first(I), Vector{Float64}(undef, length(I)))
+TSeries(I::AbstractUnitRange{<:MIT}, ::UndefInitializer) = TSeries(I)
 
 # TSeries constructor with a range and data
 function TSeries(I::AbstractUnitRange{<:MIT}, V::AbstractVector{<:Number})
@@ -99,7 +102,7 @@ end
 # TSeries constructor with a range and a single value
 function TSeries(I::AbstractUnitRange{<:MIT}, v::Number)
     # use the inner constructor
-    TSeries(I.start, fill(Float64(v), length(I)))
+    TSeries(first(I), fill(Float64(v), length(I)))
 end
 
 #-------------------------------------------------------------------------------
@@ -146,15 +149,32 @@ end
 # """
 Base.:(==)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency = (x.firstdate == y.firstdate && isequal(x.values, y.values))
 Base.size(ts::TSeries) = size(ts.values)
-Base.getindex(ts::TSeries, i::Int64) = ts.values[i]
-Base.setindex!(ts::TSeries, v::Number, i::Int64) = (ts.values[i] = v)
+
+# Indexing with plain integers simply indexes within the values 
+Base.getindex(ts::TSeries, i::Int64) = getindex(ts.values, i)
+Base.getindex(ts::TSeries, I::AbstractUnitRange{Int}) = TSeries(firstdate(ts) - 1 .+ I, getindex(ts.values, I))
+Base.getindex(ts::TSeries, I::AbstractVector{Int}) = getindex(ts.values, I)
+Base.setindex!(ts::TSeries, v::Number, i::Int64) = setindex!(ts.values, v, i)
+Base.setindex!(ts::TSeries, v::Number, I::AbstractUnitRange{Int}) = ts.values[I] .= v
+Base.setindex!(ts::TSeries, v::Number, I::AbstractVector{Int}) = ts.values[I] .= v
+Base.setindex!(ts::TSeries{F}, v::TSeries{F}, I::AbstractUnitRange{Int}) where F <: Frequency = ts.values[I] .= v.values
+Base.setindex!(ts::TSeries{F}, v::TSeries{F}, I::AbstractVector{Int}) where F <: Frequency = ts.values[I] .= v.values
+Base.setindex!(ts::TSeries, v, I::AbstractUnitRange{Int}) = setindex!(ts.values, v, I)
+Base.setindex!(ts::TSeries, v, I::AbstractVector{Int}) = setindex!(ts.values, v, I)
+
+
 
 Base.axes(t::TSeries) = (mitrange(t),)
 Base.axes1(t::TSeries) = mitrange(t)
 Base.axes(r::AbstractUnitRange{<:MIT}) = (r,)
 Base.axes1(r::AbstractUnitRange{<:MIT}) = r
+Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractUnitRange{Int}) = r[first(I)]:r[last(I)]
+Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractVector{Int}) = [r[i] for i in I]
 
-function Base.view(t::TSeries, I::AbstractUnitRange{<:MIT})
+function Base.view(t::TSeries, I::AbstractUnitRange{<:Integer})
+    if !<:(eltype(I), MIT)
+        I = firstdate(t) - 1 .+ I
+    end
     @boundscheck  checkbounds(t, I)
     TSeries(I, @inbounds view(t.values, I .- t.firstdate .+ 1))
 end
