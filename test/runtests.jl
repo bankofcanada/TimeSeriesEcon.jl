@@ -35,6 +35,18 @@ end
     @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
 end
 
+@testset "TSeries: Broadcasting" begin
+    ts_bc = TSeries(mm(2020, 1), ℯ * ones(12))
+    lts_bc = log.(ts_bc)
+
+    @test lts_bc.firstdate == mm(2020, 1)
+    @test lts_bc.values == ones(12)
+    @test exp.(lts_bc) == ts_bc
+    @test lts_bc .* 0 .+ 100 == TSeries(mm(2020, 1), 100 * ones(12))
+end
+
+
+
 @testset "TSeries: Index using end" begin
     @test ts_m[end] == 12
     @test ts_m[firstdate(ts_m):end] == ts_m
