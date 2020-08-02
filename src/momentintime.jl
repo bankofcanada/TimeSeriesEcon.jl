@@ -98,6 +98,10 @@ function MIT{T}(x::Int64) where T <: Frequency
     reinterpret(MIT{T}, x)
 end
 
+MIT{F}(y::Integer, p::Integer) where F <: Frequency = 1 <= p <= ppy(F) ? 
+                                                      reinterpret(MIT{F}, y * ppy(F) + p - 1) :
+                                                      throw(ArgumentError("$F period must be in 1…$(ppy(F))")) 
+
 export frequencyof
 """
     frequencyof(::MIT)
@@ -105,6 +109,7 @@ export frequencyof
 
 Return the Frequency type of the given MIT instance of type.
 """
+frequencyof(::Any) = nothing
 frequencyof(::MIT{T}) where T <: Frequency = T
 frequencyof(::Type{MIT{T}}) where T <: Frequency = T
 
@@ -117,8 +122,8 @@ Base.promote_rule(::Type{MIT{S}}, ::Type{T}) where S <: Frequency where T <: Int
 (T::Type{<:AbstractFloat})(x::MIT{F}) where F <: Frequency = year(x) + (period(x) - 1) / ppy(F)
 Base.promote_rule(::Type{MIT{F}}, ::Type{T}) where F <: Frequency where T <: AbstractFloat = T
 
-Base.one(::MIT{F}) where F <: Frequency = Int(1)
-Base.one(::Type{MIT{F}}) where F <: Frequency = Int(1)
+Base.one(::MIT) = Int(1)
+Base.one(::Type{<:MIT}) = Int(1)
 
 """
     year(x::MIT)
@@ -190,7 +195,7 @@ julia> typeof(ii(123))
 MIT{Unit}
 ```
 """
-ii(x::Int64) = MIT{Unit}(x * ppy(Unit))
+ii(x::Int64) = MIT{Unit}(x, 1)
 
 """
     mm(y::Int64, p::Int64)
@@ -206,10 +211,7 @@ julia> mm(2020, 1) + 5
 2020M6
 ```
 """
-mm(y, p) = begin
-    1 <= p <= 12 || error("Monthly period ", p, " must be in 1:12.")
-    MIT{Monthly}(y * ppy(Monthly) + p - 1)
-end
+mm(y, p) = MIT{Monthly}(y, p)
 
 """
     qq(y::Int64, p::Int64)
@@ -225,10 +227,7 @@ julia> qq(2020, 1) + 5
 2021Q2
 ```
 """
-qq(y, p) = begin
-    1 <= p <= 4 || error("Quarterly period ", p, " must be in 1:4")
-    MIT{Quarterly}(y * ppy(Quarterly) + p - 1)
-end
+qq(y, p) = MIT{Quarterly}(y, p)
 
 """
     yy(y::Int64)
@@ -244,32 +243,25 @@ julia> yy(2020) + 5
 2025Y
 ```
 """
-yy(y; p=1) = MIT{Yearly}(y * ppy(Yearly) + p - 1)
+yy(y, p=1) = MIT{Yearly}(y, p)
 
 # ----------------------------------------
 # 2.2 MIT{T} operations
 # ----------------------------------------
-Base.isequal(x::MIT{T}, y::MIT{T}) where T <: Frequency = x == y
 
-Base.:(<=)(x::MIT{T}, y::MIT{T}) where T <: Frequency = begin
-    reinterpret(Int64, x) <= reinterpret(Int64, y)
-end
+Base.isequal(x::MIT, y::MIT) = frequencyof(x) == frequencyof(y) && isequal(Int(x), Int(y))
+Base.:(==)(x::MIT, y::MIT) = frequencyof(x) == frequencyof(y) && Int(x) == Int(y)
 
-Base.:(<)(x::MIT{T}, y::MIT{T}) where T <: Frequency = begin
-    reinterpret(Int64, x) < reinterpret(Int64, y)
-end
+Base.:(<)(x::MIT, y::MIT) = frequencyof(x) == frequencyof(y) ? Int(x) < Int(y) : throw(ArgumentError("Cannot compare MIT of different frequency."))
+Base.:(<=)(x::MIT, y::MIT) = (x < y) || (x == y) 
 
-Base.:-(m::MIT{T}, x::Integer) where T <: Frequency = begin
-    reinterpret(MIT{T}, reinterpret(Int64, m) - x)
-end
+Base.:-(a::MIT, b::MIT) = frequencyof(a) == frequencyof(b) ? Int(a)-Int(b) : throw(ArgumentError("Cannot subtract MIT of different frequencies."))
+Base.:-(m::MIT, x::Integer) = reinterpret(typeof(m), Int(m) - x)
+Base.:-(::Integer, ::MIT) = throw(ArgumentError("Cannot subtract MIT from an Integer."))
 
-Base.:+(m::MIT{T}, x::Integer) where T <: Frequency = begin
-    reinterpret(MIT{T}, reinterpret(Int64, m) + x)
-end
-
-Base.:-(m::MIT{T}, x::MIT{T}) where T <: Frequency = begin
-    Int64(m) - Int64(x)
-end
+Base.:+(m::MIT, x::Integer) = reinterpret(typeof(m), Int(m) + x)
+Base.:+(x::Integer, m::MIT) = reinterpret(typeof(m), Int(m) + x)
+Base.:+(::MIT, ::MIT) = throw(ArgumentError("Cannot add two MIT."))
 
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
@@ -286,9 +278,33 @@ Base.sub_with_overflow(x::MIT{T}, y::MIT{T}) where T <: Frequency = begin
 end
 
 # ----------------------------------------
-# 3 MIT Exceptions and Errors
+# 4 Convenience constants
 # ----------------------------------------
 
-Base.:(+)(x::MIT{T}, y::MIT{S}) where T <: Frequency where S <: Frequency = throw(
-    ArgumentError("`MIT` addition is not defined, but you can add `Integer` to `MIT`.")
-)
+struct _FPConst{F <: Frequency,P}
+    _FPConst{F,P}() where F <: Frequency where P = 0 < P <= ppy(F) ? new{F,P}() : throw(ArgumentError("Invalid period $P for frequency $F."))
+end
+_FPConst(F::Type{<:Frequency}, p::Integer=1) = _FPConst{F,p}()
+Base.:(*)(y::Integer, fc::_FPConst{F,P}) where F <: Frequency where P = MIT{F}(y, P)
+
+
+export Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+global const Y = _FPConst(Yearly)
+global const U = _FPConst(Unit)
+global const Q1 = _FPConst(Quarterly, 1)
+global const Q2 = _FPConst(Quarterly, 2)
+global const Q3 = _FPConst(Quarterly, 3)
+global const Q4 = _FPConst(Quarterly, 4)
+global const M1 = _FPConst(Monthly, 1)
+global const M2 = _FPConst(Monthly, 2)
+global const M3 = _FPConst(Monthly, 3)
+global const M4 = _FPConst(Monthly, 4)
+global const M5 = _FPConst(Monthly, 5)
+global const M6 = _FPConst(Monthly, 6)
+global const M7 = _FPConst(Monthly, 7)
+global const M8 = _FPConst(Monthly, 8)
+global const M9 = _FPConst(Monthly, 9)
+global const M10 = _FPConst(Monthly, 10)
+global const M11 = _FPConst(Monthly, 11)
+global const M12 = _FPConst(Monthly, 12)
+
