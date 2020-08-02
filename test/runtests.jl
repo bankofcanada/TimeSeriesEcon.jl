@@ -148,13 +148,16 @@ end
 end
 
 @testset "TSeries: Broadcasting" begin
-    ts_bc = TSeries(mm(2020, 1), ℯ * ones(12))
-    lts_bc = log.(ts_bc)
+    tsbc = TSeries(2020M1, ℯ * ones(12))
 
-    @test lts_bc.firstdate == mm(2020, 1)
-    @test lts_bc.values == ones(12)
-    @test exp.(lts_bc) == ts_bc
-    @test lts_bc .* 0 .+ 100 == TSeries(mm(2020, 1), 100 * ones(12))
+
+    @test log.(tsbc) == TSeries(2020M1, ones(12))
+    @test tsbc.firstdate == mm(2020, 1)
+    @test exp.(log.(tsbc)) == tsbc
+    @test tsbc .* 0 .+ 100 == TSeries(mm(2020, 1), 100 * ones(12))
+    
+    tsbc = log.(tsbc) + 99 # 1 + 99
+    @test tsbc == TSeries(2020M1, 100 * ones(12))
 end
 
 

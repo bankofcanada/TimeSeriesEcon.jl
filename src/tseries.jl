@@ -724,7 +724,7 @@ function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{TSeries}}, 
     # Scan the inputs for the TSeries:
     ts = find_tseries(bc)
     # Use the firstdate field of ts to create the output
-    TSeries(ts.firstdate, similar(Array{ElType}, axes(bc)))
+    TSeries(ts.firstdate, similar(ts.values))
 end
 
 """
