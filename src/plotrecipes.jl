@@ -2,5 +2,10 @@
 
 using RecipesBase
 
-@recipe plot(::Type{TS <: TSeries}, ts::TS) where TS = (Float64[mitrange(ts)...], ts.values)
-
+@recipe plot(ts::TSeries...) = begin
+    for t in ts
+        @series begin
+            (Float64[mitrange(t)...], t.values)
+        end
+    end
+end
