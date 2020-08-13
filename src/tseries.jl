@@ -185,8 +185,8 @@ Base.IndexStyle(::TSeries) = IndexLinear()
 
 
 ## Index using `end` - e.g. `x[end]`
-Base.firstindex(x::TSeries) = firstdate(x)
-Base.lastindex(x::TSeries) = lastdate(x)
+# Base.firstindex(x::TSeries) = firstdate(x)
+# Base.lastindex(x::TSeries) = lastdate(x)
 
 """
 `getindex` using `MIT`
@@ -724,7 +724,8 @@ function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{TSeries}}, 
     # Scan the inputs for the TSeries:
     ts = find_tseries(bc)
     # Use the firstdate field of ts to create the output
-    TSeries(ts.firstdate, similar(ts.values))
+    # TSeries(ts.firstdate, similar(ts.values))
+    similar(ts)
 end
 
 """

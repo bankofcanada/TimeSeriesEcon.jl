@@ -150,7 +150,7 @@ end
 @testset "TSeries: Broadcasting" begin
     tsbc = TSeries(2020M1, ℯ * ones(12))
 
-
+    @test TimeSeriesEcon.find_tseries(Broadcast.Broadcasted(-, (5, tsbc))) == tsbc
     @test log.(tsbc) == TSeries(2020M1, ones(12))
     @test tsbc.firstdate == mm(2020, 1)
     @test exp.(log.(tsbc)) == tsbc
