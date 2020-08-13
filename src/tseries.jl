@@ -183,11 +183,6 @@ Base.similar(t::TSeries) = TSeries(firstdate(t), similar(getfield(t, :values)))
 Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
 Base.IndexStyle(::TSeries) = IndexLinear()
 
-
-## Index using `end` - e.g. `x[end]`
-# Base.firstindex(x::TSeries) = firstdate(x)
-# Base.lastindex(x::TSeries) = lastdate(x)
-
 """
 `getindex` using `MIT`
 """
@@ -723,8 +718,7 @@ Base.BroadcastStyle(::Type{<:TSeries}) = Broadcast.ArrayStyle{TSeries}()
 function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{TSeries}}, ::Type{ElType}) where ElType
     # Scan the inputs for the TSeries:
     ts = find_tseries(bc)
-    # Use the firstdate field of ts to create the output
-    # TSeries(ts.firstdate, similar(ts.values))
+    
     similar(ts)
 end
 

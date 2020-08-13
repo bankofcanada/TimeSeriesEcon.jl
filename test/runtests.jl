@@ -150,7 +150,16 @@ end
 @testset "TSeries: Broadcasting" begin
     tsbc = TSeries(2020M1, ℯ * ones(12))
 
+    @test Base.BroadcastStyle(typeof(tsbc)) ==  Base.Broadcast.ArrayStyle{TSeries}()
+
     @test TimeSeriesEcon.find_tseries(Broadcast.Broadcasted(-, (5, tsbc))) == tsbc
+    @test TimeSeriesEcon.find_tseries(tsbc) == tsbc
+    @test TimeSeriesEcon.find_tseries(Any, tsbc) == tsbc
+    @test TimeSeriesEcon.find_tseries(tsbc, nothing) == tsbc
+
+    @test firstdate(similar(tsbc)) == 2020M1
+    @test size(similar(tsbc)) == size(tsbc)
+
     @test log.(tsbc) == TSeries(2020M1, ones(12))
     @test tsbc.firstdate == mm(2020, 1)
     @test exp.(log.(tsbc)) == tsbc
