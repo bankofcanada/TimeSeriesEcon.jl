@@ -312,3 +312,15 @@ end
     @test axes(1U:5U) == axes(1:5)
     @test Base.axes1(2020Y:2030Y) == Base.OneTo(11)
 end
+
+@testset "recursive" begin
+    ts = TSeries(1U, zeros(0))
+    ts[1U] = ts[2U] = 1.0
+    @rec 3U:10U ts[t] = ts[t-1]+ts[t-2]
+    @test ts.values == [1.0,1,2,3,5,8,13,21,34,55]
+    t = zeros(10,7)
+    r = rand(1, 7)
+    t[1, :] = r
+    @rec 2:10 t[s,:] = t[s-1,:] .* s
+    @test t ≈ factorial.(1:10) * r
+end
