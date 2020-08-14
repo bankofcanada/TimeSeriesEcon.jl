@@ -148,6 +148,11 @@ end
 end
 
 @testset "TSeries: Broadcasting" begin
+
+    allones = TSeries(2020Q1, ones(10))
+    @test 5 - allones == 5 .- allones
+
+    # -----------------------------------
     tsbc = TSeries(2020M1, ℯ * ones(12))
 
     @test Base.BroadcastStyle(typeof(tsbc)) ==  Base.Broadcast.ArrayStyle{TSeries}()
