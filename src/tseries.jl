@@ -400,7 +400,7 @@ function Base.:(-)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
 end
 
 function Base.:(-)(x::Number, y::TSeries)
-    TSeries(y.firstdate, Float64(x) .- y)
+    TSeries(y.firstdate, Float64(x) .- y.values)
 end
 
 Base.:(-)(s::TSeries{T}) where T <: Frequency = TSeries(s.firstdate, -s.values)
