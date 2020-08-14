@@ -308,6 +308,11 @@ end
 
 end
 
+@testset "axes of range" begin
+    @test axes(1U:5U) == axes(1:5)
+    @test Base.axes1(2020Y:2030Y) == Base.OneTo(11)
+end
+
 @testset "recursive" begin
     ts = TSeries(1U, zeros(0))
     ts[1U] = ts[2U] = 1.0
