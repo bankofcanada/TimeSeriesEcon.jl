@@ -32,11 +32,28 @@ ii(10): 34.0
 
 
 """
-macro rec(eqn, rng)
-    vn = eqn.args[1].args[1]
-    tn = eqn.args[1].args[2]
+macro rec(rng, eqn)
+    eqn isa Expr && eqn.head == :(=) || error("Expression must be an assignment.")
+    lhs, rhs = eqn.args
+    lhs isa Expr && lhs.head == :ref || error("Left hand side of assignment must be an indexing expression.")
+    vn, inds = lhs.args[1], lhs.args[2:end]
+    tn = let # try to find the indexing variable
+        tn = Symbol[]
+        for i in 1:length(inds)
+            isa(inds[i], Symbol) || continue
+            if inds[i] == :t # prefer :t if it's in there
+                tn = [:t]
+                break
+            else
+                push!(tn, inds[i])
+            end
+        end
+        isempty(tn) && error("Time index not found.")
+        # :t not there and multiple other symbols.
+        length(tn) > 1 && error("Ambiguous time index. Use `t`.")
+        tn[1]
+    end
     return quote
-        $(vn)[$(rng)] = NaN
         for $(tn) in $(rng)
             $(eqn)
         end
