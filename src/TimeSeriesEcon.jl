@@ -47,6 +47,7 @@ include("momentintime.jl")
 include("tseries.jl")
 include("recursive.jl")
 include("convert.jl")
+include("plotrecipes.jl")
 
 # Defined in src/momentintime.jl
 export MIT

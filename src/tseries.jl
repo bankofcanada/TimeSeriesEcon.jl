@@ -166,8 +166,8 @@ Base.setindex!(ts::TSeries, v, I::AbstractVector{Int}) = setindex!(ts.values, v,
 
 Base.axes(t::TSeries) = (mitrange(t),)
 Base.axes1(t::TSeries) = mitrange(t)
-Base.axes(r::AbstractUnitRange{<:MIT}) = (r,)
-Base.axes1(r::AbstractUnitRange{<:MIT}) = r
+Base.axes(r::AbstractUnitRange{<:MIT}) = (Base.OneTo(length(r)),)
+Base.axes1(r::AbstractUnitRange{<:MIT}) = Base.OneTo(length(r))
 Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractUnitRange{Int}) = r[first(I)]:r[last(I)]
 Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractVector{Int}) = [r[i] for i in I]
 
