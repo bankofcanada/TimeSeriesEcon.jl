@@ -41,6 +41,7 @@ macro rec(rng, eqn)
         tn = Symbol[]
         for i in 1:length(inds)
             isa(inds[i], Symbol) || continue
+            inds[i] == :(:) && continue
             if inds[i] == :t # prefer :t if it's in there
                 tn = [:t]
                 break
