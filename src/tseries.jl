@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------------------
 
 """
-    struct TSeries{Frequency} <: AbstractVector{Float64}
+    TSeries
 
 Data structure representing a time-series vector. The following 
 operations are allowed:
@@ -27,7 +27,7 @@ TSeries{Quarterly} of length 4
 
  - Index into `TSeries`
 ```julia-repl
-julia> x[qq(2020, 1)]
+julia> x[2000Q1]
 1.0
 
 julia> x[qq(2020, 1):qq(2020, 2)]
