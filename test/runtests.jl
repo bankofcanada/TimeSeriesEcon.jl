@@ -307,3 +307,8 @@ end
     @test ppy(TSeries(qq(2020, 1), ones(1))) == 4
 
 end
+
+@testset "axes of range" begin
+    @test axes(1U:5U) == axes(1:5)
+    @test Base.axes1(2020Y:2030Y) == Base.OneTo(11)
+end
