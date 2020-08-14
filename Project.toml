@@ -1,7 +1,7 @@
 name = "TimeSeriesEcon"
 uuid = "8b6756d2-c55c-11ea-2998-5f67ea17da60"
 authors = ["Atai Akunov <aakunov@bankofcanada.ca>", "Boyan Bejanov <bbejanov@bankofcanada.ca>", "Nicholas Labelle St-Pierre <labs@bankofcanada.ca>"]
-version = "0.2"
+version = "0.2.1"
 
 [deps]
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
