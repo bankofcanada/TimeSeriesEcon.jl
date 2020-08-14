@@ -147,6 +147,35 @@ end
     @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
 end
 
+@testset "TSeries: Broadcasting" begin
+    tsbc = TSeries(2020M1, ℯ * ones(12))
+
+    @test Base.BroadcastStyle(typeof(tsbc)) ==  Base.Broadcast.ArrayStyle{TSeries}()
+
+    @test TimeSeriesEcon.find_tseries(Broadcast.Broadcasted(-, (5, tsbc))) == tsbc
+    @test TimeSeriesEcon.find_tseries(tsbc) == tsbc
+    @test TimeSeriesEcon.find_tseries(Any, tsbc) == tsbc
+    @test TimeSeriesEcon.find_tseries(tsbc, nothing) == tsbc
+
+    @test firstdate(similar(tsbc)) == 2020M1
+    @test size(similar(tsbc)) == size(tsbc)
+
+    @test log.(tsbc) == TSeries(2020M1, ones(12))
+    @test tsbc.firstdate == mm(2020, 1)
+    @test exp.(log.(tsbc)) == tsbc
+    @test tsbc .* 0 .+ 100 == TSeries(mm(2020, 1), 100 * ones(12))
+    
+    tsbc = log.(tsbc) + 99 # 1 + 99
+    @test tsbc == TSeries(2020M1, 100 * ones(12))
+end
+
+
+
+@testset "TSeries: Index using end" begin
+    @test ts_m[end] == 12
+    @test ts_m[firstdate(ts_m):end] == ts_m
+end
+
 @testset "TSeries: Monthly Access" begin
     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
     @test ts_m[mm(2018, 1):mm(2018, 12)].firstdate == mm(2018, 1)

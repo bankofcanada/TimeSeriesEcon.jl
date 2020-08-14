@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------------------
 
 """
-    struct TSeries{Frequency} <: AbstractVector{Float64}
+    TSeries
 
 Data structure representing a time-series vector. The following 
 operations are allowed:
@@ -27,7 +27,7 @@ TSeries{Quarterly} of length 4
 
  - Index into `TSeries`
 ```julia-repl
-julia> x[qq(2020, 1)]
+julia> x[2000Q1]
 1.0
 
 julia> x[qq(2020, 1):qq(2020, 2)]
@@ -182,7 +182,6 @@ end
 Base.similar(t::TSeries) = TSeries(firstdate(t), similar(getfield(t, :values)))
 Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
 Base.IndexStyle(::TSeries) = IndexLinear()
-
 
 """
 `getindex` using `MIT`
@@ -710,3 +709,28 @@ frequencyof(::Type{TSeries{T}}) where T <: Frequency = T
 frequencyof(::AbstractUnitRange{MIT{T}}) where T <: Frequency = T
 frequencyof(::Type{<:AbstractUnitRange{MIT{T}}}) where T <: Frequency = T
 
+# -----------------------------------------------------
+# Broadcasting Interface: `BroadcastStyle` and `similar`
+# https://docs.julialang.org/en/v1.0.5/manual/interfaces/#man-interfaces-broadcasting-1
+# -----------------------------------------------------
+Base.BroadcastStyle(::Type{<:TSeries}) = Broadcast.ArrayStyle{TSeries}()
+
+function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{TSeries}}, ::Type{ElType}) where ElType
+    # Scan the inputs for the TSeries:
+    ts = find_tseries(bc)
+    
+    similar(ts)
+end
+
+"""
+    find_tseries
+
+Return the first TSeries among the arguments.
+
+__Note:__ An internal function used for broadcasting support.
+"""
+find_tseries(bc::Base.Broadcast.Broadcasted) = find_tseries(bc.args)
+find_tseries(args::Tuple) = find_tseries(find_tseries(args[1]), Base.tail(args))
+find_tseries(x) = x
+find_tseries(a::TSeries, rest) = a
+find_tseries(::Any, rest) = find_tseries(rest)
