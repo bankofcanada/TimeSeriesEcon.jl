@@ -1,36 +1,40 @@
 """
+    @rec(rng, eqn)
 
-    @rec(eqn, rng)
-
-Computes recursive calculations for the given `eqn` and `rng`.
+Computes recursive calculations for the given range `rng` and equation `eqn`.
 
 ### Examples
 ```julia-repl
-julia> s = TSeries(ii(1), zeros(1));
+julia> s = TSeries(1U, zeros(1))
+1-element Unit TSeries from 1U:
+      1U : 0.0
 
-julia> # Initial values
+julia> s[1U] = 0
+0
 
-julia> s[ii(1)] = 0;
+julia> s[2U] = 1
+1
 
-julia> s[ii(2)] = 1;
+julia> s 
+2-element Unit TSeries from 1U:
+      1U : 0.0
+      2U : 1.0
 
-julia> @rec s[t] = s[t-1] + s[t-2] ii(3):ii(10)
+julia> @rec(3U:10U, s[t] = s[t-1] + s[t-2])
 
 julia> s
-TSeries{Unit} of length 10
-ii(1): 0.0
-ii(2): 1.0
-ii(3): 1.0
-ii(4): 2.0
-ii(5): 3.0
-ii(6): 5.0
-ii(7): 8.0
-ii(8): 13.0
-ii(9): 21.0
-ii(10): 34.0
+10-element Unit TSeries from 1U:
+      1U : 0.0
+      2U : 1.0
+      3U : 1.0
+      4U : 2.0
+      5U : 3.0
+      6U : 5.0
+      7U : 8.0
+      8U : 13.0
+      9U : 21.0
+     10U : 34.0
 ```
-
-
 """
 macro rec(rng, eqn)
     eqn isa Expr && eqn.head == :(=) || error("Expression must be an assignment.")
