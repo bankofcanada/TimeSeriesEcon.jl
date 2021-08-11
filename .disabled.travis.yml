@@ -10,6 +10,7 @@ notifications:
 branches:
   only:
   - master
+  - dot-operations
 codecov: true
 julia:
   # - nightly
@@ -17,7 +18,7 @@ julia:
   - 1.6
 jobs:
   allow_failures:
-    - julia: 1.6
+    - julia: 1.
   include:
   - stage: "Documentation"
     julia: 1.0
