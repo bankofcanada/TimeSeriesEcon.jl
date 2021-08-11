@@ -66,12 +66,24 @@ import TimeSeriesEcon.yp
     @test Duration{Quarterly}(5) + Duration{Quarterly}(2) == 7
     @test Duration{Quarterly}(5) + 2 == 7
     @test Duration{Quarterly}(5) + 2 isa Duration{Quarterly}
+    @test 2 + Duration{Quarterly}(5) == 7
+    @test 2 + Duration{Quarterly}(5) isa Duration{Quarterly}
     @test_throws ArgumentError Duration{Quarterly}(5) + Duration{Monthly}(2)
     @test Duration{Quarterly}(5) + Duration{Quarterly}(2) isa Duration{Quarterly}
+    @test_throws ArgumentError 20Q1 + Duration{Monthly}(2)
     # conversions to float (for plotting)
     @test 2000Q1 + 1 == 2000Q2
     @test 2000Q1 + 1.0 == 2001.0
     @test 2000Q1 + 1.2 == 2001.2
+    @test 1.2 + 5U == 6.2
+    @test 5U + 1.2 == 6.2
+    # promotions
+    @test_throws ArgumentError promote(1, 1Q1) 
+    @test_throws ArgumentError promote(1Q1, 1) 
+    @test_throws ArgumentError promote(1Q1-1Q1, 1) 
+    @test_throws ArgumentError promote(1, 1Q1-1Q1) 
+    @test promote(1.1, 1Q1) === (1.1, 1.0)
+    @test promote(1Q1, 1.2) === (1.0, 1.2)
 end
 
 @testset "UnitRange{<:MIT}" begin
@@ -87,6 +99,7 @@ end
         @test first(rng) <= m <= last(rng)
         @test rng[i] == m
     end
+    @test_throws ArgumentError 2020Q1:2020M12
 end
 
 @testset "FPConst" begin
@@ -194,27 +207,27 @@ end
 #     end
 # end
 
-# @testset "MIT arithmetic" begin
-#     @test 5U < 8U
-#     @test 5U <= 8U
-#     @test 5U <= 5U
-#     @test 5U >= 5U
-#     @test 5U == 5U
-#     @test 8U >= 5U
-#     @test 8U > 5U
-#     @test 2001Q1 >= 2000Q3
-#     @test_throws ArgumentError 1M1 > 2Q1
-#     @test_throws ArgumentError 1M1 <= 2Q1
-#     @test 1M1 != 2Q1
+@testset "MIT arithmetic" begin
+    @test 5U < 8U
+    @test 5U <= 8U
+    @test 5U <= 5U
+    @test 5U >= 5U
+    @test 5U == 5U
+    @test 8U >= 5U
+    @test 8U > 5U
+    @test 2001Q1 >= 2000Q3
+    @test_throws ArgumentError 1M1 > 2Q1
+    @test_throws ArgumentError 1M1 <= 2Q1
+    @test 1M1 != 2Q1
 
-#     @test 2001Y + 5 == 2006Y
-#     @test 6 + 2001Q3 == 2003Q1
-#     @test 2003Q1 - 2001Q3 == 6
-#     @test 2003Q1 - 6 == 2001Q3
-#     @test_throws ArgumentError 6 - 2003Q1
-#     @test_throws ArgumentError 2003Q1 + 2003Q1
-#     @test_throws ArgumentError 2003Q1 + 2003Y
-# end
+    @test 2001Y + 5 == 2006Y
+    @test 6 + 2001Q3 == 2003Q1
+    @test 2003Q1 - 2001Q3 == 6
+    @test 2003Q1 - 6 == 2001Q3
+    @test_throws ArgumentError 6 - 2003Q1
+    @test_throws ArgumentError 2003Q1 + 2003Q1
+    @test_throws ArgumentError 2003Q1 + 2003Y
+end
 
 # @testset "show" begin
 #     for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], Iterators.cycle((qq(2010, 1), mm(2010, 1), yy(2010), ii(1))))
@@ -226,14 +239,26 @@ end
 #     end
 # end
 
-# @testset "frequencyof" begin
-#     @test frequencyof(qq(2000, 1)) == Quarterly
-#     @test frequencyof(mm(2000, 1)) == Monthly
-#     @test frequencyof(yy(2000)) == Yearly
-#     @test frequencyof(ii(1)) == Unit
-#     @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly
-#     @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
-# end
+@testset "show MIT/Duration" begin
+    let io = IOBuffer()
+        show(io, 2020Q1)
+        show(io, 5U)
+        println(io, 2020M1 - 2019M1)
+        foo = readlines(seek(io,0))
+        @test foo == ["2020Q15U12"]
+    end
+end
+
+@testset "frequencyof" begin
+    @test frequencyof(qq(2000, 1)) == Quarterly
+    @test frequencyof(mm(2000, 1)) == Monthly
+    @test frequencyof(yy(2000)) == Yearly
+    @test frequencyof(1U) == Unit
+    @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly
+    @test_throws ArgumentError frequencyof(1)
+    @test_throws ArgumentError frequencyof(Int)
+    # @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
+end
 
 # @testset "TSeries: Broadcasting" begin
 
@@ -407,17 +432,16 @@ end
 #     @test lastdate(x) == qq(2020, 4)
 # end
 
-# @testset "MIT constructors: mm, qq, yy, ii" begin
-#     @test mm(2020, 1) == MIT{Monthly}(2020 * 12)
-#     @test qq(2020, 1) == MIT{Quarterly}(2020 * 4)
-#     @test yy(2020) == MIT{Yearly}(2020)
-#     @test ii(2020) == MIT{Unit}(2020)
-# end
+@testset "MIT constructors: mm, qq, yy, ii" begin
+    @test mm(2020, 1) == MIT{Monthly}(2020 * 12)
+    @test qq(2020, 1) == MIT{Quarterly}(2020 * 4)
+    @test yy(2020) == MIT{Yearly}(2020)
+end
 
-# @testset "MIT: year, period" begin
-#     @test year(mm(2020, 12)) == 2020
-#     @test period(mm(2020, 12)) == 12
-# end
+@testset "MIT: year, period" begin
+    @test year(mm(2020, 12)) == 2020
+    @test period(mm(2020, 12)) == 12
+end
 
 # @testset "MIT: mitrange" begin
 #     @test mitrange(TSeries(qq(2020, 1), ones(4))) == qq(2020, 1):qq(2020, 4)
