@@ -171,6 +171,16 @@ year and period.
 """
 mm, qq, yy
 
+"""
+    pp(year, period; N)
+
+Construct an [`MIT`](@ref) with frequency [`YPFrequency{N}`](@ref). For
+[`Quarterly`](@ref), [`Monthly`](@ref), [`Yearly`](@ref), use [`qq`](@ref),
+[`mm`](@ref), [`yy`](@ref) instead of this.
+
+"""
+@inline pp(y::Integer, p::Integer; N::Integer) = MIT{YPFrequency{N}}(y, p)
+
 # -------------------------
 # pretty printing
 

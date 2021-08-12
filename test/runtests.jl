@@ -86,7 +86,7 @@ import TimeSeriesEcon.yp
     @test promote(1Q1, 1.2) === (1.0, 1.2)
 end
 
-@testset "UnitRange{<:MIT}" begin
+@testset "Range" begin
     rng = 2020Q1:2020Q4
     @test rng isa UnitRange{MIT{Quarterly}}
     @test isempty(2020Q1:2019Q1)
@@ -207,7 +207,7 @@ end
 #     end
 # end
 
-@testset "MIT arithmetic" begin
+@testset "MITops" begin
     @test 5U < 8U
     @test 5U <= 8U
     @test 5U <= 5U
@@ -239,13 +239,18 @@ end
 #     end
 # end
 
-@testset "show MIT/Duration" begin
+@testset "show" begin
     let io = IOBuffer()
         show(io, 2020Q1)
         show(io, 5U)
         println(io, 2020M1 - 2019M1)
+        show(io, 3U-2U)
+        show(io, 2000M12-2000M1)
+        println(io, Duration{Yearly}(7))
+        show(io, Q1)
+        println(io, M1, M12, ".")
         foo = readlines(seek(io,0))
-        @test foo == ["2020Q15U12"]
+        @test foo == ["2020Q15U12", "1117", "1Q11M11M12."]
     end
 end
 
@@ -257,6 +262,11 @@ end
     @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly
     @test_throws ArgumentError frequencyof(1)
     @test_throws ArgumentError frequencyof(Int)
+    @test frequencyof(qq(2000,1)-qq(2000,1)) == Quarterly
+    @test frequencyof(mm(2000,1)-mm(2000,1)) == Monthly
+    @test frequencyof(yy(2000,1)-yy(2000,1)) == Yearly
+    @test frequencyof(5U-3U) == Unit
+    @test frequencyof(typeof(qq(2020,1):qq(2020,2))) == Quarterly
     # @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
 end
 
@@ -432,13 +442,19 @@ end
 #     @test lastdate(x) == qq(2020, 4)
 # end
 
-@testset "MIT constructors: mm, qq, yy, ii" begin
+@testset "mm, qq, yy" begin
     @test mm(2020, 1) == MIT{Monthly}(2020 * 12)
     @test qq(2020, 1) == MIT{Quarterly}(2020 * 4)
     @test yy(2020) == MIT{Yearly}(2020)
 end
 
-@testset "MIT: year, period" begin
+@testset "year, period" begin
+    @test_throws ArgumentError year(1U)
+    let val = pp(2020, 2; N=6)
+        @test year(val) == 2020
+        @test period(val) == 2
+        @test frequencyof(val) === YPFrequency{6}
+    end
     @test year(mm(2020, 12)) == 2020
     @test period(mm(2020, 12)) == 12
 end

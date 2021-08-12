@@ -51,7 +51,7 @@ include("momentintime.jl")
 
 # Defined in src/momentintime.jl
 export MIT, Duration
-export mm, qq, yy
+export mm, qq, yy, pp
 export Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit
 export year, period
 export frequencyof
