@@ -124,6 +124,105 @@ end
 end
 
 
+@testset "MITops" begin
+    @test 5U < 8U
+    @test 5U <= 8U
+    @test 5U <= 5U
+    @test 5U >= 5U
+    @test 5U == 5U
+    @test 8U >= 5U
+    @test 8U > 5U
+    @test 2001Q1 >= 2000Q3
+    @test_throws ArgumentError 1M1 > 2Q1
+    @test_throws ArgumentError 1M1 <= 2Q1
+    @test 1M1 != 2Q1
+
+    @test 2001Y + 5 == 2006Y
+    @test 6 + 2001Q3 == 2003Q1
+    @test 2003Q1 - 2001Q3 == 6
+    @test 2003Q1 - 6 == 2001Q3
+    @test_throws ArgumentError 6 - 2003Q1
+    @test_throws ArgumentError 2003Q1 + 2003Q1
+    @test_throws ArgumentError 2003Q1 + 2003Y
+end
+
+@testset "MIT.show" begin
+    let io = IOBuffer()
+        show(io, 2020Q1)
+        show(io, pp(20, 3; N=6))
+        show(io, 5U)
+        println(io, 2020M1 - 2019M1)
+        show(io, 3U-2U)
+        show(io, 2000M12-2000M1)
+        println(io, Duration{Yearly}(7))
+        show(io, Q1)
+        show(io, 1U)
+        println(io, M1, M12, ".")
+        foo = readlines(seek(io,0))
+        @test foo == ["2020Q120P35U12", "1117", "1Q11U1M11M12."]
+    end
+end
+
+@testset "frequencyof" begin
+    @test frequencyof(qq(2000, 1)) == Quarterly
+    @test frequencyof(mm(2000, 1)) == Monthly
+    @test frequencyof(yy(2000)) == Yearly
+    @test frequencyof(1U) == Unit
+    @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly
+    @test_throws ArgumentError frequencyof(1)
+    @test_throws ArgumentError frequencyof(Int)
+    @test frequencyof(qq(2000,1)-qq(2000,1)) == Quarterly
+    @test frequencyof(mm(2000,1)-mm(2000,1)) == Monthly
+    @test frequencyof(yy(2000,1)-yy(2000,1)) == Yearly
+    @test frequencyof(5U-3U) == Unit
+    @test frequencyof(typeof(qq(2020,1):qq(2020,2))) == Quarterly
+    # @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
+end
+
+@testset "mm, qq, yy" begin
+    @test mm(2020, 1) == MIT{Monthly}(2020 * 12)
+    @test qq(2020, 1) == MIT{Quarterly}(2020 * 4)
+    @test yy(2020) == MIT{Yearly}(2020)
+end
+
+@testset "year, period" begin
+    @test_throws ArgumentError year(1U)
+    let val = pp(2020, 2; N=6)
+        @test year(val) == 2020
+        @test period(val) == 2
+        @test frequencyof(val) === YPFrequency{6}
+    end
+    @test year(mm(2020, 12)) == 2020
+    @test period(mm(2020, 12)) == 12
+end
+
+@testset "TSeries" begin
+    # test constructors
+    s = TSeries(20Q1, collect(10.0 .+ (1:12)))
+    @test typeof(s) === TSeries{Quarterly, Float64, Array{Float64,1}}
+    @test size(s) == (12,)
+    @test axes(s) == (20Q1:22Q4,)
+    @test length(s) == 12
+    # indexing
+    @test s[1] == 11.0
+    @test s[12] == 22.0
+    @test s[1:3] == [11.0, 12.0, 13.0]
+    @test s[1:2:12] == collect(10.0 .+ (1:2:12))
+    @test s[s .< 13] == [11.0, 12.0]
+    #
+    @test s[20Q1] == 11.0
+    @test s[begin] == s.values[1]
+    @test s[end] == s.values[end]
+    @test s[begin:begin+3] isa typeof(s)
+    @test s[begin:begin+3].values == s.values[begin:begin+3]
+    @test (@. 13 < s < 16 ) isa TSeries{frequencyof(s), Bool}
+    #
+
+
+end
+
+nothing
+
 # ts_u = TSeries(1:5)
 # ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
 # ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
@@ -207,28 +306,6 @@ end
 #     end
 # end
 
-@testset "MITops" begin
-    @test 5U < 8U
-    @test 5U <= 8U
-    @test 5U <= 5U
-    @test 5U >= 5U
-    @test 5U == 5U
-    @test 8U >= 5U
-    @test 8U > 5U
-    @test 2001Q1 >= 2000Q3
-    @test_throws ArgumentError 1M1 > 2Q1
-    @test_throws ArgumentError 1M1 <= 2Q1
-    @test 1M1 != 2Q1
-
-    @test 2001Y + 5 == 2006Y
-    @test 6 + 2001Q3 == 2003Q1
-    @test 2003Q1 - 2001Q3 == 6
-    @test 2003Q1 - 6 == 2001Q3
-    @test_throws ArgumentError 6 - 2003Q1
-    @test_throws ArgumentError 2003Q1 + 2003Q1
-    @test_throws ArgumentError 2003Q1 + 2003Y
-end
-
 # @testset "show" begin
 #     for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], Iterators.cycle((qq(2010, 1), mm(2010, 1), yy(2010), ii(1))))
 #         let io = IOBuffer()
@@ -238,37 +315,6 @@ end
 #         end
 #     end
 # end
-
-@testset "show" begin
-    let io = IOBuffer()
-        show(io, 2020Q1)
-        show(io, 5U)
-        println(io, 2020M1 - 2019M1)
-        show(io, 3U-2U)
-        show(io, 2000M12-2000M1)
-        println(io, Duration{Yearly}(7))
-        show(io, Q1)
-        println(io, M1, M12, ".")
-        foo = readlines(seek(io,0))
-        @test foo == ["2020Q15U12", "1117", "1Q11M11M12."]
-    end
-end
-
-@testset "frequencyof" begin
-    @test frequencyof(qq(2000, 1)) == Quarterly
-    @test frequencyof(mm(2000, 1)) == Monthly
-    @test frequencyof(yy(2000)) == Yearly
-    @test frequencyof(1U) == Unit
-    @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly
-    @test_throws ArgumentError frequencyof(1)
-    @test_throws ArgumentError frequencyof(Int)
-    @test frequencyof(qq(2000,1)-qq(2000,1)) == Quarterly
-    @test frequencyof(mm(2000,1)-mm(2000,1)) == Monthly
-    @test frequencyof(yy(2000,1)-yy(2000,1)) == Yearly
-    @test frequencyof(5U-3U) == Unit
-    @test frequencyof(typeof(qq(2020,1):qq(2020,2))) == Quarterly
-    # @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
-end
 
 # @testset "TSeries: Broadcasting" begin
 
@@ -441,23 +487,6 @@ end
 #     @test firstdate(x) == qq(2020, 1)
 #     @test lastdate(x) == qq(2020, 4)
 # end
-
-@testset "mm, qq, yy" begin
-    @test mm(2020, 1) == MIT{Monthly}(2020 * 12)
-    @test qq(2020, 1) == MIT{Quarterly}(2020 * 4)
-    @test yy(2020) == MIT{Yearly}(2020)
-end
-
-@testset "year, period" begin
-    @test_throws ArgumentError year(1U)
-    let val = pp(2020, 2; N=6)
-        @test year(val) == 2020
-        @test period(val) == 2
-        @test frequencyof(val) === YPFrequency{6}
-    end
-    @test year(mm(2020, 12)) == 2020
-    @test period(mm(2020, 12)) == 12
-end
 
 # @testset "MIT: mitrange" begin
 #     @test mitrange(TSeries(qq(2020, 1), ones(4))) == qq(2020, 1):qq(2020, 4)

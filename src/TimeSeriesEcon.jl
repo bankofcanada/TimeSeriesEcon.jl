@@ -44,12 +44,6 @@ low-Frequency discrete macroeconomic time-series data.
 module TimeSeriesEcon
 
 include("momentintime.jl")
-# include("tseries.jl")
-# include("recursive.jl")
-# include("convert.jl")
-# include("plotrecipes.jl")
-
-# Defined in src/momentintime.jl
 export MIT, Duration
 export mm, qq, yy, pp
 export Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit
@@ -59,15 +53,20 @@ export U, Y, Q1, Q2, Q3, Q4
 export M1, M2, M3, M4, M5, M6
 export M7, M8, M9, M10, M11, M12
 
-# # Defined in src/TSeries.jl
-# export TSeries
+include("tseries.jl")
+export TSeries
+export firstdate, lastdate
+export typenan
+
 # export mitrange
 # export shift, shift!
 # export ppy
 # export pct, apct
 # export nanrm!
-# export firstdate, lastdate
 
+# include("recursive.jl")
+# include("convert.jl")
+# include("plotrecipes.jl")
 
 
 end

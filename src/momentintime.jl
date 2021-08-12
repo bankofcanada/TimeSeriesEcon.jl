@@ -113,9 +113,11 @@ frequencyof(::MIT{F}) where F <: Frequency = F
 frequencyof(::Type{MIT{F}}) where F <: Frequency = F
 frequencyof(::Duration{F}) where F <: Frequency = F
 frequencyof(::Type{Duration{F}}) where F <: Frequency = F
-# AbstractArray{<:MIT} covers both MIT-ranges and TSeries
+# AbstractArray{<:MIT} cover MIT-ranges and vectors of MIT
 frequencyof(::AbstractArray{MIT{F}}) where F <: Frequency = F
 frequencyof(::Type{<:AbstractArray{MIT{F}}}) where F <: Frequency = F
+frequencyof(::AbstractArray{Duration{F}}) where F <: Frequency = F
+frequencyof(::Type{<:AbstractArray{Duration{F}}}) where F <: Frequency = F
 
 # -------------------------
 # YP-specific stuff
