@@ -51,7 +51,12 @@ jobs:
           # Value passed to the --inline flag. Options: yes | no. Default value: yes.
           inline: yes # optional, default is yes
           # Value inserted in front of the julia command, e.g. for running xvfb-run julia [...]
-          # prefix: # optional, default is 
+          # prefix: # optional, default is
           # Value passed to the --project flag. The default value is the repository root: "@."
           # project: # optional, default is @.
-    
+
+      # process and submit the code coverage information
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v1
+        with:
+          file: lcov.info
