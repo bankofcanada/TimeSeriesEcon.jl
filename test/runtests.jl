@@ -175,8 +175,7 @@ end
     @test frequencyof(mm(2000,1)-mm(2000,1)) == Monthly
     @test frequencyof(yy(2000,1)-yy(2000,1)) == Yearly
     @test frequencyof(5U-3U) == Unit
-    @test frequencyof(typeof(qq(2020,1):qq(2020,2))) == Quarterly
-    # @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
+    @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
 end
 
 @testset "mm, qq, yy" begin
@@ -221,46 +220,47 @@ end
 
 end
 
+ts_u = TSeries(5)
+ts_v = TSeries(3:5)
+ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
+ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
+ts_y = TSeries(yy(2018), collect(1:12))
+
+@testset "TSeries: Construction" begin
+
+    @test ts_u.firstdate == 1U
+    # @test ts_u.values == 1:5
+
+    @test ts_m.firstdate == mm(2018, 1)
+    @test ts_m.values == collect(1.0:12.0)
+
+    @test ts_q.firstdate == qq(2018, 1)
+    @test ts_q.values == collect(1.0:12.0)
+
+    @test ts_y.firstdate == yy(2018)
+    @test ts_y.values == collect(1.0:12.0)
+
+    # Make sure if lengths are different we get an error
+    @test_throws ArgumentError TSeries(1U:5U, 1:6)
+
+    let t = TSeries(2U, rand(5))
+        @test firstdate(t) == 2U
+        @test lastdate(t) == 6U
+        @test length(t.values) == 5
+        @test length(t) == 5
+    end
+
+    let t = TSeries(1991Q1:1992Q4), s = TSeries(2222Y:2225Y, undef), r = TSeries(1006M3:1009M5, 0.3), e = TSeries(2000Y:1995Y, 7)
+        @test isempty(e)
+        @test length(r) == 10+12+12+5
+        @test length(t) == length(t.values) == 8
+        @test firstindex(t) == firstdate(t) == 1991Q1
+        @test lastindex(t) == lastdate(t) == 1992Q4
+    end
+
+end
+
 nothing
-
-# ts_u = TSeries(1:5)
-# ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
-# ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
-# ts_y = TSeries(yy(2018), collect(1:12))
-
-# @testset "TSeries: Construction" begin
-
-#     @test ts_u.firstdate == ii(1)
-#     @test ts_u.values == 1:5
-
-#     @test ts_m.firstdate == mm(2018, 1)
-#     @test ts_m.values == collect(1.0:12.0)
-
-#     @test ts_q.firstdate == qq(2018, 1)
-#     @test ts_q.values == collect(1.0:12.0)
-
-#     @test ts_y.firstdate == yy(2018)
-#     @test ts_y.values == collect(1.0:12.0)
-
-#     # Make sure if lengths are different we get an error
-#     @test_throws ArgumentError TSeries(1U:5U, 1:6)
-
-#     let t = TSeries(2U, rand(5))
-#         @test firstdate(t) == 2U
-#         @test lastdate(t) == 6U
-#         @test length(t.values) == 5
-#         @test length(t) == 5
-#     end
-
-#     let t = TSeries(1991Q1:1992Q4), s = TSeries(2222Y:2225Y, undef), r = TSeries(1006M3:1009M5, 0.3), e = TSeries(2000Y:1995Y, 7)
-#         @test isempty(e)
-#         @test length(r) == 10+12+12+5
-#         @test length(t) == length(t.values) == 8
-#         @test firstindex(t) == firstdate(t) == 1991Q1
-#         @test lastindex(t) == lastdate(t) == 1992Q4
-#     end
-
-# end
 
 # @testset "Int indexing" begin
 #     let t = TSeries(4U:8U, rand(5))

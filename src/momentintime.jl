@@ -107,16 +107,12 @@ function frequencyof end
 # throw an error, except for values and types that have a frequency
 # Q: should we return `nothing` instead? 
 # A: No. We assume that `frequencyof` returns a subtype of `Frequency`. 
-frequencyof(x) = throw(ArgumentError("$(typeof(x)) does not have a frequency."))
+frequencyof(::T) where T = frequencyof(T)
 frequencyof(T::Type) = throw(ArgumentError("$(T) does not have a frequency."))
-frequencyof(::MIT{F}) where F <: Frequency = F
 frequencyof(::Type{MIT{F}}) where F <: Frequency = F
-frequencyof(::Duration{F}) where F <: Frequency = F
 frequencyof(::Type{Duration{F}}) where F <: Frequency = F
 # AbstractArray{<:MIT} cover MIT-ranges and vectors of MIT
-frequencyof(::AbstractArray{MIT{F}}) where F <: Frequency = F
 frequencyof(::Type{<:AbstractArray{MIT{F}}}) where F <: Frequency = F
-frequencyof(::AbstractArray{Duration{F}}) where F <: Frequency = F
 frequencyof(::Type{<:AbstractArray{Duration{F}}}) where F <: Frequency = F
 
 # -------------------------

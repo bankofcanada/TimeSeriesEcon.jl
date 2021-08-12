@@ -34,7 +34,6 @@ Base.values(t::TSeries) = values(t.values)
 firstdate(t::TSeries) = t.firstdate
 lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
 
-frequencyof(::TSeries{F}) where F <: Frequency = F
 frequencyof(::Type{<:TSeries{F}}) where F <: Frequency = F
 
 """
@@ -81,8 +80,14 @@ Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, 
 # -------------------------------------------------------------
 
 # construct undefined from range
-TSeries(rng::UnitRange{<:MIT}) = TSeries(first(rng), Vector{Float64}(undef, length(rng)))
 TSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}) = TSeries(first(rng), Vector{T}(undef, length(rng)))
+TSeries(rng::UnitRange{<:MIT}) = TSeries(Float64, rng)
+TSeries(n::Integer) = TSeries(1U:n*U)
+TSeries(T::Type{<:Number}, n::Integer) = TSeries(T, 1U:n*U)
+TSeries(rng::UnitRange{<:Integer}) = TSeries(0U .+ rng)
+TSeries(T::Type{<:Number}, rng::UnitRange{<:Integer}) = TSeries(T, 0U .+ rng)
+TSeries(rng::AbstractRange, ::UndefInitializer) = TSeries(Float64, rng)
+TSeries(T::Type{<:Number}, rng::AbstractRange, ::UndefInitializer) = TSeries(T, rng)
 
 Base.similar(::Type{<:AbstractArray}, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT}}) = TSeries(T, shape[1])
 Base.similar(::Type{<:AbstractArray{T}}, shape::Tuple{UnitRange{<:MIT}}) where T <: Number = TSeries(T, shape[1])
@@ -92,7 +97,8 @@ Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT}}) where T <: Numb
 # construct from range and fill with the given constant or array
 Base.fill(v::Number, rng::UnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
 TSeries(rng::UnitRange{<:MIT}, v::Number) = fill!(TSeries(rng), v)
-TSeries(rng::UnitRange{<:MIT}, v::AbstractVector{<:Number}) = TSeries(first(rng), v)
+TSeries(rng::UnitRange{<:MIT}, v::AbstractVector{<:Number}) = 
+    length(rng) == length(v) ? TSeries(first(rng), v) : throw(ArgumentError("Range and data lengths mismatch."))
 
 
 # -------------------------------------------------------------
@@ -234,85 +240,6 @@ end
 
 nothing
 
-# """
-#     TSeries
-
-# Data structure representing a time-series vector. The following 
-# operations are allowed:
-
-#  - indexing using `MIT` (aka "moment-in-time") and `UnitRange{MIT}`
-#  - assignment using `MIT` and `UnitRange{MIT}`
-
-# In addition, most of the operations available to Julia vectors (+, -, *, etc.)
-# are supported by `TSeries` as well.
-
-# ### Examples
-#  - Create `TSeries`
-# ```julia-repl
-# julia> x = TSeries(qq(2020, 1), ones(4))
-# TSeries{Quarterly} of length 4
-# 2020Q1: 1.0
-# 2020Q2: 1.0
-# 2020Q3: 1.0
-# 2020Q4: 1.0
-# ```
-
-#  - Index into `TSeries`
-# ```julia-repl
-# julia> x[2000Q1]
-# 1.0
-
-# julia> x[qq(2020, 1):qq(2020, 2)]
-# TSeries{Quarterly} of length 2
-# 2020Q1: 1.0
-# 2020Q2: 1.0
-# ```
-
-# - Assignment using `MIT`
-# ```julia-repl
-# julia> x[qq(2020, 1)] = 100; x
-# TSeries{Quarterly} of length 4
-# 2020Q1: 100.0
-# 2020Q2: 1.0
-# 2020Q3: 1.0
-# 2020Q4: 1.0
-
-# julia> x[qq(2020, 1):qq(2020, 2)] = 100; x
-# TSeries{Quarterly} of length 4
-# 2020Q1: 100.0
-# 2020Q2: 100.0
-# 2020Q3: 1.0
-# 2020Q4: 1.0
-# ```
-
-#  - Arithmetic Operations on `TSeries`
-# ```julia-repl
-# julia> x = TSeries(qq(2020, 1), ones(4))
-# TSeries{Quarterly} of length 4
-# 2020Q1: 1.0
-# 2020Q2: 1.0
-# 2020Q3: 1.0
-# 2020Q4: 1.0
-
-# julia> 2*x + 98
-# TSeries{Quarterly} of length 4
-# 2020Q1: 100.0
-# 2020Q2: 100.0
-# 2020Q3: 100.0
-# 2020Q4: 100.0
-
-# julia> log(exp(x))
-# TSeries{Quarterly} of length 4
-# 2020Q1: 1.0
-# 2020Q2: 1.0
-# 2020Q3: 1.0
-# 2020Q4: 1.0
-# ```
-# """
-# mutable struct TSeries{T <: Frequency, C <: AbstractVector{Float64}} <: AbstractVector{Float64}
-#     firstdate::MIT{T}
-#     values::C
-# end
 
 # # We work only with Float64. All other numbers are converted to it.
 # # Might be inefficient
