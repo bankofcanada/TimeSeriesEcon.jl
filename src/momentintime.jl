@@ -217,7 +217,8 @@ Base.print(io::IO, d::Duration) = print(io, string(d))
 Base.promote_rule(IT::Type{<:Integer}, MT::Type{<:MIT}) = throw(ArgumentError("Invalid arithmetic operation with $IT and $MT"))
 Base.promote_rule(IT::Type{<:Integer}, DT::Type{<:Duration}) = throw(ArgumentError("Invalid arithmetic operation with $IT and $DT"))
 
-mixed_freq_error(::T1, ::T2) where {T1,T2} = throw(ArgumentError("Mixing frequencies not allowed: $(frequencyof(T1)) and $(frequencyof(T2))."))
+mixed_freq_error(T1::Type, T2::Type) = throw(ArgumentError("Mixing frequencies not allowed: $(frequencyof(T1)) and $(frequencyof(T2))."))
+mixed_freq_error(::T1, ::T2) where {T1,T2} = mixed_freq_error(T1, T2) 
 
 # -------------------
 # subtraction

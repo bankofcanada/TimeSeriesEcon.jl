@@ -82,8 +82,8 @@ Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, 
 # construct undefined from range
 TSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}) = TSeries(first(rng), Vector{T}(undef, length(rng)))
 TSeries(rng::UnitRange{<:MIT}) = TSeries(Float64, rng)
-TSeries(n::Integer) = TSeries(1U:n*U)
-TSeries(T::Type{<:Number}, n::Integer) = TSeries(T, 1U:n*U)
+TSeries(n::Integer) = TSeries(1U:n * U)
+TSeries(T::Type{<:Number}, n::Integer) = TSeries(T, 1U:n * U)
 TSeries(rng::UnitRange{<:Integer}) = TSeries(0U .+ rng)
 TSeries(T::Type{<:Number}, rng::UnitRange{<:Integer}) = TSeries(T, 0U .+ rng)
 TSeries(rng::AbstractRange, ::UndefInitializer) = TSeries(Float64, rng)
@@ -96,7 +96,7 @@ Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT}}) where T <: Numb
 
 # construct from range and fill with the given constant or array
 Base.fill(v::Number, rng::UnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
-TSeries(rng::UnitRange{<:MIT}, v::Number) = fill!(TSeries(rng), v)
+TSeries(rng::UnitRange{<:MIT}, v::Number) = fill(v, rng)
 TSeries(rng::UnitRange{<:MIT}, v::AbstractVector{<:Number}) = 
     length(rng) == length(v) ? TSeries(first(rng), v) : throw(ArgumentError("Range and data lengths mismatch."))
 
@@ -126,7 +126,7 @@ function Base.show(io::IO, t::TSeries)
     from = t.firstdate
     nrow, ncol = displaysize(io)
     if limit && nval > nrow - 5
-        top = div(nrow - 5, 2)
+            top = div(nrow - 5, 2)
         bot = nval - nrow + 6 + top
         for i = 1:top
             print(io, "\n", lpad(from + (i - 1), 8), " : ", t.values[i])
@@ -158,13 +158,17 @@ end
 Base.getindex(t::TSeries, m::MIT) = mixed_freq_error(t, m)
 function Base.getindex(t::TSeries{F}, m::MIT{F}) where {F <: Frequency}
     @boundscheck checkbounds(t, m)
-    getindex(t.values, firstindex(t.values) + (m - firstdate(t)))
+    fi = firstindex(t.values)
+    getindex(t.values, fi + oftype(fi, m - firstdate(t)))
 end
 
 function Base.getindex(t::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F <: Frequency}
-    start = firstindex(t.values)
-    stop = oftype(start, start + (last(rng) - firstdate(t)))
-    start = oftype(start, start + (first(rng) - firstdate(t)))
+    fi = firstindex(t.values)
+    stop = oftype(fi, fi + (last(rng) - firstdate(t)))
+    start = oftype(fi, fi + (first(rng) - firstdate(t)))
+    if start < fi || stop > lastindex(t.values)
+        throw(BoundsError(t, rng))
+    end
     return TSeries(first(rng), getindex(t.values, start:stop))
 end
 
@@ -186,7 +190,7 @@ function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::Abstr
     end
     fi = firstindex(t.values)
     start = oftype(fi, fi + (first(rng) - firstdate(t)))
-    stop = oftype(fi, fi + (last(rng) - firstdate(t)))
+stop = oftype(fi, fi + (last(rng) - firstdate(t)))
     setindex!(t.values, vec, start:stop)
 end
 
@@ -205,14 +209,14 @@ function typenan end
 typenan(x::T) where T <: Real = typenan(T)
 typenan(T::Type{<:AbstractFloat}) = T(NaN)
 typenan(T::Type{<:Integer}) = typemax(T)
-typenan(T::Type{<:Union{MIT, Duration}}) = T(typemax(Int64))
+typenan(T::Type{<:Union{MIT,Duration}}) = T(typemax(Int64))
 
 # n::Integer - only the length changes. We keep the starting date 
 function Base.resize!(t::TSeries, n::Integer)
     lt = length(t)  # the old length 
     resize!(t.values, Int64(n))
     # fill new locations with NaN
-    t.values[lt+1:end] .= typenan(eltype(t))
+    t.values[lt + 1:end] .= typenan(eltype(t))
     return t
 end
 
@@ -226,77 +230,29 @@ function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where F <: Frequenc
     end
     tvals = copy(t.values) # old values - keep them safe for now
     inds_to_copy = intersect(rng, orng)
-    nrng = min(first(rng), first(orng)):max(last(rng),last(orng))
-    _do = convert(Int,first(inds_to_copy) - first(rng)) + 1
+    # nrng = min(first(rng), first(orng)):max(last(rng), last(orng))
+    _do = convert(Int, first(inds_to_copy) - first(rng)) + 1
     _so = convert(Int, first(inds_to_copy) - first(orng)) + 1
     _n = length(inds_to_copy)
-    resize!(t.values, nrng)
-    t.firstdate = first(nrng)
-    t[begin:first(inds_to_copy)-1] .= typenan(eltype(t))
-    t[last(inds_to_copy)+1:end] .= typenan(eltype(t))
+    resize!(t.values, length(rng))
+    t.firstdate = first(rng)
+    # t[begin:first(inds_to_copy) - 1] .= typenan(eltype(t))
+    # t[last(inds_to_copy) + 1:end] .= typenan(eltype(t))
+    fill!(t.values, typenan(eltype(t)))
     copyto!(t.values, _do, tvals, _so, _n)
     return t
 end
 
+Base.copyto!(dest::TSeries, src::TSeries) = mixed_freq_error(dest, src)
+function Base.copyto!(dest::TSeries{F}, src::TSeries{F}) where F <: Frequency
+    fullindex = min(firstindex(dest), firstindex(src)):max(lastindex(dest), lastindex(src))
+    resize!(dest, fullindex)
+    copyto!(dest.values, Int(firstindex(src) - firstindex(dest) + 1), src.values, 1, length(src))
+    dest
+end
+
 nothing
 
-
-# # We work only with Float64. All other numbers are converted to it.
-# # Might be inefficient
-# TSeries(fd::MIT, v::AbstractVector{<:Number}) = TSeries(fd, Vector{Float64}(v))
-
-# TSeries(v::AbstractVector{<:Number}) = TSeries(1U, v)
-
-# TSeries(I::AbstractUnitRange{<:MIT}) = TSeries(first(I), Vector{Float64}(undef, length(I)))
-# TSeries(I::AbstractUnitRange{<:MIT}, ::UndefInitializer) = TSeries(I)
-
-# # TSeries constructor with a range and data
-# function TSeries(I::AbstractUnitRange{<:MIT}, V::AbstractVector{<:Number})
-#     if length(I) ≠ length(V)
-#         throw(ArgumentError("Range and data lengths don't match."))
-#     end
-#     TSeries(first(I), V)
-# end
-
-# # TSeries constructor with a range and a single value
-# function TSeries(I::AbstractUnitRange{<:MIT}, v::Number)
-#     # use the inner constructor
-#     TSeries(first(I), fill(Float64(v), length(I)))
-# end
-
-# #-------------------------------------------------------------------------------
-# # Base.show
-# #-------------------------------------------------------------------------------
-
-# Base.summary(io::IO, t::TSeries) = isempty(t) ? 
-#         print(io, "Empty ", frequencyof(t), " TSeries") : 
-#         print(IOContext(io, :compact=>true), length(t.values), "-element ", frequencyof(t), " TSeries from ", t.firstdate)
-
-# Base.show(io::IO, ::MIME"text/plain", t::TSeries) = show(io, t)
-# function Base.show(io::IO, t::TSeries)
-#     summary(io, t)
-#     isempty(t) && return
-#     print(io, ":")
-#     limit = get(io, :limit, true)
-#     nval = length(t.values)
-#     from = t.firstdate
-#     nrow, ncol = displaysize(io)
-#     if limit && nval > nrow - 5
-#         top = div(nrow - 5, 2)
-#         bot = nval - nrow + 6 + top
-#         for i = 1:top
-#             print(io, "\n", lpad(from+(i-1), 8), " : ", t.values[i])
-#         end
-#         print(io, "\n    ⋮")
-#         for i = bot:nval
-#             print(io, "\n", lpad(from+(i-1), 8), " : ", t.values[i])
-#         end
-#     else
-#         for i = 1:nval
-#             print(io, "\n", lpad(from+(i-1), 8), " : ", t.values[i])
-#         end
-#     end
-# end
 
 # #-------------------------------------------------------------------------------
 # # Base.getindex and Base.setindex
@@ -329,6 +285,16 @@ nothing
 # Base.axes1(r::AbstractUnitRange{<:MIT}) = Base.OneTo(length(r))
 # Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractUnitRange{Int}) = r[first(I)]:r[last(I)]
 # Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractVector{Int}) = [r[i] for i in I]
+
+Base.view(t::TSeries, I::AbstractRange{<:MIT}) = mixed_freq_error(t, I)
+function Base.view(t::TSeries{F}, I::AbstractRange{MIT{F}}) where F <: Frequency 
+    fi = firstindex(t.values)
+    TSeries(first(I), view(t.values, oftype(fi, first(I) - firstindex(t) + fi):oftype(fi, last(I) - firstindex(t) + fi)))
+end
+function Base.view(t::TSeries, I::AbstractRange{<:Integer}) 
+    fi = firstindex(t.values)
+    TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
+end
 
 # function Base.view(t::TSeries, I::AbstractUnitRange{<:Integer})
 #     if !<:(eltype(I), MIT)

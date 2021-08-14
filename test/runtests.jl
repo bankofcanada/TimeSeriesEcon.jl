@@ -216,6 +216,46 @@ end
     @test s[begin:begin+3].values == s.values[begin:begin+3]
     @test (@. 13 < s < 16 ) isa TSeries{frequencyof(s), Bool}
     #
+end
+
+@testset "Bcast" begin
+    t = TSeries(5U:10U, rand(6))
+
+    # we can broadcast with a singleton
+    r = t .+ 5
+    @test typeof(r) == typeof(t) && eachindex(r) == eachindex(t) && all(r.values .== t.values .+ 5)
+
+    # we can broadcast with another TSeries of identical range
+    r = t .+ TSeries(5U, collect(1:6))
+    @test typeof(r) == typeof(t) && eachindex(r) == eachindex(t) && all(r.values .== t.values .+ (1:6))
+
+    # we can broadcast with another TSeries of different range
+    r = t .+ TSeries(4U, collect(1:6))
+    @test typeof(r) == typeof(t) && eachindex(r) == 5U:9U && all(r.values .== t.values[1:end-1] .+ (2:6))
+
+    # we can broadcast with a Vector
+    r = t .+ collect(1:6)
+    @test typeof(r) == typeof(t) && eachindex(r) == eachindex(t) && all(r.values .== t.values .+ (1:6))
+
+    # broadcast with a vector of the wrong dimension throws a DimensionMismatch
+    @test_throws DimensionMismatch t .+ collect(1:4)
+    @test_throws DimensionMismatch t .+ collect(1:8)
+
+    # broadcast with a TSeries of another frequency throws a mixed_freq_error
+    @test_throws ArgumentError t .+ TSeries(2020Q1 .+ (0:5), 0.75)
+
+    # we can .= correctly
+    t .= 1.0
+    @test all(t.values .== 1.0)
+
+    t .+= collect(1:6)
+    @test eachindex(t) == (5U:10U) && all(t.values .== 1.0 .+ (1:6))
+
+    s = similar(t, 3U:12U)
+    fill!(s, 0.0)
+    s .= t .- 2
+    @test eachindex(s) == (3U:12U) && all(s[5U:10U].values .== (1:6) .- 1.0)
+    @test all(s[3U:4U].values .== 0.0) && all(s[11U:end] .== 0.0)
 
 
 end
@@ -226,7 +266,7 @@ ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
 ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
 ts_y = TSeries(yy(2018), collect(1:12))
 
-@testset "TSeries: Construction" begin
+@testset "TSeries" begin
 
     @test ts_u.firstdate == 1U
     # @test ts_u.values == 1:5
@@ -260,27 +300,25 @@ ts_y = TSeries(yy(2018), collect(1:12))
 
 end
 
-nothing
-
-# @testset "Int indexing" begin
-#     let t = TSeries(4U:8U, rand(5))
-#         @test t.firstdate == 4U && lastdate(t) == 8U
-#         # test access
-#         @test t[1] isa Number
-#         @test t[1] == t.values[1]
-#         @test t[2:4] isa TSeries{frequencyof(t),Vector{Float64}}
-#         @test t[2:4].values == t.values[2:4]
-#         @test t[[1,3,4]] isa Vector{Float64}
-#         @test t[[1,3,4]] == t.values[[1,3,4]]
-#         # test assignment
-#         @test begin
-#             t[2:4] = 2.5
-#             t.values[2:4] == fill(2.5, 3)
-#         end
-#         @test 5 == (t[3] = 5)
-#         @test t.values == [first(t), 2.5, 5.0, 2.5, last(t)]
-#     end
-# end
+@testset "Int indexing" begin
+    let t = TSeries(4U:8U, rand(5))
+        @test t.firstdate == 4U && lastdate(t) == 8U
+        # test access
+        @test t[1] isa Number
+        @test t[1] == t.values[1]
+        @test t[2:4] isa Vector{Float64} # TSeries{frequencyof(t),Float64,Vector{Float64}}
+        @test t[2:4] == t.values[2:4]
+        @test t[[1,3,4]] isa Vector{Float64}
+        @test t[[1,3,4]] == t.values[[1,3,4]]
+        # test assignment
+        @test begin
+            t[2:4] .= 2.5
+            t.values[2:4] == fill(2.5, 3)
+        end
+        @test 5 == (t[3] = 5)
+        @test t.values == [first(t), 2.5, 5.0, 2.5, last(t)]
+    end
+end
 
 # @testset "Views" begin
 #     let t = TSeries(2010M1, rand(20))
