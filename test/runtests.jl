@@ -204,6 +204,18 @@ end
     @test size(s) == (12,)
     @test axes(s) == (20Q1:22Q4,)
     @test length(s) == 12
+
+    t = TSeries(Int, 5)   # from type and number
+    @test typeof(t) === TSeries{Unit,Int,Vector{Int}} && t.firstdate == 1U && length(t.values) == 5
+    t = TSeries(UInt8, 4 .+ (1:5)) # from type and Int range
+    @test typeof(t) === TSeries{Unit,UInt8,Vector{UInt8}} && t.firstdate == 5U && length(t.values) == 5
+    t = TSeries(Float32, 1:5, undef) # from type, range and undef
+    @test typeof(t) === TSeries{Unit,Float32,Vector{Float32}} && t.firstdate == 1U && length(t.values) == 5
+
+    # constructing with similar()
+    t = similar(ones(Float64, 5), (2Q1:4Q4))
+    @test typeof(t) === TSeries{Quarterly,Float64,Vector{Float64}} && t.firstdate == 2Q1 && length(t.values) == 12
+
     # indexing
     @test s[1] == 11.0
     @test s[12] == 22.0
@@ -221,6 +233,25 @@ end
     @test_throws ArgumentError s[2:end]  # can't mix Int indexing with begin/end
     @test_throws ArgumentError s[begin:4]
     #
+    @test_throws ArgumentError s[1U]  # wrong frequency
+    @test_throws ArgumentError s[1Y:3Y]  # wrong frequency
+    @test_throws ArgumentError s[2Y] = 5  # wrong frequency
+
+    q = copy(s)
+    s[19Q1] = 5  # outside range
+    @test s.values ≈ [5, NaN, NaN, NaN, q.values...] nans=true
+    s[end + 3] = 3  # outside range
+    @test s.values ≈ [5, NaN, NaN, NaN, q.values..., NaN, NaN, 3] nans=true
+
+    @test_throws ArgumentError s[20Y:21Y] = [2, 3]  # wrong frequency
+
+    i = TSeries(20Y, ones(Int32, 5))
+    i[17Y] = -1
+    @test i.values == [-1, typenan(Int32), typenan(Int32), ones(5)...]
+
+    @test_throws ArgumentError resize!(i, 17U:24U)  # wrong frequency
+    @test_throws ArgumentError copyto!(i, 17U:24U, i)  # wrong frequency
+    @test_throws ArgumentError copyto!(i, s)  # wrong frequency
 end
 
 @testset "Bcast" begin
@@ -263,11 +294,18 @@ end
     @test all(s[3U:4U].values .== 0.0) && all(s[11U:end] .== 0.0)
 
     # dot-assign into a range
-    t[begin+2:end-2] .= 2
+    t[begin + 2:end - 2] .= 2
     @test t.values == [2, 3, 2, 2, 6, 7]
     
-    t[end+2:end+4] .= 8
-    @test t.values ≈ [2, 3, 2, 2, 6, 7, NaN, 8, 8, 8] nans=true
+    t[end + 2:end + 4] .= 8
+    @test t.values ≈ [2, 3, 2, 2, 6, 7, NaN, 8, 8, 8] nans = true
+
+    # setindex with BitArray
+    t[t .< 7] .= 0
+    @test t.values ≈ [0, 0, 0, 0, 0, 7, NaN, 8, 8, 8] nans = true
+    
+    t[2:4] .= 1
+    @test t.values ≈ [0, 1, 1, 1, 0, 7, NaN, 8, 8, 8] nans = true
 
 end
 
@@ -346,7 +384,7 @@ end
         @test z != t
         z = view(t, 2:5)
         c = view(t, 2010M2:2010M5)
-        @test c == z
+@test c == z
         @test z == t[begin .+ (1:4)]
         z[[1,3]] += [0.5, 0.5]
         z[[2,4]] = [1,1.5]
@@ -357,15 +395,22 @@ end
 
 @testset "show" begin
     for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], 
-                           Iterators.cycle((qq(2010, 1), mm(2010, 1), yy(2010), 1U)))
+        Iterators.cycle((qq(2010, 1), mm(2010, 1), yy(2010), 1U)))
         let io = IOBuffer()
             t = TSeries(fd, rand(24))
             show(IOContext(io, :displaysize => (nrow, 80)), MIME"text/plain"(), t)
             @test length(readlines(seek(io, 0))) == max(2, min(length(t) + 1, nrow - 3))
         end
     end
+    for fd = (2020Q1, 2020M1, 2020Y, 2020U)
+        let io = IOBuffer()
+            t = TSeries(fd, Float64[])
+            show(IOContext(io, :displaysize => (10, 80)), MIME"text/plain"(), t)
+            @test startswith(readlines(seek(io, 0))[1], "Empty")
+        end
+    end
 end
-
+            
 @testset "math" begin
     tq = TSeries(2020Q1, rand(12))
     tm = TSeries(2020M1, copy(tq.values))
@@ -391,7 +436,7 @@ end
     @test_throws MethodError tq + 5
     @test 5 .+ tq == tq .+ 5  # broadcasting works
     @test_throws ArgumentError tq + 5tm   # different frequencies not allowed
-
+    
 end
 
 @testset "Monthly" begin
@@ -426,7 +471,7 @@ end
     # partially out of boundary
     @test_throws BoundsError ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[qq(2018, 1):qq(2018, 4)]
     @test_throws BoundsError ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[1:4]
-
+    
     @test_throws BoundsError ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[qq(2018, 4):qq(2020, 4)]
     @test_throws BoundsError ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[4:12]
 
@@ -478,7 +523,7 @@ end
         ts_m[mm(2019, 2):mm(2019, 4)] = [9, 10, 11];
         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [9, 10, 11]
         @test ts_m.firstdate == mm(2018, 1)
-        @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [9, 10, 11]))
+@test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [9, 10, 11]))
     end
 
     begin
@@ -526,7 +571,7 @@ end
         @test_throws ArgumentError t[6U:7U] = TSeries(6Y, s.values)  # mixed frequency of src and dest
     end
 
-    # IRIS related: shift
+        # IRIS related: shift
     x = TSeries(qq(2020, 1), zeros(3));
     @test shift(x, 1) == TSeries(qq(2019, 4), zeros(3))
 
@@ -565,8 +610,9 @@ end
         @test lead(y2) == y && lead(y2) !== y
         @test z === y
         # opeartions
-        @test x+x == 2x
-        @test_throws ArgumentError x + x.values == 2x
+        @test x + x + 3x == 5x
+        @test_throws ArgumentError x + x.values 
+        @test_throws ArgumentError x.values + x
     end
 end
 
@@ -579,7 +625,7 @@ end
 #     ts = TSeries(1U, zeros(0))
 #     ts[1U] = ts[2U] = 1.0
 #     @rec 3U:10U ts[t] = ts[t-1]+ts[t-2]
-#     @test ts.values == [1.0,1,2,3,5,8,13,21,34,55]
+        #     @test ts.values == [1.0,1,2,3,5,8,13,21,34,55]
 #     t = zeros(10,7)
 #     r = rand(1, 7)
 #     t[1, :] = r
