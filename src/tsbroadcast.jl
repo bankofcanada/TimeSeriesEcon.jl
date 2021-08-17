@@ -26,6 +26,7 @@ Base.similar(bc::Broadcast.Broadcasted{<:TSeriesStyle}, ::Type{ElType}) where El
 # resized to include the broadcasted range. If the original range of s is already larger, then 
 # values outside the broadcasted range are left unchanged.
 
+
 # figure out the axes range of the result of the broadcast operation
 @inline my_combine_axes(A, B...) = my_broadcast_shape(axes(A), my_combine_axes(B...))
 @inline my_combine_axes(A, B) = my_broadcast_shape(axes(A), axes(B))
@@ -85,6 +86,14 @@ function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {
     bc
 end
 
+function Base.axes(bc::Base.Broadcast.Broadcasted{<:TSeriesStyle})
+    bc.axes === nothing ? my_combine_axes(bc.args...) : bc.axes
+end
+
+function Base.axes(bc::Base.Broadcast.Broadcasted{<:TSeriesStyle}, d::Integer)
+    d == 1 ? axes(bc)[1] : Base.OneTo(1)
+end
+
 # this specialization allows for the result to be stored in a TSeries
 function Base.copyto!(dest::TSeries, bc::Base.Broadcast.Broadcasted{Nothing})
     bcrng = bc.axes[1]
@@ -99,5 +108,6 @@ function Base.copyto!(dest::TSeries, bc::Base.Broadcast.Broadcasted{Nothing})
     return dest
 end
 
-
-
+function Base.Broadcast.dotview(t::TSeries, rng::UnitRange{<:MIT})
+    rng ⊆ eachindex(t) ? Base.maybeview(t, rng) : Base.maybeview(resize!(t, union(eachindex(t), rng)), rng)
+end

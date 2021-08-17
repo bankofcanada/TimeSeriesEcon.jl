@@ -219,6 +219,8 @@ Base.promote_rule(IT::Type{<:Integer}, DT::Type{<:Duration}) = throw(ArgumentErr
 
 mixed_freq_error(T1::Type, T2::Type) = throw(ArgumentError("Mixing frequencies not allowed: $(frequencyof(T1)) and $(frequencyof(T2))."))
 mixed_freq_error(::T1, ::T2) where {T1,T2} = mixed_freq_error(T1, T2) 
+mixed_freq_error(T1::Type, T2::Type, T3::Type) = throw(ArgumentError("Mixing frequencies not allowed: $(frequencyof(T1)), $(frequencyof(T2)) and $(frequencyof(T3))."))
+mixed_freq_error(::T1, ::T2, ::T3) where {T1,T2,T3} = mixed_freq_error(T1, T2, T3) 
 
 # -------------------
 # subtraction
@@ -353,9 +355,20 @@ global const M12 = _FPConst{Monthly,12}()
 # ----------------------------------------
 
 Base.:(:)(start::MIT, stop::MIT) = mixed_freq_error(start, stop)
-Base.:(:)(start::MIT{F}, stop::MIT{F}) where F <: Frequency = 
-    UnitRange{MIT{F}}(start, stop)
+Base.:(:)(start::MIT{F}, stop::MIT{F}) where F <: Frequency = UnitRange{MIT{F}}(start, stop)
+
+Base.:(:)(::Int, ::MIT) = my_range_error()
+Base.:(:)(::MIT, ::Int) = my_range_error()
+my_range_error() = throw(ArgumentError("""Cannot mix Int and MIT in the same range. 
+    If you're using `begin` or `end` to index a TSeries make sure to use them at both ends.
+    For example, instead of t[2:end] use t[begin+1:end].
+"""))
 
 Base.length(rng::UnitRange{<:MIT}) = convert(Int, last(rng) - first(rng) + 1)
 Base.step(rng::UnitRange{<:MIT}) = convert(Int, 1)
 
+Base.union(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = mixed_freq_error(l, r)
+Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = min(first(l), first(r)):max(last(l), last(r))
+
+# Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
+# Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)

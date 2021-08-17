@@ -35,6 +35,7 @@ firstdate(t::TSeries) = t.firstdate
 lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
 
 frequencyof(::Type{<:TSeries{F}}) where F <: Frequency = F
+@inline rangeof(t::TSeries) = firstdate(t):lastdate(t)
 
 """
     firstdate(ts), lastdate(ts)
@@ -88,6 +89,7 @@ TSeries(rng::UnitRange{<:Integer}) = TSeries(0U .+ rng)
 TSeries(T::Type{<:Number}, rng::UnitRange{<:Integer}) = TSeries(T, 0U .+ rng)
 TSeries(rng::AbstractRange, ::UndefInitializer) = TSeries(Float64, rng)
 TSeries(T::Type{<:Number}, rng::AbstractRange, ::UndefInitializer) = TSeries(T, rng)
+TSeries(rng::UnitRange{<:MIT}, ini::Function) = TSeries(first(rng), ini(length(rng)))
 
 Base.similar(::Type{<:AbstractArray}, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT}}) = TSeries(T, shape[1])
 Base.similar(::Type{<:AbstractArray{T}}, shape::Tuple{UnitRange{<:MIT}}) where T <: Number = TSeries(T, shape[1])
@@ -162,6 +164,7 @@ function Base.getindex(t::TSeries{F}, m::MIT{F}) where {F <: Frequency}
     getindex(t.values, fi + oftype(fi, m - firstdate(t)))
 end
 
+Base.getindex(t::TSeries, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
 function Base.getindex(t::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F <: Frequency}
     fi = firstindex(t.values)
     stop = oftype(fi, fi + (last(rng) - firstdate(t)))
@@ -175,25 +178,28 @@ end
 Base.setindex!(t::TSeries, ::Number, m::MIT) = mixed_freq_error(t, m)
 function Base.setindex!(t::TSeries{F}, v::Number, m::MIT{F}) where {F <: Frequency}
     # @boundscheck checkbounds(t, m)
-    if m ∉ eachindex(t)
+    if m ∉ rangeof(t)
         # !! resize!() doesn't work for TSeries out of the box. we implement it below. 
-        resize!(t, min(m, firstindex(t)):max(m, lastindex(t)))
+        resize!(t, union(m:m, rangeof(t))) 
     end
     fi = firstindex(t.values)
     setindex!(t.values, v, fi + oftype(fi, m - firstdate(t)))
 end
 
-function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::AbstractRange{MIT{F}}) where {F <: Frequency}
-    if !issubset(rng, eachindex(t))
+Base.setindex!(t::TSeries, ::AbstractVector{<:Number}, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
+function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::AbstractRange{MIT{F}}) where F <: Frequency
+    if !issubset(rng, rangeof(t))
         # !! resize!() doesn't work for TSeries out of the box. we implement it below. 
-        resize!(t, min(first(rng), firstindex(t)):max(last(rng), lastindex(t)))
+        resize!(t, union(rangeof(t), rng))
     end
     fi = firstindex(t.values)
     start = oftype(fi, fi + (first(rng) - firstdate(t)))
-stop = oftype(fi, fi + (last(rng) - firstdate(t)))
+    stop = oftype(fi, fi + (last(rng) - firstdate(t)))
     setindex!(t.values, vec, start:stop)
 end
 
+Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) where {F1 <: Frequency,F2 <: Frequency,F3 <: Frequency} = mixed_freq_error(t, src, rng)
+@inline Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where F <: Frequency = copyto!(t, rng, src)
 
 """
     typenan(x), typenan(T)
@@ -223,7 +229,7 @@ end
 # if range is given, we may have to 
 Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
 function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where F <: Frequency
-    orng = eachindex(t)  # old range
+    orng = rangeof(t)  # old range
     if first(rng) == first(orng)
         # if the beginning doesn't change we fallback on resize!(t, n)
         return resize!(t, length(rng))
@@ -243,219 +249,33 @@ function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where F <: Frequenc
     return t
 end
 
+#
 Base.copyto!(dest::TSeries, src::TSeries) = mixed_freq_error(dest, src)
-function Base.copyto!(dest::TSeries{F}, src::TSeries{F}) where F <: Frequency
-    fullindex = min(firstindex(dest), firstindex(src)):max(lastindex(dest), lastindex(src))
+@inline Base.copyto!(dest::TSeries{F}, src::TSeries{F}) where F <: Frequency = copyto!(dest, rangeof(src), src)
+
+#
+Base.copyto!(dest::TSeries, drng::AbstractRange{<:MIT}, src::TSeries) = mixed_freq_error(dest, drng, src)
+function Base.copyto!(dest::TSeries{F}, drng::AbstractRange{MIT{F}}, src::TSeries{F}) where F <: Frequency
+    fullindex = union(rangeof(dest), drng)
     resize!(dest, fullindex)
-    copyto!(dest.values, Int(firstindex(src) - firstindex(dest) + 1), src.values, 1, length(src))
+    copyto!(dest.values, Int(first(drng) - firstindex(dest) + 1), src[drng].values, 1, length(drng))
     dest
 end
 
-nothing
+# nothing
 
-
-# #-------------------------------------------------------------------------------
-# # Base.getindex and Base.setindex
-# #-------------------------------------------------------------------------------
-
-
-# # """
-# # Since `TSeries` is a subtype of `AbstractVector`, we have to provide implementations for `size`, `getindex`, and `setindex!`
-# # """
-# Base.:(==)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency = (x.firstdate == y.firstdate && isequal(x.values, y.values))
-# Base.size(ts::TSeries) = size(ts.values)
-
-# # Indexing with plain integers simply indexes within the values 
-# Base.getindex(ts::TSeries, i::Int) = getindex(ts.values, i)
-# Base.getindex(ts::TSeries, I::AbstractUnitRange{Int}) = TSeries(firstdate(ts) - 1 .+ I, getindex(ts.values, I))
-# Base.getindex(ts::TSeries, I::AbstractVector{Int}) = getindex(ts.values, I)
-# Base.setindex!(ts::TSeries, v::Number, i::Int) = setindex!(ts.values, v, i)
-# Base.setindex!(ts::TSeries, v::Number, I::AbstractUnitRange{Int}) = ts.values[I] .= v
-# Base.setindex!(ts::TSeries, v::Number, I::AbstractVector{Int}) = ts.values[I] .= v
-# Base.setindex!(ts::TSeries{F}, v::TSeries{F}, I::AbstractUnitRange{Int}) where F <: Frequency = ts.values[I] .= v.values
-# Base.setindex!(ts::TSeries{F}, v::TSeries{F}, I::AbstractVector{Int}) where F <: Frequency = ts.values[I] .= v.values
-# Base.setindex!(ts::TSeries, v, I::AbstractUnitRange{Int}) = setindex!(ts.values, v, I)
-# Base.setindex!(ts::TSeries, v, I::AbstractVector{Int}) = setindex!(ts.values, v, I)
-
-
-
-# Base.axes(t::TSeries) = (mitrange(t),)
-# Base.axes1(t::TSeries) = mitrange(t)
-# Base.axes(r::AbstractUnitRange{<:MIT}) = (Base.OneTo(length(r)),)
-# Base.axes1(r::AbstractUnitRange{<:MIT}) = Base.OneTo(length(r))
-# Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractUnitRange{Int}) = r[first(I)]:r[last(I)]
-# Base.getindex(r::AbstractUnitRange{<:MIT}, I::AbstractVector{Int}) = [r[i] for i in I]
-
+# view with MIT indexing
 Base.view(t::TSeries, I::AbstractRange{<:MIT}) = mixed_freq_error(t, I)
 function Base.view(t::TSeries{F}, I::AbstractRange{MIT{F}}) where F <: Frequency 
     fi = firstindex(t.values)
     TSeries(first(I), view(t.values, oftype(fi, first(I) - firstindex(t) + fi):oftype(fi, last(I) - firstindex(t) + fi)))
 end
+
+# view with Int indexing
 function Base.view(t::TSeries, I::AbstractRange{<:Integer}) 
     fi = firstindex(t.values)
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
-
-# function Base.view(t::TSeries, I::AbstractUnitRange{<:Integer})
-#     if !<:(eltype(I), MIT)
-#         I = firstdate(t) - 1 .+ I
-#     end
-#     @boundscheck  checkbounds(t, I)
-#     TSeries(I, @inbounds view(t.values, I .- t.firstdate .+ 1))
-# end
-
-# Base.similar(t::TSeries) = TSeries(firstdate(t), similar(getfield(t, :values)))
-# Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
-# Base.IndexStyle(::TSeries) = IndexLinear()
-
-# """
-# `getindex` using `MIT`
-# """
-# Base.getindex(ts::TSeries{T}, i::MIT{T}) where T <: Frequency = begin
-#     # return `nothing` if accessing outside of the `ts` range
-#     if i < ts.firstdate || i > ts.firstdate + length(ts) - 1
-#         return nothing
-#     end
-
-#     i_int = i - ts.firstdate + 1
-#     ts[i_int]
-# end
-
-# """
-# `getindex` using `Vector{MIT}`. Note the difference between `Vector{MIT}` and `UnitRange{MIT}`
-# """
-# Base.getindex(s::TSeries{T},v::AbstractVector{MIT{T}}) where T <: Frequency = begin
-#     [s[i] for i in v]
-# end
-
-# """
-# `getindex` using `UnitRange{MIT}`
-# """
-# Base.getindex(ts::TSeries{T}, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
-
-#     I_int = I .- ts.firstdate .+ 1
-
-#     I_common = intersect(I_int, 1:length(ts))
-
-#     if I_common.start > I_common.stop
-#         println("Warning: $I is outside of TSeries bounds $(mitrange(ts)).")
-#         return nothing
-#     end
-
-#     firstdate_new = MIT{T}(Int(ts.firstdate) + I_common.start - 1)
-
-#     return TSeries(firstdate_new, ts.values[I_common])
-# end
-
-# """
-# `setindex` a value using `MIT`
-# """
-# Base.setindex!(ts::TSeries{T}, v::Number, mit::MIT{T}) where T <: Frequency = begin
-#     # Step 1: find the `distance` between
-#     # - mit::MIT{T} and
-#     # - ts.firstdate::MIT{T}
-#     distance = mit - ts.firstdate + 1
-
-#     # Step 2: vectorize v::IntOrFloat to append in place to ts.values::Vector{Float64}
-#     # in Case 2 and 3
-#     v_singleton = Vector{Float64}([v])
-
-#     if 1 <= distance <= length(ts)          # Case 1: place v in an array
-#         ts.values[distance] = Float64(v)
-#     elseif distance < 1                     # Case 2: extend ts.values on the left side
-#         val_nan_vector = append!(v_singleton, fill(NaN, abs(distance)))
-#         prepend!(ts.values, val_nan_vector)
-#         ts.firstdate = mit
-#     else # length(ts) < distance            # Case 3: extend ts.values on the right side
-#         nan_val_vector = append!(fill(NaN, abs(distance) - length(ts) - 1), v_singleton)
-#         append!(ts.values, nan_val_vector)
-#     end
-# end
-
-# """
-# `setindex` a value using `UnitRange{MIT}`
-# """
-# Base.setindex!(ts::TSeries{T}, v::Number, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
-#     for i in I
-#         ts[i] = v
-#     end
-# end
-
-# """
-# `setindex` a vector using `UnitRange{MIT}`
-# """
-# Base.setindex!(ts::TSeries{T}, v::AbstractVector{<:Number}, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
-#     for (i, val) in zip(I, v)
-#         ts[i] = val
-#     end
-# end
-
-# # Base.setindex!(ts::TSeries{T}, v::Vector{Int}, I::UnitRange{MIT{T}}) where T <: Frequency = begin
-# #     for (i, val) in zip(I, v)
-# #         ts[i] = val
-# #     end
-# # end
-
-
-
-# """
-# `setindex` values from other `TSeries` using `MIT`
-# """
-# Base.setindex!(ts::TSeries{T}, v::TSeries{T}, mit::MIT{T}) where T <: Frequency = begin
-#     mit in ts.firstdate:lastdate(ts) || error("Given date:$mit is not in ", ts)
-#     mit in v.firstdate:lastdate(v) || error("Given date:$mit is not in ", v)
-
-#     ts[mit] = v[mit].values[1]
-# end
-
-# """
-# `setindex` values from other `TSeries` using `UnitRange{MIT}`
-# """
-# Base.setindex!(ts::TSeries{T}, v::TSeries{T}, I::AbstractUnitRange{MIT{T}}) where T <: Frequency = begin
-#     commonrange = intersect(I, mitrange(v))
-#     ts[commonrange] = v[commonrange].values
-# end
-
-# # """
-# # `setindex` values from other `Vector` using `MIT`
-# # """
-# # Base.setindex!(ts::TSeries{T}, v::AbstractVector{<:Number}, mit::MIT{T}) where T <: Frequency = begin
-# #     length(v) == 1 || error(v, " can contain only one element.")
-# #     ts[mit] = v[mit][1]
-# # end
-
-# #-------------------------------------------------------------------------------
-# # Operations
-# #-------------------------------------------------------------------------------
-
-# """
-#     firstdate(x::TSeries)
-
-# Return an `MIT` indicating the first date in the TSeries.
-
-# ### Examples
-# ```julia-repl
-# julia> firstdate(TSeries(qq(2020, 1), ones(10)))
-# 2020Q1
-# ```
-# """
-# firstdate(s::TSeries) = s.firstdate
-
-# """
-#     lastdate(x::TSeries)
-
-# Return an `MIT` indicating the last date in the TSeries.
-
-# ### Examples
-# ```julia-repl
-# julia> lastdate(TSeries(qq(2020, 1), ones(10)))
-# 2022Q2
-# ```
-# """
-# lastdate(s::TSeries) = (s.firstdate + length(s) - 1)
-
-# # 
-# # Base.range(t::TSeries) = firstdate(t):lastdate(t)
 
 # """
 #     Horizonatal Concatenation of `TSeries`
@@ -496,47 +316,6 @@ end
 #     return  reshaped_array
 # end
 
-# """
-#     mitrange(x::TSeries)
-
-# Return an `UnitRange{MIT{<:Frequency}}` associated with `x`.
-
-# ### Examples
-# ```julia-repl
-# julia> mitrange(TSeries(qq(2020, 1), ones(4)))
-# 2020Q1:2020Q4
-# ```
-# """
-# mitrange(ts::TSeries) = firstdate(ts):lastdate(ts)
-
-# function Base.:(+)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
-#     # I = intersect(x.firstdate:lastdate(x), y.firstdate:lastdate(y))
-#     I = intersect(mitrange(x), mitrange(y))
-
-#     I.start <= I.stop || error("There are no dates in common, operation can't be performed.")
-#     TSeries(I.start, x[I].values + y[I].values)
-# end
-
-# function Base.:(-)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
-#     # I = intersect(x.firstdate:lastdate(x), y.firstdate:lastdate(y))
-#     I = intersect(mitrange(x), mitrange(y))
-#     I.start <= I.stop || error("There are no dates in common, operation can't be performed.")
-#     TSeries(I.start, x[I].values - y[I].values)
-# end
-
-# function Base.:(-)(x::Number, y::TSeries)
-#     TSeries(y.firstdate, Float64(x) .- y.values)
-# end
-
-# Base.:(-)(s::TSeries{T}) where T <: Frequency = TSeries(s.firstdate, -s.values)
-
-
-# Base.log(ts::TSeries{T}) where T <: Frequency = TSeries(ts.firstdate, log.(ts.values))
-# Base.exp(ts::TSeries{T}) where T <: Frequency = TSeries(ts.firstdate, exp.(ts.values))
-# Base.:(+)(ts::TSeries{T}, a::Number) where T <: Frequency = TSeries(ts.firstdate, ts.values .+ a)
-# Base.:(+)(a::Number, ts::TSeries{T}) where T <: Frequency = TSeries(ts.firstdate, ts.values .+ a)
-
-# Base.:(-)(ts::TSeries{T}, a::Number) where T <: Frequency = TSeries(ts.firstdate, ts.values .- a)
 
 # """
 #     diff(x::TSeries, k::Int = -1)
@@ -551,128 +330,6 @@ end
 #     return ts - y
 # end
 
-# """
-#     3 * ts
-#     ts * 3 returns timeseries with every element multiplied by 3
-# """
-# function Base.:(*)(ts::TSeries{T}, s::Number) where T <: Frequency
-#     TSeries(ts.firstdate, ts.values .* Float64(s))
-# end
-
-# function Base.:(*)(s::Number, ts::TSeries{T}) where T <: Frequency
-#     TSeries(ts.firstdate, ts.values .* Float64(s))
-# end
-
-# """
-#     ts / 3 returns timeseries with every element divided by 3
-# """
-# function Base.:(/)(ts::TSeries{T}, s::Number) where T <: Frequency
-#     TSeries(ts.firstdate, ts.values ./ Float64(s))
-# end
-
-# function Base.:(/)(s::Number, ts::TSeries{T}) where T <: Frequency
-#     TSeries(ts.firstdate, Float64(s) ./ ts.values)
-# end
-
-# function Base.:(^)(ts::TSeries{T}, s::Number) where T <: Frequency
-#     TSeries(ts.firstdate, ts.values .^ s)
-# end
-
-
-
-# """
-#     shift(x::TSeries, n::Int)
-
-# Shift dates of `x` back by `k` periods. 
-# __Note:__ The implementation of is similar to IRIS `ts{1}`.
-
-# Examples
-# ```julia-repl
-# julia> shift(TSeries(qq(2020, 1), ones(4)), 1)
-# TSeries{Quarterly} of length 4
-# 2019Q4: 1.0
-# 2020Q1: 1.0
-# 2020Q2: 1.0
-# 2020Q3: 1.0
-
-
-# julia> shift(TSeries(qq(2020, 1), ones(4)), -1)
-# TSeries{Quarterly} of length 4
-# 2020Q2: 1.0
-# 2020Q3: 1.0
-# 2020Q4: 1.0
-# 2021Q1: 1.0
-# ```
-
-# See also: [`shift!`](@ref)
-# """
-# function shift(ts::TSeries{T}, k::Int) where T <: Frequency
-#     return TSeries(ts.firstdate - k, ts.values)
-# end
-
-# """
-#     shift!(x::TSeries, n::Int)
-
-# Shift dates of `x` back by `k` periods, in-place. 
-# __Note:__ The implementation of is similar to IRIS `ts{1}`.
-
-# Examples
-# ```julia-repl
-# julia> x = TSeries(qq(2020, 1), ones(4));
-
-# julia> shift!(x, 1);
-
-# julia> x
-# TSeries{Quarterly} of length 4
-# 2019Q4: 1.0
-# 2020Q1: 1.0
-# 2020Q2: 1.0
-# 2020Q3: 1.0
-# ```
-
-# See also: [`shift`](@ref)
-# """
-# function shift!(ts::TSeries{T}, k::Int) where T <: Frequency
-#     ts.firstdate = ts.firstdate - k
-#     return ts
-# end
-
-# """
-#     ppy(::MIT)
-#     ppy(::Type{MIT})
-
-# When applied to an [`MIT`](@ref) instance or type, return the `ppy` of its frequency.
-# """
-# ppy(::MIT{F}) where F <: Frequency = ppy(F)
-# ppy(::Type{MIT{F}}) where F <: Frequency = ppy(F)
-
-# """
-#     ppy(::TSeries)
-#     ppy(::Type{TSeries})
-
-# When applied to a [`TSeries`](@ref) instance or type, return the `ppy` of its frequency.
-# """
-# ppy(::TSeries{T}) where T <: Frequency = ppy(T)
-# ppy(::Type{TSeries{T}}) where T <: Frequency = ppy(T)
-
-
-# function Base.:(/)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
-#     I = intersect(mitrange(x), mitrange(y))
-
-#     firstdate = I.start;
-#     values = x[I].values./y[I].values;
-
-#     TSeries(firstdate, values)
-# end
-
-# function Base.:(*)(x::TSeries{T}, y::TSeries{T}) where T <: Frequency
-#     I = intersect(mitrange(x), mitrange(y))
-
-#     firstdate = I.start;
-#     values = x[I].values.*y[I].values;
-
-#     TSeries(firstdate, values)
-# end
 
 # """
 #     pct(x::TSeries, shift_value::Int, islog::Bool)
@@ -707,10 +364,6 @@ end
 #     TSeries(result.firstdate, result.values)
 # end
 
-# Base.round(ts::TSeries; digits = 2) = begin
-#     values = (x -> round(x, digits=digits)).(ts.values)
-#     TSeries(ts.firstdate, values)
-# end
 
 # """
 #     apct(x::TSeries, islog::Bool)
@@ -825,37 +478,3 @@ end
 #     return s
 # end
 
-
-# """
-# Can be applied to a [`TSeries`](@ref) instance or a range of MIT to return its [`Frequency`](@ref).
-# """
-# frequencyof(::TSeries{T}) where T <: Frequency = T
-# frequencyof(::Type{TSeries{T}}) where T <: Frequency = T
-# frequencyof(::AbstractUnitRange{MIT{T}}) where T <: Frequency = T
-# frequencyof(::Type{<:AbstractUnitRange{MIT{T}}}) where T <: Frequency = T
-
-# # -----------------------------------------------------
-# # Broadcasting Interface: `BroadcastStyle` and `similar`
-# # https://docs.julialang.org/en/v1.0.5/manual/interfaces/#man-interfaces-broadcasting-1
-# # -----------------------------------------------------
-# Base.BroadcastStyle(::Type{<:TSeries}) = Broadcast.ArrayStyle{TSeries}()
-
-# function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{TSeries}}, ::Type{ElType}) where ElType
-#     # Scan the inputs for the TSeries:
-#     ts = find_tseries(bc)
-    
-#     similar(ts)
-# end
-
-# """
-#     find_tseries
-
-# Return the first TSeries among the arguments.
-
-# __Note:__ An internal function used for broadcasting support.
-# """
-# find_tseries(bc::Base.Broadcast.Broadcasted) = find_tseries(bc.args)
-# find_tseries(args::Tuple) = find_tseries(find_tseries(args[1]), Base.tail(args))
-# find_tseries(x) = x
-# find_tseries(a::TSeries, rest) = a
-# find_tseries(::Any, rest) = find_tseries(rest)

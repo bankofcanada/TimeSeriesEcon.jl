@@ -1,3 +1,7 @@
+# Copyright (c) 2020-2021, Bank of Canada
+# All rights reserved.
+
+
 # """
 #     TimeSeriesEcon
 
@@ -55,10 +59,13 @@ export M7, M8, M9, M10, M11, M12
 
 include("tseries.jl")
 export TSeries
-export firstdate, lastdate
+export firstdate, lastdate, rangeof
 export typenan
 
-include("broadcast.jl")
+include("tsbroadcast.jl")
+include("tsmath.jl")
+
+export shift, shift!, lag, lag!, lead, lead!
 
 # export mitrange
 # export shift, shift!

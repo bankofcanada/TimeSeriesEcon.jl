@@ -80,8 +80,8 @@ import TimeSeriesEcon.yp
     # promotions
     @test_throws ArgumentError promote(1, 1Q1) 
     @test_throws ArgumentError promote(1Q1, 1) 
-    @test_throws ArgumentError promote(1Q1-1Q1, 1) 
-    @test_throws ArgumentError promote(1, 1Q1-1Q1) 
+    @test_throws ArgumentError promote(1Q1 - 1Q1, 1) 
+    @test_throws ArgumentError promote(1, 1Q1 - 1Q1) 
     @test promote(1.1, 1Q1) === (1.1, 1.0)
     @test promote(1Q1, 1.2) === (1.0, 1.2)
 end
@@ -95,11 +95,13 @@ end
     @test step(rng) isa Int
     @test step(rng) == 1
     for (i, m) in enumerate(rng)
-        @test m isa MIT{Quarterly}
+    @test m isa MIT{Quarterly}
         @test first(rng) <= m <= last(rng)
         @test rng[i] == m
     end
     @test_throws ArgumentError 2020Q1:2020M12
+    @test union(3U:5U, 4U:6U) === 3U:6U
+    @test_throws ArgumentError union(3U:5U, 4Q1:6Q1) 
 end
 
 @testset "FPConst" begin
@@ -152,13 +154,13 @@ end
         show(io, pp(20, 3; N=6))
         show(io, 5U)
         println(io, 2020M1 - 2019M1)
-        show(io, 3U-2U)
-        show(io, 2000M12-2000M1)
+        show(io, 3U - 2U)
+        show(io, 2000M12 - 2000M1)
         println(io, Duration{Yearly}(7))
         show(io, Q1)
         show(io, 1U)
         println(io, M1, M12, ".")
-        foo = readlines(seek(io,0))
+        foo = readlines(seek(io, 0))
         @test foo == ["2020Q120P35U12", "1117", "1Q11U1M11M12."]
     end
 end
@@ -171,10 +173,10 @@ end
     @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly
     @test_throws ArgumentError frequencyof(1)
     @test_throws ArgumentError frequencyof(Int)
-    @test frequencyof(qq(2000,1)-qq(2000,1)) == Quarterly
-    @test frequencyof(mm(2000,1)-mm(2000,1)) == Monthly
-    @test frequencyof(yy(2000,1)-yy(2000,1)) == Yearly
-    @test frequencyof(5U-3U) == Unit
+    @test frequencyof(qq(2000, 1) - qq(2000, 1)) == Quarterly
+    @test frequencyof(mm(2000, 1) - mm(2000, 1)) == Monthly
+    @test frequencyof(yy(2000, 1) - yy(2000, 1)) == Yearly
+    @test frequencyof(5U - 3U) == Unit
     @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
 end
 
@@ -198,7 +200,7 @@ end
 @testset "TSeries" begin
     # test constructors
     s = TSeries(20Q1, collect(10.0 .+ (1:12)))
-    @test typeof(s) === TSeries{Quarterly, Float64, Array{Float64,1}}
+    @test typeof(s) === TSeries{Quarterly,Float64,Array{Float64,1}}
     @test size(s) == (12,)
     @test axes(s) == (20Q1:22Q4,)
     @test length(s) == 12
@@ -212,9 +214,12 @@ end
     @test s[20Q1] == 11.0
     @test s[begin] == s.values[1]
     @test s[end] == s.values[end]
-    @test s[begin:begin+3] isa typeof(s)
-    @test s[begin:begin+3].values == s.values[begin:begin+3]
-    @test (@. 13 < s < 16 ) isa TSeries{frequencyof(s), Bool}
+    @test s[begin:begin + 3] isa typeof(s)
+    @test s[begin:begin + 3].values == s.values[begin:begin + 3]
+    @test (@. 13 < s < 16 ) isa TSeries{frequencyof(s),Bool}
+    #
+    @test_throws ArgumentError s[2:end]  # can't mix Int indexing with begin/end
+    @test_throws ArgumentError s[begin:4]
     #
 end
 
@@ -231,7 +236,7 @@ end
 
     # we can broadcast with another TSeries of different range
     r = t .+ TSeries(4U, collect(1:6))
-    @test typeof(r) == typeof(t) && eachindex(r) == 5U:9U && all(r.values .== t.values[1:end-1] .+ (2:6))
+    @test typeof(r) == typeof(t) && eachindex(r) == 5U:9U && all(r.values .== t.values[1:end - 1] .+ (2:6))
 
     # we can broadcast with a Vector
     r = t .+ collect(1:6)
@@ -254,9 +259,15 @@ end
     s = similar(t, 3U:12U)
     fill!(s, 0.0)
     s .= t .- 2
-    @test eachindex(s) == (3U:12U) && all(s[5U:10U].values .== (1:6) .- 1.0)
+    @test eachindex(s) === (3U:12U) && all(s[5U:10U].values .== (1:6) .- 1.0)
     @test all(s[3U:4U].values .== 0.0) && all(s[11U:end] .== 0.0)
 
+    # dot-assign into a range
+    t[begin+2:end-2] .= 2
+    @test t.values == [2, 3, 2, 2, 6, 7]
+    
+    t[end+2:end+4] .= 8
+    @test t.values ≈ [2, 3, 2, 2, 6, 7, NaN, 8, 8, 8] nans=true
 
 end
 
@@ -292,7 +303,7 @@ ts_y = TSeries(yy(2018), collect(1:12))
 
     let t = TSeries(1991Q1:1992Q4), s = TSeries(2222Y:2225Y, undef), r = TSeries(1006M3:1009M5, 0.3), e = TSeries(2000Y:1995Y, 7)
         @test isempty(e)
-        @test length(r) == 10+12+12+5
+        @test length(r) == 10 + 12 + 12 + 5
         @test length(t) == length(t.values) == 8
         @test firstindex(t) == firstdate(t) == 1991Q1
         @test lastindex(t) == lastdate(t) == 1992Q4
@@ -320,227 +331,227 @@ end
     end
 end
 
-# @testset "Views" begin
-#     let t = TSeries(2010M1, rand(20))
-#         @test axes(t) == (2010M1 - 1 .+ (1:20),)
-#         @test Base.axes1(t) == 2010M1 - 1 .+ (1:20)
-#         z = similar(t)
-#         @test z isa typeof(t)
-#         @test z.firstdate == t.firstdate
-#         @test z != t
-#         z = copy(t)
-#         @test z == t
-#         z[3:5] += 0.2
-#         z[4:5] = [3,4]
-#         @test z != t
-#         z = view(t, 2:5)
-#         c = view(t, 2010M2:2010M5)
-#         @test c == z
-#         @test z == t[2:5]
-#         z[[1,3]] += [0.5, 0.5]
-#         z[[2,4]] = [1,1.5]
-#         @test z == t[2:5]
-#         @test c == z
-#     end
-# end
+@testset "Views" begin
+    let t = TSeries(2010M1, rand(20))
+        @test axes(t) == (2010M1 - 1 .+ (1:20),)
+        @test Base.axes1(t) == 2010M1 - 1 .+ (1:20)
+        z = similar(t)
+        @test z isa typeof(t)
+        @test z.firstdate == t.firstdate
+        @test z != t
+        z = copy(t)
+        @test z == t
+        z[begin .+ (2:4)] .+= 0.2
+        z[begin .+ (3:4)] = [3,4]
+        @test z != t
+        z = view(t, 2:5)
+        c = view(t, 2010M2:2010M5)
+        @test c == z
+        @test z == t[begin .+ (1:4)]
+        z[[1,3]] += [0.5, 0.5]
+        z[[2,4]] = [1,1.5]
+        @test c == z
+        @test z == t[begin .+ (1:4)]
+    end
+end
 
-# @testset "show" begin
-#     for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], Iterators.cycle((qq(2010, 1), mm(2010, 1), yy(2010), ii(1))))
-#         let io = IOBuffer()
-#             t = TSeries(fd, rand(24))
-#             show(IOContext(io, :displaysize => (nrow, 80)), MIME"text/plain"(), t)
-#             @test length(readlines(seek(io, 0))) == max(2, min(length(t) + 1, nrow - 3))
-#         end
-#     end
-# end
+@testset "show" begin
+    for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], 
+                           Iterators.cycle((qq(2010, 1), mm(2010, 1), yy(2010), 1U)))
+        let io = IOBuffer()
+            t = TSeries(fd, rand(24))
+            show(IOContext(io, :displaysize => (nrow, 80)), MIME"text/plain"(), t)
+            @test length(readlines(seek(io, 0))) == max(2, min(length(t) + 1, nrow - 3))
+        end
+    end
+end
 
-# @testset "TSeries: Broadcasting" begin
+@testset "math" begin
+    tq = TSeries(2020Q1, rand(12))
+    tm = TSeries(2020M1, copy(tq.values))
+    tu = TSeries(11U, copy(tq.values))
 
-#     allones = TSeries(2020Q1, ones(10))
-#     @test 5 - allones == 5 .- allones
+    tmp = tq .* 5
+    @test 5tq isa TSeries{Quarterly} 
+    @test tq * 5 isa TSeries{Quarterly} 
+    @test 5tq == tmp
+    @test tq * 5 == tmp
+    @test (5tm).values == (5tq).values && 5tm ≠ 5tq
 
-#     # -----------------------------------
-#     tsbc = TSeries(2020M1, ℯ * ones(12))
+    @test (tq + tq) == (tq .+ tq)
 
-#     @test Base.BroadcastStyle(typeof(tsbc)) ==  Base.Broadcast.ArrayStyle{TSeries}()
+    # approx works when ranges don't match 
+    sq = resize!(copy(tq), 2020Q3:2022Q2)
+    @test sq ≠ tq && sq ≈ tq
 
-#     @test TimeSeriesEcon.find_tseries(Broadcast.Broadcasted(-, (5, tsbc))) == tsbc
-#     @test TimeSeriesEcon.find_tseries(tsbc) == tsbc
-#     @test TimeSeriesEcon.find_tseries(Any, tsbc) == tsbc
-#     @test TimeSeriesEcon.find_tseries(tsbc, nothing) == tsbc
+    # adding two TSeries of same frequency and range works
+    @test tq + 5tq ≈ 6tq
+    # adding TSeries and 
+    @test_throws MethodError 5 + tq
+    @test_throws MethodError tq + 5
+    @test 5 .+ tq == tq .+ 5  # broadcasting works
+    @test_throws ArgumentError tq + 5tm   # different frequencies not allowed
 
-#     @test firstdate(similar(tsbc)) == 2020M1
-#     @test size(similar(tsbc)) == size(tsbc)
+end
 
-#     @test log.(tsbc) == TSeries(2020M1, ones(12))
-#     @test tsbc.firstdate == mm(2020, 1)
-#     @test exp.(log.(tsbc)) == tsbc
-#     @test tsbc .* 0 .+ 100 == TSeries(mm(2020, 1), 100 * ones(12))
+@testset "TSeries: Monthly Access" begin
+    @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
+    @test ts_m[mm(2018, 1):mm(2018, 12)].firstdate == mm(2018, 1)
 
-#     tsbc = log.(tsbc) + 99 # 1 + 99
-#     @test tsbc == TSeries(2020M1, 100 * ones(12))
-# end
+    # access outside of ts boundaries
+    @test_throws BoundsError ts_m[mm(2017, 1):mm(2019, 12)] == ts_m
+    # @test ts_m[mm(2017, 1):mm(2019, 12)].firstdate == ts_m.firstdate
 
+    # partially out of boundary
+    @test_throws BoundsError ts_m[mm(2017, 1):mm(2018, 6)] == ts_m[mm(2018, 1):mm(2018, 6)]
+    @test_throws BoundsError ts_m[mm(2017, 1):mm(2018, 6)] == ts_m[mm(2018, 1):mm(2018, 6)]
 
-
-# @testset "TSeries: Index using end" begin
-#     @test ts_m[end] == 12
-#     @test ts_m[firstdate(ts_m):end] == ts_m
-# end
-
-# @testset "TSeries: Monthly Access" begin
-#     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
-#     @test ts_m[mm(2018, 1):mm(2018, 12)].firstdate == mm(2018, 1)
-
-#     # access outside of ts boundaries
-#     @test ts_m[mm(2017, 1):mm(2019, 12)] == ts_m
-#     @test ts_m[mm(2017, 1):mm(2019, 12)].firstdate == ts_m.firstdate
-
-#     # partially out of boundary
-#     @test ts_m[mm(2017, 1):mm(2018, 6)] == ts_m[mm(2018, 1):mm(2018, 6)]
-#     @test ts_m[mm(2017, 1):mm(2018, 6)] == ts_m[mm(2018, 1):mm(2018, 6)]
-
-#     @test ts_m[mm(2017, 1):mm(2018, 6)] == ts_m[1:6]
+    @test_throws BoundsError ts_m[mm(2017, 1):mm(2018, 6)] == ts_m[1:6]
 
 
-#     @test ts_m[mm(2018, 6):mm(2019, 12)] == ts_m[mm(2018, 6):mm(2018, 12)]
-#     @test ts_m[mm(2018, 6):mm(2019, 12)] == ts_m[6:12]
+    @test_throws BoundsError ts_m[mm(2018, 6):mm(2019, 12)] == ts_m[mm(2018, 6):mm(2018, 12)]
+    @test_throws BoundsError ts_m[mm(2018, 6):mm(2019, 12)] == ts_m[6:12]
 
-#     # fully out of boundary
-#     @test ts_m[mm(2017, 1)] === nothing
-#     @test ts_m[mm(2017, 1):mm(2017, 3)] === nothing
-# end
+    # fully out of boundary
+    @test_throws BoundsError ts_m[mm(2017, 1)] === nothing
+    @test_throws BoundsError ts_m[mm(2017, 1):mm(2017, 3)] === nothing
+end
 
-# @testset "TSeries: Quarterly Access" begin
-#     @test ts_q[qq(2018, 1):qq(2020, 4)] == ts_q
+@testset "TSeries: Quarterly Access" begin
+    @test ts_q[qq(2018, 1):qq(2020, 4)] == ts_q
 
-#     # access outside of ts boundaries
-#     @test ts_q[qq(2017, 1):qq(2021, 4)] == ts_q
+    # access outside of ts boundaries
+    @test_throws BoundsError ts_q[qq(2017, 1):qq(2021, 4)] == ts_q
 
-#     # partially out of boundary
-#     @test ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[qq(2018, 1):qq(2018, 4)]
-#     @test ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[1:4]
+    # partially out of boundary
+    @test_throws BoundsError ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[qq(2018, 1):qq(2018, 4)]
+    @test_throws BoundsError ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[1:4]
 
-#     @test ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[qq(2018, 4):qq(2020, 4)]
-#     @test ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[4:12]
+    @test_throws BoundsError ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[qq(2018, 4):qq(2020, 4)]
+    @test_throws BoundsError ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[4:12]
 
-#     # fully out of boundary
-#     @test ts_q[qq(2017, 1)] == nothing
-#     @test ts_q[qq(2017, 1):qq(2017, 3)] == nothing
-# end
+    # fully out of boundary
+    @test_throws BoundsError ts_q[qq(2017, 1)] == nothing
+    @test_throws BoundsError ts_q[qq(2017, 1):qq(2017, 3)] == nothing
+end
 
-# @testset "TSeries: Yearly Access" begin
-#     @test ts_y[yy(2018):yy(2029)] == ts_y
+@testset "TSeries: Yearly Access" begin
+    @test ts_y[yy(2018):yy(2029)] == ts_y
 
-#     # access outside of ts boundaries
-#     @test ts_y[yy(2017):yy(2017) + 100] == ts_y
+    # access outside of ts boundaries
+    @test_throws BoundsError ts_y[yy(2017):yy(2017) + 100] == ts_y
 
-#     # partially out of boundary
-#     @test ts_y[yy(2017):yy(2018)] == ts_y[yy(2018):yy(2018)]
-#     @test ts_y[yy(2017):yy(2021)] == ts_y[1:4]
+    # partially out of boundary
+    @test_throws BoundsError ts_y[yy(2017):yy(2018)] == ts_y[yy(2018):yy(2018)]
+    @test_throws BoundsError ts_y[yy(2017):yy(2021)] == ts_y[1:4]
 
-#     @test ts_y[yy(2018):yy(2100)] == ts_y[yy(2018):yy(2029)]
-#     @test ts_y[yy(2021):yy(2100)] == ts_y[4:12]
+    @test_throws BoundsError ts_y[yy(2018):yy(2100)] == ts_y[yy(2018):yy(2029)]
+    @test_throws BoundsError ts_y[yy(2021):yy(2100)] == ts_y[4:12]
 
-#     # fully out of boundary
-#     @test ts_y[yy(2017)] == nothing
-#     @test ts_y[yy(2010):yy(2017)] == nothing
-# end
+    # fully out of boundary
+    @test_throws BoundsError ts_y[yy(2017)] == nothing
+    @test_throws BoundsError ts_y[yy(2010):yy(2017)] == nothing
+end
 
-# # ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
-# @testset "TSeries: Monthly Setting" begin
-#     begin
-#         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-#         ts_m[mm(2019, 2):mm(2019, 4)] = 1;
-#         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [1, 1, 1]
-#         @test ts_m.firstdate == mm(2018, 1)
-#         @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [1, 1, 1]))
-#     end
+# ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
+@testset "TSeries: Monthly Setting" begin
+    begin
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        @test_throws BoundsError ts_m[mm(2019, 2):mm(2019, 4)] = 1;
+        ts_m[mm(2019, 2):mm(2019, 4)] .= 1;
+        @test ts_m[mm(2019, 2):mm(2019, 4)].values == [1, 1, 1]
+        @test ts_m.firstdate == mm(2018, 1)
+        @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [1, 1, 1]))
+    end
 
-#     begin
-#         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-#         ts_m[mm(2017, 10):mm(2017, 11)] = 1;
-#         @test ts_m[mm(2017, 10):mm(2017, 11)].values == [1, 1]
-#         @test ts_m.firstdate == mm(2017, 10)
-#         @test isequal(ts_m.values, vcat([1, 1], [NaN], collect(1.0:12.0)))
-#     end
+    begin
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        @test_throws BoundsError ts_m[mm(2017, 10):mm(2017, 11)] = 1;
+        ts_m[mm(2017, 10):mm(2017, 11)] .= 1;
+        @test ts_m[mm(2017, 10):mm(2017, 11)].values == [1, 1]
+        @test ts_m.firstdate == mm(2017, 10)
+        @test isequal(ts_m.values, vcat([1, 1], [NaN], collect(1.0:12.0)))
+    end
 
-#     begin
-#         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-#         ts_m[mm(2019, 2):mm(2019, 4)] = [9, 10, 11];
-#         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [9, 10, 11]
-#         @test ts_m.firstdate == mm(2018, 1)
-#         @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [9, 10, 11]))
-#     end
+    begin
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        ts_m[mm(2019, 2):mm(2019, 4)] = [9, 10, 11];
+        @test ts_m[mm(2019, 2):mm(2019, 4)].values == [9, 10, 11]
+        @test ts_m.firstdate == mm(2018, 1)
+        @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [9, 10, 11]))
+    end
 
-#     begin
-#         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-#         ts_m[mm(2017, 10):mm(2017, 11)] = [9, 10];
-#         @test ts_m[mm(2017, 10):mm(2017, 11)].values == [9, 10]
-#         @test ts_m.firstdate == mm(2017, 10)
-#         @test isequal(ts_m.values, vcat([9, 10], [NaN], collect(1.0:12.0)))
-#     end
-# end
+    begin
+        ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
+        ts_m[mm(2017, 10):mm(2017, 11)] = [9, 10];
+        @test ts_m[mm(2017, 10):mm(2017, 11)].values == [9, 10]
+        @test ts_m.firstdate == mm(2017, 10)
+        @test isequal(ts_m.values, vcat([9, 10], [NaN], collect(1.0:12.0)))
+    end
+end
 
-# @testset "TSeries: Addition" begin
-#     x = TSeries(ii(1), [7, 7, 7])
-#     y = TSeries(ii(3), [2, 4, 5])
-#     @test x + y == TSeries(ii(3), [9])
+@testset "TSeries: Addition" begin
+    x = TSeries(1U, [7, 7, 7])
+    y = TSeries(3U, [2, 4, 5])
+    @test x + y == TSeries(3U, [9])
 
-#     x = TSeries(ii(1), [7, 7, 7])
-#     y = TSeries(ii(2), [2, 4, 5])
-#     @test x + y == TSeries(ii(2), [9, 11])
-# end
+    x = TSeries(1U, [7, 7, 7])
+    y = TSeries(2U, [2, 4, 5])
+    @test x + y == TSeries(2U, [9, 11])
+end
 
-# @testset "TSeries: Iris related" begin
-#     # IRIS based assignment of values from other TSeries
-#     x = TSeries(qq(2020, 1), zeros(3));
-#     y = TSeries(qq(2020, 1), ones(3));
-#     x[qq(2020, 1):qq(2020, 2)] = y;
-#     @test x == TSeries(qq(2020, 1), [1, 1, 0])
-
-#     # IRIS related: shift
-#     x = TSeries(qq(2020, 1), zeros(3));
-#     @test shift(x, 1) == TSeries(qq(2019, 4), zeros(3))
-
-#     shift!(x, 1)
-#     @test x == TSeries(qq(2019, 4), zeros(3))
-
-#     # IRIS related: nanrm!
-#     x = TSeries(qq(2020, 1), [NaN, 123, NaN]);
-#     nanrm!(x)
-#     @test x == TSeries(qq(2020, 2), [123])
+@testset "TSeries: Iris related" begin
+    # IRIS based assignment of values from other TSeries
+    x = TSeries(qq(2020, 1), zeros(3));
+    y = TSeries(qq(2020, 1), ones(3));
+    x[qq(2020, 1):qq(2020, 2)] = y;
+    @test x == TSeries(qq(2020, 1), [1, 1, 0])
 
 
-#     # TODO
-#     # - pct
-#     # - apct
+    let t = TSeries(5U:10U, ones)
+        s = t[6U:8U]
+        @test rangeof(s) === 6U:8U
+        s .= 0.7
+        t[6U:8U] = s
+        @test t.values == [1, 0.7, 0.7, 0.7, 1, 1]
+
+        s .= 0.8
+        t[6U:7U] = s
+        @test t.values == [1, 0.8, 0.8, 0.7, 1, 1]
+
+        t[6U:7U] = [2,3]
+        @test t.values == [1, 2, 3, 0.7, 1, 1]
+
+        @test_throws ArgumentError t[6Y:7Y] = s  # mixed frequency in indexing range
+        @test_throws ArgumentError t[6U:7U] = TSeries(6Y, s.values)  # mixed frequency of src and dest
+    end
+
+    # IRIS related: shift
+    x = TSeries(qq(2020, 1), zeros(3));
+    @test shift(x, 1) == TSeries(qq(2019, 4), zeros(3))
+
+    shift!(x, 1)
+    @test x == TSeries(qq(2019, 4), zeros(3))
+
+    # # IRIS related: nanrm!
+    # x = TSeries(qq(2020, 1), [NaN, 123, NaN]);
+    # nanrm!(x)
+    # @test x == TSeries(qq(2020, 2), [123])
+
+
+    # TODO
+    # - pct
+    # - apct
 
 
 
-# end
+end
 
-# @testset "TSeries: firstdate & lastdate" begin
-#     x = TSeries(qq(2020, 1), zeros(4));
-#     @test firstdate(x) == qq(2020, 1)
-#     @test lastdate(x) == qq(2020, 4)
-# end
 
-# @testset "MIT: mitrange" begin
-#     @test mitrange(TSeries(qq(2020, 1), ones(4))) == qq(2020, 1):qq(2020, 4)
-# end
-
-# @testset "MIT: ppy" begin
-#     @test ppy(Quarterly) == 4
-#     @test ppy(qq(2020, 1)) == 4
-#     @test ppy(TSeries(qq(2020, 1), ones(1))) == 4
-
-# end
-
-# @testset "axes of range" begin
-#     @test axes(1U:5U) == axes(1:5)
-#     @test Base.axes1(2020Y:2030Y) == Base.OneTo(11)
-# end
+@testset "axes of range" begin
+    @test axes(1U:5U) == axes(1:5)
+    @test Base.axes1(2020Y:2030Y) == Base.OneTo(11)
+end
 
 # @testset "recursive" begin
 #     ts = TSeries(1U, zeros(0))
