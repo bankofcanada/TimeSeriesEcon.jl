@@ -277,7 +277,7 @@ ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
 ts_q = TSeries(qq(2018, 1):qq(2020, 4), collect(1:12))
 ts_y = TSeries(yy(2018), collect(1:12))
 
-@testset "TSeries" begin
+@testset "TSeries 1" begin
 
     @test ts_u.firstdate == 1U
     # @test ts_u.values == 1:5
@@ -394,7 +394,7 @@ end
 
 end
 
-@testset "TSeries: Monthly Access" begin
+@testset "Monthly" begin
     @test ts_m[mm(2018, 1):mm(2018, 12)] == ts_m
     @test ts_m[mm(2018, 1):mm(2018, 12)].firstdate == mm(2018, 1)
 
@@ -417,7 +417,7 @@ end
     @test_throws BoundsError ts_m[mm(2017, 1):mm(2017, 3)] === nothing
 end
 
-@testset "TSeries: Quarterly Access" begin
+@testset "Quarterly" begin
     @test ts_q[qq(2018, 1):qq(2020, 4)] == ts_q
 
     # access outside of ts boundaries
@@ -435,7 +435,7 @@ end
     @test_throws BoundsError ts_q[qq(2017, 1):qq(2017, 3)] == nothing
 end
 
-@testset "TSeries: Yearly Access" begin
+@testset "Yearly" begin
     @test ts_y[yy(2018):yy(2029)] == ts_y
 
     # access outside of ts boundaries
@@ -454,7 +454,7 @@ end
 end
 
 # ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
-@testset "TSeries: Monthly Setting" begin
+@testset "Setting" begin
     begin
         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
         @test_throws BoundsError ts_m[mm(2019, 2):mm(2019, 4)] = 1;
@@ -490,7 +490,7 @@ end
     end
 end
 
-@testset "TSeries: Addition" begin
+@testset "Addition" begin
     x = TSeries(1U, [7, 7, 7])
     y = TSeries(3U, [2, 4, 5])
     @test x + y == TSeries(3U, [9])
@@ -500,7 +500,7 @@ end
     @test x + y == TSeries(2U, [9, 11])
 end
 
-@testset "TSeries: Iris related" begin
+@testset "Iris" begin
     # IRIS based assignment of values from other TSeries
     x = TSeries(qq(2020, 1), zeros(3));
     y = TSeries(qq(2020, 1), ones(3));
@@ -547,8 +547,30 @@ end
 
 end
 
+@testset "TS.math" begin
+    let x = TSeries(2000Y:2010Y, ones)
+        # lags and leads
+        y = cumsum(x)
+        @test rangeof(y) === rangeof(x)
+        z = y
+        @test z === y
+        y1 = lag(y)
+        @test rangeof(y1) === 1 .+ (rangeof(y))  && y1.values == y.values
+        lag!(y)
+        @test y1 == y && y1 !== y
+        @test z === y
+        y2 = lead(y, 2)
+        @test rangeof(y2) === -2 .+ (rangeof(y)) && y2.values == y.values
+        lead!(y, 3)
+        @test lead(y2) == y && lead(y2) !== y
+        @test z === y
+        # opeartions
+        @test x+x == 2x
+        @test_throws ArgumentError x + x.values == 2x
+    end
+end
 
-@testset "axes of range" begin
+@testset "axes.range" begin
     @test axes(1U:5U) == axes(1:5)
     @test Base.axes1(2020Y:2030Y) == Base.OneTo(11)
 end
