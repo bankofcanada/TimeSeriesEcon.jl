@@ -1,148 +1,110 @@
+# Copyright (c) 2020-2021, Bank of Canada
+# All rights reserved.
+
 import Statistics: mean
 
 
-function getstart(s::TSeries{T}) where T <: Monthly
-    if period(s.firstdate) in [1, 4, 7, 10]
-        return s.firstdate
-    elseif 1 < period(s.firstdate) < 4
-        y = year(s.firstdate)
-        p = 4
-    elseif 4 < period(s.firstdate) < 7
-        y = year(s.firstdate)
-        p = 7
-    elseif 7 < period(s.firstdate) < 10
-        y = year(s.firstdate)
-        p = 10
-    else 7 < period(s.firstdate) < 10
-        y = year(s.firstdate) + 1
-        p = 1
-    end
+"""
+    overlay(t1, t2, ...)
 
-    return MIT{T}(y*ppy(T) + p - 1)
-        # return qq(year(s.firstdate) + 1, 1)
+Construct a TSeries in which each observation is taken from the first non-missing observation 
+in the list of arguments. A missing observation is one for which [`istypenan`](@ref) returns `true`.
+
+All TSeries in the argument list must be of the same frequency. The data type of the resulting
+TSeries is computed by the standard promotion of numerical types in Julia. Its range is
+the union of the ranges of the arguments.
+
+"""
+@inline overlay(ts::Vararg{TSeries{F},N}) where {F <: Frequency,N} = overlay(mapreduce(rangeof, union, ts), ts...)
+
+"""
+    overlay(rng, t1, t2, ...)
+
+If the first argument is a range (must be of the same frequency), that becomes the range of the resulting TSeries.
+"""
+function overlay(rng::AbstractRange{MIT{F}}, ts::Vararg{TSeries{F},N}) where {F <: Frequency,N}
+    T = mapreduce(eltype, promote_type, ts)
+    ret = TSeries(rng, typenan(T))
+    na = collect(rng)
+    for t in ts
+        if isempty(na)
+            return ret
+        end
+        keep = intersect(na, rangeof(t)[values(@. !istypenan(t))])
+        ret[keep] = t[keep]
+        na = setdiff(na, keep)
+    end
+    return ret
 end
 
-function getend(s::TSeries{T}) where T <: Monthly
-    if period(lastdate(s)) in [12, 3, 6, 9]
-        return lastdate(s)
-    elseif 1 <= period(lastdate(s)) < 3
-        y = year(lastdate(s)) - 1
-        p = 12
-    elseif 4 <= period(lastdate(s)) < 6
-        y = year(lastdate(s))
-        p = 3
-    elseif 7 <= period(lastdate(s)) < 9
-        y = year(lastdate(s))
-        p = 6
-    else 10 <= period(lastdate(s)) < 12
-        y = year(lastdate(s))
-        p = 9
-    end
 
-    return MIT{T}(y*ppy(T) + p - 1)
-        # return qq(year(s.firstdate) + 1, 1)
+
+"""
+    tofrequency(F, t)
+
+Convert the time series `t` to the desired frequency `F`.
+"""
+tofrequency(F::Type{<:Frequency}, t::TSeries; args...) = error("""
+Conversion from $(frequencyof(t)) to $F not implemented.
+""")
+
+# do nothing when the source and target frequencies are the same.
+tofrequency(::Type{F}, t::TSeries{F}) where F <: Frequency = t
+
+"""
+    tofrequency(F1, t::TSeries{F2}; method) where {F1 <: YPFrequency, F2 <: YPFrequency}
+
+Convert between frequencies are of the [`YPFrequency`](@ref) variety.
+
+TODO: describe `method` when converting to a higher frequency (interpolation)
+TODO: describe `method` when converting to a lower frequency (aggregation)
+
+"""
+function tofrequency(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=nothing) where {N1,N2}
+    args = Dict()
+    if method !== nothing
+        args[:method] = method
+    end
+    N1 > N2 ? _to_higher(F, t; args...) : _to_lower(F, t; args...)
 end
 
-function getstart(s::TSeries{T}) where T <: Quarterly
-    if period(s.firstdate) == 1
-        return s.firstdate
+function _to_higher(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const) where {N1,N2}
+    (np, r) = divrem(N1, N2)
+    if r != 0
+        throw(ArgumentError("Cannot convert to higher frequency with $N1 from $N2 - not an exact multiple."))
+    end
+    # np is the number of periods of the destination frequency for each period of the source frequency
+    (y1, p1) = TimeSeriesEcon.yp(firstindex(t))
+    # (y2, p2) = yp(lastindex(t))
+    fi = MIT{F}(y1, (p1 - 1) * np + 1)
+    # lastindex_s = pp(y2, p2*np; N=N1))
+    if method == :const
+        return TSeries(fi, repeat(t.values, inner=np))
     else
-        y = year(s.firstdate) + 1
-        p = 1
-
-        return MIT{T}(y*ppy(T) + p - 1)
-        # return qq(year(s.firstdate) + 1, 1)
+        throw(ArgumentError("Conversion method not available: $(method)."))
     end
 end
 
-function getend(s::TSeries{T}) where T <: Quarterly
-    if TimeSeriesEcon.period(lastdate(s)) == ppy(s)
-        return lastdate(s)
+function _to_lower(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:mean) where {N1,N2}
+    (np, r) = divrem(N2, N1)
+    if r != 0
+        throw(ArgumentError("Cannot convert to lower frequency with $N1 from $N2 - not an exact multiple."))
+    end
+    (y1, p1) = TimeSeriesEcon.yp(firstindex(t))
+    (d1, r1) = divrem(p1-1, N1)
+    fi = MIT{F}(y1, d1+1) + (r1 > 0)
+    println("y1 = $y1, p1 = $p1, d1 = $d1, r1 = $r1, fi = $fi")
+    (y2, p2) = TimeSeriesEcon.yp(lastindex(t))
+    (d2, r2) = divrem(p2-1, N1)
+    li = MIT{F}(y2, d2+1) 
+    println("y2 = $y2, p2 = $p2, d2 = $d2, r2 = $r2, li = $li")
+    ret = TSeries(eltype(t), fi:li)
+    vals = t[begin - 1 + N1 - r1 : end + r2 - N1].values
+    if method == :mean
+        copyto!(ret, mean(reshape(vals, np, :); dims=1))
     else
-        y = year(lastdate(s)) - 1
-        p = ppy(s)
-        return MIT{T}(y*ppy(T) + p - 1)
-        # return qq(year(lastdate(s)) - 1, ppy(s))
+        throw(ArgumentError("Conversion method not available: $(method)."))
     end
+    return ret
 end
 
-
-function crop(s::TSeries{T}) where T <: Union{Quarterly, Monthly}
-    getstart(s) <= getend(s) || error("TSeries can't be cropped. start:$(getstart(s)) > end:$(getend(s))")
-
-    return s[getstart(s):getend(s)]
-end
-
-function Base.convert(::Type{TSeries{Yearly}}, s::TSeries{Quarterly})
-    values = Vector{Float64}()
-
-    for i in 1:4:length(crop(s))
-        push!(values, mean(crop(s)[i:i+3]))
-    end
-
-    firstdate = year(crop(s).firstdate) |> yy
-
-    return TSeries(firstdate, values)
-end
-
-function Base.convert(::Type{TSeries{Quarterly}}, s::TSeries{Monthly})
-    values = Vector{Float64}()
-
-    for i in 1:3:length(crop(s))
-        push!(values, mean(crop(s)[i:i+2]))
-    end
-
-    y = year(crop(s).firstdate) |> yy
-    p = period(crop(s).firstdate) |>
-        x -> div(x - 1, 3) + 1
-
-    return TSeries(qq(y, p), values)
-end
-
-function Base.convert(::Type{TSeries{Yearly}}, s::TSeries{Monthly})
-    convert(TSeries{Quarterly}, s) |>
-        x -> convert(TSeries{Yearly}, x)
-end
-
-# Arbitrary function
-
-function Base.convert(::Type{TSeries{Yearly}}, s::TSeries{Quarterly}, f::Symbol)
-    values = Vector{Float64}()
-    for i in 1:4:length(crop(s))
-        push!(values, eval(f)(crop(s)[i:i+3]))
-    end
-    firstdate = year(crop(s).firstdate) |> yy
-    return TSeries(firstdate, values)
-end
-
-
-# convert(TSeries{Yearly}, s)
-# convert(TSeries{Yearly}, p)
-
-# function mode(a)
-#     isempty(a) && throw(ArgumentError("mode is not defined for empty collections"))
-#     cnts = Dict{eltype(a),Int}()
-#     # first element
-#     mc = 1
-#     mv, st = iterate(a)
-#     cnts[mv] = 1
-#     # find the mode along with table construction
-#     y = iterate(a, st)
-#     while y !== nothing
-#         x, st = y
-#         if haskey(cnts, x)
-#             c = (cnts[x] += 1)
-#             if c > mc
-#                 mc = c
-#                 mv = x
-#             end
-#         else
-#             cnts[x] = 1
-#             # in this case: c = 1, and thus c > mc won't happen
-#         end
-#         y = iterate(a, st)
-#     end
-#     return mv
-# end
-
-# mode([1, 2, 33, 33, 33])

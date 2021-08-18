@@ -621,6 +621,27 @@ end
     @test Base.axes1(2020Y:2030Y) == Base.OneTo(11)
 end
 
+@testset "overlay" begin
+    # from FAME manual
+    A, B = (TSeries(87Y, [1, 2, NaN, 4]), TSeries(87Y, [NaN, 6, 7, 8]))
+    @test overlay(A, B) == TSeries(87Y, [1,2,7,4])
+    @test overlay(B, A) == TSeries(87Y, [1,6,7,8])
+    @test overlay(86Y:92Y, A, B) ≈ TSeries(86Y, [NaN, 1, 2, 7, 4, NaN, NaN]) nans = true
+end
+
+@testset "tofrequency" begin
+    t = TSeries(5U, collect(1:10))
+    @test tofrequency(Unit, t) === t
+    @test_throws ErrorException tofrequency(Quarterly, t) 
+    
+    q = TSeries(5Q1, 1.0collect(1:10))
+    @test_throws ErrorException  tofrequency(Unit, q)
+    mq = tofrequency(Monthly, q)
+    @test typeof(mq) === TSeries{Monthly, Float64, Vector{Float64}}
+    # yq = tofrequency(Yearly, q)
+    # @test typeof(yq) === TSeries{Yearly, Float64, Vector{Float64}}
+end
+
 # @testset "recursive" begin
 #     ts = TSeries(1U, zeros(0))
 #     ts[1U] = ts[2U] = 1.0

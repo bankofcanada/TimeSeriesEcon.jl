@@ -60,21 +60,22 @@ export M7, M8, M9, M10, M11, M12
 include("tseries.jl")
 export TSeries
 export firstdate, lastdate, rangeof
-export typenan
+export typenan, istypenan
 
 include("tsbroadcast.jl")
 include("tsmath.jl")
 
 export shift, shift!, lag, lag!, lead, lead!
 
-# export mitrange
-# export shift, shift!
+include("convert.jl")
+
+export overlay, tofrequency
+
 # export ppy
 # export pct, apct
 # export nanrm!
 
 # include("recursive.jl")
-# include("convert.jl")
 # include("plotrecipes.jl")
 
 

@@ -38,30 +38,6 @@ Frequencies corresponding to 1, 4, and 12 periods per year.
 Yearly, Quarterly, Monthly
 
 
-# """
-#     ppy(::Frequency)
-
-# Returns the number of periods per year for a given `Frequency`, `MIT`, and `TSeries`
-
-
-# ### Examples
-# ```julia-repl
-# julia> ppy(Quarterly)                   # Frequency
-# 4
-
-# julia> ppy(mm(2020, 1))                 # MIT
-# 12
-
-# julia> ppy(TSeries(yy(2020), ones(3)))   # TSeries
-# 1
-# ```
-# """
-# ppy(::Type{T}) where T <: Monthly   = 12
-# ppy(::Type{T}) where T <: Quarterly = 4
-# ppy(::Type{T}) where T <: Yearly    = 1
-# ppy(::Type{T}) where T <: Unit      = 1
-
-
 # ----------------------------------------
 # 2. MIT (moment in time) and Duration 
 # ----------------------------------------

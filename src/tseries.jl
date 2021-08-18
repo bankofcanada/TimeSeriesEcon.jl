@@ -217,6 +217,10 @@ typenan(T::Type{<:AbstractFloat}) = T(NaN)
 typenan(T::Type{<:Integer}) = typemax(T)
 typenan(T::Type{<:Union{MIT,Duration}}) = T(typemax(Int64))
 
+istypenan(x) = false
+istypenan(x::Integer) = x == typenan(x)
+istypenan(x::AbstractFloat) = isnan(x)
+
 # n::Integer - only the length changes. We keep the starting date 
 function Base.resize!(t::TSeries, n::Integer)
     lt = length(t)  # the old length 
