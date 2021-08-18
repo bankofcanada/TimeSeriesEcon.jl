@@ -69,7 +69,7 @@ export shift, shift!, lag, lag!, lead, lead!
 
 include("convert.jl")
 
-export overlay, tofrequency
+export overlay, fconvert
 
 # export ppy
 # export pct, apct

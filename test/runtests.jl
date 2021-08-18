@@ -629,17 +629,31 @@ end
     @test overlay(86Y:92Y, A, B) ≈ TSeries(86Y, [NaN, 1, 2, 7, 4, NaN, NaN]) nans = true
 end
 
-@testset "tofrequency" begin
+@testset "fconvert" begin
     t = TSeries(5U, collect(1:10))
-    @test tofrequency(Unit, t) === t
-    @test_throws ErrorException tofrequency(Quarterly, t) 
+    @test fconvert(Unit, t) === t
+    @test_throws ErrorException fconvert(Quarterly, t) 
     
     q = TSeries(5Q1, 1.0collect(1:10))
-    @test_throws ErrorException  tofrequency(Unit, q)
-    mq = tofrequency(Monthly, q)
+    @test_throws ErrorException  fconvert(Unit, q)
+    mq = fconvert(Monthly, q)
     @test typeof(mq) === TSeries{Monthly, Float64, Vector{Float64}}
-    # yq = tofrequency(Yearly, q)
-    # @test typeof(yq) === TSeries{Yearly, Float64, Vector{Float64}}
+    yq = fconvert(Yearly, q)
+    @test typeof(yq) === TSeries{Yearly, Float64, Vector{Float64}}
+
+    for i = 1:11
+        @test rangeof(fconvert(Yearly, TSeries(1M1 .+ (i:50)))) == 2Y:4Y
+        @test rangeof(fconvert(Yearly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y
+    end
+    for i = 1:3
+        @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (i:50)))) == 2Y:12Y
+        @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (0:47+i)))) == 1Y:12Y
+    end
+    for i = 1:11
+        @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (i:50)))) == 1Q2+div(i-1,3):5Q1
+        # @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y
+    end
+
 end
 
 # @testset "recursive" begin
