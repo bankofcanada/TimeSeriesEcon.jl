@@ -23,6 +23,7 @@ struct Unit <: Frequency end
 
 Represents a calendar frequency based on a number of periods in a year. 
 The type parameter `N` is the number of periods and must be a positive integer.
+See also: [`Yearly`](@ref), [`Quarterly`](@ref), [`Monthly`](@ref)
 """
 abstract type YPFrequency{N} <: Frequency end;
 
@@ -34,6 +35,7 @@ struct Monthly <: YPFrequency{12} end
     Yearly, Quarterly, Monthly
 
 Frequencies corresponding to 1, 4, and 12 periods per year.
+See also: [`YPFrequency`](@ref)
 """
 Yearly, Quarterly, Monthly
 

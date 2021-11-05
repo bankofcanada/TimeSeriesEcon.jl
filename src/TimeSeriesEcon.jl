@@ -67,7 +67,7 @@ include("tsmath.jl")
 
 export shift, shift!, lag, lag!, lead, lead!
 
-include("convert.jl")
+include("fconvert.jl")
 
 export overlay, fconvert
 

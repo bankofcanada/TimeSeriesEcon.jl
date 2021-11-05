@@ -36,9 +36,11 @@ my_broadcast_shape(shape::Tuple) = shape
 my_broadcast_shape(::Tuple{}, shape::Tuple) = shape
 my_broadcast_shape(shape::Tuple, ::Tuple{}) = shape
 function my_broadcast_shape(shape1::Tuple, shape2::Tuple) 
-    length(shape1) > 1 || length(shape2) > 1 ? 
-        throw(ArgumentError("broadcasting TSeries with ndims > 1.")) : 
-        (_common_axes(shape1[1], shape2[1]),)
+    if length(shape1) > 1 || length(shape2) > 1 
+        throw(ArgumentError("broadcasting TSeries with ndims > 1.")) 
+    else
+        return (_common_axes(shape1[1], shape2[1]),)
+    end
 end
 
 _common_axes(a::AbstractRange{<:MIT}, b::AbstractRange{<:MIT}) = mixed_freq_error(a, b)

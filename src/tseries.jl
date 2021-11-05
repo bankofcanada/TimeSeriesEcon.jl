@@ -46,18 +46,18 @@ These are identical to `firstindex` and `lastindex`.
 firstdate, lastdate
 
 # -------------------------------------------------------------------------------
-# some methods that makes the AbstractArray infrastructure of Julia work with TSeries
+# some methods that make the AbstractArray infrastructure of Julia work with TSeries
 
-Base.size(t::TSeries) = size(t.values)
-Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
-Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
+@inline Base.size(t::TSeries) = size(t.values)
+@inline Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
+@inline Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
 
 # the following are needed for copy() and copyto!() (and a bunch of Julia internals that use them)
 Base.IndexStyle(::TSeries) = IndexLinear()
 Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
 
 # normally only the first of the following is sufficient.
-# we a few other versions of similar below
+# we add few other versions of similar below
 Base.similar(t::TSeries) = TSeries(t.firstdate, similar(t.values))
 
 # -------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) wh
 """
     typenan(x), typenan(T)
 
-Return a value that indicated Not-A-Number of the same type as the given `x` or
+Return a value that indicates Not-A-Number of the same type as the given `x` or
 of the given type `T`.
 
 For floating point types, this is the IEEE-defined NaN.
@@ -230,7 +230,7 @@ function Base.resize!(t::TSeries, n::Integer)
     return t
 end
 
-# if range is given, we may have to 
+# if range is given
 Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
 function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where F <: Frequency
     orng = rangeof(t)  # old range
@@ -263,7 +263,7 @@ function Base.copyto!(dest::TSeries{F}, drng::AbstractRange{MIT{F}}, src::TSerie
     fullindex = union(rangeof(dest), drng)
     resize!(dest, fullindex)
     copyto!(dest.values, Int(first(drng) - firstindex(dest) + 1), src[drng].values, 1, length(drng))
-    dest
+    return dest
 end
 
 # nothing
