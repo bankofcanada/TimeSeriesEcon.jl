@@ -106,26 +106,26 @@ frequencies subtyped from [`YPFrequency`](@ref).
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
 
 """
-    yp(x::MIT)
+    mit2yp(x::MIT)
 
 Recover the year and period from a given [`MIT`](@ref) value. This is valid only
 if the frequency is subtyped from [`YPFrequency`](@ref).
 """
-function yp end
-yp(x) = throw(ArgumentError("Value of type $(typeof(x)) cannot be represented as (year, period) pair. "))
+function mit2yp end
+mit2yp(x) = throw(ArgumentError("Value of type $(typeof(x)) cannot be represented as (year, period) pair. "))
 
 # Careful with values near 0 and negative values
 # the remainder `p` returned by divrem() has the same sign 
 # as the argument being divided. We need 0 <= p <= N-1, so
 # in this case we add N to p and subtract 1 from y 
 # (since 1y = N*p we preserve the property that x = N*y+p)
-@inline function yp(x::MIT{<:YPFrequency{N}}) where {N} 
+@inline function mit2yp(x::MIT{<:YPFrequency{N}}) where {N} 
     (y, p) = divrem(Int(x), N); 
     p < 0 ? (y - 1, p + N + 1) : (y, p + 1)
 end
 
-@inline year(x) = yp(x)[1]
-@inline period(x) = yp(x)[2]
+@inline year(x) = mit2yp(x)[1]
+@inline period(x) = mit2yp(x)[2]
 
 """ 
     year(x::MIT), period(x::MIT)
@@ -279,7 +279,7 @@ Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)
 # Conversion to Float64 - that's needed for plotting
 (T::Type{<:AbstractFloat})(x::MIT) = convert(T, Int(x))
 # In the special case of YPFrequency we want the year to be the whole part and the period to be the fractional part. 
-(T::Type{<:AbstractFloat})(x::MIT{<:YPFrequency{N}}) where N = convert(T, ((y, p) = yp(x); y + (p - 1) / N))
+(T::Type{<:AbstractFloat})(x::MIT{<:YPFrequency{N}}) where N = convert(T, ((y, p) = mit2yp(x); y + (p - 1) / N))
 Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
 
 # ----------------------------------------
@@ -299,7 +299,7 @@ Base.hash(x::MIT{T}) where T <: Frequency = hash(("$T", Int(x)))
 # ----------------------------------------
 
 struct _FConst{F <: Frequency} end
-    struct _FPConst{F <: Frequency,P} end
+struct _FPConst{F <: Frequency,P} end
 Base.:(*)(y::Integer, ::_FConst{F}) where F <: Frequency = MIT{F}(y)
 Base.:(*)(y::Integer, ::_FPConst{F,P}) where {F <: Frequency,P} = MIT{F}(y, P)
 
@@ -339,7 +339,7 @@ Base.:(:)(::Int, ::MIT) = my_range_error()
 Base.:(:)(::MIT, ::Int) = my_range_error()
 my_range_error() = throw(ArgumentError("""Cannot mix Int and MIT in the same range. 
     If you're using `begin` or `end` to index a TSeries make sure to use them at both ends.
-    For example, instead of t[2:end] use t[begin+1:end].
+    For example, instead of s[2:end] use s[begin+1:end].
 """))
 
 Base.length(rng::UnitRange{<:MIT}) = convert(Int, last(rng) - first(rng) + 1)

@@ -51,7 +51,7 @@ include("momentintime.jl")
 export MIT, Duration
 export mm, qq, yy, pp
 export Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit
-export year, period
+export year, period, mit2yp
 export frequencyof
 export U, Y, Q1, Q2, Q3, Q4
 export M1, M2, M3, M4, M5, M6
@@ -64,19 +64,19 @@ export typenan, istypenan
 
 include("tsbroadcast.jl")
 include("tsmath.jl")
-
 export shift, shift!, lag, lag!, lead, lead!
 
 include("fconvert.jl")
-
 export overlay, fconvert
 
 # export ppy
 # export pct, apct
 # export nanrm!
 
-# include("recursive.jl")
-# include("plotrecipes.jl")
+include("recursive.jl")
+export @rec
+
+include("plotrecipes.jl")
 
 
 end

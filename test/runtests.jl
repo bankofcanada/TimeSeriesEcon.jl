@@ -1,22 +1,20 @@
 using Test
 using TimeSeriesEcon
 
-import TimeSeriesEcon.yp
-
 @testset "MIT,Duration" begin
-    # yp conversions
-    @test yp(MIT{Quarterly}(5)) == (1, 2)
-    @test yp(MIT{Quarterly}(4)) == (1, 1)
-    @test yp(MIT{Quarterly}(3)) == (0, 4)
-    @test yp(MIT{Quarterly}(2)) == (0, 3)
-    @test yp(MIT{Quarterly}(1)) == (0, 2)
-    @test yp(MIT{Quarterly}(0)) == (0, 1)
-    @test yp(MIT{Quarterly}(-1)) == (-1, 4)
-    @test yp(MIT{Quarterly}(-2)) == (-1, 3)
-    @test yp(MIT{Quarterly}(-3)) == (-1, 2)
-    @test yp(MIT{Quarterly}(-4)) == (-1, 1)
-    @test yp(MIT{Quarterly}(-5)) == (-2, 4)
-    @test yp(MIT{Quarterly}(-6)) == (-2, 3)
+    # mit2yp conversions
+    @test mit2yp(MIT{Quarterly}(5)) == (1, 2)
+    @test mit2yp(MIT{Quarterly}(4)) == (1, 1)
+    @test mit2yp(MIT{Quarterly}(3)) == (0, 4)
+    @test mit2yp(MIT{Quarterly}(2)) == (0, 3)
+    @test mit2yp(MIT{Quarterly}(1)) == (0, 2)
+    @test mit2yp(MIT{Quarterly}(0)) == (0, 1)
+    @test mit2yp(MIT{Quarterly}(-1)) == (-1, 4)
+    @test mit2yp(MIT{Quarterly}(-2)) == (-1, 3)
+    @test mit2yp(MIT{Quarterly}(-3)) == (-1, 2)
+    @test mit2yp(MIT{Quarterly}(-4)) == (-1, 1)
+    @test mit2yp(MIT{Quarterly}(-5)) == (-2, 4)
+    @test mit2yp(MIT{Quarterly}(-6)) == (-2, 3)
     # subtractions
     @test typeof(qq(2020, 1) - qq(2019, 2)) == Duration{Quarterly}
     @test typeof(qq(2020, 1) - 2) == MIT{Quarterly}
@@ -656,14 +654,28 @@ end
 
 end
 
-# @testset "recursive" begin
-#     ts = TSeries(1U, zeros(0))
-#     ts[1U] = ts[2U] = 1.0
-#     @rec 3U:10U ts[t] = ts[t-1]+ts[t-2]
-        #     @test ts.values == [1.0,1,2,3,5,8,13,21,34,55]
-#     t = zeros(10,7)
-#     r = rand(1, 7)
-#     t[1, :] = r
-#     @rec 2:10 t[s,:] = t[s-1,:] .* s
-#     @test t ≈ factorial.(1:10) * r
-# end
+@testset "recursive" begin
+    ts = TSeries(1U, zeros(0))
+    ts[1U] = ts[2U] = 1.0
+    @rec 3U:10U ts[t] = ts[t-1]+ts[t-2]
+            @test ts.values == [1.0,1,2,3,5,8,13,21,34,55]
+    t = zeros(10,7)
+    r = rand(1, 7)
+    t[1, :] = r
+    @rec s=2:10 t[s,:] = t[s-1,:] .* s
+    @test t ≈ factorial.(1:10) * r
+    #
+    s = ones(15);
+    @rec i=3:15 s[i] = s[i-1] + s[i-2]
+    @test s == Float64[1,1,2,3,5,8,13,21,34,55,89,144,233,377,610]
+    s = TSeries(2020Q1:2021Q4)
+    s[begin] = 0
+    @test_throws UndefVarError @rec 2020Q1:2021Q2 s[i+1] = 1.0 + s[i]
+    @rec i=firstdate(s):2023Q2 s[i+1] = 1.0 + s[i]
+    @test rangeof(s) == 2020Q1:2023Q3
+    @test values(s) == Float64[0:14...]
+    resize!(s, 2020Q1:2020Q2)
+    @rec firstdate(s)+1:2022Q3 s[t+1] = 2.0 * s[t] + s[t-1]
+    @test rangeof(s) == 2020Q1:2022Q4
+    @test values(s) == Float64[0,1,2,5,12,29,70,169,408,985,2378,5741]
+end
