@@ -1,28 +1,65 @@
+# Copyright (c) 2020-2021, Bank of Canada
+# All rights reserved.
+
 # -------------------------------------------------------------------------------
 # TSeries struct 
 # -------------------------------------------------------------------------------
 
 """
-    TSeries{F, T, C} <: AbstractVector{T}
+    mutable struct TSeries{F, T, C} <: AbstractVector{T}
+        firstdate::MIT{F}
+        values::C
+    end
 
-Time series with frequency `F` with values of type `T` stored in a container of type `C`.
-By default the type is `Float64` and the container is `Vector{Float64}`.
+Time series with frequency `F` with values of type `T` stored in a container of
+type `C`. By default the type is `Float64` and the container is
+`Vector{Float64}`.
 
 Construction:
-  - `ts = TSeries(2020Q1, rand(5))` - from first date and data
-  - `ts = TSeries(2020Q1:2021Q4, 0.25)` - from range and number
-  - `ts = TSeries(2020Q1:2021Q4, rand(8))` - from range and values
+    ts = TSeries(args...)
+
+    The standard construction is `TSeries(firstdate::MIT, values::AbstractVector)`
+
+    If the first argument is an MIT-range (instead or an MIT), then the length
+    of the `values` container must match the length of the given range.
+
+    In the case of a range argument, the `values` can be omitted, in which case
+    the container is initializes with `undef`. Or you can also pass a constant
+    and then the `values` will be filled with that constant. To accomplish this,
+    you can also use `fill`, e.g., `TSeries(20Q1:20Q4, 5)` is the same as
+    `fill(5, 20Q1:20Q4)`.
+
+    If only a `firstdate::MIT` is given, the `values` container is initialized
+    to an empty `Vector`.
+
+    If only an `n::Integer` is given, it is the same as passing the range
+    `0U .+ (1:n)`. An initialization argument is not allowed in this case.
+
+    A `TSeries` can also be constructed with `copy`, `similar`, and `fill`.
 
 Indexing:
-  - `ts[1]` - using integer
-  - `ts[2020Q1]` - using `MIT` 
-  - `ts[1:4]` - indexing with integer range returns a `Vector`
-  - `ts[2020Q1:2020Q4]` - indexing with `MIT` range returns a `TSeries`
-  - `ts[ts .< 0.5]` - indexing with `Bool` array returns a `Vector`
-  - indexing with `begin` and `end` works based on the MIT range. Don't use
-    `begin` and `end` with integer indexes - it'll result in an error.
-    `t[begin:2020Q3]` works, as well as `t[begin+1:end-1]`, while `t[1:end]`
-    will result in an error (something like Illegal operation between Int and MIT).
+
+    Indexing with an `MIT` or a range of `MIT` works as you'd expect.
+
+    Indexing with `Integer`s works the same as with `Vector`.
+
+    Indexing with `Bool`-array works as you'd expect. For example,
+    `s[s .< 0.0] .*= -1` multiplies in place the negative entries of `s` by -1,
+    so effectively it's the same as `s .= abs.(s)`.
+
+    There are important differences between indexing with MIT and not
+    using MIT (i.e., using Integer or Bool-array).
+
+    * with MIT-range we return a TSeries with the given range, otherwise we
+      return a `Vector`
+
+    * the range can be extended (the TSeries resized appropriately) by assigning
+      outside the current range. This works only with MIT (you get a BoundsError
+      if you try to assign outside the Integer range).
+
+    * `begin` and `end` are MIT, so either use both or none of them. For example
+      `s[2:end]` doesn't work because 2 is an `Int` and `end` is an `MIT`. You
+      should use `s[begin+1:end]`.
 
 """
 mutable struct TSeries{F <: Frequency,T <: Number,C <: AbstractVector{T}} <: AbstractVector{T}
@@ -46,18 +83,18 @@ These are identical to `firstindex` and `lastindex`.
 firstdate, lastdate
 
 # -------------------------------------------------------------------------------
-# some methods that makes the AbstractArray infrastructure of Julia work with TSeries
+# some methods that make the AbstractArray infrastructure of Julia work with TSeries
 
-Base.size(t::TSeries) = size(t.values)
-Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
-Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
+@inline Base.size(t::TSeries) = size(t.values)
+@inline Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
+@inline Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
 
 # the following are needed for copy() and copyto!() (and a bunch of Julia internals that use them)
 Base.IndexStyle(::TSeries) = IndexLinear()
 Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
 
 # normally only the first of the following is sufficient.
-# we a few other versions of similar below
+# we add few other versions of similar below
 Base.similar(t::TSeries) = TSeries(t.firstdate, similar(t.values))
 
 # -------------------------------------------------------------------------------
@@ -83,6 +120,8 @@ Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, 
 # construct undefined from range
 TSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}) = TSeries(first(rng), Vector{T}(undef, length(rng)))
 TSeries(rng::UnitRange{<:MIT}) = TSeries(Float64, rng)
+TSeries(fd::MIT) = TSeries(fd .+ (0:-1))
+TSeries(T::Type{<:Number}, fd::MIT) = TSeries(T, fd .+ (0:-1))
 TSeries(n::Integer) = TSeries(1U:n * U)
 TSeries(T::Type{<:Number}, n::Integer) = TSeries(T, 1U:n * U)
 TSeries(rng::UnitRange{<:Integer}) = TSeries(0U .+ rng)
@@ -112,7 +151,7 @@ function Base.summary(io::IO, t::TSeries)
     ct = "" # ct = typeof(t.values) === Array{eltype(t),1} ? "" : ",$(typeof(t.values))"
     typestr = "TSeries{$(frequencyof(t))$(et)$(ct)}"
     if isempty(t)
-        print(io, "Empty ", typestr)
+        print(io, "Empty ", typestr, " starting ", t.firstdate)
     else
         print(IOContext(io, :compact => true), length(t.values), "-element ", typestr, " with range ", Base.axes1(t))
     end
@@ -204,7 +243,7 @@ Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) wh
 """
     typenan(x), typenan(T)
 
-Return a value that indicated Not-A-Number of the same type as the given `x` or
+Return a value that indicates Not-A-Number of the same type as the given `x` or
 of the given type `T`.
 
 For floating point types, this is the IEEE-defined NaN.
@@ -217,6 +256,10 @@ typenan(T::Type{<:AbstractFloat}) = T(NaN)
 typenan(T::Type{<:Integer}) = typemax(T)
 typenan(T::Type{<:Union{MIT,Duration}}) = T(typemax(Int64))
 
+istypenan(x) = false
+istypenan(x::Integer) = x == typenan(x)
+istypenan(x::AbstractFloat) = isnan(x)
+
 # n::Integer - only the length changes. We keep the starting date 
 function Base.resize!(t::TSeries, n::Integer)
     lt = length(t)  # the old length 
@@ -226,7 +269,7 @@ function Base.resize!(t::TSeries, n::Integer)
     return t
 end
 
-# if range is given, we may have to 
+# if range is given
 Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
 function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where F <: Frequency
     orng = rangeof(t)  # old range
@@ -259,7 +302,7 @@ function Base.copyto!(dest::TSeries{F}, drng::AbstractRange{MIT{F}}, src::TSerie
     fullindex = union(rangeof(dest), drng)
     resize!(dest, fullindex)
     copyto!(dest.values, Int(first(drng) - firstindex(dest) + 1), src[drng].values, 1, length(drng))
-    dest
+    return dest
 end
 
 # nothing

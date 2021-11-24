@@ -1,68 +1,60 @@
-"""
-    @rec(rng, eqn)
+# Copyright (c) 2020-2021, Bank of Canada
+# All rights reserved.
 
-Computes recursive calculations for the given range `rng` and equation `eqn`.
+using MacroTools
+
+"""
+    @rec [index=]range expression
+
+Computes recursive operations on time series. The first argument is the range
+and the second argument is an expression to be evaluated over that range.
+
+The expression is meant to be an assignment, but it doesn't have to be. 
+
+The the range can specify an optional indexing variable (as in a for loop). If
+not given, the variable is assumed to be `t`.
 
 ### Examples
 ```julia-repl
-julia> s = TSeries(1U, zeros(1))
-1-element Unit TSeries from 1U:
-      1U : 0.0
+julia> s = TSeries(1U)
+Empty TSeries{Unit} starting 5U
 
-julia> s[1U] = 0
-0
-
-julia> s[2U] = 1
-1
-
-julia> s 
-2-element Unit TSeries from 1U:
-      1U : 0.0
+julia> s[1U] = s[2U] = 1; s
+2-element TSeries{Unit} with range 1U:2U:
+      1U : 1.0
       2U : 1.0
 
-julia> @rec(3U:10U, s[t] = s[t-1] + s[t-2])
+julia> @rec t=3U:10U s[t] = s[t-1] + s[t-2]
 
 julia> s
-10-element Unit TSeries from 1U:
-      1U : 0.0
+10-element TSeries{Unit} with range 1U:10U:
+      1U : 1.0
       2U : 1.0
-      3U : 1.0
-      4U : 2.0
-      5U : 3.0
-      6U : 5.0
-      7U : 8.0
-      8U : 13.0
-      9U : 21.0
-     10U : 34.0
+      3U : 2.0
+      4U : 3.0
+      5U : 5.0
+      6U : 8.0
+      7U : 13.0
+      8U : 21.0
+      9U : 34.0
+     10U : 55.0
 ```
 """
-macro rec(rng, eqn)
-    eqn isa Expr && eqn.head == :(=) || error("Expression must be an assignment.")
-    lhs, rhs = eqn.args
-    lhs isa Expr && lhs.head == :ref || error("Left hand side of assignment must be an indexing expression.")
-    vn, inds = lhs.args[1], lhs.args[2:end]
-    tn = let # try to find the indexing variable
-        tn = Symbol[]
-        for i in 1:length(inds)
-            isa(inds[i], Symbol) || continue
-            inds[i] == :(:) && continue
-            if inds[i] == :t # prefer :t if it's in there
-                tn = [:t]
-                break
-            else
-                push!(tn, inds[i])
-            end
-        end
-        isempty(tn) && error("Time index not found.")
-        # :t not there and multiple other symbols.
-        length(tn) > 1 && error("Ambiguous time index. Use `t`.")
-        tn[1]
+macro rec(arg_rng, arg_eqn)
+    ind = nothing
+    rng = nothing
+    matched = @capture(arg_rng, ind_ = rng_) || @capture(arg_rng, ind_ in rng_) || @capture(arg_rng, ind_ ∈ rng_)
+    if !matched
+        rng = arg_rng
+        @capture(arg_eqn, var_[ind_] = rhs_)
     end
-    return quote
-        for $(tn) in $(rng)
-            $(eqn)
+    if !isa(ind, Symbol)
+        ind = :t
+    end
+    return esc(quote
+        for $(ind) in $(rng)
+            $(arg_eqn)
         end
-    end |> esc
+    end)
 end
 
-export @rec
