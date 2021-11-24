@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2021, Bank of Canada
+# All rights reserved.
+
 # ----------------------------------------
 # 1. Frequency types
 # ----------------------------------------

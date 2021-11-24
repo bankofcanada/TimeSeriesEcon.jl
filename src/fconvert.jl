@@ -44,6 +44,20 @@ function overlay(rng::AbstractRange{MIT{F}}, ts::Vararg{TSeries{F},N}) where {F 
 end
 
 
+function _valid_range(t::TSeries)
+    fd = firstdate(t)
+    ld = lastdate(t)
+    while fd <= ld && istypenan(t[ld])
+        ld -= 1
+    end
+    while fd <= ld && istypenan(t[fd])
+        fd += 1
+    end
+    return fd:ld
+end
+
+Base.strip(t::TSeries) = getindex(t, _valid_range(t))
+strip!(t::TSeries) = resize!(t, _valid_range(t))
 
 """
     fconvert(F, t)
