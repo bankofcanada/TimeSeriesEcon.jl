@@ -69,6 +69,10 @@ export shift, shift!, lag, lag!, lead, lead!
 include("fconvert.jl")
 export overlay, fconvert
 
+include("mvtseries.jl")
+export MVTSeries
+export rawdata, colnames
+
 # export ppy
 # export pct, apct
 # export nanrm!

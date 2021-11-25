@@ -68,10 +68,10 @@ mutable struct TSeries{F <: Frequency,T <: Number,C <: AbstractVector{T}} <: Abs
 end
 
 Base.values(t::TSeries) = values(t.values)
-firstdate(t::TSeries) = t.firstdate
-lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
+@inline firstdate(t::TSeries) = t.firstdate
+@inline lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
 
-frequencyof(::Type{<:TSeries{F}}) where F <: Frequency = F
+@inline frequencyof(::Type{<:TSeries{F}}) where F <: Frequency = F
 @inline rangeof(t::TSeries) = firstdate(t):lastdate(t)
 
 """
@@ -197,7 +197,7 @@ end
 #   
 
 Base.getindex(t::TSeries, m::MIT) = mixed_freq_error(t, m)
-function Base.getindex(t::TSeries{F}, m::MIT{F}) where {F <: Frequency}
+@inline function Base.getindex(t::TSeries{F}, m::MIT{F}) where {F <: Frequency}
     @boundscheck checkbounds(t, m)
     fi = firstindex(t.values)
     getindex(t.values, fi + oftype(fi, m - firstdate(t)))
@@ -320,58 +320,6 @@ function Base.view(t::TSeries, I::AbstractRange{<:Integer})
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
 
-# """
-#     Horizonatal Concatenation of `TSeries`
-
-# ### Examples
-# ```julia-repl
-# julia> a = TSeries(ii(1), ones(3));
-# julia> b = TSeries(ii(2), ones(3));
-# julia> [a b]
-# 4×2 Array{Float64,2}:
-#    1.0  NaN
-#    1.0    1.0
-#    1.0    1.0
-#  NaN      1.0
-
-# ```
-# """
-# function Base.hcat(tuple_of_ts::Vararg{TSeries{T}, N}) where T <: Frequency where N
-#     firstdate = [i.firstdate for i in tuple_of_ts] |> minimum
-#     lastdate  = [TimeSeriesEcon.lastdate(i) for i in tuple_of_ts] |> maximum
-
-#     holder = Array{Float64, 1}()
-
-#     for ts in tuple_of_ts
-#         for date in firstdate:lastdate
-#             if ts[date] == nothing
-#                 v = [NaN]
-#             else
-#                 v = ts[date]
-#             end
-
-#             append!(holder, v)
-#         end
-#     end
-
-#     reshaped_array = reshape(holder, (length(firstdate:lastdate), length(tuple_of_ts)))
-
-#     return  reshaped_array
-# end
-
-
-# """
-#     diff(x::TSeries, k::Int = -1)
-
-# Same as Iris implementation of diff
-# """
-# function Base.diff(ts::TSeries{T}, k::Int = -1) where T <: Frequency
-#     y = deepcopy(ts);
-
-#     y.firstdate = y.firstdate - k
-
-#     return ts - y
-# end
 
 
 # """

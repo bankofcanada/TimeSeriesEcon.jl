@@ -6,4 +6,4 @@ using TimeSeriesEcon
 
 include("test_mit.jl")
 include("test_tseries.jl")
-
+include("test_mvtseries.jl")
