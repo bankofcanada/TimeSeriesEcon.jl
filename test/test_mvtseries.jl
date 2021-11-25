@@ -2,6 +2,41 @@
 # All rights reserved.
 
 
+@testset "MV construct" begin
+    @test size(MVTSeries(20Q1)) == (0,0)
+    @test size(MVTSeries(20Q1, :a)) == (0,1)
+    @test size(MVTSeries(20Q1, (:a, :b))) == (0,2)
+    @test size(MVTSeries(20Q1, (:a,"b"))) == (0,2)
+    @test size(MVTSeries(20Q1:20Q4, :a)) == (4,1)
+    @test size(MVTSeries(20Q1:20Q4, (:a,:b))) == (4,2)
+    @test size(MVTSeries(20Q1:20Q4, ("a",:b))) == (4,2)
+    @test size(MVTSeries(20Q1:20Q4, ["a",:b])) == (4,2)
+    @test size(MVTSeries(20Q1:20Q4, ["a",:b], undef)) == (4,2)
+    @test size(MVTSeries(20Q1:20Q4, ["a",:b], 5)) == (4,2)
+    @test size(MVTSeries(20Q1:20Q4, ["a",:b], zeros)) == (4,2)
+
+    let a = similar(zeros(Int, 0,0), (20Y:22Y, (:a,:b))),
+        b = similar(zeros(Int, 0,0), Complex, (20Y:22Y, (:a,:b))),
+        c = fill(5, 20Q1:20Q4, (:a,:b,:c))
+        @test a isa MVTSeries
+        @test rangeof(a) == 20Y:22Y
+        @test tuple(colnames(a)...) == (:a, :b)
+        @test eltype(a) == Int
+        @test eltype(b) == Complex
+        @test eltype(c) == Int
+        @test size(c) == (4, 3)
+        @test extrema(c) == (5, 5)
+    end
+
+    @test_throws ArgumentError MVTSeries(1U, (:a, :b), zeros(10,3))
+    @test_throws ArgumentError MVTSeries(1U, (:a, :b), zeros(10,1))
+
+    @test_throws ArgumentError MVTSeries(1U:5U, (:a, :b), zeros(10,2))
+    @test_throws ArgumentError MVTSeries(1U:5U, (:a, :b), zeros(4,2))
+    @test (MVTSeries(1U:5U, (:a, :b), zeros(5,2)); true)
+
+end
+
 
 
 
