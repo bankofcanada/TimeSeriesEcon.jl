@@ -33,19 +33,14 @@ mutable struct MVTSeries{
 
 end
 
+@inline _names_as_tuple(names::Symbol) = (names,)
+@inline _names_as_tuple(names::AbstractString) = (Symbol(names),)
+@inline _names_as_tuple(names) = tuple(Symbol.(names)...)
+
+
 # standard constructor with default empty values
-function MVTSeries(fd::MIT = 1U, vars = (), data::Union{Nothing, AbstractMatrix}=nothing)
-    if vars isa Symbol
-        vars = (vars,)
-    else
-        vars = tuple(Symbol.(vars)...)
-    end
-    if data === nothing
-        return MVTSeries(fd, vars, Matrix{Float64}(undef, 0, length(vars)))
-    else
-        return MVTSeries(fd, vars, data)
-    end
-end
+MVTSeries(fd::MIT = 1U, names = ()) = (names = _names_as_tuple(names); MVTSeries(fd, names, zeros(0, length(names))))
+MVTSeries(fd::MIT, names, data::AbstractMatrix) = (names = _names_as_tuple(names); MVTSeries(fd, names, data))
 # see more constructors below
 
 @inline _vals(x::MVTSeries) = getfield(x, :values)
@@ -57,7 +52,7 @@ end
 
 @inline firstdate(x::MVTSeries) = getfield(x, :firstdate)
 @inline lastdate(x::MVTSeries) = firstdate(x) + size(_vals(x), 1) - one(firstdate(x))
-@inline frequencyof(::MVTSeries{F}) where {F<:Frequency} = F
+@inline frequencyof(::Type{<:MVTSeries{F}}) where {F<:Frequency} = F
 @inline rangeof(x::MVTSeries) = firstdate(x):lastdate(x)
 
 # -------------------------------------------------------------------------------
@@ -65,7 +60,7 @@ end
 
 
 @inline Base.size(x::MVTSeries) = size(_vals(x))
-@inline Base.axes(x::MVTSeries) = (rangeof(x), colnames(x))
+@inline Base.axes(x::MVTSeries) = (rangeof(x), tuple(colnames(x)...))
 @inline Base.axes1(x::MVTSeries) = rangeof(x)
 
 # the following are needed for copy() and copyto!() (and a bunch of Julia internals that use them)
@@ -80,9 +75,9 @@ Base.similar(x::MVTSeries) = MVTSeries(firstdate(x), colnames(x), similar(_vals(
 # Indexing with integers and booleans - same as matrices
 
 # Indexing with integers falls back to AbstractArray
-const FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex}
-Base.getindex(sd::MVTSeries, i1::FallbackType...) = getindex(_vals(sd), i1...)
-Base.setindex!(sd::MVTSeries, val, i1::FallbackType...) = setindex!(_vals(sd), val, i1...)
+const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex}
+Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), i1...)
+Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, i1...)
 
 # -------------------------------------------------------------
 # Some other constructors
@@ -100,9 +95,9 @@ MVTSeries(T::Type{<:Number}, fd::MIT, vars) = MVTSeries(fd, vars, Matrix{T}(unde
 @inline MVTSeries(rng::UnitRange{<:MIT}, vars) = MVTSeries(Float64, rng, vars, undef)
 @inline MVTSeries(rng::UnitRange{<:MIT}, vars, ::UndefInitializer) = MVTSeries(Float64, rng, vars, undef)
 @inline MVTSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}, vars) = MVTSeries(T, rng, vars, undef)
-MVTSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}, vars, ::UndefInitializer) = 
+MVTSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}, vars, ::UndefInitializer) =
     MVTSeries(first(rng), vars, Matrix{T}(undef, length(rng), length(vars)))
-MVTSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}, vars::Symbol, ::UndefInitializer) = 
+MVTSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}, vars::Symbol, ::UndefInitializer) =
     MVTSeries(first(rng), (vars,), Matrix{T}(undef, length(rng), 1))
 
 # initialize with a function like zeros, ones, rand.
@@ -119,10 +114,10 @@ function MVTSeries(rng::UnitRange{<:MIT}, vars, vals::AbstractMatrix{<:Number})
     nrow, ncol = size(vals)
     if lrng != nrow || lvrs != ncol
         throw(ArgumentError("Number of periods and variables do not match size of data." *
-                        " ($(lrng)×$(lvrs)) ≠ ($(nrow)×$(ncol))"
+                            " ($(lrng)×$(lvrs)) ≠ ($(nrow)×$(ncol))"
         ))
     end
-    return MVTSeries(first(rng), vars, vals) 
+    return MVTSeries(first(rng), vars, vals)
 end
 
 # construct if data is given as a vector (it must be exactly 1 variable)
@@ -138,14 +133,158 @@ Base.similar(::AbstractArray, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT},N
 Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}) where {T<:Number,N} = MVTSeries(T, shape[1], shape[2])
 
 # construct from range and fill with the given constant or array
-Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N, Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng),length(vars)))
-
+Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
 
 
 # -------------------------------------------------------------------------------
-# Indexing with MIT 
+# Dot access to columns
+
+Base.propertynames(x::MVTSeries) = tuple(colnames(x)...)
+
+function Base.getproperty(x::MVTSeries, col::Symbol)
+    col ∈ fieldnames(typeof(x)) && return getfield(x, col)
+    columns = _cols(x)
+    haskey(columns, col) && return columns[col]
+    Base.throw_boundserror(x, [col,])
+end
+
+function Base.setproperty!(x::MVTSeries, name::Symbol, val)
+    name ∈ fieldnames(typeof(x)) && return setfield!(x, name, val)
+    columns = _cols(x)
+    if !haskey(columns, name)
+        error("Cannot append new column this way. " *
+              "Use hcat(x; $name = value) or push!(x; $name = value).")
+    end
+    col = columns[name]
+    ####  Do we need this mightalias check here? I think it's done in copyto!() so we should be safe without it.
+    # if Base.mightalias(col, val)
+    #     val = copy(val)
+    # end
+    if val isa TSeries
+        rng = intersect(rangeof(col), rangeof(val))
+        return copyto!(col, rng, val)
+    else
+        return copyto!(col.values, val)
+    end
+end
+
+# -------------------------------------------------------------------------------
+# Indexing other than integers 
+
+# some check bounds that plug MVTSeries into the Julia infrastructure for AbstractArrays
+@inline Base.checkbounds(::Type{Bool}, x::MVTSeries, p::MIT) = checkindex(Bool, rangeof(x), p)
+@inline Base.checkbounds(::Type{Bool}, x::MVTSeries, p::UnitRange{<:MIT}) = checkindex(Bool, rangeof(x), p)
+@inline Base.checkbounds(::Type{Bool}, x::MVTSeries, c::Symbol) = haskey(_cols(x), c)
+@inline function Base.checkbounds(::Type{Bool}, x::MVTSeries, INDS::Vector{Symbol})
+    cols = _cols(x)
+    for c in INDS
+        haskey(cols, c) || return false
+    end
+    return true
+end
+
+@inline function Base.checkbounds(::Type{Bool}, x::MVTSeries, p::Union{MIT,UnitRange{<:MIT}}, c::Union{Symbol,Vector{Symbol}})
+    return checkbounds(Bool, x, p) && checkbounds(Bool, x, c)
+end
 
 
+# ---- single argument access
+
+# single argument - MIT point - return the row as a vector (slice of .values)
+Base.getindex(x::MVTSeries, p::MIT) = mixed_freq_error(x, p)
+@inline function Base.getindex(x::MVTSeries{F}, p::MIT{F}) where {F<:Frequency}
+    @boundscheck checkbounds(x, p)
+    fi = firstindex(_vals(x), 1)
+    getindex(x.values, fi + oftype(fi, p - firstdate(x)), :)
+end
+
+Base.setindex!(x::MVTSeries, val, p::MIT) = mixed_freq_error(x, p)
+@inline function Base.setindex!(x::MVTSeries{F}, val, p::MIT{F}) where {F<:Frequency}
+    @boundscheck checkbounds(x, p)
+    fi = firstindex(_vals(x), 1)
+    setindex!(_vals(x), val, fi + oftype(fi, p - firstdate(x)), :)
+end
+
+# single argument - MIT range
+Base.getindex(x::MVTSeries, rng::UnitRange{MIT}) = mixed_freq_error(x, rng)
+@inline function Base.getindex(x::MVTSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
+    start, stop = _ind_range_check(x, rng)
+    return MVTSeries(first(rng), axes(x, 2), getindex(_vals(x), start:stop, :))
+end
+
+Base.setindex!(x::MVTSeries, val, rng::UnitRange{MIT}) = mixed_freq_error(x, rng)
+@inline function Base.setindex!(x::MVTSeries{F}, val, rng::UnitRange{MIT{F}}) where {F<:Frequency}
+    start, stop = _ind_range_check(x, rng)
+    setindex!(_vals(x), val, start:stop, :)
+end
+
+# single argument - variable - return a TSeries of the column
+@inline Base.getindex(x::MVTSeries, col::AbstractString) = getindex(x, Symbol(col))
+@inline function Base.getindex(x::MVTSeries, col::Symbol)
+    @boundscheck checkbounds(x, col)
+    getproperty(x, col)
+end
+
+@inline Base.setindex!(x::MVTSeries, val, col::AbstractString) = setindex!(x, val, Symbol(col))
+@inline function Base.setindex!(x::MVTSeries, val, col::Symbol)
+    setproperty!(x, col, val)
+end
+
+# single argument - list/tuple of variables - return a TSeries of the column
+@inline Base.getindex(x::MVTSeries, col::NTuple{N,Symbol}) where {N} = getindex(x, [col...])
+@inline function Base.getindex(x::MVTSeries, col::Vector{Symbol})
+    @boundscheck checkbounds(x, col)
+    names = [colnames(x)...]
+    inds = indexin(col, names)
+    return MVTSeries(firstdate(x), tuple(names[inds]...), getindex(_vals(x), :, inds))
+end
+
+@inline Base.setindex!(x::MVTSeries, val, col::NTuple{N,Symbol}) where {N} = setindex!(x, val, [col...])
+@inline function Base.setindex!(x::MVTSeries, val, col::Vector{Symbol})
+    @boundscheck checkbounds(x, col)
+    names = [colnames(x)...]
+    inds = indexin(col, names)
+    setindex!(x.values, val, :, inds)
+end
+
+# ---- two agruments indexing
+
+@inline Base.getindex(x::MVTSeries, p::MIT, ::Any) = mixed_freq_error(x, p)
+@inline Base.getindex(x::MVTSeries, r::UnitRange{<:MIT}, ::Any) = mixed_freq_error(x, r)
+
+# if one argument is Colon, fall back on single argument indexing
+@inline Base.getindex(x::MVTSeries, p::MIT, ::Colon) = getindex(x, p)
+@inline Base.getindex(x::MVTSeries, p::UnitRange{<:MIT}, ::Colon) = getindex(x, p)
+@inline Base.getindex(x::MVTSeries, ::Colon, c::Symbol) = getindex(x, c)
+@inline Base.getindex(x::MVTSeries, ::Colon, c::NTuple{N,Symbol}) where {N} = getindex(x, c)
+@inline Base.getindex(x::MVTSeries, ::Colon, c::Vector{Symbol}) = getindex(x, c)
+
+# 
+
+_colind(x, c) = indexin([Symbol(c)], [colnames(x)...])[1]
+_colind(x, c::Vector) = indexin(Symbol.(c), [colnames(x)...])
+
+@inline function Base.getindex(x::MVTSeries{F}, p::MIT{F}, c::Union{Symbol,NTuple{N,Symbol},Vector{Symbol}}) where {F<:Frequency,N}
+    @boundscheck checkbounds(x, p, c)
+    fi = firstindex(_vals(x), 1)
+    i1 = oftype(fi, fi + (p - firstdate(x)))
+    i2 = _colind(x, c)
+    getindex(x.values, i1, i2)
+end
+
+@inline function Base.getindex(x::MVTSeries{F}, p::UnitRange{MIT{F}}, c::Union{Symbol,NTuple{N,Symbol},Vector{Symbol}}) where {F<:Frequency,N}
+    @boundscheck checkbounds(x, p, c)
+    start, stop = _ind_range_check(x, p)
+    i1 = start:stop
+    i2 = _colind(x, c)
+    # we're returning a time series here (by convention when indexing with MIT range)
+    if i2 isa Vector
+        # multiple columns
+        return MVTSeries(first(p), axes(x, 2)[i2], getindex(_vals(x), i1, i2))
+    else
+        return TSeries(first(p), getindex(_vals(x), i1, i2))
+    end
+end
 
 
 

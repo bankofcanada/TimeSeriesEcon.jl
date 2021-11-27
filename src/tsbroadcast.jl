@@ -56,7 +56,7 @@ my_check_axes(shape, x) = x  # fallback for Number and other things.
     shape == axes(t) ? t : 
         # if the axes are not identical, we create a "view" into the broadcasted range
         TSeries(first(shape[1]), view(t.values, Int(first(shape[1]) - firstindex(t)) .+ (1:length(shape[1]))))
-# For vectors other than TSeries, we create a "view" as a TSeries with the broadcasted rang
+# For vectors other than TSeries, we create a "view" as a TSeries with the broadcasted range
 @inline my_check_axes(shape, t::AbstractVector) = TSeries(first(shape[1]), view(t, Base.OneTo(length(shape[1]))))
 # For nested broadcasted argument, we process the same way recursively. 
 my_check_axes(shape, bc::BC) where BC <: Base.Broadcast.Broadcasted = do_instantiate(bc, shape)
@@ -73,16 +73,18 @@ function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,Nothing}) w
     do_instantiate(bc, shape)
 end
 
-# the following two specializations are necessary in order to be able to have destination on the left of .= that has a different range than the broadcasted result on the rigth
+# the following two specializations are necessary in order to be able to have destination on the left of .= that has a different range than the broadcasted result on the right
 function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: Base.Broadcast.BroadcastStyle,A <: Tuple{<:AbstractRange{<:MIT}}}
     shape = my_combine_axes(bc.args...)
-    do_instantiate(bc, (intersect(bc.axes[1], shape[1]),))
+    I = _common_axes(bc.axes[1], shape[1])
+    do_instantiate(bc, (I,))
 end
-    
-function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: TSeriesStyle,A <: Tuple{<:AbstractRange{<:MIT}}}
-    shape = my_combine_axes(bc.args...)
-    do_instantiate(bc, (intersect(bc.axes[1], shape[1]),))
-end
+
+# function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: TSeriesStyle,A <: Tuple{<:AbstractRange{<:MIT}}}
+#     shape = my_combine_axes(bc.args...)
+#     I = _common_axes(bc.axes[1], shape[1])
+#     do_instantiate(bc, (I,))
+# end
 
 function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: Base.Broadcast.AbstractArrayStyle{0},A <: Tuple{<:AbstractRange{<:MIT}}}
     bc

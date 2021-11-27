@@ -82,5 +82,36 @@ export @rec
 
 include("plotrecipes.jl")
 
+"""
+    rangeof(s; drop::Integer)
+
+Return the stored range of `s` adjusted by dropping `drop` periods. If `drop` is
+positive, we drop from the beginning and if `drop` is negative we drop from the
+end. This adds convenience when using [`@rec`](@ref)
+
+Example
+```
+julia> q = TSeries(20Q1:21Q4); rangeof(q; drop=1)
+20Q2:21Q4
+
+julia> rangeof(q; drop=-4)
+20Q1:20Q4
+
+julia> q[begin:begin+1] .= 1; @rec rangeof(q; drop=2) q[t] = q[t-1] + q[t-2]; q
+8-element TSeries{Quarterly} with range 20Q1:21Q4:
+    20Q1 : 1.0
+    20Q2 : 1.0
+    20Q3 : 2.0
+    20Q4 : 3.0
+    21Q1 : 5.0
+    21Q2 : 8.0
+    21Q3 : 13.0
+    21Q4 : 21.0
+```
+"""
+@inline rangeof(x::Union{TSeries, MVTSeries}; drop::Integer) = 
+    (rng = rangeof(x); 
+        drop > 0 ? (first(rng) + drop:last(rng)) : (first(rng):last(rng)+drop))
+
 
 end
