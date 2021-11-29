@@ -144,6 +144,43 @@ end
         @test sum(abs, sd[1, :]) == 0
         @test_throws BoundsError sd[1999Q4]
         @test_throws DimensionMismatch sd[2000Q3] = zeros(size(dta, 2) + 1)
+        @test_throws ArgumentError sd[2000Y]
+        @test_throws BoundsError sd[1999Q4] = [5.0, 1.1]
+        @test_throws BoundsError sd[2010Q4] = rand(2)
+        # 
+        @test sd[2001Q1:2002Q4] isa MVTSeries
+        @test sd[2001Q1:2002Q4].values == sd[5:12, :]
+        sd[2001Q1:2002Q4] = 1:16
+        @test sd[5:12, :] == reshape(1.0:16.0, :, 2)
+        @test_throws BoundsError sd[1111Q4:2002Q1]
+        @test_throws BoundsError sd[2002Q1:2200Q2]
+        @test_throws DimensionMismatch sd[2001Q1:2002Q4] = 1:17
+        # assign new column
+        sd1 = hcat(sd, c = sd.a .+ 3.0)
+        @test sd1[nms] == sd
+        @test sd1[(:a, :c)].values == sd1[:, [1, 3]]
+        # access with 2 args MIT and Symbol
+        @test sd[2001Q2, (:a, :b)] isa Vector{eltype(sd)}
+        let foo = sd[2001Q2:2002Q1, (:a, :b)]
+            @test foo isa MVTSeries
+            @test size(foo) == (4, 2)
+            @test firstdate(foo) == 2001Q2
+        end
+        @test_throws BoundsError sd[1999Q1, (:a,)]
+        @test_throws BoundsError sd[2001Q1:2001Q2, (:a, :c)]
+        @test_throws Exception sd.c = 5
+        @test similar(sd) isa typeof(sd)
+        @test_throws BoundsError sd[1999Q1:2000Q4] = zeros(8, 2)
+        @test_throws BoundsError sd[2004Q1:2013Q4, [:a, :b]]
+        # setindex with two 
+        @test_throws ArgumentError sd[2001Q1, (:b,)] = 3.5
+        sd[2001Q1, :b] = 3.5
+        @test sd[5, 2] == 3.5
+        @test_throws ArgumentError sd[2000Q1:2001Q4, (:b,)] = 3.7
+        sd[2000Q1:2001Q4, (:b,)] = fill(3.7, 8)
+        @test all(sd[1:8, 2] .== 3.7)
+        @test_throws BoundsError sd[1999Q1:2000Q4, (:a, :b)] = 5.7
+        @test_throws BoundsError sd[2000Q1:2000Q4, (:a, :c)] = 5.7
     end
 end
 

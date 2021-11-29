@@ -7,13 +7,25 @@ function Base.summary(io::IO, x::MVTSeries)
     et = eltype(x) === Float64 ? "" : ",$(eltype(x))"
     typestr = "MVTSeries{$(frequencyof(x))$(et)}"
 
-    cols = colnames(x)
+    cols = axes(x,2)
     ncols = length(cols)
-    vstr = join(cols, ",")
-    if ncols == 0 || (ncols > 1 && (length(vstr) > 20 || ncols >= 10))
-        vstr = "$ncols variables"
+    if ncols == 0
+        vstr = "no variables"
+    else
+        vstr="variables ($(cols[1])"
+        for i = 2:ncols
+            cstr = ",$(cols[i])"
+            if length(vstr) + length(cstr) > 20 
+                vstr *= ",…"
+                break
+            else
+                vstr *= cstr
+            end
+        end
+        vstr *= ")"
     end
-    print(io, '(', rangeof(x), ")×(", vstr, ") ", typestr)
+
+    print(io, size(x,1), "×", size(x, 2), " ", typestr, " with range ", rangeof(x), " and ", vstr)
     nothing
 end
 
