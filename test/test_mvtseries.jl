@@ -181,6 +181,13 @@ end
             @test size(foo) == (4, 2)
             @test firstdate(foo) == 2001Q2
         end
+        # access with an MIT range and a Symbol returns a TSeries
+        let foo = sd[2001Q2:2002Q1, :a]
+            @test foo isa TSeries
+            @test size(foo) == (4, )
+            @test firstdate(foo) == 2001Q2
+            @test foo.values == sd[2001Q2:2002Q1, :a].values
+        end
         @test_throws BoundsError sd[1999Q1, (:a,)]
         @test_throws BoundsError sd[2001Q1:2001Q2, (:a, :c)]
         @test_throws Exception sd.c = 5
@@ -213,6 +220,14 @@ end
         @test (myvar = rand(size(sd)...); sd[:,(:a,:b)] = myvar; sd[:,(:a,:b)].values == myvar)
         @test (myvar = rand(size(sd)...); sd[:,[:a,:b]] = myvar; sd[:,[:a,:b]].values == myvar)
 
+        # with a range of MIT and a single column, we fall back on TSeries assignment
+        @test (myvar = [1,2,3,4]; sd[2000Q1:2000Q4,:a] = myvar; sd[2000Q1:2000Q4,:a].values == myvar)
+
+        # setindex from an MVTSeries to an MVTSeries
+        let sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
+            sd[2001Q1:2001Q4,[:a, :b]] = sd2
+            @test (sd[2001Q1:2001Q4,:].values == sd2[2001Q1:2001Q4,:].values)
+        end
     end
 end
 
