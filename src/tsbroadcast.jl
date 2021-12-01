@@ -98,6 +98,15 @@ function Base.axes(bc::Base.Broadcast.Broadcasted{<:TSeriesStyle}, d::Integer)
     d == 1 ? axes(bc)[1] : Base.OneTo(1)
 end
 
+@inline ts_get_index(x::Number, p::MIT) = x
+@inline ts_get_index(x::TSeries, p::MIT) = x[p]
+@inline ts_get_index(x::Base.Broadcast.Broadcasted, p::MIT) = x[p]
+
+function Base.Broadcast.getindex(bc::Base.Broadcast.Broadcasted, p::MIT)
+    args = (ts_get_index(arg, p) for arg in bc.args)
+    return bc.f(args...)
+end
+
 # this specialization allows for the result to be stored in a TSeries
 function Base.copyto!(dest::TSeries, bc::Base.Broadcast.Broadcasted{Nothing})
     bcrng = bc.axes[1]

@@ -245,3 +245,39 @@ end
         end
     end
 end
+
+@testset "MV bcast" begin
+    x = MVTSeries(20Q1, (:a, :b), rand(10,2))
+
+    # we can do dot operations with scalars
+    @test (x .+ 2; true)
+    
+    # we can do dot operations with multiple MVTSeries of the same dimension
+    @test x .+ 2x ./ 2 == 2x
+
+    # we can do dot operations with multiple MVTSeries of different ranges
+    @test begin
+        q = x .+ x[begin+1:end-1, :] ./ 2
+        q == 1.5x[begin+1:end-1, :]
+    end
+
+    # we can do dot operations with matrices of identical size
+    @test x .+ 3 .* x.values == 4x
+
+    # with matrixes of wrong size we get a DimensionMismatch
+    @test_throws DimensionMismatch x .+ x.values[begin+1:end-1, :]
+    @test_throws DimensionMismatch x .+ x.values[:, 1:1]
+
+    t = TSeries(20Q1, ones(10))
+    @test x .+ t.values  == (x .+ 1)
+    @test x .+ t  == (x .+ 1)
+    #
+    @test x .+ 1 .* 3  == (x .+ 3)
+    @test 1 .* 3 .+ x  == (x .+ 3)
+    @test x .+ t.values .* 3  == (x .+ 3)
+    @test t.values .* 3 .+ x  == (x .+ 3)
+    @test x .+ t .* 3  == (x .+ 3)
+    @test t .* 3 .+ x  == (x .+ 3)
+
+end
+
