@@ -39,6 +39,10 @@
 
     @test (MVTSeries(20Q1, ("a",), zeros(5,)); true)
     @test (MVTSeries(20Q1, "a", zeros(5,)); true)
+    @test (MVTSeries(1U:5U, ("a",), zeros(5,)); true)
+
+    @test (MVTSeries(20Q1, :a, zeros(5,)); true)
+    @test (MVTSeries(1U:5U, :a, zeros(5,)); true)
 
 end
 
@@ -184,6 +188,15 @@ end
         @test all(sd[1:8, 2] .== 3.7)
         @test_throws BoundsError sd[1999Q1:2000Q4, (:a, :b)] = 5.7
         @test_throws BoundsError sd[2000Q1:2000Q4, (:a, :c)] = 5.7
+
+        # getindex mixed_freq_error
+        @test_throws ArgumentError sd[1U,:a]
+        @test_throws ArgumentError sd[1U:5U,:b]
+
+        # setindex mixed_freq_error
+        @test_throws ArgumentError sd[1U,:a] = 5
+        @test_throws ArgumentError sd[1U:5U,:a] = 5
+
     end
 end
 

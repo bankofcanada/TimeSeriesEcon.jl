@@ -247,7 +247,7 @@ end
     setindex!(x.values, val, :, inds)
 end
 
-# ---- two agruments indexing
+# ---- two arguments indexing
 
 @inline Base.getindex(x::MVTSeries, p::MIT, c) = mixed_freq_error(x, p)
 @inline Base.getindex(x::MVTSeries, r::UnitRange{<:MIT}, c) = mixed_freq_error(x, r)
