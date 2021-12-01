@@ -56,6 +56,13 @@
     @test_throws ArgumentError resize!(i, 17U:24U)  # wrong frequency
     @test_throws ArgumentError copyto!(i, 17U:24U, i)  # wrong frequency
     @test_throws ArgumentError copyto!(i, s)  # wrong frequency
+
+    # rangeof with drop
+    let myts = TSeries(20Q1:21Q4,1)
+        @test rangeof(myts,drop= 2) == 20Q3:21Q4
+        @test rangeof(myts,drop=-2) == 20Q1:21Q2
+    end
+
 end
 
 @testset "Bcast" begin
@@ -285,8 +292,8 @@ end
     @test_throws BoundsError ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[4:12]
 
     # fully out of boundary
-    @test_throws BoundsError ts_q[qq(2017, 1)] == nothing
-    @test_throws BoundsError ts_q[qq(2017, 1):qq(2017, 3)] == nothing
+    @test_throws BoundsError ts_q[qq(2017, 1)] === nothing
+    @test_throws BoundsError ts_q[qq(2017, 1):qq(2017, 3)] === nothing
 end
 
 @testset "Yearly" begin
@@ -303,8 +310,8 @@ end
     @test_throws BoundsError ts_y[yy(2021):yy(2100)] == ts_y[4:12]
 
     # fully out of boundary
-    @test_throws BoundsError ts_y[yy(2017)] == nothing
-    @test_throws BoundsError ts_y[yy(2010):yy(2017)] == nothing
+    @test_throws BoundsError ts_y[yy(2017)] === nothing
+    @test_throws BoundsError ts_y[yy(2010):yy(2017)] === nothing
 end
 
 # ts_m = TSeries(mm(2018, 1), collect(1.0:12.0))
@@ -436,6 +443,7 @@ end
     @test overlay(A, B) == TSeries(87Y, [1,2,7,4])
     @test overlay(B, A) == TSeries(87Y, [1,6,7,8])
     @test overlay(86Y:92Y, A, B) ≈ TSeries(86Y, [NaN, 1, 2, 7, 4, NaN, NaN]) nans = true
+    @test (C = overlay(A,B); overlay(C,A).values == C.values)
 end
 
 @testset "fconvert" begin
@@ -463,6 +471,15 @@ end
         # @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y
     end
 
+end
+
+@testset "strip" begin
+    let rng_x = 2000Y:2010Y, x = TSeries(rng_x, ones)
+        x[2011Y:2015Y] .= NaN
+        x[1995Y:1999Y] .= NaN
+        @test (rangeof(strip(x)) == rng_x)
+        @test (TimeSeriesEcon.strip!(x); rangeof(x) == rng_x)
+    end
 end
 
 @testset "recursive" begin
