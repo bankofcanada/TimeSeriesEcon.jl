@@ -114,4 +114,6 @@ julia> q[begin:begin+1] .= 1; @rec rangeof(q; drop=2) q[t] = q[t-1] + q[t-2]; q
         drop > 0 ? (first(rng) + drop:last(rng)) : (first(rng):last(rng)+drop))
 
 
+include("workspaces.jl")
+
 end
