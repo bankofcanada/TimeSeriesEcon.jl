@@ -90,6 +90,14 @@ end
         sd = MVTSeries(2000Q1, nms, copy(dta)),
         dta2 = rand(size(dta)...)
 
+        # if one argument is Colon, fall back on single argument indexing
+        # getindex
+        @test sd[2000Q1,:] == dta[1,:]
+        @test all(sd[2000Q1:2000Q4,:].values == dta[1:4,:])
+        @test sd[:,:a].values == dta[:,1]
+        @test sd[:,(:a,:b)].values == dta[:,1:2]
+        @test sd[:,[:a,:b]].values == dta[:,1:2]
+
         @test firstdate(sd) == 2000Q1
         @test lastdate(sd) == 2000Q1 + 20 - 1
         @test frequencyof(sd) == Quarterly
@@ -198,14 +206,12 @@ end
         @test_throws ArgumentError sd[1U:5U,:a] = 5
 
         # if one argument is Colon, fall back on single argument indexing
-        # getindex
-        @test (sd[2000Q1,:] == dta[1,:]; true)
-        @test (all(sd[2000Q1:2000Q4,:].values == dta[1:4,:]); true)
-        @test (sd[:,:a].values == dta[:,1]; true)
-        @test (sd[:,(:a,:b)].values == dta[:,1:2]; true)
-        @test (sd[:,[:a,:b]].values == dta[:,1:2]; true)
         # setindex
-
+        @test (myvar = [2,2]; sd[2000Q1,:] = myvar; sd[2000Q1,:] == myvar)
+        @test (myvar = [1 2;3 4]; sd[2000Q1:2000Q2,:] = myvar; sd[2000Q1:2000Q2,:].values == myvar)
+        @test (sd[:,:a] = dta[:,1]; sd[:,:a].values == dta[:,1])
+        @test (myvar = rand(size(sd)...); sd[:,(:a,:b)] = myvar; sd[:,(:a,:b)].values == myvar)
+        @test (myvar = rand(size(sd)...); sd[:,[:a,:b]] = myvar; sd[:,[:a,:b]].values == myvar)
 
     end
 end
