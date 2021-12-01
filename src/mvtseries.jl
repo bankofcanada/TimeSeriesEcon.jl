@@ -347,6 +347,9 @@ end
 
 # -------------------------------------------------------------------------------
 
+Base.copyto!(dest::MVTSeries, src::AbstractArray) = (copyto!(dest.values, src); dest)
+Base.copyto!(dest::MVTSeries, src::MVTSeries) = (copyto!(dest.values, src.values); dest)
+
 # -------------------------------------------------------------------------------
 # ways add new columns (variables)
 
@@ -362,5 +365,5 @@ function Base.hcat(x::MVTSeries; KW...)
     return y
 end
 
-
+include("mvtseries/mvts_broadcast.jl")
 include("mvtseries/mvts_show.jl")
