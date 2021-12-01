@@ -37,6 +37,9 @@
     @test_throws ArgumentError MVTSeries(1U:5U, (:a, :b), zeros(4, 2))
     @test (MVTSeries(1U:5U, (:a, :b), zeros(5, 2)); true)
 
+    @test (MVTSeries(20Q1, ("a",), zeros(5,)); true)
+    @test (MVTSeries(20Q1, "a", zeros(5,)); true)
+
 end
 
 @testset "MV Int Ind" begin
