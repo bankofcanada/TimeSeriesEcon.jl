@@ -197,6 +197,13 @@ end
         @test_throws ArgumentError sd[1U,:a] = 5
         @test_throws ArgumentError sd[1U:5U,:a] = 5
 
+        # if one argument is Colon, fall back on single argument indexing
+        @test sd[2000Q1,:] == dta[1,:]
+        @test all(sd[2000Q1:2000Q4,:].values == dta[1:4,:])
+        @test sd[:,:a].values == dta[:,1]
+        @test sd[:,(:a,:b)].values == dta[:,1:2]
+        @test sd[:,[:a,:b]].values == dta[:,1:2]
+
     end
 end
 
