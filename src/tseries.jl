@@ -221,7 +221,12 @@ function _ind_range_check(x, rng)
 end
 
 Base.getindex(t::TSeries, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
-function Base.getindex(t::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency}
+function Base.getindex(t::TSeries{F}, rng::StepRange{MIT{F},Duration{F}}) where {F<:Frequency}
+    start, stop = _ind_range_check(t, rng)
+    step = oftype(stop-start, rng.step)
+    return t.values[start:step:stop]
+end
+function Base.getindex(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(t, rng)
     return TSeries(first(rng), getindex(t.values, start:stop))
 end
@@ -243,8 +248,18 @@ function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::Abstr
         # !! resize!() doesn't work for TSeries out of the box. we implement it below. 
         resize!(t, union(rangeof(t), rng))
     end
-    start, stop = _ind_range_check(t, rng)
-    setindex!(t.values, vec, start:stop)
+    if rng isa AbstractUnitRange
+        start, stop = _ind_range_check(t, rng)
+        setindex!(t.values, vec, start:stop)
+    elseif rng isa StepRange
+        start, stop = _ind_range_check(t, rng)
+        setindex!(t.values, vec, start:oftype(stop-start,rng.step):stop)
+    else
+        fd = firstdate(t)
+        fi = firstindex(t.values, 1)
+        inds = [oftype(fi, fi + (ind-fd)) for ind in rng]
+        setindex!(t.values, vec, inds)
+    end
 end
 
 Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) where {F1<:Frequency,F2<:Frequency,F3<:Frequency} = mixed_freq_error(t, src, rng)
