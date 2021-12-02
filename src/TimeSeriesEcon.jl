@@ -71,7 +71,7 @@ export overlay, fconvert
 
 include("mvtseries.jl")
 export MVTSeries
-export rawdata, colnames
+export rawdata, colnames, columns
 
 # export ppy
 # export pct, apct

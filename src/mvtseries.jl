@@ -46,6 +46,8 @@ MVTSeries(fd::MIT, names, data::AbstractMatrix) = (names = _names_as_tuple(names
 @inline _vals(x::MVTSeries) = getfield(x, :values)
 @inline _cols(x::MVTSeries) = getfield(x, :columns)
 
+columns(x::MVTSeries) = getfield(x, :columns)
+
 @inline colnames(x::MVTSeries) = keys(_cols(x))
 @inline rawdata(x::MVTSeries) = _vals(x)
 @inline Base.pairs(x::MVTSeries) = pairs(_cols(x))
