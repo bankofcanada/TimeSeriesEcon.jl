@@ -203,6 +203,9 @@ mixed_freq_error(::T1, ::T2) where {T1,T2} = mixed_freq_error(T1, T2)
 mixed_freq_error(T1::Type, T2::Type, T3::Type) = throw(ArgumentError("Mixing frequencies not allowed: $(frequencyof(T1)), $(frequencyof(T2)) and $(frequencyof(T3))."))
 mixed_freq_error(::T1, ::T2, ::T3) where {T1,T2,T3} = mixed_freq_error(T1, T2, T3) 
 
+Base.promote_rule(T1::Type{<:MIT}, T2::Type{<:MIT}) = mixed_freq_error(T1, T2)
+Base.promote_rule(::Type{MIT{F}}, T2::Type{MIT{F}}) where {F<:Frequency} = T1
+
 # -------------------
 # subtraction
 
@@ -216,9 +219,15 @@ Base.:(-)(l::MIT{F}, r::Duration{F}) where F <: Frequency = MIT{F}(Int(l) - Int(
 Base.:(-)(l::MIT{F}, r::Integer) where F <: Frequency = MIT{F}(Int(l) - Int(r))
 # Difference of two Duration is a Duration
 Base.:(-)(l::Duration, r::Duration) = mixed_freq_error(l, r)
+Base.:(-)(l::Duration{F}) where F <: Frequency = Duration{F}(-Int(l))
 Base.:(-)(l::Duration{F}, r::Duration{F}) where F <: Frequency = Duration{F}(Int(l) - Int(r))
 # difference of Duration and Integer is a Duration -- the Integer value is interpreted as a Duration of the same frequency
 Base.:(-)(l::Duration{F}, r::Integer) where F <: Frequency = Duration{F}(Int(l) - Int(r))
+
+Base.rem(x::Duration, y::Duration) = mixed_freq_error(x,y)
+Base.rem(x::Duration{F}, y::Duration{F}) where {F<:Frequency} = Duration{F}(rem(Int(x),Int(y)))
+Base.div(x::Duration, y::Duration, args...) = mixed_freq_error(x,y)
+Base.div(x::Duration{F}, y::Duration{F}, args...) where {F<:Frequency} = Duration{F}(div(Int(x),Int(y),args...))
 
 # -------------------
 # Comparison for equality
@@ -344,6 +353,11 @@ my_range_error() = throw(ArgumentError("""Cannot mix Int and MIT in the same ran
     If you're using `begin` or `end` to index a TSeries make sure to use them at both ends.
     For example, instead of s[2:end] use s[begin+1:end].
 """))
+
+Base.:(:)(start::MIT, step::Int, stop::MIT) = mixed_freq_error(start, stop)
+Base.:(:)(start::MIT, step::Duration, stop::MIT) = mixed_freq_error(start, step, stop)
+Base.:(:)(start::MIT{F}, step::Int, stop::MIT{F}) where {F<:Frequency} = start:Duration{F}(step):stop
+Base.:(:)(start::MIT{F}, step::Duration{F}, stop::MIT{F}) where {F<:Frequency} = StepRange(start, step, stop)
 
 Base.length(rng::UnitRange{<:MIT}) = convert(Int, last(rng) - first(rng) + 1)
 Base.step(rng::UnitRange{<:MIT}) = convert(Int, 1)

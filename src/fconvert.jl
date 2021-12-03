@@ -88,8 +88,6 @@ function fconvert(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; met
     N1 > N2 ? _to_higher(F, t; args...) : _to_lower(F, t; args...)
 end
 
-# http://www.eviews.com/help/helpintro.html#page/content/Basedata-Frequency_Conversion.html
-
 function _to_higher(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const) where {N1,N2}
     (np, r) = divrem(N1, N2)
     if r != 0

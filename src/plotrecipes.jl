@@ -53,3 +53,74 @@ end
         end
     end
 end
+
+# This "user"-type recipe is for plotting multiple MVTSeries datasets.
+# It calls the one_tseries recipe in a loop
+@recipe function many_mvtseries(datasets::MVTSeries...)
+    # trange 
+    trng = get(plotattributes, :trange, nothing)
+    # label applies to the datasets 
+    lbls = get(plotattributes, :label, nothing)
+    if lbls === nothing
+        lbls = ["data$i" for i = 1:length(datasets)]
+    elseif lbls isa AbstractString 
+        lbls = [lbls]
+    end
+    if length(lbls) != length(datasets)
+        error(ArgumentError("Number of labels and data don't match"))
+    end
+    # vars is a selection of variables to plot from each dataset
+    vars = get(plotattributes, :vars, nothing)
+    if vars === nothing
+        vars = mapreduce(colnames, union, datasets)
+    end
+    nvars = length(vars)
+    if nvars > 10
+        error("Too many variables. Maybe split into pages.")
+    end
+
+    # default layout - one subplot for each variable
+    layout --> nvars
+    
+    # common attributes for all subplots
+    titlefont --> ("computer modern", 11)
+    seriestype := :tseries
+
+    for (ind, var) in enumerate(vars)
+        # subplot attributes
+        subplot := ind
+
+        if var isa Pair{Symbol, <:AbstractString}
+            vname = var[1]
+            title := var[2]
+        else
+            vname = var
+            title := string(vname)
+        end
+
+        # create a series for variable vname for each dataset
+        for (jnd, data) in enumerate(datasets)
+            # series specific properties
+            label := lbls[jnd]
+            if hasproperty(data, vname)
+                series = getproperty(data, vname)
+                @series begin
+                    # the series itself
+                    if trng === nothing
+                        (rangeof(series), series)
+                    else
+                        xrange --> (first(trng), last(trng))
+                        (trng, series)
+                    end
+                end
+            else
+                @series begin
+                    # empty series - variable missing from dataset
+                    seriestype := :path
+                    (Float64[], Float64[])
+                end
+            end
+        end
+    end
+end
+

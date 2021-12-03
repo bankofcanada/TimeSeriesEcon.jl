@@ -28,72 +28,83 @@ Base.similar(bc::Broadcast.Broadcasted{<:TSeriesStyle}, ::Type{ElType}) where El
 
 
 # figure out the axes range of the result of the broadcast operation
-@inline my_combine_axes(A, B...) = my_broadcast_shape(axes(A), my_combine_axes(B...))
-@inline my_combine_axes(A, B) = my_broadcast_shape(axes(A), axes(B))
-my_combine_axes(A) = axes(A)
+@inline ts_combine_axes(A, B...) = ts_broadcast_shape(axes(A), ts_combine_axes(B...))
+@inline ts_combine_axes(A, B) = ts_broadcast_shape(axes(A), axes(B))
+@inline ts_combine_axes(A) = axes(A)
 
-my_broadcast_shape(shape::Tuple) = shape
-my_broadcast_shape(::Tuple{}, shape::Tuple) = shape
-my_broadcast_shape(shape::Tuple, ::Tuple{}) = shape
-function my_broadcast_shape(shape1::Tuple, shape2::Tuple) 
+ts_broadcast_shape(shape::Tuple) = shape
+ts_broadcast_shape(::Tuple{}, shape::Tuple) = shape
+ts_broadcast_shape(shape::Tuple, ::Tuple{}) = shape
+function ts_broadcast_shape(shape1::Tuple, shape2::Tuple) 
     if length(shape1) > 1 || length(shape2) > 1 
         throw(ArgumentError("broadcasting TSeries with ndims > 1.")) 
     else
-        return (_common_axes(shape1[1], shape2[1]),)
+        return (mit_common_axes(shape1[1], shape2[1]),)
     end
 end
 
-_common_axes(a::AbstractRange{<:MIT}, b::AbstractRange{<:MIT}) = mixed_freq_error(a, b)
-_common_axes(a::AbstractRange{MIT{F}}, b::AbstractRange{MIT{F}}) where F <: Frequency = intersect(a, b)
-_common_axes(a::AbstractRange{<:MIT}, b::Any) = length(a) == length(b) && first(b) == 1 ? a : throw(DimensionMismatch("Cannot broadcast with $(a) and $b."))
-_common_axes(a::Any, b::AbstractRange{<:MIT}) = _common_axes(b, a)
+mit_common_axes(a::AbstractRange{<:MIT}, b::AbstractRange{<:MIT}) = mixed_freq_error(a, b)
+mit_common_axes(a::AbstractRange{MIT{F}}, b::AbstractRange{MIT{F}}) where F <: Frequency = intersect(a, b)
+mit_common_axes(a::AbstractRange{<:MIT}, b::Any) = length(a) == length(b) && first(b) == 1 ? a : throw(DimensionMismatch("Cannot broadcast with $(a) and $b."))
+mit_common_axes(a::Any, b::AbstractRange{<:MIT}) = mit_common_axes(b, a)
 
 # given the broadcasted range in `shape`, check that all arguments are of compatible shapes and convert the non-TSeries to 
 # TSeries with the appropriate range.  This is necessary because the indexing of the broadcast is done using the MIT ranges, so
 # plain vectors must be viewed as TSeries.
-my_check_axes(shape, x) = x  # fallback for Number and other things. 
-@inline my_check_axes(shape, t::TSeries) = 
+ts_check_axes(shape, x) = x  # fall back for Number and other things. 
+@inline ts_check_axes(shape, t::TSeries) = 
     shape == axes(t) ? t : 
         # if the axes are not identical, we create a "view" into the broadcasted range
         TSeries(first(shape[1]), view(t.values, Int(first(shape[1]) - firstindex(t)) .+ (1:length(shape[1]))))
-# For vectors other than TSeries, we create a "view" as a TSeries with the broadcasted rang
-@inline my_check_axes(shape, t::AbstractVector) = TSeries(first(shape[1]), view(t, Base.OneTo(length(shape[1]))))
+# For vectors other than TSeries, we create a "view" as a TSeries with the broadcasted range
+@inline ts_check_axes(shape, t::AbstractVector) = TSeries(first(shape[1]), view(t, Base.OneTo(length(shape[1]))))
 # For nested broadcasted argument, we process the same way recursively. 
-my_check_axes(shape, bc::BC) where BC <: Base.Broadcast.Broadcasted = do_instantiate(bc, shape)
+ts_check_axes(shape, bc::BC) where BC <: Base.Broadcast.Broadcasted = ts_instantiate(bc, shape)
 
-function do_instantiate(bc::Base.Broadcast.Broadcasted{S}, shape) where S <: Base.Broadcast.BroadcastStyle
+function ts_instantiate(bc::Base.Broadcast.Broadcasted{S}, shape) where S <: Base.Broadcast.BroadcastStyle
     args = map(bc.args) do arg
-        my_check_axes(shape, arg)
+        ts_check_axes(shape, arg)
     end
     return Base.Broadcast.Broadcasted{S}(bc.f, args, shape)
 end
 
 function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,Nothing}) where S <: TSeriesStyle
-    shape = my_combine_axes(bc.args...)
-    do_instantiate(bc, shape)
+    shape = ts_combine_axes(bc.args...)
+    ts_instantiate(bc, shape)
 end
 
-# the following two specializations are necessary in order to be able to have destination on the left of .= that has a different range than the broadcasted result on the rigth
+# the following two specializations are necessary in order to be able to have destination on the left of .= that has a different range than the broadcasted result on the right
 function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: Base.Broadcast.BroadcastStyle,A <: Tuple{<:AbstractRange{<:MIT}}}
-    shape = my_combine_axes(bc.args...)
-    do_instantiate(bc, (intersect(bc.axes[1], shape[1]),))
+    shape = ts_combine_axes(bc.args...)
+    I = mit_common_axes(bc.axes[1], shape[1])
+    ts_instantiate(bc, (I,))
 end
-    
-function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: TSeriesStyle,A <: Tuple{<:AbstractRange{<:MIT}}}
-    shape = my_combine_axes(bc.args...)
-    do_instantiate(bc, (intersect(bc.axes[1], shape[1]),))
-end
+
+# function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: TSeriesStyle,A <: Tuple{<:AbstractRange{<:MIT}}}
+#     shape = my_combine_axes(bc.args...)
+#     I = _common_axes(bc.axes[1], shape[1])
+#     ts_instantiate(bc, (I,))
+# end
 
 function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {S <: Base.Broadcast.AbstractArrayStyle{0},A <: Tuple{<:AbstractRange{<:MIT}}}
     bc
 end
 
 function Base.axes(bc::Base.Broadcast.Broadcasted{<:TSeriesStyle})
-    bc.axes === nothing ? my_combine_axes(bc.args...) : bc.axes
+    bc.axes === nothing ? ts_combine_axes(bc.args...) : bc.axes
 end
 
 function Base.axes(bc::Base.Broadcast.Broadcasted{<:TSeriesStyle}, d::Integer)
     d == 1 ? axes(bc)[1] : Base.OneTo(1)
+end
+
+@inline ts_get_index(x::Number, p::MIT) = x
+@inline ts_get_index(x::TSeries, p::MIT) = x[p]
+@inline ts_get_index(x::Base.Broadcast.Broadcasted, p::MIT) = x[p]
+
+function Base.Broadcast.getindex(bc::Base.Broadcast.Broadcasted, p::MIT)
+    args = (ts_get_index(arg, p) for arg in bc.args)
+    return bc.f(args...)
 end
 
 # this specialization allows for the result to be stored in a TSeries
