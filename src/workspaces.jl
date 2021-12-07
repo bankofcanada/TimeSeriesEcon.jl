@@ -17,9 +17,12 @@ end
 
 @inline _c(w::Workspace) = getfield(w, :contents)
 
-Base.propertynames(w::Workspace) = tuple(keys(_c(w)))
+Base.propertynames(w::Workspace) = tuple(keys(_c(w))...)
 Base.getproperty(w::Workspace, sym::Symbol) = getindex(_c(w), sym)
 Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(_c(w), val, sym)
+
+Base.getindex(w::Workspace, Args...) = getindex(_c(w), Args...)
+Base.setindex!(w::Workspace, Args...) = setindex!(_c(w), Args...)
 
 @inline Base.isempty(w::Workspace) = isempty(_c(w))
 @inline Base.in(name, w::Workspace) = Symbol(name) ∈ keys(_c(w))
