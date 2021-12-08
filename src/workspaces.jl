@@ -11,8 +11,8 @@ export Workspace
 A collection of variables.
 """
 struct Workspace
-    contents::OrderedDict{Symbol, Any}
-    Workspace() = new(Dict())
+    contents::OrderedDict{Symbol,Any}
+    Workspace() = new(OrderedDict{Symbol,Any}())
 end
 
 @inline _c(w::Workspace) = getfield(w, :contents)
@@ -32,7 +32,7 @@ Base.values(w::Workspace) = values(_c(w))
 Base.iterate(w::Workspace, args...) = iterate(_c(w), args...)
 
 
-function Base.show(io::IO, ::MIME"text/plain", w::Workspace) 
+function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
 
     if isempty(w)
         return print(io, "Empty Workspace")
@@ -42,11 +42,11 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
     println(io, "Workspace with ", nvars, "-variables")
 
     limit = get(io, :limit, true)
-    io = IOContext(io,  :SHOWN_SET => _c(w),
-                        :typeinfo => eltype(_c(w)),
-                        :compact => get(io, :compact, true),
-                        :limit => limit)
-                        
+    io = IOContext(io, :SHOWN_SET => _c(w),
+        :typeinfo => eltype(_c(w)),
+        :compact => get(io, :compact, true),
+        :limit => limit)
+
 
     dheight, dwidth = displaysize(io)
 
@@ -54,19 +54,19 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         # we're printing some but not all rows (no room on the screen)
         top = div(dheight - 5, 2)
         bot = nvars - dheight + 7 + top
-    else 
-        top, bot = nvars+1, nvars+1
+    else
+        top, bot = nvars + 1, nvars + 1
     end
 
     max_align = 0
     prows = Vector{String}[]
     for (i, (k, v)) ∈ enumerate(_c(w))
         top < i < bot && continue
-        
-        sk = sprint(print, k, context=io, sizehint=0)
-        sv = sprint(summary, v, context=io, sizehint=0)
+
+        sk = sprint(print, k, context = io, sizehint = 0)
+        sv = sprint(summary, v, context = io, sizehint = 0)
         max_align = max(max_align, length(sk))
-        
+
         push!(prows, [sk, sv])
         i == top && push!(prows, ["⋮", "⋮"])
     end

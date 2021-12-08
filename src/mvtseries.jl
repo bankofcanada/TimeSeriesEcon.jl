@@ -251,23 +251,18 @@ end
 
 # ---- two arguments indexing
 
-@inline Base.getindex(x::MVTSeries, p::MIT, c) = mixed_freq_error(x, p)
-@inline Base.getindex(x::MVTSeries, r::UnitRange{<:MIT}, c) = mixed_freq_error(x, r)
-@inline Base.setindex!(x::MVTSeries, val, p::MIT, c) = mixed_freq_error(x, p)
-@inline Base.setindex!(x::MVTSeries, val, r::UnitRange{<:MIT}, c) = mixed_freq_error(x, r)
+const _SymbolOneOrCollection = Union{Symbol,Vector{Symbol},NTuple{N,Symbol}} where {N}
+const _MITOneOrRange = Union{MIT,UnitRange{<:MIT}}
+
+@inline Base.getindex(x::MVTSeries, p::_MITOneOrRange, c::_SymbolOneOrCollection) = mixed_freq_error(x, p)
+@inline Base.setindex!(x::MVTSeries, val, p::_MITOneOrRange, c::_SymbolOneOrCollection) = mixed_freq_error(x, p)
 
 # if one argument is Colon, fall back on single argument indexing
-@inline Base.getindex(x::MVTSeries, p::MIT, ::Colon) = getindex(x, p)
-@inline Base.getindex(x::MVTSeries, p::UnitRange{<:MIT}, ::Colon) = getindex(x, p)
-@inline Base.getindex(x::MVTSeries, ::Colon, c::Symbol) = getindex(x, c)
-@inline Base.getindex(x::MVTSeries, ::Colon, c::NTuple{N,Symbol}) where {N} = getindex(x, c)
-@inline Base.getindex(x::MVTSeries, ::Colon, c::Vector{Symbol}) = getindex(x, c)
+@inline Base.getindex(x::MVTSeries, p::_MITOneOrRange, ::Colon) = getindex(x, p)
+@inline Base.getindex(x::MVTSeries, ::Colon, c::_SymbolOneOrCollection) = getindex(x, c)
 
-@inline Base.setindex!(x::MVTSeries, val, p::MIT, ::Colon) = setindex!(x, val, p)
-@inline Base.setindex!(x::MVTSeries, val, p::UnitRange{<:MIT}, ::Colon) = setindex!(x, val, p)
-@inline Base.setindex!(x::MVTSeries, val, ::Colon, c::Symbol) = setindex!(x, val, c)
-@inline Base.setindex!(x::MVTSeries, val, ::Colon, c::NTuple{N,Symbol}) where {N} = setindex!(x, val, c)
-@inline Base.setindex!(x::MVTSeries, val, ::Colon, c::Vector{Symbol}) = setindex!(x, val, c)
+@inline Base.setindex!(x::MVTSeries, val, p::_MITOneOrRange, ::Colon) = setindex!(x, val, p, axes(x, 2))
+@inline Base.setindex!(x::MVTSeries, val, ::Colon, c::_SymbolOneOrCollection) = setindex!(x, val, axes(x, 1), c)
 
 # 
 
@@ -278,7 +273,7 @@ _colind(x, c::Vector) = indexin(Symbol.(c), [colnames(x)...])
 # with a single MIT and single Symbol we return a number
 # with a single MIT and multiple Symbol-s we return a Vector
 # the appropriate dispatch is done in getindex on the values, so we wrap both cases in a single function
-@inline function Base.getindex(x::MVTSeries{F}, p::MIT{F}, c::Union{Symbol,NTuple{N,Symbol},Vector{Symbol}}) where {F<:Frequency,N}
+@inline function Base.getindex(x::MVTSeries{F}, p::MIT{F}, c::_SymbolOneOrCollection) where {F<:Frequency}
     @boundscheck checkbounds(x, c)
     @boundscheck checkbounds(x, p)
     fi = firstindex(_vals(x), 1)
@@ -310,7 +305,7 @@ end
 # assignments
 
 # with a single MIT we assign a number or a row-Vector
-@inline function Base.setindex!(x::MVTSeries{F}, val, p::MIT{F}, c::Union{Symbol,NTuple{N,Symbol},Vector{Symbol}}) where {F<:Frequency,N}
+@inline function Base.setindex!(x::MVTSeries{F}, val, p::MIT{F}, c::_SymbolOneOrCollection) where {F<:Frequency}
     @boundscheck checkbounds(x, p)
     @boundscheck checkbounds(x, c)
     fi = firstindex(_vals(x), 1)
@@ -320,12 +315,12 @@ end
 end
 
 # with a range of MIT and a single column - we fall back on TSeries assignment
-@inline function Base.setindex!(x::MVTSeries{F}, val, r::UnitRange{MIT{F}}, c::Symbol) where {F<:Frequency} 
+@inline function Base.setindex!(x::MVTSeries{F}, val, r::UnitRange{MIT{F}}, c::Symbol) where {F<:Frequency}
     col = getindex(x, c)
     setindex!(col, val, r)
 end
 
-@inline function Base.setindex!(x::MVTSeries{F}, val, r::UnitRange{MIT{F}}, c::Union{Vector{Symbol}, NTuple{N,Symbol}}) where {F<:Frequency, N}
+@inline function Base.setindex!(x::MVTSeries{F}, val, r::UnitRange{MIT{F}}, c::Union{Vector{Symbol},NTuple{N,Symbol}}) where {F<:Frequency,N}
     @boundscheck checkbounds(x, r)
     @boundscheck checkbounds(x, c)
     start, stop = _ind_range_check(x, r)
@@ -334,7 +329,7 @@ end
     setindex!(_vals(x), val, i1, i2)
 end
 
-@inline function Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, r::UnitRange{MIT{F}}, c::Union{Vector{Symbol}, NTuple{N,Symbol}}) where {F<:Frequency, N}
+@inline function Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, r::UnitRange{MIT{F}}, c::Union{Vector{Symbol},NTuple{N,Symbol}}) where {F<:Frequency,N}
     @boundscheck checkbounds(x, r)
     @boundscheck checkbounds(x, c)
     @boundscheck checkbounds(val, r)
@@ -367,5 +362,43 @@ function Base.hcat(x::MVTSeries; KW...)
     return y
 end
 
+
+####   Views
+
+Base.fill!(x::MVTSeries, val) = fill!(_vals(x), val)
+
+
+# @inline Base.view(x::MVTSeries, I::Union{MIT,AbstractRange{<:MIT}}, J) = mixed_freq_error(x, eltype(I))
+
+@inline Base.view(x::MVTSeries, I, J) = view(_vals(x), I, J)
+
+@inline Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
+@inline Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon) = view(x, I, axes(x, 2))
+@inline Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))
+function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection) where {F<:Frequency}
+    @boundscheck checkbounds(x, I)
+    @boundscheck checkbounds(x, J)
+    start, stop = _ind_range_check(x, I)
+    i1 = start:stop
+    i2 = _colind(x, J)
+    return MVTSeries(first(I), axes(x, 2)[i2], view(_vals(x), i1, i2))
+end
+
+
+####
+
 include("mvtseries/mvts_broadcast.jl")
 include("mvtseries/mvts_show.jl")
+
+####  arraymath
+
+@inline Base.promote_shape(x::MVTSeries, y::MVTSeries) = 
+    (intersect(rangeof(x),rangeof(y)),
+    sym_common_axes(axes(x,2), axes(y,2)))
+
+@inline Base.promote_shape(x::MVTSeries, y::AbstractMatrix) = 
+    promote_shape(_vals(x), y)
+
+@inline Base.LinearIndices(x::MVTSeries) = LinearIndices(_vals(x))
+
+

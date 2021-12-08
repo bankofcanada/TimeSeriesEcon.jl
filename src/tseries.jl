@@ -209,7 +209,8 @@ Base.getindex(t::TSeries, m::MIT) = mixed_freq_error(t, m)
     getindex(t.values, fi + oftype(fi, m - firstdate(t)))
 end
 
-function _ind_range_check(x, rng)
+@inline _ind_range_check(x, rng::MIT) = _ind_range_check(x, rng:rng)
+function _ind_range_check(x, rng::UnitRange{<:MIT})
     fi = firstindex(x.values, 1)
     fd = firstdate(x)
     stop = oftype(fi, fi + (last(rng)-fd))
@@ -348,6 +349,7 @@ function Base.view(t::TSeries, I::AbstractRange{<:Integer})
 end
 
 
+@inline Base.diff(x::TSeries) = x - lag(x)
 
 # """
 #     pct(x::TSeries, shift_value::Int, islog::Bool)
@@ -368,20 +370,20 @@ end
 # ```
 # See also: [`apct`](@ref)
 # """
-# function pct(ts::TSeries, shift_value::Int; islog::Bool = false)
-#     if islog
-#         a = exp(ts);
-#         b = shift(exp(ts), shift_value);
-#     else
-#         a = ts;
-#         b = shift(ts, shift_value);
-#     end
+function pct(ts::TSeries, shift_value::Int; islog::Bool = false)
+    if islog
+        a = exp.(ts);
+        b = shift(exp.(ts), shift_value);
+    else
+        a = ts;
+        b = shift(ts, shift_value);
+    end
 
-#     result = ( (a - b)/b ) * 100
+    result = @. ( (a - b)/b ) * 100
 
-#     TSeries(result.firstdate, result.values)
-# end
-
+    TSeries(result.firstdate, result.values)
+end
+export pct
 
 # """
 #     apct(x::TSeries, islog::Bool)

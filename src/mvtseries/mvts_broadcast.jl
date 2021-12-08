@@ -53,16 +53,24 @@ function Base.copyto!(dest::MVTSeries, bc::Broadcast.Broadcasted{Nothing})
     return dest
 end
 
-
-function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {N, S<:Base.Broadcast.BroadcastStyle, A<:Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}}
-    tmp = mvts_combine_axes(bc.args...)
-    shape = mvts_broadcast_shape(bc.axes, tmp)
+function do_instantiate(bc)
+    shape = mvts_combine_axes(bc.args...)
+    if bc.axes !== nothing
+        shape = mvts_broadcast_shape(bc.axes, shape)
+    end
     mvts_instantiate(bc, shape)
 end
 
-function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,Nothing}) where {S<:MVTSeriesStyle}
-    shape = mvts_combine_axes(bc.args...)
-    mvts_instantiate(bc, shape)
+@inline function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {N,S<:Base.Broadcast.BroadcastStyle,A<:Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}}
+    do_instantiate(bc)
+end
+
+@inline function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,A}) where {N,S<:Base.Broadcast.AbstractArrayStyle{0},A<:Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}}
+    do_instantiate(bc)
+end
+
+@inline function Base.Broadcast.instantiate(bc::Base.Broadcast.Broadcasted{S,Nothing}) where {S<:MVTSeriesStyle}
+    do_instantiate(bc)
 end
 
 # combine_axes works recursively
@@ -71,6 +79,7 @@ end
 @inline mvts_combine_axes(A, B...) = mvts_broadcast_shape(axes(A), mvts_combine_axes(B...))
 
 @inline mvts_broadcast_shape(shape::Tuple) = shape
+@inline mvts_broadcast_shape(::Tuple{}, shape::Tuple{}) = shape
 @inline mvts_broadcast_shape(::Tuple{}, shape::Tuple) = shape
 @inline mvts_broadcast_shape(shape::Tuple, ::Tuple{}) = shape
 @inline mvts_broadcast_shape(shape1::Tuple{A}, shape2::Tuple) where {A} = mvts_broadcast_shape(shape2, shape1)
@@ -140,3 +149,11 @@ end
 @inline mvts_check_axes(shape::MVTSeriesIndexType, x::AbstractMatrix) = MVTSeries(first(shape[1]), shape[2], x)
 
 
+
+function Base.axes(bc::Base.Broadcast.Broadcasted{<:MVTSeriesStyle})
+    bc.axes === nothing ? mvts_combine_axes(bc.args...) : bc.axes
+end
+
+function Base.axes(bc::Base.Broadcast.Broadcasted{<:MVTSeriesStyle}, d::Integer)
+    1 <= d <= 2 ? axes(bc)[d] : Base.OneTo(1)
+end
