@@ -33,7 +33,9 @@ end
 
 const MVTSeriesIndexType = Tuple{UnitRange{<:MIT},NTuple{N,Symbol}} where {N}
 
+@inline mvts_get_index(x, p::MIT, c::Symbol) = x
 @inline mvts_get_index(x::Number, p::MIT, c::Symbol) = x
+@inline mvts_get_index(x::Ref, p::MIT, c::Symbol) = x[]
 @inline mvts_get_index(x::MVTSeries, p::MIT, c::Symbol) = x[p, c]
 @inline mvts_get_index(x::TSeries, p::MIT, c::Symbol) = x[p]
 @inline mvts_get_index(x::Base.Broadcast.Broadcasted, p::MIT, c::Symbol) = x[p, c]
@@ -52,6 +54,13 @@ function Base.copyto!(dest::MVTSeries, bc::Broadcast.Broadcasted{Nothing})
     end
     return dest
 end
+
+function Base.eachindex(bc::Broadcast.Broadcasted{<:MVTSeriesStyle})
+    bcrng, bcvars = axes(bc)
+    Iterators.product(bcrng, bcvars)
+end
+
+@inline Base.Broadcast.getindex(bc::Base.Broadcast.Broadcasted, pc::Tuple{<:MIT, Symbol}) = bc[pc...]
 
 function do_instantiate(bc)
     shape = mvts_combine_axes(bc.args...)
@@ -142,7 +151,7 @@ end
 # TSeries are also left alone
 @inline mvts_check_axes(shape::MVTSeriesIndexType, x::TSeries) = x
 # Leave numbers alone too
-@inline mvts_check_axes(shape::MVTSeriesIndexType, x::Number) = x
+@inline mvts_check_axes(shape::MVTSeriesIndexType, x) = x[]
 # For Vector, we wrap it in a TSeries
 @inline mvts_check_axes(shape::MVTSeriesIndexType, x::AbstractVector) = TSeries(shape[1], x)
 # For Matrix, we wrap them in an MVTSeries with the same dimensions

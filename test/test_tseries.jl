@@ -104,6 +104,10 @@ end
     @test eachindex(s) === (3U:12U) && all(s[5U:10U].values .== (1:6) .- 1.0)
     @test all(s[3U:4U].values .== 0.0) && all(s[11U:end] .== 0.0)
 
+    # we can .^ correctly
+    @test isa(s .^ 2,typeof(s))
+    @test (s .^ 2).values == s.values .^ 2
+
     # dot-assign when the rhs is a vector
     @test_throws DimensionMismatch s .= ones(length(s) + 1)
     @test_throws DimensionMismatch s .= ones(length(s) - 1)

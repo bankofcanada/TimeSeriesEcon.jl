@@ -300,5 +300,9 @@ end
     @test x .+ t .* 3  == (x .+ 3)
     @test t .* 3 .+ x  == (x .+ 3)
 
+    # we can .^ correctly
+    @test isa(x .^ 2,typeof(x))
+    @test (x .^ 2).values == x.values .^ 2
+
 end
 

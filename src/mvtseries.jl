@@ -329,6 +329,8 @@ end
     setindex!(_vals(x), val, i1, i2)
 end
 
+@inline Base.setindex!(x::MVTSeries, val, ind::Tuple{<:MIT,Symbol}) = setindex!(x,val,ind...)
+
 @inline function Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, r::UnitRange{MIT{F}}, c::Union{Vector{Symbol},NTuple{N,Symbol}}) where {F<:Frequency,N}
     @boundscheck checkbounds(x, r)
     @boundscheck checkbounds(x, c)

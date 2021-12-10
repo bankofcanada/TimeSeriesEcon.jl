@@ -98,7 +98,7 @@ function Base.axes(bc::Base.Broadcast.Broadcasted{<:TSeriesStyle}, d::Integer)
     d == 1 ? axes(bc)[1] : Base.OneTo(1)
 end
 
-@inline ts_get_index(x::Number, p::MIT) = x
+@inline ts_get_index(x, p::MIT) = x[]
 @inline ts_get_index(x::TSeries, p::MIT) = x[p]
 @inline ts_get_index(x::Base.Broadcast.Broadcasted, p::MIT) = x[p]
 
