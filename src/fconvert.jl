@@ -58,6 +58,7 @@ end
 
 Base.strip(t::TSeries) = getindex(t, _valid_range(t))
 strip!(t::TSeries) = resize!(t, _valid_range(t))
+export strip!
 
 """
     fconvert(F, t)

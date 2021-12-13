@@ -189,6 +189,11 @@ function Base.show(io::IO, t::TSeries)
     end
 end
 
+macro showall(a)
+    return esc(:(show(IOContext(stdout, :limit=>false), $a)))
+end
+export @showall
+
 
 
 # ------------------------------------------------------------------
@@ -349,7 +354,7 @@ function Base.view(t::TSeries, I::AbstractRange{<:Integer})
 end
 
 
-@inline Base.diff(x::TSeries) = x - lag(x)
+@inline Base.diff(x::TSeries,k::Integer = -1) = x - lag(x,-k)
 
 # """
 #     pct(x::TSeries, shift_value::Int, islog::Bool)
