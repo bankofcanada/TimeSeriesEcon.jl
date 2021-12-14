@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 # 
@@ -79,5 +79,17 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         println(io, "  ", lpad(sk, max_align), " ⇒ ", sv)
     end
 
+end
+
+
+_dict_to_workspace(x) = x
+_dict_to_workspace(x::AbstractDict) = Workspace(x)
+function Workspace(fromdict::AbstractDict; recursive=false)
+    w = Workspace()
+    convert_value = ifelse(recursive, _dict_to_workspace, identity)
+    for (key, value) in fromdict
+        push!(_c(w), Symbol(key) => convert_value(value))
+    end
+    return w
 end
 
