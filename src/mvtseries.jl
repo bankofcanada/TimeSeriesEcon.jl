@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 using OrderedCollections
@@ -137,6 +137,20 @@ Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}
 # construct from range and fill with the given constant or array
 Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
 
+# construct from a collection of TSeries
+function MVTSeries(; arg...)
+    # range is the union of all ranges
+    rng = mapreduce(rangeof, union, values(arg))
+    # figure out the element type
+    ET = mapreduce(eltype, promote_type, values(arg))
+    # allocate memory
+    ret = MVTSeries(rng, keys(arg), typenan(ET))
+    # copy data
+    for (key, value) in arg
+        ret[:, key] .= value
+    end
+    return ret
+end
 
 # -------------------------------------------------------------------------------
 # Dot access to columns
@@ -329,7 +343,7 @@ end
     setindex!(_vals(x), val, i1, i2)
 end
 
-@inline Base.setindex!(x::MVTSeries, val, ind::Tuple{<:MIT,Symbol}) = setindex!(x,val,ind...)
+@inline Base.setindex!(x::MVTSeries, val, ind::Tuple{<:MIT,Symbol}) = setindex!(x, val, ind...)
 
 @inline function Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, r::UnitRange{MIT{F}}, c::Union{Vector{Symbol},NTuple{N,Symbol}}) where {F<:Frequency,N}
     @boundscheck checkbounds(x, r)
@@ -394,11 +408,11 @@ include("mvtseries/mvts_show.jl")
 
 ####  arraymath
 
-@inline Base.promote_shape(x::MVTSeries, y::MVTSeries) = 
-    (intersect(rangeof(x),rangeof(y)),
-    sym_common_axes(axes(x,2), axes(y,2)))
+@inline Base.promote_shape(x::MVTSeries, y::MVTSeries) =
+    (intersect(rangeof(x), rangeof(y)),
+        sym_common_axes(axes(x, 2), axes(y, 2)))
 
-@inline Base.promote_shape(x::MVTSeries, y::AbstractMatrix) = 
+@inline Base.promote_shape(x::MVTSeries, y::AbstractMatrix) =
     promote_shape(_vals(x), y)
 
 @inline Base.LinearIndices(x::MVTSeries) = LinearIndices(_vals(x))
