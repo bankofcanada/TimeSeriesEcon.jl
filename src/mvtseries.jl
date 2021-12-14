@@ -39,7 +39,7 @@ end
 
 
 # standard constructor with default empty values
-MVTSeries(fd::MIT = 1U, names = ()) = (names = _names_as_tuple(names); MVTSeries(fd, names, zeros(0, length(names))))
+MVTSeries(fd::MIT, names = ()) = (names = _names_as_tuple(names); MVTSeries(fd, names, zeros(0, length(names))))
 MVTSeries(fd::MIT, names, data::AbstractMatrix) = (names = _names_as_tuple(names); MVTSeries(fd, names, data))
 # see more constructors below
 
@@ -138,15 +138,16 @@ Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}
 Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
 
 # construct from a collection of TSeries
-function MVTSeries(; arg...)
+function MVTSeries(; args...)
+    isempty(args) && return MVTSeries(1U)
     # range is the union of all ranges
-    rng = mapreduce(rangeof, union, values(arg))
+    rng = mapreduce(rangeof, union, values(args))
     # figure out the element type
-    ET = mapreduce(eltype, promote_type, values(arg))
+    ET = mapreduce(eltype, promote_type, values(args))
     # allocate memory
-    ret = MVTSeries(rng, keys(arg), typenan(ET))
+    ret = MVTSeries(rng, keys(args), typenan(ET))
     # copy data
-    for (key, value) in arg
+    for (key, value) in args
         ret[:, key] .= value
     end
     return ret
