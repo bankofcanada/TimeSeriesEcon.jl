@@ -42,7 +42,7 @@ function overlay(rng::AbstractRange{MIT{F}}, ts::Vararg{TSeries{F},N}) where {F 
     end
     return ret
 end
-
+export overlay
 
 function _valid_range(t::TSeries)
     fd = firstdate(t)

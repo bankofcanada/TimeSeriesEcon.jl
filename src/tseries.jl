@@ -357,7 +357,7 @@ end
 @inline Base.diff(x::TSeries,k::Integer = -1) = x - lag(x,-k)
 
 # """
-#     pct(x::TSeries, shift_value::Int, islog::Bool)
+#     pct(x::TSeries, shift_value::Int=-1, islog::Bool)
 
 # Calculate percentage growth in `x` given a `shift_value`.
 
@@ -375,7 +375,7 @@ end
 # ```
 # See also: [`apct`](@ref)
 # """
-function pct(ts::TSeries, shift_value::Int; islog::Bool = false)
+function pct(ts::TSeries, shift_value::Int=-1; islog::Bool = false)
     if islog
         a = exp.(ts);
         b = shift(exp.(ts), shift_value);

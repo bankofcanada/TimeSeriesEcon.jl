@@ -31,6 +31,9 @@ Base.keys(w::Workspace) = keys(_c(w))
 Base.values(w::Workspace) = values(_c(w))
 Base.iterate(w::Workspace, args...) = iterate(_c(w), args...)
 
+function Base.mergewith(combine, w::Workspace, others::Workspace...)
+    return Workspace(mergewith(combine,_c(w), _c.(others)...))
+end
 
 function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
 
@@ -92,4 +95,7 @@ function Workspace(fromdict::AbstractDict; recursive=false)
     end
     return w
 end
+
+overlay(stuff...) = stuff[1]
+overlay(w::Vararg{Workspace}) = mergewith(overlay,w...)
 
