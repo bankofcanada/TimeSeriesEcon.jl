@@ -204,7 +204,7 @@ mixed_freq_error(T1::Type, T2::Type, T3::Type) = throw(ArgumentError("Mixing fre
 mixed_freq_error(::T1, ::T2, ::T3) where {T1,T2,T3} = mixed_freq_error(T1, T2, T3) 
 
 Base.promote_rule(T1::Type{<:MIT}, T2::Type{<:MIT}) = mixed_freq_error(T1, T2)
-Base.promote_rule(::Type{MIT{F}}, T2::Type{MIT{F}}) where {F<:Frequency} = T1
+Base.promote_rule(T1::Type{MIT{F}}, T2::Type{MIT{F}}) where {F<:Frequency} = T1
 
 # -------------------
 # subtraction
