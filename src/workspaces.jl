@@ -28,21 +28,29 @@ Base.setindex!(w::Workspace, Args...) = setindex!(_c(w), Args...)
 @inline Base.in(name, w::Workspace) = Symbol(name) ∈ keys(_c(w))
 
 Base.keys(w::Workspace) = keys(_c(w))
+Base.haskey(w::Workspace, k::Symbol) = haskey(_c(w), k)
 Base.values(w::Workspace) = values(_c(w))
 Base.iterate(w::Workspace, args...) = iterate(_c(w), args...)
 
 function Base.mergewith(combine, w::Workspace, others::Workspace...)
-    return Workspace(mergewith(combine,_c(w), _c.(others)...))
+    return Workspace(mergewith(combine, _c(w), _c.(others)...))
 end
 
-function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
-
+function Base.summary(io::IO, w::Workspace)
     if isempty(w)
         return print(io, "Empty Workspace")
     end
 
     nvars = length(_c(w))
     println(io, "Workspace with ", nvars, "-variables")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
+
+    summary(io, w)
+
+    nvars = length(_c(w))
+    nvars == 0 && return
 
     limit = get(io, :limit, true)
     io = IOContext(io, :SHOWN_SET => _c(w),
@@ -67,7 +75,11 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         top < i < bot && continue
 
         sk = sprint(print, k, context = io, sizehint = 0)
-        sv = sprint(summary, v, context = io, sizehint = 0)
+        if typeof(v) == eltype(v) # is it a scalar value?
+            sv = sprint(print, v, context = io, sizehint = 0)
+        else
+            sv = sprint(summary, v, context = io, sizehint = 0)
+        end
         max_align = max(max_align, length(sk))
 
         push!(prows, [sk, sv])
@@ -84,10 +96,9 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
 
 end
 
-
 _dict_to_workspace(x) = x
 _dict_to_workspace(x::AbstractDict) = Workspace(x)
-function Workspace(fromdict::AbstractDict; recursive=false)
+function Workspace(fromdict::AbstractDict; recursive = false)
     w = Workspace()
     convert_value = ifelse(recursive, _dict_to_workspace, identity)
     for (key, value) in fromdict
@@ -97,5 +108,4 @@ function Workspace(fromdict::AbstractDict; recursive=false)
 end
 
 overlay(stuff...) = stuff[1]
-overlay(w::Vararg{Workspace}) = mergewith(overlay,w...)
-
+overlay(w::Vararg{Workspace}) = mergewith(overlay, w...)
