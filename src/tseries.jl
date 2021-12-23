@@ -390,47 +390,42 @@ function pct(ts::TSeries, shift_value::Int=-1; islog::Bool = false)
 end
 export pct
 
-# """
-#     apct(x::TSeries, islog::Bool)
+"""
+    apct(x::TSeries, islog::Bool)
 
-# Calculate annualised percent rate of change in `x`.
+Calculate annualised percent rate of change in `x`.
 
-# __Note:__ The implementation is similar to IRIS.
+__Note:__ The implementation is similar to IRIS.
 
-# Examples
-# ```julia-repl
-# julia> x = TSeries(qq(2018, 1), Vector(1:8));
+Examples
+```julia-repl
+julia> x = TSeries(qq(2018, 1), Vector(1:8));
 
-# julia> apct(x)
-# TSeries{Quarterly} of length 7
-# 2018Q2: 1500.0
-# 2018Q3: 406.25
-# 2018Q4: 216.04938271604937
-# 2019Q1: 144.140625
-# 2019Q2: 107.35999999999999
-# 2019Q3: 85.26234567901243
-# 2019Q4: 70.59558517284461
-# ```
+julia> apct(x)
+TSeries{Quarterly} of length 7
+2018Q2: 1500.0
+2018Q3: 406.25
+2018Q4: 216.04938271604937
+2019Q1: 144.140625
+2019Q2: 107.35999999999999
+2019Q3: 85.26234567901243
+2019Q4: 70.59558517284461
+```
 
-# See also: [`pct`](@ref)
-# """
-# function apct(ts::TSeries, islog::Bool = false)
-#     if islog
-#         a = exp(ts);
-#         b = shift(exp(ts), - 1);
-#     else
-#         a = ts;
-#         b = shift(ts, -1);
-#     end
-
-#     values_change = a/b
-#     firstdate = values_change.firstdate
-
-#     values = (values_change.^ppy(ts) .- 1) * 100
-
-#     TSeries( (a/b).firstdate, values)
-# end
-
+See also: [`pct`](@ref)
+"""
+function apct(ts::TSeries{<: YPFrequency{N}}, islog::Bool = false) where {N}
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), - 1)
+    else
+        a = ts
+        b = shift(ts, -1)
+    end
+    return ((a ./ b) .^ N .- 1) * 100
+end
+export apct
+apct(ts::TSeries, args...) = error("apct for frequency $(frequencyof(ts)) not implemented")
 
 # function Base.cumsum(s::TSeries)
 #     TSeries(s.firstdate, cumsum(s.values))
