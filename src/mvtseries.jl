@@ -43,6 +43,7 @@ MVTSeries(fd::MIT, names = ()) = (names = _names_as_tuple(names); MVTSeries(fd, 
 MVTSeries(fd::MIT, names, data::AbstractMatrix) = (names = _names_as_tuple(names); MVTSeries(fd, names, data))
 # see more constructors below
 
+# easy access to internals. 
 @inline _vals(x::MVTSeries) = getfield(x, :values)
 @inline _cols(x::MVTSeries) = getfield(x, :columns)
 
@@ -50,8 +51,16 @@ columns(x::MVTSeries) = getfield(x, :columns)
 
 @inline colnames(x::MVTSeries) = keys(_cols(x))
 @inline rawdata(x::MVTSeries) = _vals(x)
-@inline Base.pairs(x::MVTSeries) = pairs(_cols(x))
 
+# some methods to make MVTSeries function like a Dict (collection of named of columns)
+@inline Base.pairs(x::MVTSeries) = pairs(_cols(x))
+@inline Base.keys(x::MVTSeries) = keys(_cols(x))
+@inline Base.haskey(x::MVTSeries, sym::Symbol) = haskey(_cols(x), sym)
+@inline Base.get(x::MVTSeries, sym::Symbol, default) = get(_cols(x), sym, default)
+@inline Base.get(f::Function, x::MVTSeries, sym::Symbol) = get(f, _cols(x), sym)
+# no get!() - can't add columns like this!!
+
+# methods related to TSeries 
 @inline firstdate(x::MVTSeries) = getfield(x, :firstdate)
 @inline lastdate(x::MVTSeries) = firstdate(x) + size(_vals(x), 1) - one(firstdate(x))
 @inline frequencyof(::Type{<:MVTSeries{F}}) where {F<:Frequency} = F
@@ -71,15 +80,15 @@ columns(x::MVTSeries) = getfield(x, :columns)
 
 # normally only the first of the following is sufficient.
 # we add few other versions of similar below
-Base.similar(x::MVTSeries) = MVTSeries(firstdate(x), colnames(x), similar(_vals(x)))
+@inline Base.similar(x::MVTSeries) = MVTSeries(firstdate(x), colnames(x), similar(_vals(x)))
 
 # -------------------------------------------------------------------------------
 # Indexing with integers and booleans - same as matrices
 
 # Indexing with integers falls back to AbstractArray
 const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex}
-Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), i1...)
-Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, i1...)
+@inline Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), i1...)
+@inline Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, i1...)
 
 # -------------------------------------------------------------
 # Some other constructors
@@ -418,4 +427,11 @@ include("mvtseries/mvts_show.jl")
 
 @inline Base.LinearIndices(x::MVTSeries) = LinearIndices(_vals(x))
 
+####  sum(x; dims=2) -> TSeries
 
+for func in (:sum, :prod, :minimum, :maximum)
+    @eval begin
+        Base.$func(x::MVTSeries; dims) =
+            dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims = dims)[:]) : $func(rawdata(x); dims = dims)
+    end
+end

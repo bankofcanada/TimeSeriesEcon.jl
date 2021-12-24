@@ -12,7 +12,9 @@ A collection of variables.
 """
 struct Workspace
     contents::OrderedDict{Symbol,Any}
-    Workspace() = new(OrderedDict{Symbol,Any}())
+    Workspace(;kwargs...) = 
+        isempty(kwargs) ? new(OrderedDict{Symbol,Any}()) : 
+            new(push!(OrderedDict{Symbol,Any}(), kwargs...))
 end
 
 @inline _c(w::Workspace) = getfield(w, :contents)
@@ -35,6 +37,7 @@ Base.get(w::Workspace, key, default) = get(_c(w), key, default)
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
 Base.get!(w::Workspace, key, default) = get!(_c(w), key, default)
 Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
+Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
 
 function Base.mergewith(combine, w::Workspace, others::Workspace...)
     return Workspace(mergewith(combine, _c(w), _c.(others)...))
