@@ -60,7 +60,7 @@ function Base.eachindex(bc::Broadcast.Broadcasted{<:MVTSeriesStyle})
     Iterators.product(bcrng, bcvars)
 end
 
-@inline Base.Broadcast.getindex(bc::Base.Broadcast.Broadcasted, pc::Tuple{<:MIT, Symbol}) = bc[pc...]
+@inline Base.Broadcast.getindex(bc::Base.Broadcast.Broadcasted, pc::Tuple{<:MIT,Symbol}) = bc[pc...]
 
 function do_instantiate(bc)
     shape = mvts_combine_axes(bc.args...)
@@ -91,14 +91,24 @@ end
 @inline mvts_broadcast_shape(::Tuple{}, shape::Tuple{}) = shape
 @inline mvts_broadcast_shape(::Tuple{}, shape::Tuple) = shape
 @inline mvts_broadcast_shape(shape::Tuple, ::Tuple{}) = shape
+@inline mvts_broadcast_shape(shape::Tuple{A}, ::Tuple{}) where {A} = shape
+@inline mvts_broadcast_shape(::Tuple{}, shape::Tuple{A}) where {A} = shape
 @inline mvts_broadcast_shape(shape1::Tuple{A}, shape2::Tuple) where {A} = mvts_broadcast_shape(shape2, shape1)
 function mvts_broadcast_shape(shape1::Tuple, shape2::Tuple)
     if length(shape1) > 2 || length(shape2) > 2
         throw(ArgumentError("broadcasting MVTSeries with ndims > 2."))
     end
-    return (mit_common_axes(shape1[1], shape2[1]),
-        length(shape2) == 1 ? shape1[2] : sym_common_axes(shape1[2], shape2[2]),
-    )
+    if length(shape2) == 2
+        return (mit_common_axes(shape1[1], shape2[1]), sym_common_axes(shape1[2], shape2[2]))
+    else # length(shape1) == 2 && length(shape2) == 1
+        if length(shape1[1]) == length(shape2[1])
+            return (mit_common_axes(shape1[1], shape2[1]), shape1[2])
+        elseif length(shape1[1]) == 1 && length(shape1[2]) == length(shape2[1])
+            return (shape1[1], sym_common_axes(shape1[2], shape2[1]))
+        else
+            throw(ArgumentError("Cannot broadcast with $shape1 and $shape2"))
+        end
+    end
 end
 
 @inline mit_common_axes(a::UnitRange{<:MIT}, b::Base.OneTo) =
@@ -132,7 +142,7 @@ struct MVTSBroadcasted{Axes,BC}
     end
 end
 
-@inline Base.eltype(x::MVTSBroadcasted) = Base.Broadcast.combine_eltypes(x.bc.f, x.bc.args)
+@inline Base.eltype(x::MVTSBroadcasted) = eltype(x.bc)
 
 function mvts_get_index(x::MVTSBroadcasted, p::MIT, c::Symbol)
     ip = x.singleton[1] ? 1 : Int(p - first(x.shape[1]) + 1)
@@ -152,10 +162,14 @@ end
 @inline mvts_check_axes(shape::MVTSeriesIndexType, x::TSeries) = x
 # Leave numbers alone too
 @inline mvts_check_axes(shape::MVTSeriesIndexType, x) = x[]
-# For Vector, we wrap it in a TSeries
-@inline mvts_check_axes(shape::MVTSeriesIndexType, x::AbstractVector) = TSeries(shape[1], x)
+# For Vector, we wrap it in a TSeries if first dimension matches, otherwise we wrap it in a MVTSBroadcasted MVTSeries with one row . . .
+@inline mvts_check_axes(shape::MVTSeriesIndexType, x::AbstractVector) = 
+    length(shape[1]) == length(x) ? TSeries(shape[1], x) :
+        MVTSBroadcasted(shape, MVTSeries(shape[1], shape[2], reshape(x, 1, :)))
+
 # For Matrix, we wrap them in an MVTSeries with the same dimensions
-@inline mvts_check_axes(shape::MVTSeriesIndexType, x::AbstractMatrix) = MVTSeries(first(shape[1]), shape[2], x)
+@inline mvts_check_axes(shape::MVTSeriesIndexType, x::AbstractMatrix) = 
+    MVTSBroadcasted(shape, MVTSeries(first(shape[1]), shape[2], x))
 
 
 

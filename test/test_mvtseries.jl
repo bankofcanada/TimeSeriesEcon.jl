@@ -304,5 +304,12 @@ end
     @test isa(x .^ 2,typeof(x))
     @test (x .^ 2).values == x.values .^ 2
 
+    s = [2.0 2.0]
+
+    @test (z = (x .+ s); z isa typeof(x) && axes(z) == axes(x))
+    @test (x .+ s).values == (x.values .+ s)
+
+    @test (z = copy(x); x .+= s; (z .+ s) == x)
+
 end
 
