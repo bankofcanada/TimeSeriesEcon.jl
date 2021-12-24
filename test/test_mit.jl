@@ -149,7 +149,7 @@ end
 @testset "MIT.show" begin
     let io = IOBuffer()
         show(io, 2020Q1)
-        show(io, pp(20, 3; N=6))
+        # show(io, pp(20, 3; N=6))
         show(io, 5U)
         println(io, 2020M1 - 2019M1)
         show(io, 3U - 2U)
@@ -159,7 +159,8 @@ end
         show(io, 1U)
         println(io, M1, M12, ".")
         foo = readlines(seek(io, 0))
-        @test foo == ["2020Q120P35U12", "1117", "1Q11U1M11M12."]
+        # @test foo == ["2020Q120P35U12", "1117", "1Q11U1M11M12."]
+        @test foo == ["2020Q15U12", "1117", "1Q11U1M11M12."]
     end
 end
 
@@ -186,10 +187,10 @@ end
 
 @testset "year, period" begin
     @test_throws ArgumentError year(1U)
-    let val = pp(2020, 2; N=6)
+    let val = qq(2020, 2)
         @test year(val) == 2020
         @test period(val) == 2
-        @test frequencyof(val) === YPFrequency{6}
+        @test frequencyof(val) <: YPFrequency{4}
     end
     @test year(mm(2020, 12)) == 2020
     @test period(mm(2020, 12)) == 12
