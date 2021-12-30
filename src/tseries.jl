@@ -67,6 +67,8 @@ mutable struct TSeries{F<:Frequency,T<:Number,C<:AbstractVector{T}} <: AbstractV
     values::C
 end
 
+@inline _vals(t::TSeries) = t.values
+
 Base.values(t::TSeries) = values(t.values)
 @inline firstdate(t::TSeries) = t.firstdate
 @inline lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
@@ -78,7 +80,7 @@ Base.values(t::TSeries) = values(t.values)
 
 Return the stored range of the given time series object.
 """
-@inline rangeof(t::TSeries) = firstdate(t):lastdate(t)
+@inline rangeof(t::TSeries) = firstdate(t) .+ (0:size(t.values, 1)-1)
 
 """
     firstdate(ts), lastdate(ts)
@@ -190,7 +192,7 @@ function Base.show(io::IO, t::TSeries)
 end
 
 macro showall(a)
-    return esc(:(show(IOContext(stdout, :limit=>false), $a)))
+    return esc(:(show(IOContext(stdout, :limit => false), $a)))
 end
 export @showall
 
@@ -218,8 +220,8 @@ end
 function _ind_range_check(x, rng::UnitRange{<:MIT})
     fi = firstindex(x.values, 1)
     fd = firstdate(x)
-    stop = oftype(fi, fi + (last(rng)-fd))
-    start = oftype(fi, fi + (first(rng)-fd))
+    stop = oftype(fi, fi + (last(rng) - fd))
+    start = oftype(fi, fi + (first(rng) - fd))
     if start < fi || stop > lastindex(x.values, 1)
         Base.throw_boundserror(x, rng)
     end
@@ -229,7 +231,7 @@ end
 Base.getindex(t::TSeries, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
 function Base.getindex(t::TSeries{F}, rng::StepRange{MIT{F},Duration{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(t, rng)
-    step = oftype(stop-start, rng.step)
+    step = oftype(stop - start, rng.step)
     return t.values[start:step:stop]
 end
 function Base.getindex(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
@@ -259,11 +261,11 @@ function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::Abstr
         setindex!(t.values, vec, start:stop)
     elseif rng isa StepRange
         start, stop = _ind_range_check(t, rng)
-        setindex!(t.values, vec, start:oftype(stop-start,rng.step):stop)
+        setindex!(t.values, vec, start:oftype(stop - start, rng.step):stop)
     else
         fd = firstdate(t)
         fi = firstindex(t.values, 1)
-        inds = [oftype(fi, fi + (ind-fd)) for ind in rng]
+        inds = [oftype(fi, fi + (ind - fd)) for ind in rng]
         setindex!(t.values, vec, inds)
     end
 end
@@ -354,7 +356,7 @@ function Base.view(t::TSeries, I::AbstractRange{<:Integer})
 end
 
 
-@inline Base.diff(x::TSeries,k::Integer = -1) = x - lag(x,-k)
+@inline Base.diff(x::TSeries, k::Integer = -1) = x - lag(x, -k)
 
 # """
 #     pct(x::TSeries, shift_value::Int=-1, islog::Bool)
@@ -375,16 +377,16 @@ end
 # ```
 # See also: [`apct`](@ref)
 # """
-function pct(ts::TSeries, shift_value::Int=-1; islog::Bool = false)
+function pct(ts::TSeries, shift_value::Int = -1; islog::Bool = false)
     if islog
-        a = exp.(ts);
-        b = shift(exp.(ts), shift_value);
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value)
     else
-        a = ts;
-        b = shift(ts, shift_value);
+        a = ts
+        b = shift(ts, shift_value)
     end
 
-    result = @. ( (a - b)/b ) * 100
+    result = @. ((a - b) / b) * 100
 
     TSeries(result.firstdate, result.values)
 end
@@ -414,10 +416,10 @@ TSeries{Quarterly} of length 7
 
 See also: [`pct`](@ref)
 """
-function apct(ts::TSeries{<: YPFrequency{N}}, islog::Bool = false) where {N}
+function apct(ts::TSeries{<:YPFrequency{N}}, islog::Bool = false) where {N}
     if islog
         a = exp.(ts)
-        b = shift(exp.(ts), - 1)
+        b = shift(exp.(ts), -1)
     else
         a = ts
         b = shift(ts, -1)
