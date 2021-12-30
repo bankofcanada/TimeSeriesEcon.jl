@@ -221,7 +221,8 @@ function Base.copyto!(dest::MVTSeries, bc::Base.Broadcast.Broadcasted{Nothing})
             copyto!(dest.values, bc)
         end
     else
-        copyto!(dest.values, bc)
+        bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, bc.args, (1:length(dest_rng), 1:length(dest_nms),))
+        copyto!(dest.values, bc1)
     end
     return dest
 end

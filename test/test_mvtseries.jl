@@ -389,7 +389,15 @@ end
         @test p[21Q1:21Q2, (:b, :d)] == q[21Q1:21Q2, (:b, :d)] .+ 1
     end
 
-
+    let p = copy(q)
+        @test_throws DimensionMismatch p[21Q1:21Q4, (:b, :d)] .= [4, 5]
+        p[21Q1:21Q4, (:b, :d)] .= [4 5]
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q1:21Q4, (:a, :c)] == q[21Q1:21Q4, (:a, :c)]
+        @test p[21Q1:21Q4, :b].values == 4ones(4)
+        @test p[21Q1:21Q4, :d].values == 5ones(4)
+    end
 
 end
 
