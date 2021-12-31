@@ -407,10 +407,7 @@ end
 
 Base.fill!(x::MVTSeries, val) = fill!(_vals(x), val)
 
-
-# @inline Base.view(x::MVTSeries, I::Union{MIT,AbstractRange{<:MIT}}, J) = mixed_freq_error(x, eltype(I))
-
-@inline Base.view(x::MVTSeries, I, J) = view(_vals(x), I, J)
+@inline Base.view(x::MVTSeries, I...) = view(_vals(x), I...)
 
 @inline Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 @inline Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon) = view(x, I, axes(x, 2))
@@ -467,3 +464,17 @@ for func in (:sum, :prod, :minimum, :maximum)
     @eval Base.$func(x::MVTSeries; dims) =
         dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims = dims)[:]) : $func(_vals(x); dims = dims)
 end
+
+####  reshape
+
+# reshaped arrays are slow with MVTSeries. We must avoid them at all costs
+@inline function Base.reshape(x::MVTSeries, args::Int...)
+    ret = reshape(_vals(x), args...)
+    if axes(ret) == axes(_vals(x))
+        return x
+    else
+        @error("Cannot reshape MVTSeries!")
+        return ret
+    end
+end
+
