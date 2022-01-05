@@ -32,6 +32,7 @@ Base.setindex!(w::Workspace, Args...) = setindex!(_c(w), Args...)
 Base.keys(w::Workspace) = keys(_c(w))
 Base.haskey(w::Workspace, k::Symbol) = haskey(_c(w), k)
 Base.values(w::Workspace) = values(_c(w))
+Base.length(w::Workspace) = length(_c(w))
 Base.iterate(w::Workspace, args...) = iterate(_c(w), args...)
 Base.get(w::Workspace, key, default) = get(_c(w), key, default)
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
@@ -49,7 +50,7 @@ function Base.summary(io::IO, w::Workspace)
     end
 
     nvars = length(_c(w))
-    println(io, "Workspace with ", nvars, "-variables")
+    return print(io, "Workspace with ", nvars, "-variables")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
@@ -98,7 +99,7 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
     for (sk, sv) ∈ prows
         lv = length(sv)
         sv = lv <= cutoff ? sv : sv[1:cutoff-1] * "…"
-        println(io, "  ", lpad(sk, max_align), " ⇒ ", sv)
+        print(io, "\n  ", lpad(sk, max_align), " ⇒ ", sv)
     end
 
 end
