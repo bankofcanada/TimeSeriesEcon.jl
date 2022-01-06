@@ -12,9 +12,10 @@ A collection of variables.
 """
 struct Workspace
     contents::OrderedDict{Symbol,Any}
-    Workspace(;kwargs...) = 
-        isempty(kwargs) ? new(OrderedDict{Symbol,Any}()) : 
-            new(push!(OrderedDict{Symbol,Any}(), kwargs...))
+    # punt construction to container
+    Workspace(args...; kwargs...) = new(OrderedDict{Symbol,Any}(args...; kwargs...))
+    # Allow construction like this: Workspace(; var1=val1, var2=val2, ...)
+    Workspace(; kw...) = new(OrderedDict{Symbol,Any}(kw))
 end
 
 @inline _c(w::Workspace) = getfield(w, :contents)
