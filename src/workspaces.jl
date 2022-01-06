@@ -41,10 +41,6 @@ Base.get!(w::Workspace, key, default) = get!(_c(w), key, default)
 Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
 Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
 
-function Base.mergewith(combine, w::Workspace, others::Workspace...)
-    return Workspace(mergewith(combine, _c(w), _c.(others)...))
-end
-
 function Base.summary(io::IO, w::Workspace)
     if isempty(w)
         return print(io, "Empty Workspace")
@@ -116,5 +112,11 @@ function Workspace(fromdict::AbstractDict; recursive = false)
     return w
 end
 
+@inline _c(x::MVTSeries) = _cols(x)
+
+function Base.mergewith(combine, stuff::Union{Workspace,MVTSeries}...)
+    return Workspace(mergewith(combine, (_c(w) for w in stuff)...))
+end
+
 overlay(stuff...) = stuff[1]
-overlay(w::Vararg{Workspace}) = mergewith(overlay, w...)
+overlay(w::Vararg{Union{Workspace,MVTSeries}}) = mergewith(overlay, w...)

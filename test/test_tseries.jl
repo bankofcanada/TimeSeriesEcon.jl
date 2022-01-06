@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 @testset "TSeries" begin
@@ -431,8 +431,8 @@ end
         @test z === y
         # opeartions
         @test x + x + 3x == 5x
-        @test_throws ArgumentError x + x.values 
-        @test_throws ArgumentError x.values + x
+        @test x + x.values == 2x
+        @test x.values + x == 2x
     end
 end
 

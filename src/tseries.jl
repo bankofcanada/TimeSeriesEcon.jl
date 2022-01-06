@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 # -------------------------------------------------------------------------------
@@ -68,6 +68,7 @@ mutable struct TSeries{F<:Frequency,T<:Number,C<:AbstractVector{T}} <: AbstractV
 end
 
 @inline _vals(t::TSeries) = t.values
+@inline rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
 @inline firstdate(t::TSeries) = t.firstdate
@@ -355,8 +356,11 @@ function Base.view(t::TSeries, I::AbstractRange{<:Integer})
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
 
-
 @inline Base.diff(x::TSeries, k::Integer = -1) = x - lag(x, -k)
+
+function Base.vcat(x::TSeries, args::AbstractVector...)
+    return TSeries(firstdate(x), vcat(_vals(x), args...))
+end
 
 # """
 #     pct(x::TSeries, shift_value::Int=-1, islog::Bool)

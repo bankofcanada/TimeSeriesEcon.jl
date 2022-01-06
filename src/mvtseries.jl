@@ -95,6 +95,8 @@ columns(x::MVTSeries) = getfield(x, :columns)
 @inline Base.IndexStyle(x::MVTSeries) = IndexStyle(_vals(x))
 @inline Base.dataids(x::MVTSeries) = Base.dataids(_vals(x))
 
+@inline Base.eachindex(x::MVTSeries) = eachindex(_vals(x))
+
 # normally only the first of the following is sufficient.
 # we add few other versions of similar below
 @inline Base.similar(x::MVTSeries) = MVTSeries(firstdate(x), colnames(x), similar(_vals(x)))
@@ -402,6 +404,9 @@ function Base.hcat(x::MVTSeries; KW...)
     return y
 end
 
+function Base.vcat(x::MVTSeries, args::AbstractVecOrMat...)
+    return MVTSeries(firstdate(x), colnames(x), vcat(_vals(x), args...))
+end
 
 ####   Views
 
