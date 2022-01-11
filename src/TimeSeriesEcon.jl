@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 
@@ -46,6 +46,8 @@
 #     - `nanrm!(x::TSeries, type::Symbol=:both)`: removes `NaN` from `x::TSeries`
 # """
 module TimeSeriesEcon
+
+using MacroTools
 
 include("momentintime.jl")
 export MIT, Duration

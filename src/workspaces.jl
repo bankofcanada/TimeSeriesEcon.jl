@@ -11,55 +11,45 @@ export Workspace
 A collection of variables.
 """
 struct Workspace
-    contents::OrderedDict{Symbol,Any}
+    _c::OrderedDict{Symbol,Any}
     # punt construction to container
     Workspace(args...; kwargs...) = new(OrderedDict{Symbol,Any}(args...; kwargs...))
     # Allow construction like this: Workspace(; var1=val1, var2=val2, ...)
     Workspace(; kw...) = new(OrderedDict{Symbol,Any}(kw))
 end
 
-@inline _c(w::Workspace) = getfield(w, :contents)
+@inline _c(w::Workspace) = getfield(w, :_c)
 
-Base.propertynames(w::Workspace) = tuple(keys(_c(w))...)
-Base.getproperty(w::Workspace, sym::Symbol) = getindex(_c(w), sym)
-Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(_c(w), val, sym)
+Base.propertynames(w::Workspace, private::Bool = false) = tuple(keys(w)...)
+Base.getproperty(w::Workspace, sym::Symbol) = sym == :_c ? _c(w) : getindex(w, sym)
+Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(w, val, sym)
 
-Base.getindex(w::Workspace, Args...) = getindex(_c(w), Args...)
-Base.setindex!(w::Workspace, Args...) = setindex!(_c(w), Args...)
+MacroTools.@forward Workspace._c (Base.getindex, Base.setindex!)
+MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
+MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!, Base.push!, Base.delete!)
+MacroTools.@forward Workspace._c (Base.eltype,)
 
-@inline Base.isempty(w::Workspace) = isempty(_c(w))
 @inline Base.in(name, w::Workspace) = Symbol(name) ∈ keys(_c(w))
-
-Base.keys(w::Workspace) = keys(_c(w))
-Base.haskey(w::Workspace, k::Symbol) = haskey(_c(w), k)
-Base.values(w::Workspace) = values(_c(w))
-Base.length(w::Workspace) = length(_c(w))
-Base.iterate(w::Workspace, args...) = iterate(_c(w), args...)
-Base.get(w::Workspace, key, default) = get(_c(w), key, default)
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
-Base.get!(w::Workspace, key, default) = get!(_c(w), key, default)
 Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
-Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
 
 function Base.summary(io::IO, w::Workspace)
     if isempty(w)
         return print(io, "Empty Workspace")
     end
-
-    nvars = length(_c(w))
-    return print(io, "Workspace with ", nvars, "-variables")
+    return print(io, "Workspace with ", length(w), "-variables")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
 
     summary(io, w)
 
-    nvars = length(_c(w))
+    nvars = length(w)
     nvars == 0 && return
 
     limit = get(io, :limit, true)
     io = IOContext(io, :SHOWN_SET => _c(w),
-        :typeinfo => eltype(_c(w)),
+        :typeinfo => eltype(w),
         :compact => get(io, :compact, true),
         :limit => limit)
 
@@ -76,7 +66,7 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
 
     max_align = 0
     prows = Vector{String}[]
-    for (i, (k, v)) ∈ enumerate(_c(w))
+    for (i, (k, v)) ∈ enumerate(w)
         top < i < bot && continue
 
         sk = sprint(print, k, context = io, sizehint = 0)
@@ -107,16 +97,95 @@ function Workspace(fromdict::AbstractDict; recursive = false)
     w = Workspace()
     convert_value = ifelse(recursive, _dict_to_workspace, identity)
     for (key, value) in fromdict
-        push!(_c(w), Symbol(key) => convert_value(value))
+        push!(w, Symbol(key) => convert_value(value))
     end
     return w
 end
 
-@inline _c(x::MVTSeries) = _cols(x)
+const LikeWorkspace = Union{Workspace,MVTSeries,AbstractDict{Symbol,<:Any}}
 
-function Base.mergewith(combine, stuff::Union{Workspace,MVTSeries}...)
+@inline _c(x::MVTSeries) = _cols(x)
+@inline _c(x::AbstractDict) = x
+
+function Base.mergewith(combine, stuff::LikeWorkspace...)
     return Workspace(mergewith(combine, (_c(w) for w in stuff)...))
 end
 
 overlay(stuff...) = stuff[1]
-overlay(w::Vararg{Union{Workspace,MVTSeries}}) = mergewith(overlay, w...)
+overlay(w::Vararg{LikeWorkspace}) = mergewith(overlay, w...)
+
+###########################
+
+"""
+    @compare x y [options] 
+    compare(x, y [; options])
+
+Compare two `Workspace` recursively and print out the differeces. `MVTSeries`
+and `Dict` with keys of type `Symbol` are treated like `Workspace`. `TSeries` and
+other `Vector` are compared using `isapprox`, so feel free to supply `rtol` or
+`atol`.
+
+Optional argument `name` can be used for the top name. Default is `"!"`.
+
+Parameter `showequal=true` causes the report to include objects that are the
+same. Default behaviour, with `showequal=false`, is to report only the
+differences.
+
+"""
+function compare end, macro compare end
+export compare, @compare
+
+
+compare_equal(x, y; kwargs...) = isequal(x, y)
+compare_equal(x::AbstractVector, y::AbstractVector; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) = isapprox(x, y; atol, rtol)
+
+function compare_equal(x::LikeWorkspace, y::LikeWorkspace; kwargs...)
+    equal = true
+    for name in union(keys(x), keys(y))
+        xval = get(x, name, missing)
+        yval = get(y, name, missing)
+        if !compare(xval, yval, name; kwargs...)
+            equal = false
+        end
+    end
+    return equal
+end
+
+@inline compare_print(names, message, quiet) = quiet ? nothing : println(join(names, "."), ": ", message)
+
+function compare(x, y, name = Symbol("_");
+    showequal = false, ignoremissing = false, quiet=false,
+    left = :left, right = :right,
+    names = Symbol[], kwargs...)
+    push!(names, name)
+    if ismissing(x)
+        equal = ignoremissing 
+        ignoremissing || compare_print(names, "missing in $left", quiet)
+    elseif ismissing(y)
+        equal = ignoremissing 
+        ignoremissing || compare_print(names, "missing in $right", quiet)
+    elseif compare_equal(x, y; showequal, ignoremissing, names, left, right, kwargs...)
+        (showequal || length(names) == 1) && compare_print(names, "same", quiet)
+        equal = true
+    else
+        compare_print(names, "different", quiet)
+        equal = false
+    end
+    pop!(names)
+    return equal
+end
+
+macro compare(x, y, kwargs...)
+    kw = map(kwargs) do arg
+        if arg isa Symbol
+            arg => true
+        elseif MacroTools.isexpr(arg, :(=))
+            Pair(arg.args...)
+        else
+            arg
+        end
+    end
+    esc(quote
+        compare($x, $y; left = $(QuoteNode(x)), right = $(QuoteNode(y)), $kw...)
+    end)
+end
