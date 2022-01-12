@@ -393,7 +393,8 @@ Base.copyto!(dest::MVTSeries, src::MVTSeries) = (copyto!(dest.values, src.values
 # ways add new columns (variables)
 
 function Base.hcat(x::MVTSeries; KW...)
-    y = MVTSeries(rangeof(x), tuple(colnames(x)..., keys(KW)...))
+    T = reduce(Base.promote_eltype, (x, values(KW)...))
+    y = MVTSeries(rangeof(x), tuple(colnames(x)..., keys(KW)...), typenan(T))
     # copyto!(y, x)
     for (k, v) in pairs(x)
         setproperty!(y, k, v)

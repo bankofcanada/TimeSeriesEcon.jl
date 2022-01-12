@@ -107,12 +107,8 @@ const LikeWorkspace = Union{Workspace,MVTSeries,AbstractDict{Symbol,<:Any}}
 @inline _c(x::MVTSeries) = _cols(x)
 @inline _c(x::AbstractDict) = x
 
-function Base.mergewith(combine, stuff::LikeWorkspace...)
-    return Workspace(mergewith(combine, (_c(w) for w in stuff)...))
-end
-
 overlay(stuff...) = stuff[1]
-overlay(w::Vararg{LikeWorkspace}) = mergewith(overlay, w...)
+overlay(stuff::Vararg{LikeWorkspace}) = Workspace(mergewith(overlay, (_c(w) for w in stuff)...))
 
 ###########################
 
