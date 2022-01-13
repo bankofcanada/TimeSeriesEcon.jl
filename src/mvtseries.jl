@@ -169,14 +169,15 @@ Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = 
 # construct from a collection of TSeries
 function MVTSeries(; args...)
     isempty(args) && return MVTSeries(1U)
+    keys, values = zip(args...)
     # range is the union of all ranges
-    rng = mapreduce(rangeof, union, values(args))
+    rng = mapreduce(rangeof, union, filter(v -> applicable(rangeof, v), values))
     # figure out the element type
-    ET = mapreduce(eltype, promote_type, values(args))
+    ET = mapreduce(eltype, Base.promote_eltype, values)
     # allocate memory
-    ret = MVTSeries(rng, keys(args), typenan(ET))
+    ret = MVTSeries(rng, keys, typenan(ET))
     # copy data
-    for (key, value) in args
+    for (key, value) in zip(keys, values)
         ret[:, key] .= value
     end
     return ret

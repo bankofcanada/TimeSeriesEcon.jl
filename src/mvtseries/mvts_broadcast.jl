@@ -215,7 +215,9 @@ function Base.copyto!(dest::MVTSeries, bc::Base.Broadcast.Broadcasted{Nothing})
         bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, mvts_unwrap_args((rng, nms,), bc.args), (1:length(rng), 1:length(nms),))
         copyto!(view(_vals(dest), i1, i2), Base.Broadcast.preprocess(_vals(dest), bc1))
     elseif length(bcax) == 1
-        if length(dest_rng) != length(bcax[1]) && length(dest_rng) == 1 && length(dest_nms) == length(bcax[1])
+        if length(dest_rng) == length(bcax[1]) && length(dest_nms) == 1
+            copyto!(view(_vals(dest), :, 1), bc)
+        elseif length(dest_rng) == 1 && length(dest_nms) == length(bcax[1])
             copyto!(view(_vals(dest), 1, :), bc)
         else
             copyto!(dest.values, bc)
