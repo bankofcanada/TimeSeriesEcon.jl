@@ -116,7 +116,7 @@ overlay(stuff::Vararg{LikeWorkspace}) = Workspace(mergewith(overlay, (_c(w) for 
     @compare x y [options] 
     compare(x, y [; options])
 
-Compare two `Workspace` recursively and print out the differeces. `MVTSeries`
+Compare two `Workspace` recursively and print out the differences. `MVTSeries`
 and `Dict` with keys of type `Symbol` are treated like `Workspace`. `TSeries` and
 other `Vector` are compared using `isapprox`, so feel free to supply `rtol` or
 `atol`.
