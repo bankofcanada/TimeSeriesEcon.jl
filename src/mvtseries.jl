@@ -165,7 +165,7 @@ Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = 
 
 # Empty (0 variables) from range
 @inline function MVTSeries(rng::UnitRange{<:MIT}; args...) 
-    isempty(args) && return MVTSeries(rng)
+    isempty(args) && return MVTSeries(rng, ())
     keys, values = zip(args...)
     # figure out the element type
     ET = mapreduce(eltype, Base.promote_eltype, values)

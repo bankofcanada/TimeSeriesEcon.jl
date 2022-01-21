@@ -14,6 +14,9 @@
     @test size(MVTSeries(20Q1:20Q4, ["a", :b], undef)) == (4, 2)
     @test size(MVTSeries(20Q1:20Q4, ["a", :b], 5)) == (4, 2)
     @test size(MVTSeries(20Q1:20Q4, ["a", :b], zeros)) == (4, 2)
+    @test size(MVTSeries(1U:5U)) == (5,0)
+    @test size(MVTSeries(a=TSeries(1U:5U), b=TSeries(3U:8U))) == (8,2)
+
 
     let a = similar(zeros(Int, 0, 0), (20Y:22Y, (:a, :b))),
         b = similar(zeros(Int, 0, 0), Complex, (20Y:22Y, (:a, :b))),
