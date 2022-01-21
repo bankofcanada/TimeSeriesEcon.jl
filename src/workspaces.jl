@@ -24,12 +24,18 @@ Base.propertynames(w::Workspace, private::Bool = false) = tuple(keys(w)...)
 Base.getproperty(w::Workspace, sym::Symbol) = sym == :_c ? _c(w) : getindex(w, sym)
 Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(w, val, sym)
 
-MacroTools.@forward Workspace._c (Base.getindex, Base.setindex!)
+# MacroTools.@forward Workspace._c (Base.getindex,)
+Base.getindex(w::Workspace, sym) = getindex(_c(w), convert(Symbol, sym))
+Base.getindex(w::Workspace, sym, syms...) = getindex(w, (sym, syms...,))
+Base.getindex(w::Workspace, syms::Vector) = getindex(w, (syms...,))
+Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] for s in syms)
+
+MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!, Base.push!, Base.delete!)
 MacroTools.@forward Workspace._c (Base.eltype,)
 
-@inline Base.in(name, w::Workspace) = Symbol(name) ∈ keys(_c(w))
+@inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
 Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
 
@@ -132,8 +138,14 @@ function compare end, macro compare end
 export compare, @compare
 
 
-compare_equal(x, y; kwargs...) = isequal(x, y)
-compare_equal(x::AbstractVector, y::AbstractVector; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) = isapprox(x, y; atol, rtol)
+@inline compare_equal(x, y; kwargs...) = isequal(x, y)
+@inline compare_equal(x::AbstractVector, y::AbstractVector; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) = isapprox(x, y; atol, rtol)
+function compare_equal(x::TSeries, y::TSeries; trange=nothing, atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) 
+    if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
+        trange = intersect(rangeof(x), rangeof(y))
+    end
+    isapprox(x[trange], y[trange]; atol, rtol)
+end
 
 function compare_equal(x::LikeWorkspace, y::LikeWorkspace; kwargs...)
     equal = true
@@ -150,15 +162,16 @@ end
 @inline compare_print(names, message, quiet) = quiet ? nothing : println(join(names, "."), ": ", message)
 
 function compare(x, y, name = Symbol("_");
-    showequal = false, ignoremissing = false, quiet=false,
+    showequal = false, ignoremissing = false, quiet = false,
     left = :left, right = :right,
-    names = Symbol[], kwargs...)
+    names = Symbol[], 
+    kwargs...)
     push!(names, name)
     if ismissing(x)
-        equal = ignoremissing 
+        equal = ignoremissing
         ignoremissing || compare_print(names, "missing in $left", quiet)
     elseif ismissing(y)
-        equal = ignoremissing 
+        equal = ignoremissing
         ignoremissing || compare_print(names, "missing in $right", quiet)
     elseif compare_equal(x, y; showequal, ignoremissing, names, left, right, kwargs...)
         (showequal || length(names) == 1) && compare_print(names, "same", quiet)
@@ -172,16 +185,47 @@ function compare(x, y, name = Symbol("_");
 end
 
 macro compare(x, y, kwargs...)
-    kw = map(kwargs) do arg
+    # build the basic compare call
+    ret = MacroTools.unblock(quote
+        compare($x, $y; left = $(QuoteNode(x)), right = $(QuoteNode(y)))
+    end)
+    # find the array of kw-parameters in ret
+    params = (()->for a in ret.args
+        if MacroTools.isexpr(a, :parameters)
+            return a.args
+        end
+    end)()
+    # convert arguments to this macro to kw-parameters to the compare() call
+    for arg in kwargs
         if arg isa Symbol
-            arg => true
+            kw = Expr(:kw, arg, true)
         elseif MacroTools.isexpr(arg, :(=))
-            Pair(arg.args...)
+            kw = Expr(:kw, arg.args...)
         else
-            arg
+            kw = arg
+        end
+        push!(params, kw)
+    end
+    # done
+    return esc(ret)
+end
+
+###########################
+
+"""
+    strip!(w::Workspace; recursive=true)
+
+Apply [`strip!`](@ref) to all TSeries members of the given workspace. This
+includes nested workspaces, unless `recursive=false`.
+
+"""
+function strip!(w::Workspace; recursive = true)
+    for (key, value) in w._c
+        if value isa TSeries
+            strip!(value)
+        elseif recursive && value isa Workspace
+            strip!(value; recursive)
         end
     end
-    esc(quote
-        compare($x, $y; left = $(QuoteNode(x)), right = $(QuoteNode(y)), $kw...)
-    end)
+    return w
 end

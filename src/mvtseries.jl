@@ -114,9 +114,6 @@ const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractA
 # Some other constructors
 # -------------------------------------------------------------
 
-# Empty (0 variables) from range
-@inline MVTSeries(T::Type{<:Number}, rng::AbstractUnitRange{<:MIT}) = MVTSeries(first(rng), (), Matrix{T}(undef, length(rng), 0))
-@inline MVTSeries(rng::UnitRange{<:MIT}) = MVTSeries(Float64, rng)
 
 # Empty from a list of variables and of specified type (first date must also be given, Frequency is not enough)
 # @inline MVTSeries(fd::MIT, vars) = MVTSeries(Float64, fd, vars)
@@ -166,18 +163,30 @@ Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}
 # construct from range and fill with the given constant or array
 Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
 
-# construct from a collection of TSeries
+# Empty (0 variables) from range
+@inline function MVTSeries(rng::UnitRange{<:MIT}; args...) 
+    isempty(args) && return MVTSeries(rng)
+    keys, values = zip(args...)
+    # figure out the element type
+    ET = mapreduce(eltype, Base.promote_eltype, values)
+    MVTSeries(ET, rng; args...)
+end
+
 function MVTSeries(; args...)
     isempty(args) && return MVTSeries(1U)
     keys, values = zip(args...)
     # range is the union of all ranges
     rng = mapreduce(rangeof, union, filter(v -> applicable(rangeof, v), values))
-    # figure out the element type
-    ET = mapreduce(eltype, Base.promote_eltype, values)
+    return MVTSeries(rng; args...)
+end
+
+# construct from a collection of TSeries
+function MVTSeries(ET::Type{<:Number}, rng::UnitRange{<:MIT}; args...)
+    isempty(args) && return MVTSeries(1U)
     # allocate memory
-    ret = MVTSeries(rng, keys, typenan(ET))
+    ret = MVTSeries(rng, keys(args), typenan(ET))
     # copy data
-    for (key, value) in zip(keys, values)
+    for (key, value) in args
         ret[:, key] .= value
     end
     return ret
