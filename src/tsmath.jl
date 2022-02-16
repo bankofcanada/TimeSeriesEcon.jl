@@ -33,8 +33,12 @@
 #     isapprox(x[shape].values, y[shape].values; kwargs...)
 # end
 
-
-
+for func in (:maximum, :minimum)
+    @eval begin
+        Base.$func(t::TSeries; kwargs...) = $func(t.values; kwargs...)
+        Base.$func(f::Function, t::TSeries; kwargs...) = $func(f, t.values; kwargs...)
+    end
+end
 
 ####################################################################
 # Now we implement some time-series operations that do not really apply to vectors.

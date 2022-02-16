@@ -76,7 +76,11 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         top < i < bot && continue
 
         sk = sprint(print, k, context = io, sizehint = 0)
-        if typeof(v) == eltype(v) # is it a scalar value?
+        if v isa Union{AbstractString,Symbol,AbstractRange}
+            # It's a string or a Symbol
+            sv = sprint(show, v, context = io, sizehint = 0)
+        elseif typeof(v) == eltype(v)
+            #  it's a scalar value
             sv = sprint(print, v, context = io, sizehint = 0)
         else
             sv = sprint(summary, v, context = io, sizehint = 0)
@@ -127,11 +131,16 @@ and `Dict` with keys of type `Symbol` are treated like `Workspace`. `TSeries` an
 other `Vector` are compared using `isapprox`, so feel free to supply `rtol` or
 `atol`.
 
-Optional argument `name` can be used for the top name. Default is `"!"`.
+Optional argument `name` can be used for the top name. Default is `"_"`.
 
 Parameter `showequal=true` causes the report to include objects that are the
 same. Default behaviour, with `showequal=false`, is to report only the
-differences.
+differences. 
+
+Parameter `ignoremissing=true` causes objects that appear in one but not the
+other workspace to be ignored. That is, they are not printed and do not affect
+the return value `true` or `false`. Default is `ignoremissing=false` meaning
+they will be printed and return value will be `false`.
 
 """
 function compare end, macro compare end
@@ -140,7 +149,7 @@ export compare, @compare
 
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
 @inline compare_equal(x::AbstractVector, y::AbstractVector; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) = isapprox(x, y; atol, rtol)
-function compare_equal(x::TSeries, y::TSeries; trange=nothing, atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) 
+function compare_equal(x::TSeries, y::TSeries; trange = nothing, atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...)
     if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
         trange = intersect(rangeof(x), rangeof(y))
     end
@@ -164,7 +173,7 @@ end
 function compare(x, y, name = Symbol("_");
     showequal = false, ignoremissing = false, quiet = false,
     left = :left, right = :right,
-    names = Symbol[], 
+    names = Symbol[],
     kwargs...)
     push!(names, name)
     if ismissing(x)
@@ -190,11 +199,13 @@ macro compare(x, y, kwargs...)
         compare($x, $y; left = $(QuoteNode(x)), right = $(QuoteNode(y)))
     end)
     # find the array of kw-parameters in ret
-    params = (()->for a in ret.args
+    params = []
+    for a in ret.args
         if MacroTools.isexpr(a, :parameters)
-            return a.args
+            params = a.args
+            break
         end
-    end)()
+    end
     # convert arguments to this macro to kw-parameters to the compare() call
     for arg in kwargs
         if arg isa Symbol

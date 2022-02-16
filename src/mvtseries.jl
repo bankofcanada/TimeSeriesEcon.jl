@@ -164,7 +164,7 @@ Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}
 Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
 
 # Empty (0 variables) from range
-@inline function MVTSeries(rng::UnitRange{<:MIT}; args...) 
+@inline function MVTSeries(rng::UnitRange{<:MIT}; args...)
     isempty(args) && return MVTSeries(rng, ())
     keys, values = zip(args...)
     # figure out the element type
@@ -469,16 +469,20 @@ for func = (:+, :-)
             return copyto!(similar(x, T), $func(_vals(x), _vals(y)))
         else
             shape = promote_shape(x, y)
-            return copyto!(similar(T, shape), $func(_vals(x[shape[1]]), _vals(y[shape[1]])))
+            return copyto!(similar(Matrix, T, shape), $func(_vals(x[shape[1]]), _vals(y[shape[1]])))
         end
     end
 end
 
-####  sum(x; dims=2) -> TSeries
+####  sum(x::MVTSeries; dims=2) -> TSeries
 
 for func in (:sum, :prod, :minimum, :maximum)
-    @eval Base.$func(x::MVTSeries; dims) =
-        dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims = dims)[:]) : $func(_vals(x); dims = dims)
+    @eval @inline Base.$func(x::MVTSeries; dims) =
+        dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims = dims)[:]) : $func(rawdata(x); dims = dims)
+
+    @eval @inline Base.$func(f, x::MVTSeries; dims) =
+        dims == 2 ? TSeries(firstdate(x), $func(f, rawdata(x); dims = dims)[:]) : $func(f, rawdata(x); dims = dims)
+
 end
 
 ####  reshape
@@ -494,3 +498,138 @@ end
     end
 end
 
+####  diff and cumsum
+
+@inline shift(x::MVTSeries, k::Integer) = shift!(copy(x), k)
+@inline shift!(x::MVTSeries, k::Integer) = (x.firstdate -= k; x)
+@inline lag(x::MVTSeries, k::Integer = 1) = shift(x, -k)
+@inline lag!(x::MVTSeries, k::Integer = 1) = shift!(x, -k)
+@inline lead(x::MVTSeries, k::Integer = 1) = shift(x, k)
+@inline lead!(x::MVTSeries, k::Integer = 1) = shift!(x, k)
+
+@inline Base.diff(x::MVTSeries; dims = 1) = diff(x, -1; dims)
+@inline Base.diff(x::MVTSeries, k::Integer; dims = 1) =
+    dims == 1 ? x - shift(x, k) : diff(_vals(x); dims)
+
+@inline Base.cumsum(x::MVTSeries; dims) = cumsum!(copy(x), _vals(x); dims)
+@inline Base.cumsum!(out::MVTSeries, in::AbstractMatrix; dims) = (cumsum!(_vals(out), in; dims); out)
+
+####  moving average
+
+
+"""
+    moving(x, n)
+
+Compute the moving average of `x` over a window of `n` periods. If `n > 0` the
+window is backward-looking (n-1:0) and if `n < 0` the window is forward-looking
+(0:-n-1). 
+"""
+function moving end
+export moving
+
+@inline _moving_mean!(x_ma::TSeries, x, t, window) = x_ma[t] = mean(x[t.+window])
+@inline _moving_mean!(x_ma::MVTSeries, x, t, window) = x_ma[t, :] .= mean(x[t.+window, :]; dims = 1)
+
+@inline _moving_shape(x::TSeries, n) = (rangeof(x, drop = n - copysign(1, n)),)
+@inline _moving_shape(x::MVTSeries, n) = (rangeof(x, drop = n - copysign(1, n)), axes(x, 2))
+
+function moving(x::Union{TSeries,MVTSeries}, n::Integer)
+    window = n > 0 ? (-n+1:0) : (0:-n-1)
+    x_ma = similar(x, _moving_shape(x, n))
+    for t in rangeof(x_ma)
+        _moving_mean!(x_ma, x, t, window)
+    end
+    return x_ma
+end
+
+####  undiff
+
+"""
+    undiff(dvar, [date => value])
+    undiff!(var, dvar; fromdate=firstdate(dvar)-1)
+
+Inverse of `diff`, i.e. `var` remains unchanged under `undiff!(var, diff(var))`
+or `undiff(diff(var), firstdate(var)=>first(var))`. This is the same as
+`cumsum`, but specific to time series.
+
+In the case of `undiff` the second argument is an "anchor" `Pair` specifying a
+known value at some time period. Typically this will be the period just before
+the first date of `dvar`, but doesn't have to be. If the date falls outside the
+`rangeof(dvar)` we extend dvar with zeros as necessary. If missing, this
+argument defaults to `firstdate(dvar)-1 => 0`.
+
+In the case of `undiff!`, the `var` argument provides the "anchor" value and the
+storage location for the result. The `fromdate` parameter specifies the date of
+the "anchor" and the anchor value is taken from `var`. See important note below.
+
+The in-place version (`undiff!`) works only with `TSeries`. The other version
+(`undiff`) works with `MVTSeries` as well as `TSeries`. In the case of
+`MVTSeries` the anchor `value` must be a `Vector`, or a `Martix` with 1 row, of
+the same length as the number of columns of `dvar`.
+
+!!! note 
+
+    In the case of `undiff!` the meaning of parameter `fromdate` is different
+    from the meaning of `date` in the second argument of `undiff`. This only
+    matters if `fromdate` falls somewhere in the middle of the range of `dvar`.
+
+    In the case of `undiff!`, all values of `dvar` at, and prior to, `fromdate`
+    are ignored (considered zero). Effectively, values of `var` up to, and
+    including, `fromdate` remain unchanged. 
+
+    By contrast, in `undiff` with `date => value` somewhere in the middle of the
+    range of `dvar`, the operation is applied over the full range of `dvar`,
+    both before and after `date`, and then the result is adjusted by adding or
+    subtracting a constant such that in the end we have `result[date]=value`.
+
+"""
+function undiff end, function undiff! end
+export undiff, undiff!
+
+@inline undiff(dvar::TSeries) = undiff(dvar, firstdate(dvar) - 1 => zero(eltype(dvar)))
+function undiff(dvar::TSeries, anchor::Pair{<:MIT,<:Number})
+    fromdate, value = anchor
+    ET = Base.promote_eltype(dvar, value)
+    if fromdate ∉ rangeof(dvar)
+        # our anchor is outside, extend with zeros
+        dvar = overlay(dvar, fill(zero(ET), fromdate:lastdate(dvar)))
+    end
+    result = similar(dvar, ET)
+    result .= cumsum(dvar)
+    correction = value - result[fromdate]
+    result .+= correction
+    return result
+end
+
+function undiff!(var::TSeries, dvar::TSeries; fromdate = firstdate(dvar) - 1)
+    if fromdate < firstdate(var)
+        error("Range mismatch: `fromdate == $(fromdate) < $(firstdate(var)) == firstdate(var): ")
+    end
+    if lastdate(var) < lastdate(dvar)
+        resize!(var, firstdate(var):lastdate(dvar))
+    end
+    for t = fromdate+1:lastdate(dvar) 
+        var[t] = var[t-1] + dvar[t]
+    end
+    return var
+end
+
+# undiff(dvar::MVTSeries) = undiff(dvar, firstdate(dvar) - 1 => zeros(eltype(dvar), size(dvar, 2)))
+undiff(dvar::MVTSeries, anchor_value::Number = 0) = undiff(dvar, firstdate(dvar) - 1 => fill(anchor_value, size(dvar, 2)))
+function undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:AbstractVecOrMat})
+    fromdate, value = anchor
+    ET = Base.promote_eltype(dvar, value)
+    if fromdate ∉ rangeof(dvar)
+        # our anchor is outside, extend with zeros
+        shape = axes(dvar)
+        new_range = union(fromdate:fromdate, shape[1])
+        tmp = dvar
+        dvar = fill(zero(ET), new_range, shape[2])
+        dvar .= tmp
+    end
+    result = similar(dvar, ET)
+    result .= cumsum(dvar; dims = 1)
+    correction = reshape(value .- result[fromdate], 1, :)
+    result .+= correction
+    return result
+end
