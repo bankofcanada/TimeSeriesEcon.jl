@@ -433,6 +433,15 @@ end
 export apct
 apct(ts::TSeries, args...) = error("apct for frequency $(frequencyof(ts)) not implemented")
 
+
+"""
+    ytypct(x) 
+
+Year-to-year percent change in x. 
+"""
+ytypct(x) = 100*(x ./  shift(x, -ppy(x)) .- 1)
+export ytypct
+
 # function Base.cumsum(s::TSeries)
 #     TSeries(s.firstdate, cumsum(s.values))
 # end

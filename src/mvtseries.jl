@@ -521,8 +521,8 @@ end
     moving(x, n)
 
 Compute the moving average of `x` over a window of `n` periods. If `n > 0` the
-window is backward-looking (n-1:0) and if `n < 0` the window is forward-looking
-(0:-n-1). 
+window is backward-looking `(-n+1:0)` and if `n < 0` the window is forward-looking
+`(0:-n-1)`.
 """
 function moving end
 export moving

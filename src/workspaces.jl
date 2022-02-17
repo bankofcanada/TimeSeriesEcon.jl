@@ -39,6 +39,12 @@ MacroTools.@forward Workspace._c (Base.eltype,)
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
 Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
 
+rangeof(w::Workspace) = (
+    iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));
+    mapreduce(rangeof, intersect, iterable)
+)
+
+
 function Base.summary(io::IO, w::Workspace)
     if isempty(w)
         return print(io, "Empty Workspace")
