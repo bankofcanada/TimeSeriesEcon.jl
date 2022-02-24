@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 # augment arraymath.jl for TSeries
@@ -23,16 +23,22 @@
 @inline shape_error(A::Type,B::Type) = throw(ArgumentError("This operation is not valid for $(A) and $(B). Try using . to do it element-wise."))
 @inline shape_error(a,b) = shape_error(typeof(a), typeof(b))
 
-@inline Base.promote_shape(a::TSeries, b::AbstractVector) = shape_error(a, b)
-@inline Base.promote_shape(a::AbstractVector, b::TSeries) = shape_error(a, b)
+@inline Base.promote_shape(a::TSeries, b::AbstractVector) = promote_shape(_vals(a), b)
+@inline Base.promote_shape(a::AbstractVector, b::TSeries) = promote_shape(a, _vals(b))
 
 # +, -, *, / work out of the box with the above methods for promote_shape.
 
-@inline function Base.isapprox(x::TSeries, y::TSeries; kwargs...)
-    shape = promote_shape(x, y)
-    isapprox(x[shape].values, y[shape].values; kwargs...)
-end
+# @inline function Base.isapprox(x::TSeries, y::TSeries; kwargs...)
+#     shape = promote_shape(x, y)
+#     isapprox(x[shape].values, y[shape].values; kwargs...)
+# end
 
+for func in (:maximum, :minimum)
+    @eval begin
+        Base.$func(t::TSeries; kwargs...) = $func(t.values; kwargs...)
+        Base.$func(f::Function, t::TSeries; kwargs...) = $func(f, t.values; kwargs...)
+    end
+end
 
 ####################################################################
 # Now we implement some time-series operations that do not really apply to vectors.

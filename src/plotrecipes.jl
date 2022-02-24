@@ -16,11 +16,23 @@ using RecipesBase
 #                           \  2020.25   with mit_loc=:right
 #
 
-mit_offset(::Val{:left}, f::Type{<:Frequency}) = 0.0
-mit_offset(::Val{:middle}, f::Type{<:Frequency}) = 0.5
-mit_offset(::Val{:middle}, f::Type{F}) where F <: YPFrequency{N} where N = 0.5 / N
-mit_offset(::Val{:right}, f::Type{<:Frequency}) = 1.0
-mit_offset(::Val{:right}, f::Type{F}) where F <: YPFrequency{N} where N = 1.0 / N
+mit_offset(::Val{:left}, ::Type{<:Frequency}) = 0.0
+mit_offset(::Val{:middle}, ::Type{<:Frequency}) = 0.5
+mit_offset(::Val{:middle}, ::Type{<:YPFrequency{N}}) where {N} = 0.5 / N
+mit_offset(::Val{:right}, ::Type{<:Frequency}) = 1.0
+mit_offset(::Val{:right}, ::Type{<:YPFrequency{N}}) where {N} = 1.0 / N
+
+function mit_formatter(V::Val, F::Type{<:YPFrequency{N}}) where {N}
+    offset = mit_offset(V, F)
+    # @info "Creating formatter for $F $V" offset
+    return x -> begin
+        yr = floor(Int, x - offset)
+        per = 1 + floor(Int, N * (x - yr - offset))
+        ret = string(MIT{F}(yr, per))
+        # println("formatter: ", x, " -> ", ret)
+        ret
+    end
+end
 
 # This "series"-type recipe is for plotting a single TSeries. 
 # It is activated when plot(..., seriestype=:tseries, ...)
@@ -29,11 +41,15 @@ mit_offset(::Val{:right}, f::Type{F}) where F <: YPFrequency{N} where N = 1.0 / 
     @assert y isa TSeries
     @assert z isa Nothing
     @assert frequencyof(x) == frequencyof(y)
-    mit_loc =  get(plotattributes, :mit_loc, :left)
+    # @info "Plotting TSeries"
+    mit_loc = get(plotattributes, :mit_loc, :left)
     rng = get(plotattributes, :range, x)
     rng = intersect(rng, rangeof(y))
     y := values(y[rng])
     x := Float64.(rng) .+ mit_offset(Val(mit_loc), frequencyof(rng))
+    if frequencyof(x) <: YPFrequency
+        xformatter --> mit_formatter(Val(mit_loc), frequencyof(rng))
+    end
     seriestype := :path
 end
 
@@ -63,7 +79,7 @@ end
     lbls = get(plotattributes, :label, nothing)
     if lbls === nothing
         lbls = ["data$i" for i = 1:length(datasets)]
-    elseif lbls isa AbstractString 
+    elseif lbls isa AbstractString
         lbls = [lbls]
     end
     if length(lbls) != length(datasets)
@@ -81,7 +97,7 @@ end
 
     # default layout - one subplot for each variable
     layout --> nvars
-    
+
     # common attributes for all subplots
     titlefont --> ("computer modern", 11)
     seriestype := :tseries
@@ -90,7 +106,7 @@ end
         # subplot attributes
         subplot := ind
 
-        if var isa Pair{Symbol, <:AbstractString}
+        if var isa Pair{Symbol,<:AbstractString}
             vname = var[1]
             title := var[2]
         else

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 @testset "TSeries" begin
@@ -103,6 +103,10 @@ end
     s .= t .- 2
     @test eachindex(s) === (3U:12U) && all(s[5U:10U].values .== (1:6) .- 1.0)
     @test all(s[3U:4U].values .== 0.0) && all(s[11U:end] .== 0.0)
+
+    # we can .^ correctly
+    @test isa(s .^ 2,typeof(s))
+    @test (s .^ 2).values == s.values .^ 2
 
     # dot-assign when the rhs is a vector
     @test_throws DimensionMismatch s .= ones(length(s) + 1)
@@ -427,8 +431,8 @@ end
         @test z === y
         # opeartions
         @test x + x + 3x == 5x
-        @test_throws ArgumentError x + x.values 
-        @test_throws ArgumentError x.values + x
+        @test x + x.values == 2x
+        @test x.values + x == 2x
     end
 end
 

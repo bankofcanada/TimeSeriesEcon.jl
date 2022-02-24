@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 # -------------------------------------------------------------------------------
@@ -67,6 +67,9 @@ mutable struct TSeries{F<:Frequency,T<:Number,C<:AbstractVector{T}} <: AbstractV
     values::C
 end
 
+@inline _vals(t::TSeries) = t.values
+@inline rawdata(t::TSeries) = t.values
+
 Base.values(t::TSeries) = values(t.values)
 @inline firstdate(t::TSeries) = t.firstdate
 @inline lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
@@ -78,7 +81,7 @@ Base.values(t::TSeries) = values(t.values)
 
 Return the stored range of the given time series object.
 """
-@inline rangeof(t::TSeries) = firstdate(t):lastdate(t)
+@inline rangeof(t::TSeries) = firstdate(t) .+ (0:size(t.values, 1)-1)
 
 """
     firstdate(ts), lastdate(ts)
@@ -189,6 +192,11 @@ function Base.show(io::IO, t::TSeries)
     end
 end
 
+macro showall(a)
+    return esc(:(show(IOContext(stdout, :limit => false), $a)))
+end
+export @showall
+
 
 
 # ------------------------------------------------------------------
@@ -213,8 +221,8 @@ end
 function _ind_range_check(x, rng::UnitRange{<:MIT})
     fi = firstindex(x.values, 1)
     fd = firstdate(x)
-    stop = oftype(fi, fi + (last(rng)-fd))
-    start = oftype(fi, fi + (first(rng)-fd))
+    stop = oftype(fi, fi + (last(rng) - fd))
+    start = oftype(fi, fi + (first(rng) - fd))
     if start < fi || stop > lastindex(x.values, 1)
         Base.throw_boundserror(x, rng)
     end
@@ -224,7 +232,7 @@ end
 Base.getindex(t::TSeries, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
 function Base.getindex(t::TSeries{F}, rng::StepRange{MIT{F},Duration{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(t, rng)
-    step = oftype(stop-start, rng.step)
+    step = oftype(stop - start, rng.step)
     return t.values[start:step:stop]
 end
 function Base.getindex(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
@@ -254,11 +262,11 @@ function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::Abstr
         setindex!(t.values, vec, start:stop)
     elseif rng isa StepRange
         start, stop = _ind_range_check(t, rng)
-        setindex!(t.values, vec, start:oftype(stop-start,rng.step):stop)
+        setindex!(t.values, vec, start:oftype(stop - start, rng.step):stop)
     else
         fd = firstdate(t)
         fi = firstindex(t.values, 1)
-        inds = [oftype(fi, fi + (ind-fd)) for ind in rng]
+        inds = [oftype(fi, fi + (ind - fd)) for ind in rng]
         setindex!(t.values, vec, inds)
     end
 end
@@ -348,11 +356,14 @@ function Base.view(t::TSeries, I::AbstractRange{<:Integer})
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
 
+@inline Base.diff(x::TSeries, k::Integer = -1) = x - lag(x, -k)
 
-@inline Base.diff(x::TSeries) = x - lag(x)
+function Base.vcat(x::TSeries, args::AbstractVector...)
+    return TSeries(firstdate(x), vcat(_vals(x), args...))
+end
 
 # """
-#     pct(x::TSeries, shift_value::Int, islog::Bool)
+#     pct(x::TSeries, shift_value::Int=-1, islog::Bool)
 
 # Calculate percentage growth in `x` given a `shift_value`.
 
@@ -370,62 +381,66 @@ end
 # ```
 # See also: [`apct`](@ref)
 # """
-function pct(ts::TSeries, shift_value::Int; islog::Bool = false)
+function pct(ts::TSeries, shift_value::Int = -1; islog::Bool = false)
     if islog
-        a = exp.(ts);
-        b = shift(exp.(ts), shift_value);
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value)
     else
-        a = ts;
-        b = shift(ts, shift_value);
+        a = ts
+        b = shift(ts, shift_value)
     end
 
-    result = @. ( (a - b)/b ) * 100
+    result = @. ((a - b) / b) * 100
 
     TSeries(result.firstdate, result.values)
 end
 export pct
 
-# """
-#     apct(x::TSeries, islog::Bool)
+"""
+    apct(x::TSeries, islog::Bool)
 
-# Calculate annualised percent rate of change in `x`.
+Calculate annualised percent rate of change in `x`.
 
-# __Note:__ The implementation is similar to IRIS.
+__Note:__ The implementation is similar to IRIS.
 
-# Examples
-# ```julia-repl
-# julia> x = TSeries(qq(2018, 1), Vector(1:8));
+Examples
+```julia-repl
+julia> x = TSeries(qq(2018, 1), Vector(1:8));
 
-# julia> apct(x)
-# TSeries{Quarterly} of length 7
-# 2018Q2: 1500.0
-# 2018Q3: 406.25
-# 2018Q4: 216.04938271604937
-# 2019Q1: 144.140625
-# 2019Q2: 107.35999999999999
-# 2019Q3: 85.26234567901243
-# 2019Q4: 70.59558517284461
-# ```
+julia> apct(x)
+TSeries{Quarterly} of length 7
+2018Q2: 1500.0
+2018Q3: 406.25
+2018Q4: 216.04938271604937
+2019Q1: 144.140625
+2019Q2: 107.35999999999999
+2019Q3: 85.26234567901243
+2019Q4: 70.59558517284461
+```
 
-# See also: [`pct`](@ref)
-# """
-# function apct(ts::TSeries, islog::Bool = false)
-#     if islog
-#         a = exp(ts);
-#         b = shift(exp(ts), - 1);
-#     else
-#         a = ts;
-#         b = shift(ts, -1);
-#     end
+See also: [`pct`](@ref)
+"""
+function apct(ts::TSeries{<:YPFrequency{N}}, islog::Bool = false) where {N}
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), -1)
+    else
+        a = ts
+        b = shift(ts, -1)
+    end
+    return ((a ./ b) .^ N .- 1) * 100
+end
+export apct
+apct(ts::TSeries, args...) = error("apct for frequency $(frequencyof(ts)) not implemented")
 
-#     values_change = a/b
-#     firstdate = values_change.firstdate
 
-#     values = (values_change.^ppy(ts) .- 1) * 100
+"""
+    ytypct(x) 
 
-#     TSeries( (a/b).firstdate, values)
-# end
-
+Year-to-year percent change in x. 
+"""
+ytypct(x) = 100*(x ./  shift(x, -ppy(x)) .- 1)
+export ytypct
 
 # function Base.cumsum(s::TSeries)
 #     TSeries(s.firstdate, cumsum(s.values))

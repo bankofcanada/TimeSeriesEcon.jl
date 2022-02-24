@@ -14,6 +14,9 @@
     @test size(MVTSeries(20Q1:20Q4, ["a", :b], undef)) == (4, 2)
     @test size(MVTSeries(20Q1:20Q4, ["a", :b], 5)) == (4, 2)
     @test size(MVTSeries(20Q1:20Q4, ["a", :b], zeros)) == (4, 2)
+    @test size(MVTSeries(1U:5U)) == (5,0)
+    @test size(MVTSeries(a=TSeries(1U:5U), b=TSeries(3U:8U))) == (8,2)
+
 
     let a = similar(zeros(Int, 0, 0), (20Y:22Y, (:a, :b))),
         b = similar(zeros(Int, 0, 0), Complex, (20Y:22Y, (:a, :b))),
@@ -92,11 +95,11 @@ end
 
         # if one argument is Colon, fall back on single argument indexing
         # getindex
-        @test sd[2000Q1,:] == dta[1,:]
-        @test all(sd[2000Q1:2000Q4,:].values == dta[1:4,:])
-        @test sd[:,:a].values == dta[:,1]
-        @test sd[:,(:a,:b)].values == dta[:,1:2]
-        @test sd[:,[:a,:b]].values == dta[:,1:2]
+        @test sd[2000Q1, :] == dta[1, :]
+        @test all(sd[2000Q1:2000Q4, :].values == dta[1:4, :])
+        @test sd[:, :a].values == dta[:, 1]
+        @test sd[:, (:a, :b)].values == dta[:, 1:2]
+        @test sd[:, [:a, :b]].values == dta[:, 1:2]
 
         @test firstdate(sd) == 2000Q1
         @test lastdate(sd) == 2000Q1 + 20 - 1
@@ -184,7 +187,7 @@ end
         # access with an MIT range and a Symbol returns a TSeries
         let foo = sd[2001Q2:2002Q1, :a]
             @test foo isa TSeries
-            @test size(foo) == (4, )
+            @test size(foo) == (4,)
             @test firstdate(foo) == 2001Q2
             @test foo.values == sd[2001Q2:2002Q1, :a].values
         end
@@ -205,28 +208,28 @@ end
         @test_throws BoundsError sd[2000Q1:2000Q4, (:a, :c)] = 5.7
 
         # getindex mixed_freq_error
-        @test_throws ArgumentError sd[1U,:a]
-        @test_throws ArgumentError sd[1U:5U,:b]
+        @test_throws ArgumentError sd[1U, :a]
+        @test_throws ArgumentError sd[1U:5U, :b]
 
         # setindex mixed_freq_error
-        @test_throws ArgumentError sd[1U,:a] = 5
-        @test_throws ArgumentError sd[1U:5U,:a] = 5
+        @test_throws ArgumentError sd[1U, :a] = 5
+        @test_throws ArgumentError sd[1U:5U, :a] = 5
 
         # if one argument is Colon, fall back on single argument indexing
         # setindex
-        @test (myvar = [2,2]; sd[2000Q1,:] = myvar; sd[2000Q1,:] == myvar)
-        @test (myvar = [1 2;3 4]; sd[2000Q1:2000Q2,:] = myvar; sd[2000Q1:2000Q2,:].values == myvar)
-        @test (sd[:,:a] = dta[:,1]; sd[:,:a].values == dta[:,1])
-        @test (myvar = rand(size(sd)...); sd[:,(:a,:b)] = myvar; sd[:,(:a,:b)].values == myvar)
-        @test (myvar = rand(size(sd)...); sd[:,[:a,:b]] = myvar; sd[:,[:a,:b]].values == myvar)
+        @test (myvar = [2, 2]; sd[2000Q1, :] = myvar; sd[2000Q1, :] == myvar)
+        @test (myvar = [1 2; 3 4]; sd[2000Q1:2000Q2, :] = myvar; sd[2000Q1:2000Q2, :].values == myvar)
+        @test (sd[:, :a] = dta[:, 1]; sd[:, :a].values == dta[:, 1])
+        @test (myvar = rand(size(sd)...); sd[:, (:a, :b)] = myvar; sd[:, (:a, :b)].values == myvar)
+        @test (myvar = rand(size(sd)...); sd[:, [:a, :b]] = myvar; sd[:, [:a, :b]].values == myvar)
 
         # with a range of MIT and a single column, we fall back on TSeries assignment
-        @test (myvar = [1,2,3,4]; sd[2000Q1:2000Q4,:a] = myvar; sd[2000Q1:2000Q4,:a].values == myvar)
+        @test (myvar = [1, 2, 3, 4]; sd[2000Q1:2000Q4, :a] = myvar; sd[2000Q1:2000Q4, :a].values == myvar)
 
         # setindex from an MVTSeries to an MVTSeries
         let sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
-            sd[2001Q1:2001Q4,[:a, :b]] = sd2
-            @test (sd[2001Q1:2001Q4,:].values == sd2[2001Q1:2001Q4,:].values)
+            sd[2001Q1:2001Q4, [:a, :b]] = sd2
+            @test (sd[2001Q1:2001Q4, :].values == sd2[2001Q1:2001Q4, :].values)
         end
     end
 end
@@ -268,11 +271,14 @@ end
 end
 
 @testset "MV bcast" begin
-    x = MVTSeries(20Q1, (:a, :b), rand(10,2))
+
+    x = MVTSeries(20Q1, (:a, :b), rand(10, 2))
+    t = TSeries(20Q1, ones(10))
+    s = [2.0 3.0]
 
     # we can do dot operations with scalars
     @test (x .+ 2; true)
-    
+
     # we can do dot operations with multiple MVTSeries of the same dimension
     @test x .+ 2x ./ 2 == 2x
 
@@ -287,18 +293,114 @@ end
 
     # with matrixes of wrong size we get a DimensionMismatch
     @test_throws DimensionMismatch x .+ x.values[begin+1:end-1, :]
-    @test_throws DimensionMismatch x .+ x.values[:, 1:1]
+    @test_throws DimensionMismatch x .+ x.values[:, [1, 1, 1]]
 
-    t = TSeries(20Q1, ones(10))
-    @test x .+ t.values  == (x .+ 1)
-    @test x .+ t  == (x .+ 1)
+    @test x .+ t.values == (x .+ 1)
+    @test x .+ t == (x .+ 1)
     #
-    @test x .+ 1 .* 3  == (x .+ 3)
-    @test 1 .* 3 .+ x  == (x .+ 3)
-    @test x .+ t.values .* 3  == (x .+ 3)
-    @test t.values .* 3 .+ x  == (x .+ 3)
-    @test x .+ t .* 3  == (x .+ 3)
-    @test t .* 3 .+ x  == (x .+ 3)
+    @test x .+ 1 .* 3 == (x .+ 3)
+    @test 1 .* 3 .+ x == (x .+ 3)
+    @test x .+ t.values .* 3 == (x .+ 3)
+    @test t.values .* 3 .+ x == (x .+ 3)
+    @test x .+ t .* 3 == (x .+ 3)
+    @test t .* 3 .+ x == (x .+ 3)
+
+    # we can .^ correctly
+    @test isa(x .^ 2, typeof(x))
+    @test (x .^ 2).values == x.values .^ 2
+
+    @test (z = (x .+ s); z isa typeof(x) && axes(z) == axes(x))
+    @test (x .+ s).values == (x.values .+ s)
+
+    # test .op= assignments
+    let z = copy(x)
+        z .= 1
+        @test z isa typeof(x) && axes(x) == axes(z)
+        @test all(z.values .== 1)
+
+        z .= randn(size(z)...)
+        @test z isa typeof(x) && axes(x) == axes(z)
+        @test !all(z.values .== 1)
+    end
+
+    let z = copy(x)
+        z .+= t
+        @test z isa typeof(x) && axes(x) == axes(z)
+        @test all(z.values .== x.values .+ 1)
+    end
+
+    let z = copy(x)
+        z .+= t.values
+        @test z isa typeof(x) && axes(x) == axes(z)
+        @test all(z.values .== x.values .+ 1)
+    end
+
+    let z = copy(x)
+        z .+= s
+        @test z isa typeof(x) && axes(x) == axes(z)
+        @test z.values == x.values .+ s
+    end
+
+    # test .= within a range
+    q = MVTSeries(20Q1, collect("abcd"), randn(12, 4))
+    let p = copy(q)
+        p .= TSeries(21Q1, ones(4))
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q1:21Q4, :].values == ones(4, 4)
+    end
+
+    let p = copy(q)
+        p .= MVTSeries(21Q1, :b, ones(4))
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q1:21Q4, (:a, :c, :d)] == q[21Q1:21Q4, (:a, :c, :d)]
+        @test p[21Q1:21Q4, :b].values == ones(4)
+    end
+
+    let p = copy(q)
+        p[:, :b] .= TSeries(21Q1:21Q4, 1.0)
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q1:21Q4, (:a, :c, :d)] == q[21Q1:21Q4, (:a, :c, :d)]
+        @test p[21Q1:21Q4, :b].values == ones(4)
+    end
+
+    let p = copy(q)
+        p[21Q1:21Q4, :b] .= TSeries(20Q1:22Q4, 1.0)
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q1:21Q4, (:a, :c, :d)] == q[21Q1:21Q4, (:a, :c, :d)]
+        @test p[21Q1:21Q4, :b].values == ones(4)
+    end
+
+    let p = copy(q)
+        p[21Q1:21Q4, :b] .+= TSeries(20Q1:22Q4, 1.0)
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q1:21Q4, (:a, :c, :d)] == q[21Q1:21Q4, (:a, :c, :d)]
+        @test p[21Q1:21Q4, :b] == q[21Q1:21Q4, :b] .+ 1
+    end
+
+    let p = copy(q)
+        p[21Q1, (:b, :d)] .+= 1.0
+        p[21Q2, (:b, :d)] .+= [1.0, 1.0]
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q3:21Q4, :] == q[21Q3:21Q4, :]
+        @test p[21Q1:21Q2, (:a, :c)] == q[21Q1:21Q2, (:a, :c)]
+        @test p[21Q1:21Q2, (:b, :d)] == q[21Q1:21Q2, (:b, :d)] .+ 1
+    end
+
+    let p = copy(q)
+        @test_throws DimensionMismatch p[21Q1:21Q4, (:b, :d)] .= [4, 5]
+        p[21Q1:21Q4, (:b, :d)] .= [4 5]
+        @test p[20Q1:20Q4, :] == q[20Q1:20Q4, :]
+        @test p[22Q1:22Q4, :] == q[22Q1:22Q4, :]
+        @test p[21Q1:21Q4, (:a, :c)] == q[21Q1:21Q4, (:a, :c)]
+        @test p[21Q1:21Q4, :b].values == 4ones(4)
+        @test p[21Q1:21Q4, :d].values == 5ones(4)
+    end
 
 end
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 import Statistics: mean
@@ -15,7 +15,7 @@ All TSeries in the argument list must be of the same frequency. The data type of
 the resulting TSeries is computed by the standard promotion of numerical types
 in Julia. Its range is the union of the ranges of the arguments.
 """
-@inline overlay(ts::Vararg{TSeries{F},N}) where {F <: Frequency,N} = overlay(mapreduce(rangeof, union, ts), ts...)
+@inline overlay(ts::Vararg{<:TSeries}) = overlay(mapreduce(rangeof, union, ts), ts...)
 
 """
     overlay(rng, t1, t2, ...)
@@ -23,7 +23,7 @@ in Julia. Its range is the union of the ranges of the arguments.
 If the first argument is a range (must be of the same frequency), that becomes
 the range of the resulting TSeries.
 """
-function overlay(rng::AbstractRange{MIT{F}}, ts::Vararg{TSeries{F},N}) where {F <: Frequency,N}
+function overlay(rng::AbstractRange{<:MIT}, ts::Vararg{<:TSeries})
     T = mapreduce(eltype, promote_type, ts)
     ret = TSeries(rng, typenan(T))
     # na = collection of periods where the entry of ret is missing (typenan(T))
@@ -42,7 +42,7 @@ function overlay(rng::AbstractRange{MIT{F}}, ts::Vararg{TSeries{F},N}) where {F 
     end
     return ret
 end
-
+export overlay
 
 function _valid_range(t::TSeries)
     fd = firstdate(t)
@@ -58,6 +58,7 @@ end
 
 Base.strip(t::TSeries) = getindex(t, _valid_range(t))
 strip!(t::TSeries) = resize!(t, _valid_range(t))
+export strip!
 
 """
     fconvert(F, t)

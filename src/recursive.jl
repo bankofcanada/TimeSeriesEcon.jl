@@ -1,7 +1,5 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
-
-using MacroTools
 
 """
     @rec [index=]range expression

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 
@@ -47,11 +47,13 @@
 # """
 module TimeSeriesEcon
 
+using MacroTools
+
 include("momentintime.jl")
 export MIT, Duration
-export mm, qq, yy, pp
+export mm, qq, yy
 export Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit
-export year, period, mit2yp
+export year, period, mit2yp, ppy
 export frequencyof
 export U, Y, Q1, Q2, Q3, Q4
 export M1, M2, M3, M4, M5, M6
@@ -72,10 +74,6 @@ export overlay, fconvert
 include("mvtseries.jl")
 export MVTSeries
 export rawdata, colnames, columns
-
-# export ppy
-# export pct, apct
-# export nanrm!
 
 include("recursive.jl")
 export @rec
