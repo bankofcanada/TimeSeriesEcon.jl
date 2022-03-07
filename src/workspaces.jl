@@ -154,13 +154,13 @@ export compare, @compare
 
 
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
-@inline compare_equal(x::Number, y::Number; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) = isapprox(x, y; atol, rtol)
-@inline compare_equal(x::AbstractVector, y::AbstractVector; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) = isapprox(x, y; atol, rtol)
-function compare_equal(x::TSeries, y::TSeries; trange = nothing, atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...)
+@inline compare_equal(x::Number, y::Number; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
+@inline compare_equal(x::AbstractVector, y::AbstractVector; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
+function compare_equal(x::TSeries, y::TSeries; trange = nothing, atol = 0, rtol = atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
     if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
         trange = intersect(rangeof(x), rangeof(y))
     end
-    isapprox(x[trange], y[trange]; atol, rtol)
+    isapprox(x[trange], y[trange]; atol, rtol, nans)
 end
 
 function compare_equal(x::LikeWorkspace, y::LikeWorkspace; kwargs...)
