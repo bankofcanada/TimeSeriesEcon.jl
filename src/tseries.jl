@@ -251,6 +251,8 @@ function Base.setindex!(t::TSeries{F}, v::Number, m::MIT{F}) where {F<:Frequency
     setindex!(t.values, v, fi + oftype(fi, m - firstdate(t)))
 end
 
+Base.setindex!(t::TSeries, from::TSeries, m::MIT) = setindex!(t, from[m], m)
+
 Base.setindex!(t::TSeries, ::AbstractVector{<:Number}, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
 function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::AbstractRange{MIT{F}}) where {F<:Frequency}
     if !issubset(rng, rangeof(t))
