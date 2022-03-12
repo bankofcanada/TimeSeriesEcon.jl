@@ -67,21 +67,21 @@ mutable struct TSeries{F<:Frequency,T<:Number,C<:AbstractVector{T}} <: AbstractV
     values::C
 end
 
-@inline _vals(t::TSeries) = t.values
-@inline rawdata(t::TSeries) = t.values
+_vals(t::TSeries) = t.values
+rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
-@inline firstdate(t::TSeries) = t.firstdate
-@inline lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
+firstdate(t::TSeries) = t.firstdate
+lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
 
-@inline frequencyof(::Type{<:TSeries{F}}) where {F<:Frequency} = F
+frequencyof(::Type{<:TSeries{F}}) where {F<:Frequency} = F
 
 """
     rangeof(s)
 
 Return the stored range of the given time series object.
 """
-@inline rangeof(t::TSeries) = firstdate(t) .+ (0:size(t.values, 1)-1)
+rangeof(t::TSeries) = firstdate(t) .+ (0:size(t.values, 1)-1)
 
 """
     firstdate(ts), lastdate(ts)
@@ -94,9 +94,9 @@ firstdate, lastdate
 # -------------------------------------------------------------------------------
 # some methods that make the AbstractArray infrastructure of Julia work with TSeries
 
-@inline Base.size(t::TSeries) = size(t.values)
-@inline Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
-@inline Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
+Base.size(t::TSeries) = size(t.values)
+Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
+Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
 
 # the following are needed for copy() and copyto!() (and a bunch of Julia internals that use them)
 Base.IndexStyle(::TSeries) = IndexLinear()
@@ -105,6 +105,10 @@ Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
 # normally only the first of the following is sufficient.
 # we add few other versions of similar below
 Base.similar(t::TSeries) = TSeries(t.firstdate, similar(t.values))
+
+# -------------------------------------------------------------------------------
+
+Base.hash(t::TSeries, h::UInt) = hash((t.values, t.firstdate), h)
 
 # -------------------------------------------------------------------------------
 # Indexing with integers and booleans - same as vectors
@@ -274,7 +278,7 @@ function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::Abstr
 end
 
 Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) where {F1<:Frequency,F2<:Frequency,F3<:Frequency} = mixed_freq_error(t, src, rng)
-@inline Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency} = copyto!(t, rng, src)
+Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency} = copyto!(t, rng, src)
 
 """
     typenan(x), typenan(T)
@@ -332,7 +336,7 @@ end
 
 #
 Base.copyto!(dest::TSeries, src::TSeries) = mixed_freq_error(dest, src)
-@inline Base.copyto!(dest::TSeries{F}, src::TSeries{F}) where {F<:Frequency} = copyto!(dest, rangeof(src), src)
+Base.copyto!(dest::TSeries{F}, src::TSeries{F}) where {F<:Frequency} = copyto!(dest, rangeof(src), src)
 
 #
 Base.copyto!(dest::TSeries, drng::AbstractRange{<:MIT}, src::TSeries) = mixed_freq_error(dest, drng, src)
@@ -347,18 +351,18 @@ end
 
 # view with MIT indexing
 Base.view(t::TSeries, I::AbstractRange{<:MIT}) = mixed_freq_error(t, I)
-function Base.view(t::TSeries{F}, I::AbstractRange{MIT{F}}) where {F<:Frequency}
+@inline function Base.view(t::TSeries{F}, I::AbstractRange{MIT{F}}) where {F<:Frequency}
     fi = firstindex(t.values)
     TSeries(first(I), view(t.values, oftype(fi, first(I) - firstindex(t) + fi):oftype(fi, last(I) - firstindex(t) + fi)))
 end
 
 # view with Int indexing
-function Base.view(t::TSeries, I::AbstractRange{<:Integer})
+@inline function Base.view(t::TSeries, I::AbstractRange{<:Integer})
     fi = firstindex(t.values)
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
 
-@inline Base.diff(x::TSeries, k::Integer = -1) = x - lag(x, -k)
+Base.diff(x::TSeries, k::Integer = -1) = x - lag(x, -k)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
@@ -441,77 +445,7 @@ apct(ts::TSeries, args...) = error("apct for frequency $(frequencyof(ts)) not im
 
 Year-to-year percent change in x. 
 """
-ytypct(x) = 100*(x ./  shift(x, -ppy(x)) .- 1)
+ytypct(x) = 100 * (x ./ shift(x, -ppy(x)) .- 1)
 export ytypct
 
-# function Base.cumsum(s::TSeries)
-#     TSeries(s.firstdate, cumsum(s.values))
-# end
-
-# function Base.cumsum!(s::TSeries)
-#     s.values = cumsum(s.values)
-#     return s
-# end
-
-
-# """
-#     leftcropnan!(x::TSeries)
-
-# Remove `NaN` values from starting at the beginning of `x`, in-place.
-
-# __Note__: an internal function.
-# """
-# function leftcropnan!(s::TSeries)
-#     while isequal(s[firstdate(s)], NaN)
-#         popfirst!(s.values)
-#         s.firstdate = s.firstdate + 1
-#     end
-#     return s
-# end
-
-# """
-# rightcropnan!(x::TSeries)
-
-# Remove `NaN` values from the end of `x`
-
-# __Note__: an internal function.
-# """
-# function rightcropnan!(s::TSeries)
-#     while isequal(s[lastdate(s)], NaN)
-#         pop!(s.values)
-#     end
-#     return s
-# end
-
-
-# """
-#     nanrm!(s::TSeries, type::Symbol)
-
-# Remove `NaN` values that are either at the beginning of the `s` and/or end of `x`.
-
-# Examples
-# ```
-# julia> s = TSeries(yy(2018), [NaN, NaN, 1, 2, NaN]);
-
-# julia> nanrm!(s);
-
-# julia> s
-# TSeries{Yearly} of length 2
-# 2020Y: 1.0
-# 2021Y: 2.0
-# ```
-# """
-# function nanrm!(s::TSeries, type::Symbol=:both)
-#     if type == :left
-#         leftcropnan!(s)
-#     elseif type == :right
-#         rightcropnan!(s)
-#     elseif type == :both
-#         leftcropnan!(s)
-#         rightcropnan!(s)
-#     else
-#         error("Please select between :left, :right, or :both.")
-#     end
-#     return s
-# end
 

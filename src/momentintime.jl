@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 # ----------------------------------------
@@ -47,8 +47,8 @@ Yearly, Quarterly, Monthly
 # 2. MIT (moment in time) and Duration 
 # ----------------------------------------
 
-primitive type MIT{F <: Frequency} <: Signed 64 end
-primitive type Duration{F <: Frequency} <: Signed 64 end
+primitive type MIT{F<:Frequency} <: Signed 64 end
+primitive type Duration{F<:Frequency} <: Signed 64 end
 
 """
     MIT{F <: Frequency}, Duration{F <: Frequency}
@@ -295,7 +295,8 @@ Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
 # ----------------------------------------
 
 # added so MIT can be used as dictionary keys
-Base.hash(x::MIT{T}) where T <: Frequency = hash(("$T", Int(x)))
+Base.hash(x::MIT{T}, h::UInt) where T <: Frequency = hash(("$T", Int(x)), h)
+Base.hash(x::Duration{T}, h::UInt) where T <: Frequency = hash(("$T", Int(x)), h)
 
 # # added for sorting Vector{MIT{T}} where T <: Frequency
 # Base.sub_with_overflow(x::MIT{T}, y::MIT{T}) where T <: Frequency = begin
