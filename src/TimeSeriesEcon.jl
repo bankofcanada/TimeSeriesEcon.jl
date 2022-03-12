@@ -107,11 +107,14 @@ julia> q[begin:begin+1] .= 1; @rec rangeof(q; drop=2) q[t] = q[t-1] + q[t-2]; q
     21Q4 : 21.0
 ```
 """
-@inline rangeof(x::Union{TSeries, MVTSeries}; drop::Integer) = 
-    (rng = rangeof(x); 
-        drop > 0 ? (first(rng) + drop:last(rng)) : (first(rng):last(rng)+drop))
+@inline function rangeof(x::Union{TSeries,MVTSeries}; drop::Integer)
+    rng = rangeof(x)
+    return drop > 0 ? (first(rng)+drop:last(rng)) : (first(rng):last(rng)+drop)
+end
 
 
 include("workspaces.jl")
+
+include("serialize.jl")
 
 end
