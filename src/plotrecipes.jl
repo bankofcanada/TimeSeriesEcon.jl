@@ -110,7 +110,7 @@ end
             vname = var[1]
             title := var[2]
         else
-            vname = var
+            vname = Symbol(var)
             title := string(vname)
         end
 
