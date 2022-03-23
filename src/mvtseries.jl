@@ -399,15 +399,7 @@ Base.copyto!(dest::MVTSeries, src::MVTSeries) = (copyto!(dest.values, src.values
 
 function Base.hcat(x::MVTSeries; KW...)
     T = reduce(Base.promote_eltype, (x, values(KW)...))
-    y = MVTSeries(rangeof(x), tuple(colnames(x)..., keys(KW)...), typenan(T))
-    # copyto!(y, x)
-    for (k, v) in pairs(x)
-        setproperty!(y, k, v)
-    end
-    for (k, v) in KW
-        setproperty!(y, k, v)
-    end
-    return y
+    return MVTSeries(T, rangeof(x); pairs(x)..., KW...)
 end
 
 function Base.vcat(x::MVTSeries, args::AbstractVecOrMat...)
