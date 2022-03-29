@@ -30,7 +30,7 @@ _names_as_tuple(names) = tuple((Symbol(n) for n in names)...)
 
 
 # standard constructor with default empty values
-MVTSeries(fd::MIT, names = ()) = (names = _names_as_tuple(names); MVTSeries(fd, names, zeros(0, length(names))))
+MVTSeries(fd::MIT, names=()) = (names = _names_as_tuple(names); MVTSeries(fd, names, zeros(0, length(names))))
 MVTSeries(fd::MIT, names::Union{AbstractVector,Tuple,Base.KeySet{Symbol,<:OrderedDict}}, data::AbstractMatrix) = begin
     names = _names_as_tuple(names)
     MVTSeries(fd, names, data)
@@ -61,7 +61,17 @@ colnames(x::MVTSeries) = keys(_cols(x))
 rawdata(x::MVTSeries) = _vals(x)
 
 # some methods to make MVTSeries function like a Dict (collection of named of columns)
-Base.pairs(x::MVTSeries) = pairs(_cols(x))
+# Base.pairs(x::MVTSeries) = pairs(_cols(x))
+"""
+    pairs(data::MVTSeries; copy = false)
+
+Returns an iterator over the named columns of `data`. Each iteration gives a
+name-value pair where name is a `Symbol` and value is a [`TSeries`](@ref).
+
+Setting `copy=true` is equivalent to `pairt(copy(data))` but slightly more
+efficient.
+"""
+Base.pairs(x::MVTSeries; copy=false) = copy ? pairs(deepcopy(_cols(x))) : pairs(_cols(x))
 Base.keys(x::MVTSeries) = keys(_cols(x))
 Base.haskey(x::MVTSeries, sym::Symbol) = haskey(_cols(x), sym)
 Base.get(x::MVTSeries, sym::Symbol, default) = get(_cols(x), sym, default)
@@ -88,8 +98,27 @@ Base.dataids(x::MVTSeries) = Base.dataids(_vals(x))
 
 Base.eachindex(x::MVTSeries) = eachindex(_vals(x))
 
-# normally only the first of the following is sufficient.
-# we add few other versions of similar below
+"""
+    similar(t::MVTSeries, [eltype], [shape])
+    similar(array, [eltype], shape)
+    similar(array_type, [eltype], shape)
+
+Create an uninitialized [`MVTSeries`](@ref) with the given element type and `shape`.
+
+If the first argument is an [`MVTSeries`](@ref) then the element type and shape
+of the output will match those of the input, unless they are explicitly given in
+subsequent arguments. If the first argument is another array or an array type,
+then `shape` must be given in the form of a tuple where the first element is an
+MIT range and the second is a list of column names. The element type, `eltype`,
+also can be given optionally; if not given it will be deduced from the first
+argument.
+
+Example: 
+```
+similar(Array{Float64}, (2000Q1:2001Q4, (:a, :b)))
+```
+
+"""
 Base.similar(x::MVTSeries) = MVTSeries(firstdate(x), colnames(x), similar(_vals(x)))
 Base.similar(x::MVTSeries, ::Type{T}) where {T} = MVTSeries(firstdate(x), colnames(x), similar(_vals(x), T))
 
@@ -464,11 +493,11 @@ end
 ####  sum(x::MVTSeries; dims=2) -> TSeries
 
 for func in (:sum, :prod, :minimum, :maximum)
-    @eval @inline Base.$func(x::MVTSeries; dims) =
-        dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims = dims)[:]) : $func(rawdata(x); dims = dims)
+    @eval @inline Base.$func(x::MVTSeries; dims=:) =
+        dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims=dims)[:]) : $func(rawdata(x); dims=dims)
 
-    @eval @inline Base.$func(f, x::MVTSeries; dims) =
-        dims == 2 ? TSeries(firstdate(x), $func(f, rawdata(x); dims = dims)[:]) : $func(f, rawdata(x); dims = dims)
+    @eval @inline Base.$func(f, x::MVTSeries; dims=:) =
+        dims == 2 ? TSeries(firstdate(x), $func(f, rawdata(x); dims=dims)[:]) : $func(f, rawdata(x); dims=dims)
 
 end
 
@@ -489,13 +518,13 @@ end
 
 shift(x::MVTSeries, k::Integer) = shift!(copy(x), k)
 shift!(x::MVTSeries, k::Integer) = (x.firstdate -= k; x)
-lag(x::MVTSeries, k::Integer = 1) = shift(x, -k)
-lag!(x::MVTSeries, k::Integer = 1) = shift!(x, -k)
-lead(x::MVTSeries, k::Integer = 1) = shift(x, k)
-lead!(x::MVTSeries, k::Integer = 1) = shift!(x, k)
+lag(x::MVTSeries, k::Integer=1) = shift(x, -k)
+lag!(x::MVTSeries, k::Integer=1) = shift!(x, -k)
+lead(x::MVTSeries, k::Integer=1) = shift(x, k)
+lead!(x::MVTSeries, k::Integer=1) = shift!(x, k)
 
-Base.diff(x::MVTSeries; dims = 1) = diff(x, -1; dims)
-Base.diff(x::MVTSeries, k::Integer; dims = 1) =
+Base.diff(x::MVTSeries; dims=1) = diff(x, -1; dims)
+Base.diff(x::MVTSeries, k::Integer; dims=1) =
     dims == 1 ? x - shift(x, k) : diff(_vals(x); dims)
 
 Base.cumsum(x::MVTSeries; dims) = cumsum!(copy(x), _vals(x); dims)
@@ -515,10 +544,10 @@ function moving end
 export moving
 
 _moving_mean!(x_ma::TSeries, x, t, window) = x_ma[t] = mean(x[t.+window])
-_moving_mean!(x_ma::MVTSeries, x, t, window) = x_ma[t, :] .= mean(x[t.+window, :]; dims = 1)
+_moving_mean!(x_ma::MVTSeries, x, t, window) = x_ma[t, :] .= mean(x[t.+window, :]; dims=1)
 
-_moving_shape(x::TSeries, n) = (rangeof(x, drop = n - copysign(1, n)),)
-_moving_shape(x::MVTSeries, n) = (rangeof(x, drop = n - copysign(1, n)), axes(x, 2))
+_moving_shape(x::TSeries, n) = (rangeof(x, drop=n - copysign(1, n)),)
+_moving_shape(x::MVTSeries, n) = (rangeof(x, drop=n - copysign(1, n)), axes(x, 2))
 
 function moving(x::Union{TSeries,MVTSeries}, n::Integer)
     window = n > 0 ? (-n+1:0) : (0:-n-1)
@@ -588,7 +617,7 @@ function undiff(dvar::TSeries, anchor::Pair{<:MIT,<:Number})
     return result
 end
 
-function undiff!(var::TSeries, dvar::TSeries; fromdate = firstdate(dvar) - 1)
+function undiff!(var::TSeries, dvar::TSeries; fromdate=firstdate(dvar) - 1)
     if fromdate < firstdate(var)
         error("Range mismatch: `fromdate == $(fromdate) < $(firstdate(var)) == firstdate(var): ")
     end
@@ -602,7 +631,7 @@ function undiff!(var::TSeries, dvar::TSeries; fromdate = firstdate(dvar) - 1)
 end
 
 # undiff(dvar::MVTSeries) = undiff(dvar, firstdate(dvar) - 1 => zeros(eltype(dvar), size(dvar, 2)))
-undiff(dvar::MVTSeries, anchor_value::Number = 0) = undiff(dvar, firstdate(dvar) - 1 => fill(anchor_value, size(dvar, 2)))
+undiff(dvar::MVTSeries, anchor_value::Number=0) = undiff(dvar, firstdate(dvar) - 1 => fill(anchor_value, size(dvar, 2)))
 function undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:AbstractVecOrMat})
     fromdate, value = anchor
     ET = Base.promote_eltype(dvar, value)
@@ -615,7 +644,7 @@ function undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:AbstractVecOrMat})
         dvar .= tmp
     end
     result = similar(dvar, ET)
-    result .= cumsum(dvar; dims = 1)
+    result .= cumsum(dvar; dims=1)
     correction = reshape(value .- result[fromdate], 1, :)
     result .+= correction
     return result

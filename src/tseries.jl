@@ -104,6 +104,19 @@ Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
 
 # normally only the first of the following is sufficient.
 # we add few other versions of similar below
+"""
+    similar(t::TSeries, [eltype], [range])
+    similar(array, [eltype], range)
+    similar(array_type, [eltype], range)
+
+Create an uninitialized [`TSeries`](@ref) with the given element type and range.
+
+If the first argument is a [`TSeries`](@ref) then the element type and range of
+the output will match those of the input, unless they are explicitly given in
+subsequent arguments. If the first argument is another array or an array type,
+then `range` must be given. The element type, `eltype`, can be given; if not it
+will be deduced from the first argument.
+"""
 Base.similar(t::TSeries) = TSeries(t.firstdate, similar(t.values))
 
 # -------------------------------------------------------------------------------
@@ -301,6 +314,13 @@ istypenan(x::Integer) = x == typenan(x)
 istypenan(x::AbstractFloat) = isnan(x)
 
 # n::Integer - only the length changes. We keep the starting date 
+"""
+    resize!(t::TSeries, n::Integer)
+
+Extend or shrink the allocated storage for `t` to `n` entries. The first date of
+`t` does not change. If allocation is extended, the new entries are set to
+`NaN`.
+"""
 function Base.resize!(t::TSeries, n::Integer)
     lt = length(t)  # the old length 
     if lt ≠ n
@@ -313,6 +333,12 @@ end
 
 # if range is given
 Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
+"""
+    resize!(t::TSeries, rng)
+
+Extend or shrink the allocated storage for `t` so that the new range of `t`
+equals the given `rng`. If `t` is extended, new entries are set to `NaN`.
+"""
 function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
     orng = rangeof(t)  # old range
     if first(rng) == first(orng)
@@ -362,6 +388,16 @@ end
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
 
+"""
+    diff(x::TSeries)
+    diff(x::TSeries, k)
+
+Construct the first difference, or the `k`-th difference, of time series `t`. If
+`y = diff(x,k)` then `y[t] = x[t] - x[t+k]`. A negative value of `k` means that
+we subtract a lag and positive value means that we subtract a lead. `k` not
+given is the same as `k=-1`, which is the standard definition of first
+difference.
+"""
 Base.diff(x::TSeries, k::Integer = -1) = x - lag(x, -k)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)

@@ -7,23 +7,24 @@ import Statistics: mean
 """
     overlay(t1, t2, ...)
 
-Construct a TSeries in which each observation is taken from the first
+Construct a [`TSeries`](@ref) in which each observation is taken from the first
 non-missing observation in the list of arguments. A missing observation is one
 for which [`istypenan`](@ref) returns `true`.
 
-All TSeries in the argument list must be of the same frequency. The data type of
-the resulting TSeries is computed by the standard promotion of numerical types
-in Julia. Its range is the union of the ranges of the arguments.
+All [`TSeries`](@ref)` in the arguments list must be of the same frequency. The
+data type of the resulting [`TSeries`](@ref) is decided by the standard
+promotion of numerical types in Julia. Its range is the union of the ranges of
+the arguments.
 """
-@inline overlay(ts::Vararg{<:TSeries}) = overlay(mapreduce(rangeof, union, ts), ts...)
+@inline overlay(ts::TSeries...) = overlay(mapreduce(rangeof, union, ts), ts...)
 
 """
     overlay(rng, t1, t2, ...)
 
-If the first argument is a range (must be of the same frequency), that becomes
-the range of the resulting TSeries.
+If the first argument is a range, it becomes the range of the resulting
+[`TSeries`](@ref).
 """
-function overlay(rng::AbstractRange{<:MIT}, ts::Vararg{<:TSeries})
+function overlay(rng::AbstractRange{<:MIT}, ts::TSeries...)
     T = mapreduce(eltype, promote_type, ts)
     ret = TSeries(rng, typenan(T))
     # na = collection of periods where the entry of ret is missing (typenan(T))
