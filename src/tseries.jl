@@ -485,3 +485,12 @@ ytypct(x) = 100 * (x ./ shift(x, -ppy(x)) .- 1)
 export ytypct
 
 
+####  reindex
+
+function reindex(ts::TSeries,pair::Pair{<:MIT,<:MIT}; copy = false)
+    ts_lag = firstdate(ts)-pair[1]
+    return TSeries(pair[2]+Int(ts_lag), copy ? Base.copy(ts.values) : ts.values)
+end
+export reindex
+
+

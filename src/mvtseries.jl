@@ -649,3 +649,29 @@ function undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:AbstractVecOrMat})
     result .+= correction
     return result
 end
+
+####  reindex
+
+"""
+    reindex(ts, from => to; copy = false)
+
+The function `reindex` re-indexes the `TSeries` or `MVTSeries` `ts`
+so that the `MIT` `from` becomes the `MIT` `to` leaving the data unchanged.
+
+By default, the data is not copied.
+
+Example: 
+```
+ts = MVTSeries(2020Q1,(:y1,:y2),randn(10,2))
+ts2 = reindex(ts,2021Q1 => 1U; copy = true)
+ts2.y2[3U] = 9999
+ts
+ts2
+```
+"""
+function reindex(ts::MVTSeries,pair::Pair{<:MIT,<:MIT}; copy = false)
+    ts_lag = firstdate(ts)-pair[1]
+    return MVTSeries(pair[2]+Int(ts_lag),keys(ts), copy ? Base.copy(ts.values) : ts.values)
+end
+export reindex
+
