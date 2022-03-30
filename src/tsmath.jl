@@ -69,7 +69,7 @@ TSeries{Quarterly} of length 4
 2021Q1: 4.0
 ```
 """
-shift(ts::TSeries, k::Int) = copyto!(TSeries(ts.firstdate - k), ts.values)
+shift(ts::TSeries, k::Int) = copyto!(TSeries(rangeof(ts) .- k), ts.values)
 
 """
     shift!(x::TSeries, n)

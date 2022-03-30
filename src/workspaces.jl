@@ -67,10 +67,10 @@ Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
 """
     rangeof(w)
 
-Calculate the range of a [`Workspace`] as the intersection of the ranges of all
-[`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of `w`.
-If there are objects of different frequencies there will be a mixed-frequency
-error.
+Calculate the range of a [`Workspace`](@ref) as the intersection of the ranges
+of all [`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of
+`w`. If there are objects of different frequencies there will be a
+mixed-frequency error.
 """
 rangeof(w::Workspace) = (
     iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));

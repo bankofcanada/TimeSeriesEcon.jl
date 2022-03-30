@@ -87,7 +87,7 @@ Base.values(t::TSeries) = values(t.values)
     firstdate(x)
 
 Return the first date of the range of allocated storage for the given
-[`TSeries`](@ref) or [`MVTSeries`] instance.
+[`TSeries`](@ref) or [`MVTSeries`](@ref) instance.
 """
 firstdate(t::TSeries) = t.firstdate
 
@@ -95,7 +95,7 @@ firstdate(t::TSeries) = t.firstdate
     lastdate(x)
 
 Return the last date of the range of allocated storage for the given
-[`TSeries`](@ref) or [`MVTSeries`] instance.
+[`TSeries`](@ref) or [`MVTSeries`](@ref) instance.
 """
 lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
 
