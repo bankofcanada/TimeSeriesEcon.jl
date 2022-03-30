@@ -11,56 +11,60 @@
         values::C
     end
 
-Time series with frequency `F` with values of type `T` stored in a container of
+Time series with frequency `F` and values of type `T` stored in a container of
 type `C`. By default the type is `Float64` and the container is
 `Vector{Float64}`.
 
-Construction:
+### Construction:
     ts = TSeries(args...)
 
-    The standard construction is `TSeries(firstdate::MIT, values::AbstractVector)`
+The standard construction is
+`TSeries(firstdate::MIT, values::AbstractVector)`. If the second argument is
+not given, the `TSeries` is constructed empty.
 
-    If the first argument is an MIT-range (instead or an MIT), then the length
-    of the `values` container must match the length of the given range.
+Alternatively, the first argument can be a range. In this case, the second
+argument is interpreted as an initializer. If it is omitted or set to
+`undef`, the storage is left uninitialized. If it is a number, the storage
+is filled with it. It can also be an initializer function, such as `zeros`,
+`ones` or `rand`. Lastly, if the second argument is an array, it must be
+1-dimensional and of the same length as the range given in the first
+argument.
 
-    In the case of a range argument, the `values` can be omitted, in which case
-    the container is initializes with `undef`. Or you can also pass a constant
-    and then the `values` will be filled with that constant. To accomplish this,
-    you can also use `fill`, e.g., `TSeries(20Q1:20Q4, 5)` is the same as
-    `fill(5, 20Q1:20Q4)`.
+If only an integer number is given, as in `TSeries(n::Integer)`, the
+constructed `TSeries` will have frequency `Unit`, first date `1U` and length
+`n`. An initialization argument is not allowed in this case, so the storage
+remains uninitialized.
 
-    If only a `firstdate::MIT` is given, the `values` container is initialized
-    to an empty `Vector`.
+A `TSeries` can also be constructed with `copy`, `similar`, and `fill`, `ones`,
+`zeros`.
 
-    If only an `n::Integer` is given, it is the same as passing the range
-    `0U .+ (1:n)`. An initialization argument is not allowed in this case.
+### Indexing:
+Indexing with an [`MIT`](@ref) or a range of [`MIT`](@ref) works as you'd
+expect.
 
-    A `TSeries` can also be constructed with `copy`, `similar`, and `fill`.
+Indexing with `Integer`s works the same as with `Vector`.
 
-Indexing:
+Indexing with `Bool`-array works as you'd expect. For example,
+`s[s .< 0.0] .*= -1` multiplies in place the negative entries of `s` by -1,
+so effectively it's the same as `s .= abs.(s)`.
 
-    Indexing with an `MIT` or a range of `MIT` works as you'd expect.
+There are important differences between indexing with MIT and not
+using MIT (i.e., using `Integer` or `Bool`-array).
 
-    Indexing with `Integer`s works the same as with `Vector`.
+* with MIT-range we return a `TSeries`, otherwise we
+    return a `Vector`.
 
-    Indexing with `Bool`-array works as you'd expect. For example,
-    `s[s .< 0.0] .*= -1` multiplies in place the negative entries of `s` by -1,
-    so effectively it's the same as `s .= abs.(s)`.
+* the range can be extended (the `TSeries` resized appropriately) by
+    assigning outside the current range. This works only with [`MIT`](@ref).
+    With anything else you get a BoundsError if you try to assign outside the
+    Integer range.
 
-    There are important differences between indexing with MIT and not
-    using MIT (i.e., using Integer or Bool-array).
+* `begin` and `end` are [`MIT`](@ref), so either use both or none of them.
+    For example `s[2:end]` doesn't work because 2 is an `Int` and `end` is an
+    `MIT`. You should use `s[begin+1:end]`.
 
-    * with MIT-range we return a TSeries with the given range, otherwise we
-      return a `Vector`
-
-    * the range can be extended (the TSeries resized appropriately) by assigning
-      outside the current range. This works only with MIT (you get a BoundsError
-      if you try to assign outside the Integer range).
-
-    * `begin` and `end` are MIT, so either use both or none of them. For example
-      `s[2:end]` doesn't work because 2 is an `Int` and `end` is an `MIT`. You
-      should use `s[begin+1:end]`.
-
+Check out the tutorial at 
+[https://bankofcanada.github.io/DocsEcon.jl/dev/Tutorials/TimeSeriesEcon/main/](https://bankofcanada.github.io/DocsEcon.jl/dev/Tutorials/TimeSeriesEcon/main/)
 """
 mutable struct TSeries{F<:Frequency,T<:Number,C<:AbstractVector{T}} <: AbstractVector{T}
     firstdate::MIT{F}
@@ -68,10 +72,31 @@ mutable struct TSeries{F<:Frequency,T<:Number,C<:AbstractVector{T}} <: AbstractV
 end
 
 _vals(t::TSeries) = t.values
+"""
+    rawdata(t)
+
+Return the raw storage of `t`. For a [`TSeries`](@ref) this is a `Vector`. For
+an [`MVTSeries`](@ref) this is a `Matrix`.
+"""
 rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
+
+
+"""
+    firstdate(x)
+
+Return the first date of the range of allocated storage for the given
+[`TSeries`](@ref) or [`MVTSeries`] instance.
+"""
 firstdate(t::TSeries) = t.firstdate
+
+"""
+    lastdate(x)
+
+Return the last date of the range of allocated storage for the given
+[`TSeries`](@ref) or [`MVTSeries`] instance.
+"""
 lastdate(t::TSeries) = t.firstdate + length(t.values) - one(t.firstdate)
 
 frequencyof(::Type{<:TSeries{F}}) where {F<:Frequency} = F
@@ -79,17 +104,12 @@ frequencyof(::Type{<:TSeries{F}}) where {F<:Frequency} = F
 """
     rangeof(s)
 
-Return the stored range of the given time series object.
+Return the stored range of the given [`TSeries`](@ref) or [`MVTSeries`](@ref)
+instance.
 """
+function rangeof end
+
 rangeof(t::TSeries) = firstdate(t) .+ (0:size(t.values, 1)-1)
-
-"""
-    firstdate(ts), lastdate(ts)
-
-Return the first and last date of the allocated data for the given `TSeries`.
-These are identical to `firstindex` and `lastindex`.
-"""
-firstdate, lastdate
 
 # -------------------------------------------------------------------------------
 # some methods that make the AbstractArray infrastructure of Julia work with TSeries
@@ -162,11 +182,27 @@ Base.similar(::AbstractArray, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT}})
 Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
 
 # construct from range and fill with the given constant or array
-Base.fill(v::Number, rng::UnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
+Base.fill(v, shape::Tuple{UnitRange{<:MIT}}) = fill(v, shape...)
+Base.fill(v, rng::UnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
 TSeries(rng::UnitRange{<:MIT}, v::Number) = fill(v, rng)
 TSeries(rng::UnitRange{<:MIT}, v::AbstractVector{<:Number}) =
     length(rng) == length(v) ? TSeries(first(rng), v) : throw(ArgumentError("Range and data lengths mismatch."))
 
+for (fname, felt) in ((:zeros, :zero), (:ones, :one))
+    @eval begin
+        Base.$fname(rng::UnitRange{<:MIT}) = fill($felt(Float64), rng)
+        Base.$fname(::Type{T}, rng::UnitRange{<:MIT}) where {T} = fill($felt(T), rng)
+        Base.$fname(shape::Tuple{UnitRange{<:MIT}}) = fill($felt(Float64), shape)
+        Base.$fname(::Type{T}, shape::Tuple{UnitRange{<:MIT}}) where {T} = fill($felt(T), shape)
+    end
+end
+
+for (fname, felt) in ((:trues, true), (:falses, false))
+    @eval begin
+        Base.$fname(rng::UnitRange{<:MIT}) = TSeries(rng, $fname(length(rng)))
+        Base.$fname(shape::Tuple{UnitRange{<:MIT}}) = TSeries(shape[1], $fname(length(shape[1])))
+    end
+end
 
 # -------------------------------------------------------------
 # Pretty printing
@@ -208,12 +244,6 @@ function Base.show(io::IO, t::TSeries)
         end
     end
 end
-
-macro showall(a)
-    return esc(:(show(IOContext(stdout, :limit => false), $a)))
-end
-export @showall
-
 
 
 # ------------------------------------------------------------------
@@ -294,22 +324,31 @@ Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) wh
 Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency} = copyto!(t, rng, src)
 
 """
-    typenan(x), typenan(T)
+    typenan(x)
+    typenan(T)
 
-Return a value that indicates Not-A-Number of the same type as the given `x` or
+Return a value that indicates not-a-number of the same type as the given `x` or
 of the given type `T`.
 
-For floating point types, this is the IEEE-defined NaN.
-For integer types, we use typemax(). This is not ideal, but it'll do for now.
+For floating point types, this is `NaN`. For integer types, we use `typemax()`.
+This is not ideal, but it'll do for now.
 """
 function typenan end
 
-typenan(x::T) where {T<:Real} = typenan(T)
+typenan(::T) where {T<:Real} = typenan(T)
 typenan(T::Type{<:AbstractFloat}) = T(NaN)
 typenan(T::Type{<:Integer}) = typemax(T)
 typenan(T::Type{<:Union{MIT,Duration}}) = T(typemax(Int64))
 
+"""
+    istypenan(x)
+
+Return `true` if the given `x` is a not-n-number of its type, otherwise return
+`false`.
+"""
 istypenan(x) = false
+istypenan(::Nothing) = true
+istypenan(::Missing) = true
 istypenan(x::Integer) = x == typenan(x)
 istypenan(x::AbstractFloat) = isnan(x)
 
@@ -332,13 +371,14 @@ function Base.resize!(t::TSeries, n::Integer)
 end
 
 # if range is given
-Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
 """
     resize!(t::TSeries, rng)
 
 Extend or shrink the allocated storage for `t` so that the new range of `t`
-equals the given `rng`. If `t` is extended, new entries are set to `NaN`.
+equals the given `rng`. If `t` is extended, new entries are set to `NaN`, or the
+appropriate Not-A-Number value (see [`typenan`](@ref)).
 """
+Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
 function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
     orng = rangeof(t)  # old range
     if first(rng) == first(orng)
@@ -395,35 +435,22 @@ end
 Construct the first difference, or the `k`-th difference, of time series `t`. If
 `y = diff(x,k)` then `y[t] = x[t] - x[t+k]`. A negative value of `k` means that
 we subtract a lag and positive value means that we subtract a lead. `k` not
-given is the same as `k=-1`, which is the standard definition of first
+given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
-Base.diff(x::TSeries, k::Integer = -1) = x - lag(x, -k)
+Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
 end
 
-# """
-#     pct(x::TSeries, shift_value::Int=-1, islog::Bool)
 
-# Calculate percentage growth in `x` given a `shift_value`.
+"""
+    pct(x; islog=false)
 
-# __Note:__ The implementation is similar to IRIS.
-
-# Examples
-# ```julia-repl
-# julia> x = TSeries(yy(2000), Vector(1:4));
-
-# julia> pct(x, -1)
-# TSeries{Yearly} of length 3
-# 2001Y: 100.0
-# 2002Y: 50.0
-# 2003Y: 33.33333333333333
-# ```
-# See also: [`apct`](@ref)
-# """
-function pct(ts::TSeries, shift_value::Int = -1; islog::Bool = false)
+Observation-to-observation percent rate of change in x.
+"""
+function pct(ts::TSeries, shift_value::Int=-1; islog::Bool=false)
     if islog
         a = exp.(ts)
         b = shift(exp.(ts), shift_value)
@@ -441,9 +468,7 @@ export pct
 """
     apct(x::TSeries, islog::Bool)
 
-Calculate annualised percent rate of change in `x`.
-
-__Note:__ The implementation is similar to IRIS.
+Annualised percent rate of change in `x`.
 
 Examples
 ```julia-repl
@@ -462,7 +487,7 @@ TSeries{Quarterly} of length 7
 
 See also: [`pct`](@ref)
 """
-function apct(ts::TSeries{<:YPFrequency{N}}, islog::Bool = false) where {N}
+function apct(ts::TSeries{<:YPFrequency{N}}, islog::Bool=false) where {N}
     if islog
         a = exp.(ts)
         b = shift(exp.(ts), -1)
@@ -487,9 +512,9 @@ export ytypct
 
 ####  reindex
 
-function reindex(ts::TSeries,pair::Pair{<:MIT,<:MIT}; copy = false)
-    ts_lag = firstdate(ts)-pair[1]
-    return TSeries(pair[2]+Int(ts_lag), copy ? Base.copy(ts.values) : ts.values)
+function reindex(ts::TSeries, pair::Pair{<:MIT,<:MIT}; copy=false)
+    ts_lag = firstdate(ts) - pair[1]
+    return TSeries(pair[2] + Int(ts_lag), copy ? Base.copy(ts.values) : ts.values)
 end
 export reindex
 

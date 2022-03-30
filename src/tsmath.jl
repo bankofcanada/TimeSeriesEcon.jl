@@ -17,14 +17,14 @@
 
 # function applications are not valid, so we must use dot to broadcast, e.g. log(t) throws an error, we must do log.(t)
 
-@inline Base.promote_shape(a::TSeries, b::TSeries) = mixed_freq_error(a, b)
-@inline Base.promote_shape(a::TSeries{F}, b::TSeries{F}) where F <: Frequency = intersect(eachindex(a), eachindex(b))
+Base.promote_shape(a::TSeries, b::TSeries) = mixed_freq_error(a, b)
+Base.promote_shape(a::TSeries{F}, b::TSeries{F}) where {F<:Frequency} = intersect(eachindex(a), eachindex(b))
 
-@inline shape_error(A::Type,B::Type) = throw(ArgumentError("This operation is not valid for $(A) and $(B). Try using . to do it element-wise."))
-@inline shape_error(a,b) = shape_error(typeof(a), typeof(b))
+shape_error(A::Type, B::Type) = throw(ArgumentError("This operation is not valid for $(A) and $(B). Try using . to do it element-wise."))
+shape_error(a, b) = shape_error(typeof(a), typeof(b))
 
-@inline Base.promote_shape(a::TSeries, b::AbstractVector) = promote_shape(_vals(a), b)
-@inline Base.promote_shape(a::AbstractVector, b::TSeries) = promote_shape(a, _vals(b))
+Base.promote_shape(a::TSeries, b::AbstractVector) = promote_shape(_vals(a), b)
+Base.promote_shape(a::AbstractVector, b::TSeries) = promote_shape(a, _vals(b))
 
 # +, -, *, / work out of the box with the above methods for promote_shape.
 
@@ -44,26 +44,14 @@ end
 # Now we implement some time-series operations that do not really apply to vectors.
 
 
-@inline shift(ts::TSeries, k::Int) = TSeries(ts.firstdate - k, copy(ts.values))
-@inline shift!(ts::TSeries, k::Int) = (ts.firstdate -= k; ts)
-@inline lag(t::TSeries, k::Int=1) = shift(t, -k)
-@inline lag!(t::TSeries, k::Int=1) = shift!(t, -k)
-@inline lead(t::TSeries, k::Int=1) = shift(t, k)
-@inline lead!(t::TSeries, k::Int=1) = shift!(t, k)
-
 """
-    shift(x, n)
-    shift!(x, n)
-    lag(x, n=1)
-    lag!(x, n=1)
-    lead(x, n=1)
-    lead!(x, n=1)
+    shift(x::TSeries, n)
 
-Shift, lag or lead the TSeries `x` by `n` periods.     
-By convention `shift` is the same as `lead` while `lag(x,n)` is the same as `shift(x, -n)`.
-The versions ending in ! do it in place, while the others create a new TSeries instance.
+Shift the dates of `x` by `n` periods. By convention positive `n` gives the lead
+and negative `n` gives the lag. `shift` creates a new [`TSeries`](@ref) and
+copies the data over. See [`shift!`](@ref) for in-place version.
 
-Examples
+For example:
 ```julia-repl
 julia> shift(TSeries(2020Q1, 1:4), 1)
 TSeries{Quarterly} of length 4
@@ -79,20 +67,44 @@ TSeries{Quarterly} of length 4
 2020Q3: 2.0
 2020Q4: 3.0
 2021Q1: 4.0
-
-julia> x = TSeries(2020Q1, 1:4);
-
-julia> shift!(x, 1);
-
-julia> x
-TSeries{Quarterly} of length 4
-2019Q4: 1.0
-2020Q1: 2.0
-2020Q2: 3.0
-2020Q3: 4.0
 ```
 """
-shift, shift!, lead, lead!, lag, lag!
+shift(ts::TSeries, k::Int) = copyto!(TSeries(ts.firstdate - k), ts.values)
 
+"""
+    shift!(x::TSeries, n)
 
+In-place version of [`shift`](@ref).
+"""
+shift!(ts::TSeries, k::Int) = (ts.firstdate -= k; ts)
+
+"""
+    lag(x::TSeries, k=1)
+
+Shift the dates of `x` by `k` period to produce the `k`-th lag of `x`. This is
+the same [`shift(x, -k)`](@ref).
+"""
+lag(t::TSeries, k::Int=1) = shift(t, -k)
+
+"""
+    lag!(x::TSeries, k=1)
+
+In-place version of [`lag`](@ref)
+"""
+lag!(t::TSeries, k::Int=1) = shift!(t, -k)
+
+"""
+    lead(x::TSeries, k=1)
+
+Shift the dates of `x` by `k` period to produce the `k`-th lead of `x`. This is
+the same [`shift(x, k)`](@ref).
+"""
+lead(t::TSeries, k::Int=1) = shift(t, k)
+
+"""
+    lead!(x::TSeries, k=1)
+
+In-place version of [`lead`](@ref)
+"""
+lead!(t::TSeries, k::Int=1) = shift!(t, k)
 

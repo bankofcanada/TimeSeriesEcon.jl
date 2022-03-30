@@ -1,14 +1,10 @@
-vscode_workspace*
 *.db
 *.jld2
 *.svg
 *.pdf
 *.html
-various.jl
 Manifest.toml
-archive
 .vscode
 
 docs/build
 docs/Manifest.toml
-tbd.jl

@@ -1,6 +1,8 @@
 # Copyright (c) 2020-2021, Bank of Canada
 # All rights reserved.
 
+import TimeSeriesEcon: qq, mm, yy
+
 @testset "MIT,Duration" begin
     # mit2yp conversions
     @test mit2yp(MIT{Quarterly}(5)) == (1, 2)
