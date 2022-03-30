@@ -160,3 +160,8 @@ function strip!(w::Workspace; recursive=true)
     end
     return w
 end
+
+###########################
+Base.filter(f,w::Workspace) = Workspace(filter(f,_c(w)))
+Base.filter!(f,w::Workspace) = (filter!(f,_c(w)); w)
+
