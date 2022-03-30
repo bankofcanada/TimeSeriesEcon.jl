@@ -4,13 +4,13 @@
 """
     @rec [index=]range expression
 
-Computes recursive operations on time series. The first argument is the range
+Compute recursive operations on time series. The first argument is the range
 and the second argument is an expression to be evaluated over that range.
 
 The expression is meant to be an assignment, but it doesn't have to be. 
 
-The the range can specify an optional indexing variable (as in a for loop). If
-not given, the variable is assumed to be `t`.
+The range specification can include an optional indexing variable name. If not
+given, the variable name defaults to `t`.
 
 ### Examples
 ```julia-repl

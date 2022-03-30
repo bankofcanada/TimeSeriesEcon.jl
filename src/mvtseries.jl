@@ -7,6 +7,73 @@ using OrderedCollections
 # MVTSeries -- multivariate TSeries
 # -------------------------------------------------------------------------------
 
+"""
+    mutable struct MVTSeries{F,T,C} <: AbstractMatrix{T}
+        firstdate::MIT{F}
+        columns::OrderedDict{Symbol,TSeries{F,T}}
+        values::C
+    end
+
+Multi-variate Time series with frequency `F` with values of type `T` stored in a
+container of type `C`. By default the type is `Float64` and the container is
+`Matrix{Float64}`. The rows correspond to moments in time and the columns
+correspond to variables. Columns are named. The values in the field `columns`
+are `TSeries` whose storages are views into the corresponding columns of the
+`values` matrix.
+
+### Construction:
+    x = MVTSeries(args...)
+
+The standard construction is
+```MVTSeries(firstdate::MIT, names, values)```
+Here `names` should be a tuple of `Symbol`s and `values` should be a matrix
+of the same number of columns as there are names in `names`. The range of
+the `MVTSeries` is determined from the number of rows of `values`. If
+`values` is not provided, the `MVTSeries` is constructed empty with size
+`(0, length(names))``. If `names` is also not provided, the `MVTSeries` is
+constructed empty with size `(0, 0)`.
+
+The first argument can be a range.
+```MVTSeries(range::UnitRange{<:MIT}, names, values)``` 
+In this case the size of the `MVTSeries` is determined by the lengths of
+`range` and `names`; the `values` argument is interpreted as an initializer.
+If it is omitted or set to `undef`, the storage is left uninitialized. If it
+is a number, the storage is filled with it. It can also be an initializer
+function, such as `zeros`, `ones` or `rand`. Lastly, if the `values`
+argument is an array, it must be 2-dimensional and of the correct size.
+
+Another possibility is to construct from a collection of name-value pairs.
+```MVTSeries(range; var1 = val1, var2 = val2, ...)```
+The `range` argument is optional, if missing it'll be determined from the
+ranges of the given values. The values can be [`TSeries`](@ref), vectors or
+constants. Any vector must have the same length as the range.
+
+An `MVTSeries` can also be constructed with `copy`, `similar`, and `fill`.
+
+### Indexing:
+Indexing with integers, integer ranges, or boolean arrays works the same as
+with `Matrix`. The result from slicing with integer ranges or boolean arrays
+is always a `Matrix`, i.e., the `MVTSeries` structure is lost.
+
+Indexing with two indexes works as follows. The first index can be an
+[`MIT`](@ref) or a range of [`MIT`](@ref) and it works the same as for  
+[`TSeries`](@ref). The second index can be a `Symbol` or a collection of
+`Symbol`s, such as a tuple or a vector. `begin` and `end` work for the
+first index the same as with [`TSeries`](@ref).
+
+Indexing with one index depends on the type. If it is `MIT` or a 
+range of `MIT`, it is treated as if the second index were `:`, i.e., the 
+entire row or multiple rows is returned. If the index is a `Symbol` or 
+a collection of `Symbol`s, it is treated as if the first index were `:`, 
+i.e., entire column or multiple columns is returned as [`TSeries`](@ref) or
+`MVTSeries` respectively.
+
+Columns can also be accessed using "dot" notation. For example `x[:a]` is the
+same as `x.a`.
+
+Check out the tutorial at 
+[https://bankofcanada.github.io/DocsEcon.jl/dev/Tutorials/TimeSeriesEcon/main/](https://bankofcanada.github.io/DocsEcon.jl/dev/Tutorials/TimeSeriesEcon/main/)
+"""
 mutable struct MVTSeries{F<:Frequency,T<:Number,C<:AbstractMatrix{T}} <: AbstractMatrix{T}
     firstdate::MIT{F}
     columns::OrderedDict{Symbol,TSeries{F,T}}
@@ -55,8 +122,18 @@ function _col(x::MVTSeries, col::Symbol)
     return ret
 end
 
+"""
+    columns(x::MVTSeries)
+
+Return the columns of `x` as a dictionary. 
+"""
 columns(x::MVTSeries) = getfield(x, :columns)
 
+"""
+    colnames(x::MVTSeries)
+
+Return the names of the columns of `x` as an iterable.
+"""
 colnames(x::MVTSeries) = keys(_cols(x))
 rawdata(x::MVTSeries) = _vals(x)
 
@@ -68,7 +145,7 @@ rawdata(x::MVTSeries) = _vals(x)
 Returns an iterator over the named columns of `data`. Each iteration gives a
 name-value pair where name is a `Symbol` and value is a [`TSeries`](@ref).
 
-Setting `copy=true` is equivalent to `pairt(copy(data))` but slightly more
+Setting `copy=true` is equivalent to `pairs(copy(data))` but slightly more
 efficient.
 """
 Base.pairs(x::MVTSeries; copy=false) = copy ? pairs(deepcopy(_cols(x))) : pairs(_cols(x))
@@ -185,7 +262,16 @@ Base.similar(::AbstractArray, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT},N
 Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT},NTuple{N,Symbol}}) where {T<:Number,N} = MVTSeries(T, shape[1], shape[2])
 
 # construct from range and fill with the given constant or array
-Base.fill(v::Number, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
+"""
+    fill(val, range)
+    fill(val, range, variables)
+
+In the first form create a [`TSeries`](@ref) with the given range. In the second
+form create an [`MVTSeries`](@ref) with the given range and variables. In both
+cases they are filled with the given value `val`.
+"""
+Base.fill(v, rng::UnitRange{<:MIT}, vars::NTuple{N,Symbol}) where {N} = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
+Base.fill(v, shape::Tuple{UnitRange{<:MIT}, NTuple{N,Symbol}}) where {N} = fill(v, shape...)
 
 # Empty (0 variables) from range
 function MVTSeries(rng::UnitRange{<:MIT}; args...)
@@ -256,9 +342,9 @@ end
 # Indexing other than integers 
 
 # some check bounds that plug MVTSeries into the Julia infrastructure for AbstractArrays
-@inline Base.checkbounds(::Type{Bool}, x::MVTSeries, p::MIT) = checkindex(Bool, rangeof(x), p)
-@inline Base.checkbounds(::Type{Bool}, x::MVTSeries, p::UnitRange{<:MIT}) = checkindex(Bool, rangeof(x), p)
-@inline Base.checkbounds(::Type{Bool}, x::MVTSeries, c::Symbol) = haskey(_cols(x), c)
+Base.checkbounds(::Type{Bool}, x::MVTSeries, p::MIT) = checkindex(Bool, rangeof(x), p)
+Base.checkbounds(::Type{Bool}, x::MVTSeries, p::UnitRange{<:MIT}) = checkindex(Bool, rangeof(x), p)
+Base.checkbounds(::Type{Bool}, x::MVTSeries, c::Symbol) = haskey(_cols(x), c)
 @inline function Base.checkbounds(::Type{Bool}, x::MVTSeries, INDS::Union{Vector{Symbol},NTuple{N,Symbol}}) where {N}
     cols = _cols(x)
     for c in INDS
@@ -267,7 +353,7 @@ end
     return true
 end
 
-@inline function Base.checkbounds(::Type{Bool}, x::MVTSeries, p::Union{MIT,UnitRange{<:MIT}}, c::Union{Symbol,Vector{Symbol},NTuple{N,Symbol}}) where {N}
+function Base.checkbounds(::Type{Bool}, x::MVTSeries, p::Union{MIT,UnitRange{<:MIT}}, c::Union{Symbol,Vector{Symbol},NTuple{N,Symbol}}) where {N}
     return checkbounds(Bool, x, p) && checkbounds(Bool, x, c)
 end
 
@@ -424,7 +510,7 @@ Base.copyto!(dest::MVTSeries, src::AbstractArray) = (copyto!(dest.values, src); 
 Base.copyto!(dest::MVTSeries, src::MVTSeries) = (copyto!(dest.values, src.values); dest)
 
 # -------------------------------------------------------------------------------
-# ways add new columns (variables)
+# ways to add new columns (variables)
 
 function Base.hcat(x::MVTSeries; KW...)
     T = reduce(Base.promote_eltype, (x, values(KW)...))
@@ -669,9 +755,11 @@ ts
 ts2
 ```
 """
-function reindex(ts::MVTSeries,pair::Pair{<:MIT,<:MIT}; copy = false)
-    ts_lag = firstdate(ts)-pair[1]
-    return MVTSeries(pair[2]+Int(ts_lag),keys(ts), copy ? Base.copy(ts.values) : ts.values)
-end
+function reindex end
 export reindex
+
+function reindex(ts::MVTSeries, pair::Pair{<:MIT,<:MIT}; copy=false)
+    ts_lag = firstdate(ts) - pair[1]
+    return MVTSeries(pair[2] + Int(ts_lag), keys(ts), copy ? Base.copy(ts.values) : ts.values)
+end
 
