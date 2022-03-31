@@ -191,3 +191,70 @@ macro compare(x, y, kwargs...)
     # done
     return esc(ret)
 end
+
+
+
+####  reindex
+
+"""
+    reindex(ts, from => to; copy = false)
+    reindex(w, from => to; copy = false)
+
+The function `reindex` re-indexes the `TSeries` or `MVTSeries` `ts`
+or those contained in the `Workspace` `w`
+so that the `MIT` `from` becomes the `MIT` `to` leaving the data unchanged.
+For a `Workspace`, only the `TSeries` with the same frequency as the first element of the pair
+will be reindexed.
+
+By default, the data is not copied.
+
+Example:
+With a `TSeries` or an `MVTSeries` 
+```
+ts = MVTSeries(2020Q1,(:y1,:y2),randn(10,2))
+ts2 = reindex(ts,2021Q1 => 1U; copy = true)
+ts2.y2[3U] = 9999
+ts
+ts2
+```
+With a `Workspace`
+```
+w = Workspace();
+w.a = TSeries(2020Q1,randn(10))
+w.b = TSeries(2021Q1,randn(10))
+w.c = 1
+w.d = "string"
+w1 = reindex(w, 2021Q1 => 1U)
+w2 = reindex(w, 2021Q1 => 1U; copy = true)
+w.a[2020Q1] = 9999
+MVTSeries(; w1_a = w1.a, w2_a = w2.a)
+```
+"""
+function reindex end
+export reindex
+
+function reindex(ts::TSeries, pair::Pair{<:MIT,<:MIT}; copy=false)
+    ts_lag = firstdate(ts) - pair[1]
+    return TSeries(pair[2] + Int(ts_lag), copy ? Base.copy(ts.values) : ts.values)
+end
+
+function reindex(ts::MVTSeries, pair::Pair{<:MIT,<:MIT}; copy=false)
+    ts_lag = firstdate(ts) - pair[1]
+    return MVTSeries(pair[2] + Int(ts_lag), keys(ts), copy ? Base.copy(ts.values) : ts.values)
+end
+
+function reindex(w::Workspace, pair::Pair{<:MIT,<:MIT}; copy=false)
+    freq_from = frequencyof(pair[1])
+    wo = Workspace()
+    for (k,v) in w
+        if isa(v,Union{TSeries,MVTSeries}) && frequencyof(v) == freq_from
+            wo[k] = reindex(v,pair; copy = copy)
+        elseif copy && hasmethod(Base.copy,(typeof(v),))
+            wo[k] = Base.copy(w[k])
+        else
+            wo[k] = w[k]
+        end
+    end
+    return wo
+end
+
