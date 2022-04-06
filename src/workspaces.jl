@@ -6,9 +6,23 @@
 export Workspace
 
 """
-    struct Workspace … end
+    struct Workspace
+        …
+    end
 
-A collection of variables.
+A collection of variables. `Workspace`s can store data of any kind, including
+numbers, `MIT`s, ranges, strings, `TSeries`, `MVTSeries`, even nested
+`Workspace`s.
+
+### Construction
+Easiest is to start with and empty `Workspace` and fill it up later. Otherwise,
+content can be provided at construction time as a collection of name-value
+pairs, where the name must be a `Symbol` and the value can be anything.
+
+### Access
+Members of the `Workspace` can be accessed using "dot" notation or using
+`[]` indexing, like a dictionary.
+
 """
 struct Workspace
     _c::OrderedDict{Symbol,Any}
@@ -18,10 +32,21 @@ struct Workspace
     Workspace(; kw...) = new(OrderedDict{Symbol,Any}(kw))
 end
 
-@inline _c(w::Workspace) = getfield(w, :_c)
+_c(w::Workspace) = getfield(w, :_c)
 
-Base.propertynames(w::Workspace, private::Bool = false) = tuple(keys(w)...)
-Base.getproperty(w::Workspace, sym::Symbol) = sym == :_c ? _c(w) : getindex(w, sym)
+_dict_to_workspace(x) = x
+_dict_to_workspace(x::AbstractDict) = Workspace(x)
+function Workspace(fromdict::AbstractDict; recursive=false)
+    w = Workspace()
+    convert_value = recursive ? _dict_to_workspace : identity
+    for (key, value) in fromdict
+        w[Symbol(key)] = convert_value(value)
+    end
+    return w
+end
+
+Base.propertynames(w::Workspace, private::Bool=false) = tuple(keys(w)...)
+Base.getproperty(w::Workspace, sym::Symbol) = sym === :_c ? _c(w) : getindex(w, sym)
 Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(w, val, sym)
 
 # MacroTools.@forward Workspace._c (Base.getindex,)
@@ -39,6 +64,14 @@ MacroTools.@forward Workspace._c (Base.eltype,)
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
 Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
 
+"""
+    rangeof(w)
+
+Calculate the range of a [`Workspace`](@ref) as the intersection of the ranges
+of all [`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of
+`w`. If there are objects of different frequencies there will be a
+mixed-frequency error.
+"""
 rangeof(w::Workspace) = (
     iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));
     mapreduce(rangeof, intersect, iterable)
@@ -81,15 +114,15 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
     for (i, (k, v)) ∈ enumerate(w)
         top < i < bot && continue
 
-        sk = sprint(print, k, context = io, sizehint = 0)
+        sk = sprint(print, k, context=io, sizehint=0)
         if v isa Union{AbstractString,Symbol,AbstractRange}
             # It's a string or a Symbol
-            sv = sprint(show, v, context = io, sizehint = 0)
+            sv = sprint(show, v, context=io, sizehint=0)
         elseif typeof(v) == eltype(v)
             #  it's a scalar value
-            sv = sprint(print, v, context = io, sizehint = 0)
+            sv = sprint(print, v, context=io, sizehint=0)
         else
-            sv = sprint(summary, v, context = io, sizehint = 0)
+            sv = sprint(summary, v, context=io, sizehint=0)
         end
         max_align = max(max_align, length(sk))
 
@@ -107,125 +140,6 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
 
 end
 
-_dict_to_workspace(x) = x
-_dict_to_workspace(x::AbstractDict) = Workspace(x)
-function Workspace(fromdict::AbstractDict; recursive = false)
-    w = Workspace()
-    convert_value = ifelse(recursive, _dict_to_workspace, identity)
-    for (key, value) in fromdict
-        push!(w, Symbol(key) => convert_value(value))
-    end
-    return w
-end
-
-const LikeWorkspace = Union{Workspace,MVTSeries,AbstractDict{Symbol,<:Any}}
-
-@inline _c(x::MVTSeries) = _cols(x)
-@inline _c(x::AbstractDict) = x
-
-overlay(stuff...) = stuff[1]
-overlay(stuff::Vararg{LikeWorkspace}) = Workspace(mergewith(overlay, (_c(w) for w in stuff)...))
-
-###########################
-
-"""
-    @compare x y [options] 
-    compare(x, y [; options])
-
-Compare two `Workspace` recursively and print out the differences. `MVTSeries`
-and `Dict` with keys of type `Symbol` are treated like `Workspace`. `TSeries` and
-other `Vector` are compared using `isapprox`, so feel free to supply `rtol` or
-`atol`.
-
-Optional argument `name` can be used for the top name. Default is `"_"`.
-
-Parameter `showequal=true` causes the report to include objects that are the
-same. Default behaviour, with `showequal=false`, is to report only the
-differences. 
-
-Parameter `ignoremissing=true` causes objects that appear in one but not the
-other workspace to be ignored. That is, they are not printed and do not affect
-the return value `true` or `false`. Default is `ignoremissing=false` meaning
-they will be printed and return value will be `false`.
-
-"""
-function compare end, macro compare end
-export compare, @compare
-
-
-@inline compare_equal(x, y; kwargs...) = isequal(x, y)
-@inline compare_equal(x::AbstractVector, y::AbstractVector; atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...) = isapprox(x, y; atol, rtol)
-function compare_equal(x::TSeries, y::TSeries; trange = nothing, atol = 0, rtol = atol > 0 ? 0.0 : √eps(), kwargs...)
-    if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
-        trange = intersect(rangeof(x), rangeof(y))
-    end
-    isapprox(x[trange], y[trange]; atol, rtol)
-end
-
-function compare_equal(x::LikeWorkspace, y::LikeWorkspace; kwargs...)
-    equal = true
-    for name in union(keys(x), keys(y))
-        xval = get(x, name, missing)
-        yval = get(y, name, missing)
-        if !compare(xval, yval, name; kwargs...)
-            equal = false
-        end
-    end
-    return equal
-end
-
-@inline compare_print(names, message, quiet) = quiet ? nothing : println(join(names, "."), ": ", message)
-
-function compare(x, y, name = Symbol("_");
-    showequal = false, ignoremissing = false, quiet = false,
-    left = :left, right = :right,
-    names = Symbol[],
-    kwargs...)
-    push!(names, name)
-    if ismissing(x)
-        equal = ignoremissing
-        ignoremissing || compare_print(names, "missing in $left", quiet)
-    elseif ismissing(y)
-        equal = ignoremissing
-        ignoremissing || compare_print(names, "missing in $right", quiet)
-    elseif compare_equal(x, y; showequal, ignoremissing, names, left, right, kwargs...)
-        (showequal || length(names) == 1) && compare_print(names, "same", quiet)
-        equal = true
-    else
-        compare_print(names, "different", quiet)
-        equal = false
-    end
-    pop!(names)
-    return equal
-end
-
-macro compare(x, y, kwargs...)
-    # build the basic compare call
-    ret = MacroTools.unblock(quote
-        compare($x, $y; left = $(QuoteNode(x)), right = $(QuoteNode(y)))
-    end)
-    # find the array of kw-parameters in ret
-    params = []
-    for a in ret.args
-        if MacroTools.isexpr(a, :parameters)
-            params = a.args
-            break
-        end
-    end
-    # convert arguments to this macro to kw-parameters to the compare() call
-    for arg in kwargs
-        if arg isa Symbol
-            kw = Expr(:kw, arg, true)
-        elseif MacroTools.isexpr(arg, :(=))
-            kw = Expr(:kw, arg.args...)
-        else
-            kw = arg
-        end
-        push!(params, kw)
-    end
-    # done
-    return esc(ret)
-end
 
 ###########################
 
@@ -236,7 +150,7 @@ Apply [`strip!`](@ref) to all TSeries members of the given workspace. This
 includes nested workspaces, unless `recursive=false`.
 
 """
-function strip!(w::Workspace; recursive = true)
+function strip!(w::Workspace; recursive=true)
     for (key, value) in w._c
         if value isa TSeries
             strip!(value)
@@ -246,3 +160,8 @@ function strip!(w::Workspace; recursive = true)
     end
     return w
 end
+
+###########################
+Base.filter(f,w::Workspace) = Workspace(filter(f,_c(w)))
+Base.filter!(f,w::Workspace) = (filter!(f,_c(w)); w)
+

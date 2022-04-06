@@ -3,46 +3,7 @@
 
 import Statistics: mean
 
-
-"""
-    overlay(t1, t2, ...)
-
-Construct a TSeries in which each observation is taken from the first
-non-missing observation in the list of arguments. A missing observation is one
-for which [`istypenan`](@ref) returns `true`.
-
-All TSeries in the argument list must be of the same frequency. The data type of
-the resulting TSeries is computed by the standard promotion of numerical types
-in Julia. Its range is the union of the ranges of the arguments.
-"""
-@inline overlay(ts::Vararg{<:TSeries}) = overlay(mapreduce(rangeof, union, ts), ts...)
-
-"""
-    overlay(rng, t1, t2, ...)
-
-If the first argument is a range (must be of the same frequency), that becomes
-the range of the resulting TSeries.
-"""
-function overlay(rng::AbstractRange{<:MIT}, ts::Vararg{<:TSeries})
-    T = mapreduce(eltype, promote_type, ts)
-    ret = TSeries(rng, typenan(T))
-    # na = collection of periods where the entry of ret is missing (typenan(T))
-    na = collect(rng)
-    for t in ts
-        if isempty(na)
-            # if na is empty, then we've assigned all slots
-            break
-        end
-        # keep = periods that are not yet assigned and t has valid values in them
-        keep = intersect(na, rangeof(t)[values(@. !istypenan(t))])
-        # assign
-        ret[keep] = t[keep]
-        # update na by removing the periods we just assigned
-        na = setdiff(na, keep)
-    end
-    return ret
-end
-export overlay
+#### strip and strip!
 
 function _valid_range(t::TSeries)
     fd = firstdate(t)
@@ -56,7 +17,19 @@ function _valid_range(t::TSeries)
     return fd:ld
 end
 
+"""
+    strip(t:TSeries)
+
+Remove leading and trailing `NaN` from the given time series. This version
+creates a new [`TSeries`](@ref) instance.
+"""
 Base.strip(t::TSeries) = getindex(t, _valid_range(t))
+"""
+    strip!(t::TSeries)
+
+Remove leading and training `NaN` from the given time series. This is
+done in-place.
+"""
 strip!(t::TSeries) = resize!(t, _valid_range(t))
 export strip!
 
@@ -70,16 +43,34 @@ Conversion from $(frequencyof(t)) to $F not implemented.
 """)
 
 # do nothing when the source and target frequencies are the same.
-fconvert(::Type{F}, t::TSeries{F}) where {F <: Frequency} = t
+fconvert(::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
 
 """
-    fconvert(F1, t::TSeries{F2}; method) where {F1 <: YPFrequency, F2 <: YPFrequency}
+    fconvert(F1, x::TSeries{F2}; method) where {F1 <: YPFrequency, F2 <: YPFrequency}
 
-Convert between frequencies of the [`YPFrequency`](@ref) variety.
+Convert between frequencies derived from [`YPFrequency`](@ref).
 
-TODO: describe `method` when converting to a higher frequency (interpolation)
-TODO: describe `method` when converting to a lower frequency (aggregation)
+Currently this works only when the periods per year of the higher frequency is
+an exact multiple of the periods per year of the lower frequency.
 
+### Converting to Higher Frequency
+The only method available is `method=:const`, where the value at each period of
+the higher frequency is the value of the period of the lower frequency it
+belongs to.
+```
+x = TSeries(2000Q1:2000Q3, collect(Float64, 1:3))
+fconvert(Monthly, x)
+```
+
+### Converting to Lower Frequency
+The range of the result includes periods that are fully included in the range of
+the input. For each period of the lower frequency we aggregate all periods of
+the higher frequency within it. We have 4 methods currently available: `:mean`,
+`:sum`, `:begin`, and `:end`.  The default is `:mean`.
+```
+x = TSeries(2000M1:2000M7, collect(Float64, 1:7))
+fconvert(Quarterly, x; method = :sum)
+```
 """
 function fconvert(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=nothing) where {N1,N2}
     args = Dict()
@@ -120,20 +111,19 @@ function _to_lower(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; me
     (d2, r2) = divrem(p2 - 1, np)
     li = MIT{F}(y2, d2 + 1) - (r2 < np - 1)
     # println("y2 = $y2, p2 = $p2, d2 = $d2, r2 = $r2, li = $li")
-    ret = TSeries(eltype(t), fi:li)
-    vals = t[begin + (r1 > 0) * (np - r1):end - (r2 < np-1)*(1+r2)].values
+    vals = t[begin+(r1>0)*(np-r1):end-(r2<np-1)*(1+r2)].values
     # println("vals = $vals")
     if method == :mean
-        copyto!(ret, mean(reshape(vals, np, :); dims=1))
+        ret = mean(reshape(vals, np, :); dims=1)
     elseif method == :sum
-        copyto!(ret, sum(reshape(vals, np, :); dims=1))
+        ret = sum(reshape(vals, np, :); dims=1)
     elseif method == :begin
-        copyto!(ret, reshape(vals, np, :)[begin, :])
+        ret = reshape(vals, np, :)[begin, :]
     elseif method == :end
-        copyto!(ret, reshape(vals, np, :)[end, :])
+        ret = reshape(vals, np, :)[end, :]
     else
         throw(ArgumentError("Conversion method not available: $(method)."))
     end
-    return ret
+    return copyto!(TSeries(eltype(ret), fi:li), ret)
 end
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
 
 # ----------------------------------------
@@ -9,6 +9,7 @@
     abstract type Frequency end
 
 The abstract supertype for all frequencies.
+
 See also: [`Unit`](@ref) and [`YPFrequency`](@ref)
 """
 abstract type Frequency end
@@ -17,52 +18,62 @@ abstract type Frequency end
     struct Unit <: Frequency end
 
 Represents a non-dimensional frequency (not associated with the calendar).
-See also: [`YPFrequency`](@ref)
+
+See also: [`Frequency`](@ref), [`YPFrequency`](@ref)
 """
 struct Unit <: Frequency end
 
 """
-    abstract type YPFrequency{N} <: Frequency end;
+    abstract type YPFrequency{N} <: Frequency end
 
-Represents a calendar frequency based on a number of periods in a year. 
-The type parameter `N` is the number of periods and must be a positive integer.
-See also: [`Yearly`](@ref), [`Quarterly`](@ref), [`Monthly`](@ref)
+Represents a calendar frequency defined by a number of periods in a year. The
+type parameter `N` is the number of periods and must be a positive integer. 
+
+See also: [`Frequency`](@ref), [`Yearly`](@ref), [`Quarterly`](@ref), [`Monthly`](@ref)
 """
-abstract type YPFrequency{N} <: Frequency end;
+abstract type YPFrequency{N} <: Frequency end
 
+
+"""
+    struct Yearly <: YPFrequency{1} end
+
+A concrete frequency defined as 1 period per year.
+"""
 struct Yearly <: YPFrequency{1} end
+
+"""
+    struct Quarterly <: YPFrequency{4} end
+
+A concrete frequency defined as 4 periods per year.
+"""
 struct Quarterly <: YPFrequency{4} end
+
+"""
+    struct Monthly <: YPFrequency{12} end
+
+A concrete frequency defined as 12 periods per year.
+"""
 struct Monthly <: YPFrequency{12} end
-
-"""
-    Yearly, Quarterly, Monthly
-
-Frequencies corresponding to 1, 4, and 12 periods per year.
-See also: [`YPFrequency`](@ref)
-"""
-Yearly, Quarterly, Monthly
-
 
 # ----------------------------------------
 # 2. MIT (moment in time) and Duration 
 # ----------------------------------------
 
-primitive type MIT{F <: Frequency} <: Signed 64 end
-primitive type Duration{F <: Frequency} <: Signed 64 end
+primitive type MIT{F<:Frequency} <: Signed 64 end
+primitive type Duration{F<:Frequency} <: Signed 64 end
 
 """
     MIT{F <: Frequency}, Duration{F <: Frequency}
 
-Two types representing a 
-moment in time (like 2020Q1 or 2020-01-01) and
-duration (the quantity of time between two moments).
+Two types representing a moment in time (like 2020Q1 or 2020Y) and duration (the
+quantity of time between two moments).
 
-Both of these have a Frequency as a type parameter and both 
-internally are represented by integer values.
+Both of these have a Frequency as a type parameter and both internally are
+represented by integer values.
 
-If you imagine a time axis of the given `Frequency`, `MIT` values are
-ordinal (correspond to points) while `Duration` values are cardinal 
-(correspond to distances). 
+If you imagine a time axis of the given `Frequency`, `MIT` values are ordinal
+(correspond to points) while `Duration` values are cardinal (correspond to
+distances).
 """
 MIT, Duration
 
@@ -79,9 +90,10 @@ Int(x::Duration) = reinterpret(Int, x)
 # frequencyof()
 
 """
-frequencyof(x), frequencyof(T)
+    frequencyof(x)
+    frequencyof(T)
 
-Return the Frequency type of the given value `x` or type `T`.
+Return the [`Frequency`](@ref) type of the given value `x` or type `T`.
 """
 function frequencyof end
 
@@ -103,16 +115,16 @@ frequencyof(::Type{<:AbstractArray{Duration{F}}}) where F <: Frequency = F
 """
     MIT{F}(year, period) where {F <: YPFrequency}
 
-Construct an [`MIT`](@ref) instance from year and period. This is valid only for
-frequencies subtyped from [`YPFrequency`](@ref).
+Construct an [`MIT`](@ref) instance from `year` and `period`. This is valid only
+for frequencies subtyped from [`YPFrequency`](@ref).
 """ 
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
 
 """
     mit2yp(x::MIT)
 
-Recover the year and period from a given [`MIT`](@ref) value. This is valid only
-if the frequency is subtyped from [`YPFrequency`](@ref).
+Recover the year and period from the given [`MIT`](@ref) value. This is valid
+only for frequencies subtyped from [`YPFrequency`](@ref).
 """
 function mit2yp end
 mit2yp(x) = throw(ArgumentError("Value of type $(typeof(x)) cannot be represented as (year, period) pair. "))
@@ -127,31 +139,54 @@ mit2yp(x) = throw(ArgumentError("Value of type $(typeof(x)) cannot be represente
     p < 0 ? (y - 1, p + N + 1) : (y, p + 1)
 end
 
-@inline year(x) = mit2yp(x)[1]
-@inline period(x) = mit2yp(x)[2]
-
-""" 
-    year(x::MIT), period(x::MIT)
-
-Return the year and period of an [`MIT`](@ref) value `x`. This only makes
-sense if the frequency of `x` is subtyped from [`YPFrequency`](@ref).
 """
-year, period
+    year(mit)
 
-@inline mm(y::Integer, p::Integer) = MIT{Monthly}(y, p)
-@inline qq(y::Integer, p::Integer) = MIT{Quarterly}(y, p)
-@inline yy(y::Integer, p::Integer=1) = MIT{Yearly}(y, p)
+Return the year of an [`MIT`](@ref). This is valid only for frequencies subtyped
+from [`YPFrequency`](@ref).
+"""
+year(x) = mit2yp(x)[1]
 
 """
-    mm(year, period), qq(year, period), yy(year, period=1)
+    period(mit)
 
-IRIS type constructors for [`MIT`](@ref) values with frequencies that have
-year and period. 
+Return the period of an [`MIT`](@ref). This is valid only for frequencies
+subtyped from [`YPFrequency`](@ref).
 """
-mm, qq, yy
+period(x) = mit2yp(x)[2]
+
+"""
+    mm(year, period)
+
+Construct an `MIT{Monthly}` from an year and a period.
+"""
+mm(y::Integer, p::Integer) = MIT{Monthly}(y, p)
+
+"""
+    qq(year, period)
+
+Construct an `MIT{Quarterly}` from an year and a period.
+"""
+qq(y::Integer, p::Integer) = MIT{Quarterly}(y, p)
+
+"""
+    yy(year, period)
+
+Construct an `MIT{Yearly}` from an year and a period.
+"""
+yy(y::Integer, p::Integer=1) = MIT{Yearly}(y, p)
 
 # -------------------------
 # ppy: period per year
+"""
+    ppy(x)
+    ppy(T)
+
+Return the periods per year for the frequency associated with the given value
+`x` or type `T`. This is valid only for frequencies subtyped from
+[`YPFrequency`](@ref).
+"""
+function ppy end
 ppy(x) = ppy(frequencyof(x))
 ppy(::Type{<:YPFrequency{N}}) where {N} = N
 ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year") 
@@ -295,7 +330,8 @@ Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
 # ----------------------------------------
 
 # added so MIT can be used as dictionary keys
-Base.hash(x::MIT{T}) where T <: Frequency = hash(("$T", Int(x)))
+Base.hash(x::MIT{T}, h::UInt) where T <: Frequency = hash(("$T", Int(x)), h)
+Base.hash(x::Duration{T}, h::UInt) where T <: Frequency = hash(("$T", Int(x)), h)
 
 # # added for sorting Vector{MIT{T}} where T <: Frequency
 # Base.sub_with_overflow(x::MIT{T}, y::MIT{T}) where T <: Frequency = begin
@@ -314,8 +350,17 @@ Base.:(*)(y::Integer, ::_FPConst{F,P}) where {F <: Frequency,P} = MIT{F}(y, P)
 Base.show(io::IO, C::_FConst) = print(io, 1C)
 Base.show(io::IO, C::_FPConst) = print(io, 1C)
 
+""" 
 
+Convenience constants that make MIT literal constants possible. For example, the
+constant `Q1` makes it possible to write `2020Q1` instead of
+`MIT{Quarterly}(2020, 1)`. Use `U` for `MIT{Unit}`, `Y` for `MIT{Yearly}`, `Q1`
+to `Q4` for `MIT{Quarterly}` and `M1` to `M12` for `MIT{Monthly}`
+
+"""
+Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 export Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+
 global const U = _FConst{Unit}()
 global const Y = _FPConst{Yearly,1}()
 global const Q1 = _FPConst{Quarterly,1}()
