@@ -257,6 +257,16 @@ end
     @test 5 .+ tq == tq .+ 5  # broadcasting works
     @test_throws ArgumentError tq + 5tm   # different frequencies not allowed
     
+    # shape errors
+    @test_throws ArgumentError TimeSeriesEcon.shape_error(typeof(1), typeof(2))
+    @test_throws ArgumentError TimeSeriesEcon.shape_error(1, 2)
+
+    # maximum and minimum
+    @test minimum(tq) == minimum(tq.values)
+    @test maximum(tq) == maximum(tq.values)
+    halve(x) = x/2
+    @test minimum(halve, tq) == minimum(halve, tq.values)
+    @test maximum(halve, tq) == maximum(halve, tq.values)
 end
 
 @testset "Monthly" begin
