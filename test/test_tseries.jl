@@ -74,7 +74,7 @@ end
 
     # we can broadcast with another TSeries of identical range
     r = t .+ TSeries(5U, collect(1:6))
-    @test typeof(r) == typeof(t) && eachindex(r) == eachindex(t) && all(r.values .== t.values .+ (1:6))
+    @test typeof(r) == typeof(t) && eachindex(r) == eachindex(t) && all(r.values .== t.values .+ (1:6)) && rangeof(r) == rangeof(t)
 
     # we can broadcast with another TSeries of different range
     r = t .+ TSeries(4U, collect(1:6))
@@ -126,6 +126,9 @@ end
     
     t[2:4] .= 1
     @test t.values ≈ [0, 1, 1, 1, 0, 7, NaN, 8, 8, 8] nans = true
+
+    #additional tests for code coverage
+    @test Base.Broadcast._eachindex((1U:4U,)) == 1:4
 
 end
 
