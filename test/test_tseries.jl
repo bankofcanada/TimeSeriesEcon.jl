@@ -540,3 +540,24 @@ end
     @test rangeof(s) == 2020Q1:2022Q4
     @test values(s) == Float64[0,1,2,5,12,29,70,169,408,985,2378,5741]
 end
+
+@testset "various" begin
+    # compares
+    a = TSeries(89Y, ones(7))
+    b = TSeries(89Y, ones(7))
+    @test TimeSeriesEcon.compare_equal(a, b) == true
+    @test TimeSeriesEcon.compare_equal(a.values, b.values) == true
+    @test TimeSeriesEcon.compare_equal(a.values[1], b.values[2]) == true
+
+    c = TSeries(89Y, ones(7)*1.1)
+    @test TimeSeriesEcon.compare_equal(a, c) == false
+    @test TimeSeriesEcon.compare_equal(a, c, atol=0.3) == true
+       
+    #reindexing
+    ts = TSeries(2020Q1,randn(10))
+    ts2 = reindex(ts,2021Q1 => 1U; copy = true)
+    @test ts2[3U] == ts[2021Q3]
+    @test length(ts2) == 10
+    @test ts2[-3U] == ts[2020Q1]
+end
+

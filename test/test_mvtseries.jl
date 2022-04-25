@@ -404,3 +404,21 @@ end
 
 end
 
+using OrderedCollections
+
+@testset "MVTSeries various" begin
+    x = MVTSeries(20Q1, (:a, :b), rand(10, 2))
+
+    @test TimeSeriesEcon._c(x) isa OrderedDict
+    @test length(TimeSeriesEcon._c(x)) == 2
+    @test TimeSeriesEcon._c(x)[:a] isa TSeries
+
+    #reindexing
+    ts = MVTSeries(2020Q1,(:y1,:y2),randn(10,2))
+    ts2 = reindex(ts,2021Q1 => 1U; copy = true)
+    @test ts2.y2[3U] == ts.y2[2021Q3]
+    @test length(ts2.y2) == 10
+    @test ts2.y1[-3U] == ts.y1[2020Q1]
+    
+end
+
