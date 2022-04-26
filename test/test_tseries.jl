@@ -1,5 +1,6 @@
 # Copyright (c) 2020-2022, Bank of Canada
 # All rights reserved.
+import TimeSeriesEcon: qq, mm, yy
 
 @testset "TSeries" begin
     # test constructors
@@ -8,6 +9,9 @@
     @test size(s) == (12,)
     @test axes(s) == (20Q1:22Q4,)
     @test length(s) == 12
+    @test values(s) == [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0]
+    @test s.values == [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0]
+    @test rawdata(s) == [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0]
 
     t = TSeries(Int, 5)   # from type and number
     @test typeof(t) === TSeries{Unit,Int,Vector{Int}} && t.firstdate == 1U && length(t.values) == 5
@@ -57,13 +61,55 @@
     @test_throws ArgumentError copyto!(i, 17U:24U, i)  # wrong frequency
     @test_throws ArgumentError copyto!(i, s)  # wrong frequency
 
+    # various ways of initializing an empty tseries
+    i2 = TSeries(1U)
+    @test length(i2) == 0
+    i3 = TSeries(Int32, 20Y)
+    @test length(i3) == 0
+    @test_throws InexactError i3[20Y] = 2.5
+
     # rangeof with drop
     let myts = TSeries(20Q1:21Q4,1)
         @test rangeof(myts,drop= 2) == 20Q3:21Q4
         @test rangeof(myts,drop=-2) == 20Q1:21Q2
     end
 
+    # similar with an abstract array
+    val = Float32(22.3)
+    t2 = similar(typeof([val]), (2Q1:4Q4))
+    @test typeof(t2) === TSeries{Quarterly,Float32,Vector{Float32}} && t2.firstdate == 2Q1 && length(t2.values) == 12
+    t3 = similar([val], (2Q1:4Q4))
+    @test typeof(t3) === TSeries{Quarterly,Float32,Vector{Float32}} && t3.firstdate == 2Q1 && length(t3.values) == 12
+
+    # fill
+    t4 = fill(2, (20Y:22Y))
+    @test t4 isa TSeries && rangeof(t4) == 20Y:22Y && t4[21Y] == 2
+    for (fname, fval) in ((:zeros, 0.0), (:ones, 1.0), (:trues, true), (:falses, false))
+        @eval begin
+            t1 = $fname(20Y:22Y)
+            t2 = $fname((20Y:22Y))
+            @test t1 isa TSeries && rangeof(t1) == 20Y:22Y && t1[21Y] == $fval
+            @test t2 isa TSeries && rangeof(t2) == 20Y:22Y && t2[21Y] == $fval
+        end
+        if fname in (:zeros, :ones)
+            @eval begin
+                @test typeof(t1[21Y]) == Float64
+                @test typeof(t2[21Y]) == Float64
+                t3 = $fname(Float32, 20Y:22Y)
+                t4 = $fname(Float32, (20Y:22Y))
+                @test t3 isa TSeries && rangeof(t3) == 20Y:22Y && t3[21Y] == $fval && typeof(t3[21Y]) == Float32
+                @test t4 isa TSeries && rangeof(t4) == 20Y:22Y && t4[21Y] == $fval && typeof(t4[21Y]) == Float32
+            end
+        end
+        if fname in (:trues, :falses)
+            @eval begin
+                @test typeof(t1[21Y]) == Bool
+                @test typeof(t2[21Y]) == Bool
+            end
+        end
+    end
 end
+
 
 @testset "Bcast" begin
     t = TSeries(5U:10U, rand(6))
@@ -356,7 +402,7 @@ end
         ts_m[mm(2019, 2):mm(2019, 4)] = [9, 10, 11];
         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [9, 10, 11]
         @test ts_m.firstdate == mm(2018, 1)
-@test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [9, 10, 11]))
+        @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [9, 10, 11]))
     end
 
     begin
@@ -365,6 +411,31 @@ end
         @test ts_m[mm(2017, 10):mm(2017, 11)].values == [9, 10]
         @test ts_m.firstdate == mm(2017, 10)
         @test isequal(ts_m.values, vcat([9, 10], [NaN], collect(1.0:12.0)))
+    end
+
+    begin
+        ts_m1 = TSeries(2018Q1:2018Q4, collect(1.0:4.0))
+        ts_m2 = TSeries(2018Q1:2018Q4, zeros(4))
+        setindex!(ts_m1, ts_m2, 2018Q3)
+        @test ts_m1.values == [1.0, 2.0, 0.0, 4.0]
+    end
+
+    begin
+        ts_m1 = TSeries(2018Q1:2019Q4, collect(1.0:8.0))
+        setindex!(ts_m1, [0.0, 1.0, 2.0, 3.0], 2018Q3:2019Q2)
+        @test ts_m1.values == [1.0, 2.0, 0.0, 1.0, 2.0, 3.0, 7.0, 8.0]
+    end
+
+    begin
+        ts_m1 = TSeries(2018Q1:2019Q4, collect(1.0:8.0))
+        setindex!(ts_m1, [0.0, 1.0, 2.0, 3.0], StepRange(2018Q1, 1Q3-1Q1, 2019Q4))
+        @test ts_m1.values == [0.0, 2.0, 1.0, 4.0, 2.0, 6.0, 3.0, 8.0]
+    end
+
+    begin
+        ts_m1 = TSeries(2018Q1:2019Q4, collect(1.0:8.0))
+        setindex!(ts_m1, [0.0, 1.0, 2.0, 3.0], 2:5)
+        @test ts_m1.values == [1.0, 0.0, 1.0, 2.0, 3.0, 6.0, 7.0, 8.0]
     end
 end
 
@@ -561,3 +632,56 @@ end
     @test ts2[-3U] == ts[2020Q1]
 end
 
+@testset "pct" begin
+    t1 = TSeries(2000Y, [1, 2, 4, 8])
+    @test diff(t1).values == [1, 2, 4]
+    @test rangeof(diff(t1)) == 2001Y:2003Y
+
+    @test pct(t1).values == [100,100,100]
+    @test rangeof(diff(t1)) == 2001Y:2003Y
+
+    @test pct(t1, -2).values == [300,300]
+    @test rangeof(pct(t1, -2)) == 2002Y:2003Y
+
+    t2 = TSeries(2000Y, log.([1, 2, 4, 8]))
+    @test pct(t2; islog=true).values ≈ [100,100,100]
+    @test rangeof(pct(t2; islog=true)) == 2001Y:2003Y
+
+    #annualized
+    t3 = TSeries(2000Q1, 2 .^ collect(1:20))
+    @test pct(t3).values[1:3] == [100, 100, 100]
+    @test apct(t3).values[1:3] == [1500, 1500, 1500]
+    @test rangeof(apct(t3)) == 2000Q2:2004Q4
+    t4 = TSeries(2000M1, 2 .^ collect(1:20))
+    @test pct(t4).values[1:3] == [100, 100, 100]
+    @test apct(t4).values[1:3] == [409500, 409500, 409500]
+    @test rangeof(apct(t4)) == 2000M2:2001M8
+    t5 = TSeries(2000Q1, log.(2 .^ collect(1:20)))
+    @test pct(t5; islog=true).values[1:3] ≈ [100, 100, 100]
+    @test apct(t5, true).values[1:3] ≈ [1500, 1500, 1500]
+    @test rangeof(apct(t5, true)) == 2000Q2:2004Q4
+
+    #year-to-year
+    @test ytypct(t1).values[1:3] == [100, 100, 100]
+    @test rangeof(ytypct(t1)) == 2001Y:2003Y
+    @test ytypct(t3).values[1:3] == [1500, 1500, 1500]
+    @test rangeof(ytypct(t3)) == 2001Q1:2004Q4
+    @test ytypct(t4).values[1:3] == [409500, 409500, 409500]
+    @test rangeof(ytypct(t4)) == 2001M1:2001M8
+
+
+    ## supplemental nan tests
+    x = TSeries(2000Y:2010Y, ones(Int32, 11))
+    x2 = TSeries(2012Y:2020Y, ones(Int32, 9))
+    x = overlay(x, x2)
+    # x[2011Y:2015Y] .= NaN
+    @test istypenan(x[2011Y]) == true
+    @test istypenan(x[2000Y]) == false
+    @test istypenan(nothing) == true
+    @test istypenan(missing) == true
+    @test istypenan(2) == false
+end
+
+@testset "hmm" begin
+    @test true
+end
