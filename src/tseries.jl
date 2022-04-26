@@ -265,6 +265,7 @@ Base.getindex(t::TSeries, m::MIT) = mixed_freq_error(t, m)
 end
 
 @inline _ind_range_check(x, rng::MIT) = _ind_range_check(x, rng:rng)
+@inline _ind_range_check(x, rng::StepRange{<:MIT}) = _ind_range_check(x, first(rng):last(rng))
 function _ind_range_check(x, rng::UnitRange{<:MIT})
     fi = firstindex(x.values, 1)
     fd = firstdate(x)
