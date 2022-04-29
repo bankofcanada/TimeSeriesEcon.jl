@@ -199,9 +199,11 @@ end
 """
     reindex(ts, from => to; copy = false)
     reindex(w, from => to; copy = false)
+    reindex(rng, from => to)
 
-The function `reindex` re-indexes the `TSeries` or `MVTSeries` `ts`
-or those contained in the `Workspace` `w`
+The function `reindex` re-indexes the `TSeries` or `MVTSeries` `ts`, 
+or those contained in the `Workspace` `w`, 
+or the `UnitRange` `rng`, 
 so that the `MIT` `from` becomes the `MIT` `to` leaving the data unchanged.
 For a `Workspace`, only the `TSeries` with the same frequency as the first element of the pair
 will be reindexed.
@@ -229,9 +231,18 @@ w2 = reindex(w, 2021Q1 => 1U; copy = true)
 w.a[2020Q1] = 9999
 MVTSeries(; w1_a = w1.a, w2_a = w2.a)
 ```
+With a `UnitRange`
+```
+reindex(2021Q1:2022Q4, 2022Q1 => 1U)
+```
 """
 function reindex end
 export reindex
+
+function reindex(rng::UnitRange{<:MIT}, pair::Pair{<:MIT,<:MIT})
+    T = pair[2]+Int(rng[1] - pair[1])
+    return T:T+length(rng)-1
+end
 
 function reindex(ts::TSeries, pair::Pair{<:MIT,<:MIT}; copy=false)
     ts_lag = firstdate(ts) - pair[1]
