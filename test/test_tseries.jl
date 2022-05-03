@@ -681,7 +681,3 @@ end
     @test istypenan(missing) == true
     @test istypenan(2) == false
 end
-
-@testset "hmm" begin
-    @test true
-end
