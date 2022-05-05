@@ -559,7 +559,6 @@ end
 
     end
 
-
     #diff
     let x2_orig = MVTSeries(1U:3U, (:a, :b))
         x2_orig.a = collect(1:3)
@@ -622,8 +621,6 @@ end
         @test rangeof(x_m2_forward) == 1U:9U
         @test x_m2_forward.a.values == collect(1:9) .+ 0.5
         @test x_m2_forward.b.values == collect(11:19) .+ 0.5 
-
-
     end
 
     #undiff
@@ -635,30 +632,26 @@ end
         @test undiff(diff(x.a), 2U => 2.0) == x.a[2U:10U]
         @test undiff(diff(x.a), 5U => 5.0) == x.a[2U:10U] # not sure why this is the case
         @test undiff(diff(x), 1U => [1, 11]) == x
-        #@test undiff(diff(x.a)) == x.a #should not fail 
+        @test undiff(diff(x.a)) == collect(0:9) #first item is assumed to be 0
 
         x2 = copy(x)
-        undiff!(x2.a, diff(x.a); fromdate=3U)
-        @test x2.a == x.a
+        undiff!(x2.a, diff(x.a*3); fromdate=6U) ##no effect
+        @test x2.a == [1,2,3,4,5,6,9,12,15,18]
         @test x2.b == x.b
 
-        # ts1 = copy(x.a)
-        # ts2 = diff(ts1)
-        # ts3 = diff(ts1 .* 3)
-        # @test ts1 != ts2
-        # undiff!(ts1, ts3)
-        # @test ts1[1U] == x.a[1U]
-        # the calculus is a bit off. The diff is multiplied in
-        # but not for the first period, which is just taken from ts2
-        # Then the value of the second period is equal to
-        # ts1[2U] + ts3[2U] = 2.0 * 3.0 = 6.0, but then we also subtract 2... 
-        # these tests should be revisited.
-        # @test ts1[2U:10U] == x.a[2U:10U] .* 3 .- (1.0 * 3 - 1)
-
-        # @test undiff(diff(x.a), x.a) == x.a
+        ts1 = copy(x.a)
+        ts2 = diff(ts1 .* 3)
+        @test ts1 != ts2
+        # applied growth rate (+3) applies from the period after fromdate
+        undiff!(ts1, ts2, fromdate=6U)
+        @test ts1.values == [1,2,3,4,5,6,9,12,15,18]
+        # adding the growth rate to an earlier date makes it kick in earlier and changes the series
+        undiff!(ts1, ts2, fromdate=4U)
+        @test ts1.values == [1,2,3,4,7,10,13,16,19,22]
+        # adding the same growth rate to a later date leads the series unchanged
+        undiff!(ts1, ts2, fromdate=8U)
+        @test ts1.values == [1,2,3,4,7,10,13,16,19,22]
     end
-
-    
 end
 
 
