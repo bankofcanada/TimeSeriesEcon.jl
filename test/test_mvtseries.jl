@@ -47,6 +47,18 @@
     @test (MVTSeries(20Q1, :a, zeros(5,)); true)
     @test (MVTSeries(1U:5U, :a, zeros(5,)); true)
 
+    # contruct with named arguments
+    let x = MVTSeries(2020Q1:2021Q1;
+            hex = TSeries(2019Q1, collect(Float64, 1:20)),
+            why = zeros(5),
+            zed = 3, )
+            @test x.hex isa TSeries
+            @test x isa MVTSeries
+            @test rangeof(x) == 2020Q1:2021Q1
+            # provided tseries is truncated to MVTSeries range
+            @test rangeof(x.hex) == 2020Q1:2021Q1
+            @test x.hex.values == collect(5.0:9.0)
+    end
 end
 
 @testset "MV Int Ind" begin
