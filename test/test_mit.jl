@@ -84,6 +84,23 @@ import TimeSeriesEcon: qq, mm, yy
     @test_throws ArgumentError promote(1, 1Q1 - 1Q1) 
     @test promote(1.1, 1Q1) === (1.1, 1.0)
     @test promote(1Q1, 1.2) === (1.0, 1.2)
+
+    # custom frequencies
+    customFreq = YPFrequency{5}
+    customFreq2 = YPFrequency{11}
+    d1 = Duration{customFreq}(10)
+    d2 = Duration{customFreq}(4)
+    d3 = Duration{customFreq2}(4)
+    @test d1 - d2 == 6
+    @test div(d1,d2) == 2
+    @test rem(d1,d2) == 2
+    @test div(d2,d1) == 0
+    @test_throws ArgumentError div(d2,d3)
+    @test_throws ArgumentError rem(d2,d3)
+
+    #hash
+    @test hash(1Q1, UInt(8)) == hash(("Quarterly", 4), UInt(8))
+    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly", 2), UInt(8))
 end
 
 @testset "Range" begin
@@ -95,13 +112,33 @@ end
     @test step(rng) isa Int
     @test step(rng) == 1
     for (i, m) in enumerate(rng)
-    @test m isa MIT{Quarterly}
+        @test m isa MIT{Quarterly}
         @test first(rng) <= m <= last(rng)
         @test rng[i] == m
     end
     @test_throws ArgumentError 2020Q1:2020M12
     @test union(3U:5U, 4U:6U) === 3U:6U
     @test_throws ArgumentError union(3U:5U, 4Q1:6Q1) 
+
+    # step ranges
+    sr1 = 1Q1:1Q3-1Q1:4Q4
+    @test length(sr1) == 8
+    @test step(sr1) == 2
+    @test first(sr1) == 1Q1
+    @test last(sr1) == 4Q3
+    @test collect(sr1) == [1Q1, 1Q3, 2Q1, 2Q3, 3Q1, 3Q3, 4Q1, 4Q3]
+    
+    sr2 = 1Q1:2:4Q4
+    @test length(sr2) == 8
+    @test step(sr2) == 2
+    @test first(sr2) == 1Q1
+    @test last(sr2) == 4Q3
+    @test collect(sr2) == [1Q1, 1Q3, 2Q1, 2Q3, 3Q1, 3Q3, 4Q1, 4Q3]
+
+    @test_throws ArgumentError 1Q2:2:5U
+    @test_throws ArgumentError 1Q2:1Q1-1Q2:5U
+    
+    
 end
 
 @testset "FPConst" begin
@@ -160,9 +197,22 @@ end
         show(io, Q1)
         show(io, 1U)
         println(io, M1, M12, ".")
+
+        customFreq = YPFrequency{4}
+        customMIT = MIT{customFreq}(5)
+        show(io, customMIT)
+
+        customFreq2 = YPFrequency{5}
+        customMIT2 = MIT{customFreq2}(6)
+        println(io, "")
+        show(io, customMIT2)
+
+        println(io, "")
+        show(io, U)
+
         foo = readlines(seek(io, 0))
         # @test foo == ["2020Q120P35U12", "1117", "1Q11U1M11M12."]
-        @test foo == ["2020Q15U12", "1117", "1Q11U1M11M12."]
+        @test foo == ["2020Q15U12", "1117", "1Q11U1M11M12.", "1Q2", "1P2", "1U"]
     end
 end
 
