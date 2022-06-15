@@ -39,14 +39,16 @@ abstract type YPFrequency{N} <: Frequency end
 
 A concrete frequency defined as 1 period per year.
 """
-struct Yearly <: YPFrequency{1} end
+struct Yearly{N} <: YPFrequency{1} where N<:Integer  end
+# struct Yearly <: YearlyFrequency{12} end
 
 """
     struct Quarterly <: YPFrequency{4} end
 
 A concrete frequency defined as 4 periods per year.
 """
-struct Quarterly <: YPFrequency{4} end
+# abstract type QuarterlyFrequency{N} <: YPFrequency{4} end
+struct Quarterly{N} <: YPFrequency{4}  end
 
 """
     struct Monthly <: YPFrequency{12} end
