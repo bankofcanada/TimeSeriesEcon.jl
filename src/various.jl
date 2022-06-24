@@ -205,8 +205,8 @@ The function `reindex` re-indexes the `TSeries` or `MVTSeries` `ts`,
 or those contained in the `Workspace` `w`, 
 or the `UnitRange` `rng`, 
 so that the `MIT` `from` becomes the `MIT` `to` leaving the data unchanged.
-For a `Workspace`, only the `TSeries` with the same frequency as the first element of the pair
-will be reindexed.
+For a `Workspace`, only objects  with the same frequency as the first element of the pair
+will be reindexed; also, nested `Workspace`s are reindexed recursively.
 
 By default, the data is not copied.
 
@@ -239,7 +239,7 @@ reindex(2021Q1:2022Q4, 2022Q1 => 1U)
 function reindex end
 export reindex
 
-function reindex(rng::UnitRange{<:MIT}, pair::Pair{<:MIT,<:MIT})
+function reindex(rng::UnitRange{<:MIT}, pair::Pair{<:MIT,<:MIT}; copy=false)
     T = pair[2]+Int(rng[1] - pair[1])
     return T:T+length(rng)-1
 end
@@ -258,7 +258,9 @@ function reindex(w::Workspace, pair::Pair{<:MIT,<:MIT}; copy=false)
     freq_from = frequencyof(pair[1])
     wo = Workspace()
     for (k,v) in w
-        if isa(v,Union{TSeries,MVTSeries}) && frequencyof(v) == freq_from
+        if v isa Workspace
+            wo[k] = reindex(w[k], pair; copy)
+        elseif hasmethod(reindex, (typeof(v), Pair{<:MIT,<:MIT})) && frequencyof(v) == freq_from
             wo[k] = reindex(v,pair; copy = copy)
         elseif copy && hasmethod(Base.copy,(typeof(v),))
             wo[k] = Base.copy(w[k])
