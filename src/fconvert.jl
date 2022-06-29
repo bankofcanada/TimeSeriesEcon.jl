@@ -424,3 +424,240 @@ function _to_lower(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; me
     return copyto!(TSeries(eltype(ret), fi:li), ret)
 end
 
+
+function fconvert(F::Type{<:Union{Monthly, Quarterly, Quarterly{N1}, Yearly, Yearly{N2}, Weekly, Weekly{N3}}}, t::TSeries{Daily}; method=:mean) where {N1,N2,N3}
+    _d0 = Date("0001-01-01") - Day(1)
+    dates = [_d0 + Day(Int(val)) for val in rangeof(t)]
+
+    trunc_start, trunc_end = _get_fconvert_truncations(F, frequencyof(t), dates, method)
+    
+    if F <: Weekly
+        reference_day_adjust = 0
+        if @isdefined N3
+            reference_day_adjust = 7 - N3
+        end
+        weeks = [Int(floor((Int(val) -1 + reference_day_adjust)/7)) + 1 for val in rangeof(t)]
+        out_index = ["MIT{$F}($week)" for week in weeks]
+    elseif F <: Monthly
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+        out_index = ["$(year)M$(month)" for (year, month) in zip(years, months)]
+    elseif F <: Quarterly
+        # dates = [_d0 + Day(Int(val)) + adjustment for val in rangeof(t)]
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+        if @isdefined N1
+            months .+= 3 - N1
+            years[months .> 12] .+= 1
+            months[months .> 12] .-= 12
+        end
+        quarters = [Int(floor((m -1)/3) + 1) for m in months]
+        out_index = ["$(year)Q$(quarter)" for (year, quarter) in zip(years, quarters)]
+    elseif F <: Yearly
+        years = Dates.year.(dates)
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+        if @isdefined N2
+            months .+= 12 - N2
+            years[months .> 12] .+= 1
+            # months[months .> 12] .-= 12
+        end
+        out_index = ["$(year)Y" for year in years]
+    end
+    out_index_unique = unique(out_index)
+    fi = eval(Meta.parse("fi = $(out_index[begin])"))
+    li = eval(Meta.parse("li = $(out_index[end])"))
+
+    if method == :mean
+        ret = [mean(t.values[out_index .== target]) for target in out_index_unique]
+    elseif method == :sum
+        ret = [sum(t.values[out_index .== target]) for target in out_index_unique]
+    elseif method == :begin
+        ret = [t.values[out_index .== target][begin] for target in out_index_unique]
+    elseif method == :end
+        ret = [t.values[out_index .== target][end] for target in out_index_unique]
+    else
+        throw(ArgumentError("Conversion method not available: $(method)."))
+    end
+
+    return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
+end
+
+function fconvert(F::Type{<:Daily}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:const, interpolation=:none) where{N3}
+    np = 7
+    reference_day_adjust = 0
+    if @isdefined N3
+        reference_day_adjust = 7 - N3
+    end
+    
+    fi = MIT{Daily}(Int(firstindex(t))*7 - 6 - reference_day_adjust)
+    
+    if method == :const
+        if interpolation == :linear
+            values = repeat(t.values, inner=np)
+            adjust = 3
+            for i in 1:length(t.values)
+                if i == 1
+                    interpolated = collect(LinRange(values[i*7-adjust], values[(i+1)*7-adjust],8))
+                    values[1:adjust] .= values[7-adjust] .- reverse(collect(1:adjust))*(interpolated[2]-interpolated[1])
+                else
+                   values[(i-1)*7-adjust:i*7-adjust] = collect(LinRange(values[(i-1)*7-adjust], values[i*7-adjust],8))
+                    if i == length(t.values)
+                        values[i*7-adjust+1:i*7] = values[i*7-adjust] .+ collect(1:adjust)*(values[i*7-adjust] - values[i*7-adjust-1])
+                    end
+                end
+            end
+            return TSeries(fi, values)
+        else
+            return TSeries(fi, repeat(t.values, inner=np))
+        end
+        
+    else
+        throw(ArgumentError("Conversion method not available: $(method)."))
+    end
+end
+
+function _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol) where {N1,N2,N3,N4}
+    trunc_start = 0
+    trunc_end = 0
+    overlap_function = nothing
+    if F_to <: Weekly
+        overlap_function = Dates.dayofweek
+    elseif F_to <: Monthly
+        overlap_function = Dates.dayofmonth
+    elseif F_to <: Quarterly
+        overlap_function = Dates.dayofquarter
+    elseif F_to <: Yearly
+        overlap_function = Dates.dayofyear
+    end
+    input_shift = F_from == Weekly ? Day(7) : Day(1)
+    target_shift = Day(0)
+    if @isdefined N1
+        target_shift = N1 != 3 ? Month(N1) : Day(0) 
+    end
+    if @isdefined N2
+        target_shift = N2 != 12 ? Month(N2) : Day(0) 
+    end
+    if @isdefined N3
+        target_shift = N3 != 7 ? Day(N3) : Day(0) 
+    end
+
+    whole_first_period = overlap_function(dates[begin] - target_shift - input_shift) > overlap_function(dates[begin] - target_shift)
+    whole_last_period = overlap_function(dates[end] - target_shift + Day(1)) < overlap_function(dates[end] - target_shift)
+    if method ∈ (:mean, :sum)
+        trunc_start = whole_first_period ? 0 : 1
+        trunc_end = whole_last_period ? 0 : 1
+    elseif method == :begin
+        trunc_start = whole_first_period ? 0 : 1
+    elseif method == :end
+        trunc_end = whole_last_period ? 0 : 1
+    end
+
+    return trunc_start, trunc_end
+end
+
+function fconvert(F::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly}}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:mean, interpolation=:none) where {N1,N2,N3}
+    _d0 = Date("0001-01-01") - Day(1)
+    # d1 + Dates.Month(2)
+    adjustment = Day(0) 
+    if @isdefined N3
+        adjustment = Day(7 - N3)
+    end
+    
+    dates = [_d0 + Day(Int(val))*7 - adjustment for val in rangeof(t)]
+    trunc_start, trunc_end = _get_fconvert_truncations(F, frequencyof(t), dates, method)
+    months_rotation = Day(0)
+    if @isdefined N1
+        months_rotation = Month(3-N1)
+    end
+    if @isdefined N2
+        months_rotation = Month(12-N2)
+    end
+
+    # interpolate for weeks spanning divides
+    adjusted_values = copy(t.values)
+    if interpolation == :linear
+        overlap = zeros(Int, length(t.values))
+        if F <: Monthly
+            overlap .= [ Dates.month(date - Day(6)) != Dates.month(date) ? Dates.dayofmonth(date) : 0  for date in dates]
+        end
+        if F <: Quarterly
+            overlap .= [ Dates.quarter(date - Day(6) + months_rotation) != Dates.quarter(date + months_rotation) ? Dates.dayofmonth(date) : 0  for date in dates]
+        end
+        if F <: Yearly
+            overlap .= [ Dates.year(date - Day(6) + months_rotation) != Dates.year(date + months_rotation) ? Dates.dayofmonth(date) : 0  for date in dates]
+        end
+        for (i, d) in enumerate(overlap) 
+            if i > 1 && d != 0
+                v1 = copy(adjusted_values[i-1])
+                v2 = copy(adjusted_values[i])
+               if method == :end #equivalent to technique=linear, observed=end 
+                    adjusted_values[i-1] = v1 + (1 - (d/7))*(v2 - v1)
+                elseif method == :mean #equivalent to technique=linear, observed=averaged
+                    # convert to daily with linear interpolation, then convert to monthly
+                    return fconvert(F, fconvert(Daily, t; method=:const, interpolation=:linear), method=:mean)
+                elseif method == :sum #equivalent to technique=linear, observed=summed
+                    # shift some part of transitionary weeks between months
+                    adjusted_values[i-1] = v1 + (1 - (d/7))*v2
+                    adjusted_values[i] = v2 - (1 - (d/7))*v2
+                elseif method == :begin #equivalent to technique=linear, observed:begin
+                    v3 = copy(adjusted_values[min(i+1,length(dates))])
+                    # this is equivalent to converting the series to daily with linear interpolation
+                    # and selecting the value from the date corresponding to the reference date.
+                    adjusted_values[i] = v2 + (1- (d/7))*(v3 - v2)
+                end
+            end
+        end
+    end
+    
+    # get out indices
+    if F <: Monthly
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+        out_index = ["$(year)M$(month)" for (year, month) in zip(years, months)]
+        out_index_unique = unique(out_index)
+        fi = eval(Meta.parse("fi = $(out_index[begin])"))
+        li = eval(Meta.parse("li = $(out_index[end])"))
+    elseif F <: Quarterly
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+        if @isdefined N1
+            months .+= 3 - N1
+            years[months .> 12] .+= 1
+            months[months .> 12] .-= 12
+        end
+        quarters = [Int(floor((m -1)/3) + 1) for m in months]
+        out_index = ["$(year)Q$(quarter)" for (year, quarter) in zip(years, quarters)]
+        out_index_unique = unique(out_index)
+        fi = eval(Meta.parse("fi = $(out_index[begin])"))
+        li = eval(Meta.parse("li = $(out_index[end])"))
+    elseif F <: Yearly
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+        if @isdefined N2
+            months .+= 12 - N2
+            years[months .> 12] .+= 1
+        end
+        out_index = ["$(year)Y" for year in years]
+        out_index_unique = unique(out_index)
+        fi = eval(Meta.parse("fi = $(out_index[begin])"))
+        li = eval(Meta.parse("li = $(out_index[end])"))
+    end
+
+    # do the conversion
+    if method == :mean
+        ret = [mean(adjusted_values[out_index .== target]) for target in out_index_unique]
+    elseif method == :sum
+        ret = [sum(adjusted_values[out_index .== target]) for target in out_index_unique]
+    elseif method == :begin
+        ret = [adjusted_values[out_index .== target][begin] for target in out_index_unique]
+    elseif method == :end
+        ret = [adjusted_values[out_index .== target][end] for target in out_index_unique]
+    else
+        throw(ArgumentError("Conversion method not available: $(method)."))
+    end
+
+    return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
+end

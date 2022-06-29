@@ -24,6 +24,33 @@ See also: [`Frequency`](@ref), [`YPFrequency`](@ref)
 struct Unit <: Frequency end
 
 """
+    abstract type CalendarFrequency <: Frequencies  end
+
+Represents frequencies associated with a specific gregorian calendar position.
+
+See also: [`Frequency`](@ref), [`YPFrequency`](@ref)
+"""
+abstract type CalendarFrequency <: Frequency end
+
+"""
+    struct Daily <: CalendarFrequency end
+
+Represents a daily frequency.
+
+See also: [`Frequency`](@ref), [`YPFrequency`](@ref)
+"""
+struct Daily <: CalendarFrequency end
+
+"""
+    struct Weekly <: Frequency end
+
+Represents a weekly frequency. The default weekly series ends on a Sunday (N = 7).
+
+See also: [`Frequency`](@ref), [`YPFrequency`](@ref)
+"""
+struct Weekly{N} <: CalendarFrequency where N<:Integer  end
+
+"""
     abstract type YPFrequency{N} <: Frequency end
 
 Represents a calendar frequency defined by a number of periods in a year. The
@@ -48,7 +75,7 @@ struct Yearly{N} <: YPFrequency{1} where N<:Integer  end
 A concrete frequency defined as 4 periods per year.
 """
 # abstract type QuarterlyFrequency{N} <: YPFrequency{4} end
-struct Quarterly{N} <: YPFrequency{4}  end
+struct Quarterly{N} <: YPFrequency{4} where N<:Integer end
 
 """
     struct Monthly <: YPFrequency{12} end
@@ -56,6 +83,7 @@ struct Quarterly{N} <: YPFrequency{4}  end
 A concrete frequency defined as 12 periods per year.
 """
 struct Monthly <: YPFrequency{12} end
+
 
 # ----------------------------------------
 # 2. MIT (moment in time) and Duration 
@@ -178,6 +206,19 @@ Construct an `MIT{Yearly}` from an year and a period.
 """
 yy(y::Integer, p::Integer=1) = MIT{Yearly}(y, p)
 
+"""
+    yy(year, period)
+
+Construct an `MIT{Yearly}` from an year and a period.
+"""
+_d0 = Date("0001-01-01") - Day(1) 
+# _1day = Day(1)
+daily(d::Date) = MIT{Daily}(Dates.value(d - _d0))
+daily(d::String) = MIT{Daily}(Dates.value(Date(d) - _d0))
+
+weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
+weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
+# _d0 + Day(Int(m)*7) - Day(4)
 # -------------------------
 # ppy: period per year
 """
@@ -197,6 +238,21 @@ ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year
 # pretty printing
 
 Base.show(io::IO, m::MIT{Unit}) = print(io, Int(m), 'U')
+function Base.show(io::IO, m::MIT{Daily}) 
+    # if Int(m) >= 547498 # start of the 16th century
+    print(io, _d0 + Day(Int(m)))
+    # else
+    #     print(io, Int(m), 'D')
+    # end
+end
+function Base.show(io::IO, m::Union{MIT{Weekly{N}},MIT{Weekly}}) where N
+    # we want the thursday
+    #TODO adjust for weekly Wednesday, etc.
+    date = _d0 + Day(Int(m)*7) - Day(4)
+    print(io, "$(Dates.year(date))W$(Dates.week(date))")
+end
+
+# Base.show(io::IO, m::MIT{Weekly}) = print(io, Int(m), 'W')
 function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
     if isconcretetype(F)
     periodletter = first("$(F)")
@@ -360,11 +416,13 @@ constant `Q1` makes it possible to write `2020Q1` instead of
 to `Q4` for `MIT{Quarterly}` and `M1` to `M12` for `MIT{Monthly}`
 
 """
-Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
-export Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+Y, U, D, W, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+export Y, U, D, W, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 
 global const U = _FConst{Unit}()
 global const Y = _FPConst{Yearly,1}()
+global const D = _FConst{Daily}()
+global const W = _FConst{Weekly}()
 global const Q1 = _FPConst{Quarterly,1}()
 global const Q2 = _FPConst{Quarterly,2}()
 global const Q3 = _FPConst{Quarterly,3}()
