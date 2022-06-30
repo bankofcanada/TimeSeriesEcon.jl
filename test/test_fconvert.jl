@@ -266,22 +266,39 @@ end
     r1 = fconvert(Monthly, t1, method=:mean, interpolation=:linear)
     @test isapprox(r1.values, [2.71,6.93,11.14,15.50], atol=1e-2)
     @test rangeof(r1) == 1M1:1M4
-
+    r1_range = fconvert(Monthly, rangeof(t1), method=:mean)
+    @test r1_range == 1M1:1M4
+    r1_MIT_start = fconvert(Monthly, first(rangeof(t1)), round_to=:next)
+    r1_MIT_end = fconvert(Monthly, last(rangeof(t1)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
+   
     """repo CONVERT(WS1, MONTHLY, LINEAR, END)"""
     r2 = fconvert(Monthly, t1, method=:end, interpolation=:linear)
     @test isapprox(r2.values, [4.43,8.43,12.86,17.14], atol=1e-2)
     @test rangeof(r2) == 1M1:1M4
+    r2_range = fconvert(Monthly, rangeof(t1), method=:end)
+    @test r2_range == 1M1:1M4
+    r2_MIT_start = fconvert(Monthly, first(rangeof(t1)), round_to=:current)
+    r2_MIT_end = fconvert(Monthly, last(rangeof(t1)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     """repo CONVERT(WS1, MONTHLY, LINEAR, BEGIN)"""
     r3 = fconvert(Monthly, t1, method=:begin, interpolation=:linear)
     @test isapprox(r3.values, [1.00,5.43,9.43,13.86,18.14], atol=1e-2)
     @test rangeof(r3) == 1M1:1M5
+    r3_range = fconvert(Monthly, rangeof(t1), method=:begin)
+    @test r3_range == 1M1:1M5
+    r3_MIT_start = fconvert(Monthly, first(rangeof(t1)), round_to=:next)
+    r3_MIT_end = fconvert(Monthly, last(rangeof(t1)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     """repo CONVERT(WS1, MONTHLY, LINEAR, SUMMED)"""
     #OBS!! Not getting exact results here, low tolerance!!
     r4 = fconvert(Monthly, t1, method=:sum, interpolation=:linear)
     @test isapprox(r4.values, [12.02,27.71,49.35,66.43], atol=1e-0)
     @test rangeof(r4) == 1M1:1M4
+    r4_range = fconvert(Monthly, rangeof(t1), method=:sum)
+    @test r4_range == 1M1:1M4
 
     """repo CONVERT(WS1, MONTHLY, DISCRETE, AVERAGED)"""
     r5 = fconvert(Monthly, t1, method=:mean, interpolation=:none)
@@ -307,22 +324,39 @@ end
     r9 = fconvert(Monthly, t2, method=:mean, interpolation=:linear)
     @test isapprox(r9.values, [6.36,10.57,14.93], atol=1e-2)
     @test rangeof(r9) == 1M2:1M4
+    r9_range = fconvert(Monthly, rangeof(t2), method=:both)
+    @test r9_range == 1M2:1M4
+    r9_MIT_start = fconvert(Monthly, first(rangeof(t2)), round_to=:next)
+    r9_MIT_end = fconvert(Monthly, last(rangeof(t2)), round_to=:previous)
+    @test r9_MIT_start:r9_MIT_end == r9_range
 
     """repo CONVERT(WS2, MONTHLY, LINEAR, END)"""
     r10 = fconvert(Monthly, t2, method=:end, interpolation=:linear)
     @test isapprox(r10.values, [3.86,7.86,12.29,16.57], atol=1e-2)
     @test rangeof(r10) == 1M1:1M4
+    r10_range = fconvert(Monthly, rangeof(t2), method=:end)
+    @test r10_range == 1M1:1M4
+    r10_MIT_start = fconvert(Monthly, first(rangeof(t2)), round_to=:current)
+    r10_MIT_end = fconvert(Monthly, last(rangeof(t2)), round_to=:previous)
+    @test r10_MIT_start:r10_MIT_end == r10_range
 
     """repo CONVERT(WS2, MONTHLY, LINEAR, BEGIN)"""
     r11 = fconvert(Monthly, t2, method=:begin, interpolation=:linear)
     @test isapprox(r11.values, [4.86,8.86,13.29,17.57], atol=1e-2)
     @test rangeof(r11) == 1M2:1M5
+    r11_range = fconvert(Monthly, rangeof(t2), method=:begin)
+    @test r11_range == 1M2:1M5
+    r11_MIT_start = fconvert(Monthly, first(rangeof(t2)), round_to=:next)
+    r11_MIT_end = fconvert(Monthly, last(rangeof(t2)), round_to=:current)
+    @test r11_MIT_start:r11_MIT_end == r11_range
 
     """repo CONVERT(WS2, MONTHLY, LINEAR, SUMMED)"""
     ## OBS! reduced tolerance!
     r12 = fconvert(Monthly, t2, method=:sum, interpolation=:linear)
     @test isapprox(r12.values, [25.43,46.82,63.98], atol=1e-1)
     @test rangeof(r12) == 1M2:1M4
+    r12_range = fconvert(Monthly, rangeof(t2), method=:sum)
+    @test r12_range == 1M2:1M4
 
     """repo CONVERT(WS2, MONTHLY, DISCRETE, AVERAGED)"""
     r13 = fconvert(Monthly, t2, method=:mean, interpolation=:none)
@@ -359,21 +393,41 @@ end
     r1 = fconvert(Quarterly, t3, method=:mean, interpolation=:none)
     @test isapprox(r1.values, [6.50,19.00,32.43,46.00], atol=1e-1)
     @test rangeof(r1) == 1Q1:1Q4
+    r1_range = fconvert(Quarterly, rangeof(t3), method=:mean)
+    @test r1_range == 1Q1:1Q4
+    r1_MIT_start = fconvert(Quarterly, first(rangeof(t3)), round_to=:next)
+    r1_MIT_end = fconvert(Quarterly, last(rangeof(t3)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
 
     """repo CONVERT(WS3, QUARTERLY, DISCRETE, END)"""
     r2 = fconvert(Quarterly, t3, method=:end, interpolation=:none)
     @test isapprox(r2.values, [12,25,39,52], atol=1e-2)
     @test rangeof(r2) == 1Q1:1Q4
+    r2_range = fconvert(Quarterly, rangeof(t3), method=:end)
+    @test r2_range == 1Q1:1Q4
+    r2_MIT_start = fconvert(Quarterly, first(rangeof(t3)), round_to=:current)
+    r2_MIT_end = fconvert(Quarterly, last(rangeof(t3)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
+
 
     """repo CONVERT(WS3, QUARTERLY, DISCRETE, BEGIN)"""
     r3 = fconvert(Quarterly, t3, method=:begin, interpolation=:none)
     @test isapprox(r3.values, [1,13,26,40,53], atol=1e-2)
     @test rangeof(r3) == 1Q1:2Q1
+    r3_range = fconvert(Quarterly, rangeof(t3), method=:begin)
+    @test r3_range == 1Q1:2Q1
+    r3_MIT_start = fconvert(Quarterly, first(rangeof(t3)), round_to=:next)
+    r3_MIT_end = fconvert(Quarterly, last(rangeof(t3)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
+
 
     """repo CONVERT(WS3, QUARTERLY, DISCRETE, SUMMED)"""
     r4 = fconvert(Quarterly, t3, method=:sum, interpolation=:none)
     @test isapprox(r4.values, [78,247,454,598], atol=1e0)
     @test rangeof(r4) == 1Q1:1Q4
+    r4_range = fconvert(Quarterly, rangeof(t3), method=:both)
+    @test r4_range == 1Q1:1Q4
+
 
     """repo CONVERT(WS3, QUARTERLY, LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly, t3, method=:mean, interpolation=:linear)
@@ -399,21 +453,38 @@ end
     r9 = fconvert(Quarterly, t4, method=:mean, interpolation=:none)
     @test isapprox(r9.values, [19.00, 31.92, 45.00], atol=1e-1)
     @test rangeof(r9) == 1Q2:1Q4
+    r9_range = fconvert(Quarterly, rangeof(t4), method=:both)
+    @test r9_range == 1Q2:1Q4
+    r9_MIT_start = fconvert(Quarterly, first(rangeof(t4)), round_to=:next)
+    r9_MIT_end = fconvert(Quarterly, last(rangeof(t4)), round_to=:previous)
+    @test r9_MIT_start:r9_MIT_end == r9_range
 
     """repo CONVERT(WS4, QUARTERLY, DISCRETE, END)"""
     r10 = fconvert(Quarterly, t4, method=:end, interpolation=:none)
     @test isapprox(r10.values, [12,25,38,51], atol=1e-2)
     @test rangeof(r10) == 1Q1:1Q4
+    r10_range = fconvert(Quarterly, rangeof(t4), method=:end)
+    @test r10_range == 1Q1:1Q4
+    r10_MIT_start = fconvert(Quarterly, first(rangeof(t4)), round_to=:current)
+    r10_MIT_end = fconvert(Quarterly, last(rangeof(t4)), round_to=:previous)
+    @test r10_MIT_start:r10_MIT_end == r10_range
 
     """repo CONVERT(WS4, QUARTERLY, DISCRETE, BEGIN)"""
     r11 = fconvert(Quarterly, t4, method=:begin, interpolation=:none)
     @test isapprox(r11.values, [13,26,39,52], atol=1e-2)
     @test rangeof(r11) == 1Q2:2Q1
+    r11_range = fconvert(Quarterly, rangeof(t4), method=:begin)
+    @test r11_range == 1Q2:2Q1
+    r11_MIT_start = fconvert(Quarterly, first(rangeof(t4)), round_to=:next)
+    r11_MIT_end = fconvert(Quarterly, last(rangeof(t4)), round_to=:current)
+    @test r11_MIT_start:r11_MIT_end == r11_range
 
     """repo CONVERT(WS4, QUARTERLY, DISCRETE, SUMMED)"""
     r12 = fconvert(Quarterly, t4, method=:sum, interpolation=:none)
     @test isapprox(r12.values, [247, 415, 585], atol=1e-0)
     @test rangeof(r12) == 1Q2:1Q4
+    r12_range = fconvert(Quarterly, rangeof(t4), method=:sum)
+    @test r12_range == 1Q2:1Q4
 
     """repo CONVERT(WS4, QUARTERLY, LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly, t4, method=:mean, interpolation=:linear)
@@ -452,21 +523,38 @@ end
     r1 = fconvert(Yearly, t5, method=:mean, interpolation=:none)
     @test isapprox(r1.values, [26.50,78.50,130.50], atol=1e-2)
     @test rangeof(r1) == 1Y:3Y
+    r1_range = fconvert(Yearly, rangeof(t5), method=:mean)
+    @test r1_range == 1Y:3Y
+    r1_MIT_start = fconvert(Yearly, first(rangeof(t5)), round_to=:next)
+    r1_MIT_end = fconvert(Yearly, last(rangeof(t5)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
 
     """repo CONVERT(WS5, ANNUAL, DISCRETE, END)"""
     r2 = fconvert(Yearly, t5, method=:end, interpolation=:none)
     @test isapprox(r2.values, [52,104,156], atol=1e-2)
     @test rangeof(r2) == 1Y:3Y
+    r2_range = fconvert(Yearly, rangeof(t5), method=:end)
+    @test r2_range == 1Y:3Y
+    r2_MIT_start = fconvert(Yearly, first(rangeof(t5)), round_to=:current)
+    r2_MIT_end = fconvert(Yearly, last(rangeof(t5)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     """repo CONVERT(WS5, ANNUAL, DISCRETE, BEGIN)"""
     r3 = fconvert(Yearly, t5, method=:begin, interpolation=:none)
     @test isapprox(r3.values, [1,53,105,157], atol=1e-2)
     @test rangeof(r3) == 1Y:4Y
+    r3_range = fconvert(Yearly, rangeof(t5), method=:begin)
+    @test r3_range == 1Y:4Y
+    r3_MIT_start = fconvert(Yearly, first(rangeof(t5)), round_to=:next)
+    r3_MIT_end = fconvert(Yearly, last(rangeof(t5)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     """repo CONVERT(WS5, ANNUAL, DISCRETE, SUMMED)"""
     r4 = fconvert(Yearly, t5, method=:sum, interpolation=:none)
     @test isapprox(r4.values, [1378,4082,6786], atol=1e-1)
     @test rangeof(r4) == 1Y:3Y
+    r4_range = fconvert(Yearly, rangeof(t5), method=:both)
+    @test r4_range == 1Y:3Y
 
     """repo CONVERT(WS5, ANNUAL, LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly, t5, method=:mean, interpolation=:linear)
@@ -492,21 +580,38 @@ end
     r9 = fconvert(Yearly, t6, method=:mean, interpolation=:none)
     @test isapprox(r9.values, [77.50, 129.50], atol=1e-2)
     @test rangeof(r9) == 2Y:3Y
+    r9_range = fconvert(Yearly, rangeof(t6), method=:both)
+    @test r9_range == 2Y:3Y
+    r9_MIT_start = fconvert(Yearly, first(rangeof(t6)), round_to=:next)
+    r9_MIT_end = fconvert(Yearly, last(rangeof(t6)), round_to=:previous)
+    @test r9_MIT_start:r9_MIT_end == r9_range
 
     """repo CONVERT(WS6, ANNUAL, DISCRETE, END)"""
     r10 = fconvert(Yearly, t6, method=:end, interpolation=:none)
     @test isapprox(r10.values, [51,103,155], atol=1e-2)
     @test rangeof(r10) == 1Y:3Y
+    r10_range = fconvert(Yearly, rangeof(t6), method=:end)
+    @test r10_range == 1Y:3Y
+    r10_MIT_start = fconvert(Yearly, first(rangeof(t6)), round_to=:current)
+    r10_MIT_end = fconvert(Yearly, last(rangeof(t6)), round_to=:previous)
+    @test r10_MIT_start:r10_MIT_end == r10_range
 
     """repo CONVERT(WS6, ANNUAL, DISCRETE, BEGIN)"""
     r11 = fconvert(Yearly, t6, method=:begin, interpolation=:none)
     @test isapprox(r11.values, [52,104,156], atol=1e-2)
     @test rangeof(r11) == 2Y:4Y
+    r11_range = fconvert(Yearly, rangeof(t6), method=:begin)
+    @test r11_range == 2Y:4Y
+    r11_MIT_start = fconvert(Yearly, first(rangeof(t6)), round_to=:next)
+    r11_MIT_end = fconvert(Yearly, last(rangeof(t6)), round_to=:current)
+    @test r11_MIT_start:r11_MIT_end == r11_range
 
     """repo CONVERT(WS6, ANNUAL, DISCRETE, SUMMED)"""
     r12 = fconvert(Yearly, t6, method=:sum, interpolation=:none)
     @test isapprox(r12.values, [4030,6734], atol=1e-2)
     @test rangeof(r12) == 2Y:3Y
+    r12_range = fconvert(Yearly, rangeof(t6), method=:sum)
+    @test r12_range == 2Y:3Y
 
     """repo CONVERT(WS6, ANNUAL, LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly, t6, method=:mean, interpolation=:linear)
@@ -536,21 +641,38 @@ end
     r1 = fconvert(Quarterly{1}, t3, method=:mean, interpolation=:none)
     @test isapprox(r1.values, [11.00, 24.00, 36.92,50.00], atol=1e-1)
     @test rangeof(r1) == 1Q2:2Q1
+    r1_range = fconvert(Quarterly{1}, rangeof(t3), method=:mean)
+    @test r1_range == 1Q2:2Q1
+    r1_MIT_start = fconvert(Quarterly{1}, first(rangeof(t3)), round_to=:next)
+    r1_MIT_end = fconvert(Quarterly{1}, last(rangeof(t3)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), DISCRETE, END)"""
     r2 = fconvert(Quarterly{1}, t3, method=:end, interpolation=:none)
     @test isapprox(r2.values, [4,17,30,43,56], atol=1e-2) 
     @test rangeof(r2) == 1Q1:2Q1
+    r2_range = fconvert(Quarterly{1}, rangeof(t3), method=:end)
+    @test r2_range == 1Q1:2Q1
+    r2_MIT_start = fconvert(Quarterly{1}, first(rangeof(t3)), round_to=:current)
+    r2_MIT_end = fconvert(Quarterly{1}, last(rangeof(t3)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), DISCRETE, BEGIN)"""
     r3 = fconvert(Quarterly{1}, t3, method=:begin, interpolation=:none)
     @test isapprox(r3.values, [5,18,31,44,57], atol=1e-2)
     @test rangeof(r3) == 1Q2:2Q2
+    r3_range = fconvert(Quarterly{1}, rangeof(t3), method=:begin)
+    @test r3_range == 1Q2:2Q2
+    r3_MIT_start = fconvert(Quarterly{1}, first(rangeof(t3)), round_to=:next)
+    r3_MIT_end = fconvert(Quarterly{1}, last(rangeof(t3)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), DISCRETE, SUMMED)"""
     r4 = fconvert(Quarterly{1}, t3, method=:sum, interpolation=:none)
     @test isapprox(r4.values, [143,312,480,650], atol=1e-0)
     @test rangeof(r4) == 1Q2:2Q1
+    r4_range = fconvert(Quarterly{1}, rangeof(t3), method=:both)
+    @test r4_range == 1Q2:2Q1
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly{1}, t3, method=:mean, interpolation=:linear)
@@ -576,21 +698,38 @@ end
     r9 = fconvert(Quarterly{1}, t4, method=:mean, interpolation=:none)
     @test isapprox(r9.values, [10.00,23.00,35.92,49.50], atol=1e-1)
     @test rangeof(r9) == 1Q2:2Q1
+    r9_range = fconvert(Quarterly{1}, rangeof(t4), method=:both)
+    @test r9_range == 1Q2:2Q1
+    r9_MIT_start = fconvert(Quarterly{1}, first(rangeof(t4)), round_to=:next)
+    r9_MIT_end = fconvert(Quarterly{1}, last(rangeof(t4)), round_to=:previous)
+    @test r9_MIT_start:r9_MIT_end == r9_range
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), DISCRETE, END)"""
     r10 = fconvert(Quarterly{1}, t4, method=:end, interpolation=:none)
     @test isapprox(r10.values, [3,16,29,42,56], atol=1e-2)
     @test rangeof(r10) == 1Q1:2Q1
+    r10_range = fconvert(Quarterly{1}, rangeof(t4), method=:end)
+    @test r10_range == 1Q1:2Q1
+    r10_MIT_start = fconvert(Quarterly{1}, first(rangeof(t4)), round_to=:current)
+    r10_MIT_end = fconvert(Quarterly{1}, last(rangeof(t4)), round_to=:previous)
+    @test r10_MIT_start:r10_MIT_end == r10_range
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), DISCRETE, BEGIN)"""
     r11 = fconvert(Quarterly{1}, t4, method=:begin, interpolation=:none)
     @test isapprox(r11.values, [4,17,30,43,57], atol=1e-2)
     @test rangeof(r11) == 1Q2:2Q2
+    r11_range = fconvert(Quarterly{1}, rangeof(t4), method=:begin)
+    @test r11_range == 1Q2:2Q2
+    r11_MIT_start = fconvert(Quarterly{1}, first(rangeof(t4)), round_to=:next)
+    r11_MIT_end = fconvert(Quarterly{1}, last(rangeof(t4)), round_to=:current)
+    @test r11_MIT_start:r11_MIT_end == r11_range
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), DISCRETE, SUMMED)"""
     r12 = fconvert(Quarterly{1}, t4, method=:sum, interpolation=:none)
     @test isapprox(r12.values, [130,299,467,693], atol=1e-0)
     @test rangeof(r12) == 1Q2:2Q1
+    r12_range = fconvert(Quarterly{1}, rangeof(t4), method=:sum)
+    @test r12_range == 1Q2:2Q1
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly{1}, t4, method=:mean, interpolation=:linear)
@@ -618,21 +757,38 @@ end
     r1 = fconvert(Quarterly{2}, t3, method=:mean, interpolation=:none)
     @test isapprox(r1.values, [15,28,40.92], atol=1e-1) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test rangeof(r1) == 1Q2:1Q4
+    r1_range = fconvert(Quarterly{2}, rangeof(t3), method=:mean)
+    @test r1_range == 1Q2:1Q4
+    r1_MIT_start = fconvert(Quarterly{2}, first(rangeof(t3)), round_to=:next)
+    r1_MIT_end = fconvert(Quarterly{2}, last(rangeof(t3)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), DISCRETE, END)"""
     r2 = fconvert(Quarterly{2}, t3, method=:end, interpolation=:none)
     @test isapprox(r2.values, [8,21,34,47], atol=1e-2) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test rangeof(r2) == 1Q1:1Q4
+    r2_range = fconvert(Quarterly{2}, rangeof(t3), method=:end)
+    @test r2_range == 1Q1:1Q4
+    r2_MIT_start = fconvert(Quarterly{2}, first(rangeof(t3)), round_to=:current)
+    r2_MIT_end = fconvert(Quarterly{2}, last(rangeof(t3)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), DISCRETE, BEGIN)"""
     r3 = fconvert(Quarterly{2}, t3, method=:begin, interpolation=:none)
     @test isapprox(r3.values, [9,22,35,48], atol=1e-2)
     @test rangeof(r3) == 1Q2:2Q1
+    r3_range = fconvert(Quarterly{2}, rangeof(t3), method=:begin)
+    @test r3_range == 1Q2:2Q1
+    r3_MIT_start = fconvert(Quarterly{2}, first(rangeof(t3)), round_to=:next)
+    r3_MIT_end = fconvert(Quarterly{2}, last(rangeof(t3)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), DISCRETE, SUMMED)"""
     r4 = fconvert(Quarterly{2}, t3, method=:sum, interpolation=:none) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test isapprox(r4.values, [195,364,532], atol=1e-0)
     @test rangeof(r4) == 1Q2:1Q4
+    r4_range = fconvert(Quarterly{2}, rangeof(t3), method=:both)
+    @test r4_range == 1Q2:1Q4
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly{2}, t3, method=:mean, interpolation=:linear)
@@ -658,21 +814,38 @@ end
     r9 = fconvert(Quarterly{2}, t4, method=:mean, interpolation=:none)
     @test isapprox(r9.values, [14.50,28.00,40.92], atol=1e-1) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test rangeof(r1) == 1Q2:1Q4
+    r9_range = fconvert(Quarterly{2}, rangeof(t4), method=:both)
+    @test r9_range == 1Q2:1Q4
+    r9_MIT_start = fconvert(Quarterly{2}, first(rangeof(t4)), round_to=:next)
+    r9_MIT_end = fconvert(Quarterly{2}, last(rangeof(t4)), round_to=:previous)
+    @test r9_MIT_start:r9_MIT_end == r9_range
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), DISCRETE, END)"""
     r10 = fconvert(Quarterly{2}, t4, method=:end, interpolation=:none)
     @test isapprox(r10.values, [7,21,34,47], atol=1e-2) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test rangeof(r10) == 1Q1:1Q4
+    r10_range = fconvert(Quarterly{2}, rangeof(t4), method=:end)
+    @test r10_range == 1Q1:1Q4
+    r10_MIT_start = fconvert(Quarterly{2}, first(rangeof(t4)), round_to=:current)
+    r10_MIT_end = fconvert(Quarterly{2}, last(rangeof(t4)), round_to=:previous)
+    @test r10_MIT_start:r10_MIT_end == r10_range
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), DISCRETE, BEGIN)"""
     r11 = fconvert(Quarterly{2}, t4, method=:begin, interpolation=:none)
     @test isapprox(r11.values, [8,22,35,48], atol=1e-2)
     @test rangeof(r11) == 1Q2:2Q1
+    r11_range = fconvert(Quarterly{2}, rangeof(t4), method=:begin)
+    @test r11_range == 1Q2:2Q1
+    r11_MIT_start = fconvert(Quarterly{2}, first(rangeof(t4)), round_to=:next)
+    r11_MIT_end = fconvert(Quarterly{2}, last(rangeof(t4)), round_to=:current)
+    @test r11_MIT_start:r11_MIT_end == r11_range
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), DISCRETE, SUMMED)"""
     r12 = fconvert(Quarterly{2}, t4, method=:sum, interpolation=:none)
     @test isapprox(r12.values, [203,364,532], atol=1e-0) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test rangeof(r12) == 1Q2:1Q4
+    r12_range = fconvert(Quarterly{2}, rangeof(t4), method=:sum)
+    @test r12_range == 1Q2:1Q4
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly{2}, t4, method=:mean, interpolation=:linear)
@@ -700,21 +873,38 @@ end
     r1 = fconvert(Yearly{8}, t5, method=:mean, interpolation=:none)
     @test isapprox(r1.values, [60.5,113,165.5], atol=1e-2)
     @test rangeof(r1) == 2Y:4Y
+    r1_range = fconvert(Yearly{8}, rangeof(t5), method=:mean)
+    @test r1_range == 2Y:4Y
+    r1_MIT_start = fconvert(Yearly{8}, first(rangeof(t5)), round_to=:next)
+    r1_MIT_end = fconvert(Yearly{8}, last(rangeof(t5)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), DISCRETE, END)"""
     r2 = fconvert(Yearly{8}, t5, method=:end, interpolation=:none)
     @test isapprox(r2.values, [34,86,139,191], atol=1e-2)
     @test rangeof(r2) == 1Y:4Y
+    r2_range = fconvert(Yearly{8}, rangeof(t5), method=:end)
+    @test r2_range == 1Y:4Y
+    r2_MIT_start = fconvert(Yearly{8}, first(rangeof(t5)), round_to=:current)
+    r2_MIT_end = fconvert(Yearly{8}, last(rangeof(t5)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), DISCRETE, BEGIN)"""
     r3 = fconvert(Yearly{8}, t5, method=:begin, interpolation=:none)
     @test isapprox(r3.values, [35,87,140,192], atol=1e-2)
     @test rangeof(r3) == 2Y:5Y
+    r3_range = fconvert(Yearly{8}, rangeof(t5), method=:begin)
+    @test r3_range == 2Y:5Y
+    r3_MIT_start = fconvert(Yearly{8}, first(rangeof(t5)), round_to=:next)
+    r3_MIT_end = fconvert(Yearly{8}, last(rangeof(t5)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), DISCRETE, SUMMED)"""
     r4 = fconvert(Yearly{8}, t5, method=:sum, interpolation=:none)
     @test isapprox(r4.values, [3146,5989,8606], atol=1e-1)
     @test rangeof(r4) == 2Y:4Y
+    r4_range = fconvert(Yearly{8}, rangeof(t5), method=:both)
+    @test r4_range == 2Y:4Y
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly{8}, t5, method=:mean, interpolation=:linear)
@@ -740,21 +930,38 @@ end
     r9 = fconvert(Yearly{8}, t6, method=:mean, interpolation=:none)
     @test isapprox(r9.values, [60.5,112.5,164.5], atol=1e-2)
     @test rangeof(r9) == 2Y:4Y
+    r9_range = fconvert(Yearly{8}, rangeof(t6), method=:both)
+    @test r9_range == 2Y:4Y
+    r9_MIT_start = fconvert(Yearly{8}, first(rangeof(t6)), round_to=:next)
+    r9_MIT_end = fconvert(Yearly{8}, last(rangeof(t6)), round_to=:previous)
+    @test r9_MIT_start:r9_MIT_end == r9_range
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), DISCRETE, END)"""
     r10 = fconvert(Yearly{8}, t6, method=:end, interpolation=:none)
     @test isapprox(r10.values, [34,86,138,190], atol=1e-2)
     @test rangeof(r10) == 1Y:4Y
+    r10_range = fconvert(Yearly{8}, rangeof(t6), method=:end)
+    @test r10_range == 1Y:4Y
+    r10_MIT_start = fconvert(Yearly{8}, first(rangeof(t6)), round_to=:current)
+    r10_MIT_end = fconvert(Yearly{8}, last(rangeof(t6)), round_to=:previous)
+    @test r10_MIT_start:r10_MIT_end == r10_range
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), DISCRETE, BEGIN)"""
     r11 = fconvert(Yearly{8}, t6, method=:begin, interpolation=:none)
     @test isapprox(r11.values, [35,87,139,191], atol=1e-2)
     @test rangeof(r11) == 2Y:5Y
+    r11_range = fconvert(Yearly{8}, rangeof(t6), method=:begin)
+    @test r11_range == 2Y:5Y
+    r11_MIT_start = fconvert(Yearly{8}, first(rangeof(t6)), round_to=:next)
+    r11_MIT_end = fconvert(Yearly{8}, last(rangeof(t6)), round_to=:current)
+    @test r11_MIT_start:r11_MIT_end == r11_range
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), DISCRETE, SUMMED)"""
     r12 = fconvert(Yearly{8}, t6, method=:sum, interpolation=:none)
     @test isapprox(r12.values, [3146,5850,8554], atol=1e-2)
     @test rangeof(r12) == 2Y:4Y
+    r12_range = fconvert(Yearly{8}, rangeof(t6), method=:sum)
+    @test r12_range == 2Y:4Y
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly{8}, t6, method=:mean, interpolation=:linear)
@@ -783,21 +990,38 @@ end
     r1 = fconvert(Yearly{3}, t5, method=:mean, interpolation=:none)
     @test isapprox(r1.values, [39,91.5,143.5], atol=1e-2)
     @test rangeof(r1) == 2Y:4Y
+    r1_range = fconvert(Yearly{3}, rangeof(t5), method=:mean)
+    @test r1_range == 2Y:4Y
+    r1_MIT_start = fconvert(Yearly{3}, first(rangeof(t5)), round_to=:next)
+    r1_MIT_end = fconvert(Yearly{3}, last(rangeof(t5)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
 
     """repo CONVERT(WS5, ANNUAL(MARCH), DISCRETE, END)"""
     r2 = fconvert(Yearly{3}, t5, method=:end, interpolation=:none)
     @test isapprox(r2.values, [12,65,117,169], atol=1e-2)
     @test rangeof(r2) == 1Y:4Y
+    r2_range = fconvert(Yearly{3}, rangeof(t5), method=:end)
+    @test r2_range == 1Y:4Y
+    r2_MIT_start = fconvert(Yearly{3}, first(rangeof(t5)), round_to=:current)
+    r2_MIT_end = fconvert(Yearly{3}, last(rangeof(t5)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     """repo CONVERT(WS5, ANNUAL(MARCH), DISCRETE, BEGIN)"""
     r3 = fconvert(Yearly{3}, t5, method=:begin, interpolation=:none)
     @test isapprox(r3.values, [13,66,118,170], atol=1e-2)
     @test rangeof(r3) == 2Y:5Y
+    r3_range = fconvert(Yearly{3}, rangeof(t5), method=:begin)
+    @test r3_range == 2Y:5Y
+    r3_MIT_start = fconvert(Yearly{3}, first(rangeof(t5)), round_to=:next)
+    r3_MIT_end = fconvert(Yearly{3}, last(rangeof(t5)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     """repo CONVERT(WS5, ANNUAL(MARCH), DISCRETE, SUMMED)"""
     r4 = fconvert(Yearly{3}, t5, method=:sum, interpolation=:none)
     @test isapprox(r4.values, [2067,4758,7462], atol=1e-1)
     @test rangeof(r4) == 2Y:4Y
+    r4_range = fconvert(Yearly{3}, rangeof(t5), method=:both)
+    @test r4_range == 2Y:4Y
 
     """repo CONVERT(WS5, ANNUAL(MARCH), LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly{3}, t5, method=:mean, interpolation=:linear)
@@ -823,21 +1047,38 @@ end
     r9 = fconvert(Yearly{3}, t6, method=:mean, interpolation=:none)
     @test isapprox(r9.values, [38.5,90.5,142.5], atol=1e-2)
     @test rangeof(r9) == 2Y:4Y
+    r9_range = fconvert(Yearly{3}, rangeof(t6), method=:both)
+    @test r9_range == 2Y:4Y
+    r9_MIT_start = fconvert(Yearly{3}, first(rangeof(t6)), round_to=:next)
+    r9_MIT_end = fconvert(Yearly{3}, last(rangeof(t6)), round_to=:previous)
+    @test r9_MIT_start:r9_MIT_end == r9_range
 
     """repo CONVERT(WS6, ANNUAL(MARCH), DISCRETE, END)"""
     r10 = fconvert(Yearly{3}, t6, method=:end, interpolation=:none)
     @test isapprox(r10.values, [12,64,116,168], atol=1e-2)
     @test rangeof(r10) == 1Y:4Y
+    r10_range = fconvert(Yearly{3}, rangeof(t6), method=:end)
+    @test r10_range == 1Y:4Y
+    r10_MIT_start = fconvert(Yearly{3}, first(rangeof(t6)), round_to=:current)
+    r10_MIT_end = fconvert(Yearly{3}, last(rangeof(t6)), round_to=:previous)
+    @test r10_MIT_start:r10_MIT_end == r10_range
 
     """repo CONVERT(WS6, ANNUAL(MARCH), DISCRETE, BEGIN)"""
     r11 = fconvert(Yearly{3}, t6, method=:begin, interpolation=:none)
     @test isapprox(r11.values, [13,65,117,169], atol=1e-2)
     @test rangeof(r11) == 2Y:5Y
+    r11_range = fconvert(Yearly{3}, rangeof(t6), method=:begin)
+    @test r11_range == 2Y:5Y
+    r11_MIT_start = fconvert(Yearly{3}, first(rangeof(t6)), round_to=:next)
+    r11_MIT_end = fconvert(Yearly{3}, last(rangeof(t6)), round_to=:current)
+    @test r11_MIT_start:r11_MIT_end == r11_range
 
     """repo CONVERT(WS6, ANNUAL(MARCH), DISCRETE, SUMMED)"""
     r12 = fconvert(Yearly{3}, t6, method=:sum, interpolation=:none)
     @test isapprox(r12.values, [2002,4706,7410], atol=1e-2)
     @test rangeof(r12) == 2Y:4Y
+    r12_range = fconvert(Yearly{3}, rangeof(t6), method=:sum)
+    @test r12_range == 2Y:4Y
 
     """repo CONVERT(WS6, ANNUAL(MARCH), LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly{3}, t6, method=:mean, interpolation=:linear)
@@ -889,14 +1130,30 @@ end
     r1 = fconvert(Weekly, t1, method=:mean)
     @test r1.values == collect(4:7:95)
     @test rangeof(r1) == 1:14
+    r1_range = fconvert(Weekly, rangeof(t1), method=:both)
+    @test r1_range == 1:14
+    r1_MIT_start = fconvert(Weekly, first(rangeof(t1)), round_to=:next)
+    r1_MIT_end = fconvert(Weekly, last(rangeof(t1)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
+
     
     r2 = fconvert(Weekly, t1, method=:end)
     @test r2.values == collect(7:7:98)
     @test rangeof(r2) == 1:14
+    r2_range = fconvert(Weekly, rangeof(t1), method=:end)
+    @test r2_range == 1:14
+    r2_MIT_start = fconvert(Weekly, first(rangeof(t1)), round_to=:current)
+    r2_MIT_end = fconvert(Weekly, last(rangeof(t1)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     r3 = fconvert(Weekly, t1, method=:begin)
     @test r3.values == collect(1:7:100)
     @test rangeof(r3) == 1:15
+    r3_range = fconvert(Weekly, rangeof(t1), method=:begin)
+    @test r3_range == 1:15
+    r3_MIT_start = fconvert(Weekly, first(rangeof(t1)), round_to=:next)
+    r3_MIT_end = fconvert(Weekly, last(rangeof(t1)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     r4 = fconvert(Weekly, t1, method=:sum)
     @test r4.values == collect(28:49:665)
@@ -905,14 +1162,29 @@ end
     r5 = fconvert(Weekly{4}, t1, method=:mean)
     @test r5.values == collect(8:7:92)
     @test rangeof(r5) == 2:14
+    r5_range = fconvert(Weekly{4}, rangeof(t1), method=:both)
+    @test r5_range == 2:14
+    r5_MIT_start = fconvert(Weekly{4}, first(rangeof(t1)), round_to=:next)
+    r5_MIT_end = fconvert(Weekly{4}, last(rangeof(t1)), round_to=:previous)
+    @test r5_MIT_start:r5_MIT_end == r5_range
     
     r6 = fconvert(Weekly{4}, t1, method=:end)
     @test r6.values == collect(4:7:95)
     @test rangeof(r6) == 1:14
+    r6_range = fconvert(Weekly{4}, rangeof(t1), method=:end)
+    @test r6_range == 1:14
+    r6_MIT_start = fconvert(Weekly{4}, first(rangeof(t1)), round_to=:current)
+    r6_MIT_end = fconvert(Weekly{4}, last(rangeof(t1)), round_to=:previous)
+    @test r6_MIT_start:r6_MIT_end == r6_range
 
     r7 = fconvert(Weekly{4}, t1, method=:begin)
     @test r7.values == collect(5:7:96)
     @test rangeof(r7) == 2:15
+    r7_range = fconvert(Weekly{4}, rangeof(t1), method=:begin)
+    @test r7_range == 2:15
+    r7_MIT_start = fconvert(Weekly{4}, first(rangeof(t1)), round_to=:next)
+    r7_MIT_end = fconvert(Weekly{4}, last(rangeof(t1)), round_to=:current)
+    @test r7_MIT_start:r7_MIT_end == r7_range
 
     r8 = fconvert(Weekly{4}, t1, method=:sum)
     @test r8.values == collect(56:49:644)
@@ -926,14 +1198,29 @@ end
     r1 = fconvert(Monthly, t1, method=:mean)
     @test r1.values == [16,45.5,75]
     @test rangeof(r1) == 1M1:1M3
+    r1_range = fconvert(Monthly, rangeof(t1), method=:both)
+    @test r1_range == 1M1:1M3
+    r1_MIT_start = fconvert(Monthly, first(rangeof(t1)), round_to=:next)
+    r1_MIT_end = fconvert(Monthly, last(rangeof(t1)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
     
     r2 = fconvert(Monthly, t1, method=:end)
     @test r2.values == [31, 31+28, 31+28+31]
     @test rangeof(r2) == 1M1:1M3
+    r2_range = fconvert(Monthly, rangeof(t1), method=:end)
+    @test r2_range == 1M1:1M3
+    r2_MIT_start = fconvert(Monthly, first(rangeof(t1)), round_to=:current)
+    r2_MIT_end = fconvert(Monthly, last(rangeof(t1)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     r3 = fconvert(Monthly, t1, method=:begin)
     @test r3.values == [1, 1+31, 1+31+28, 1+31+28+31]
     @test rangeof(r3) == 1M1:1M4
+    r3_range = fconvert(Monthly, rangeof(t1), method=:begin)
+    @test r3_range == 1M1:1M4
+    r3_MIT_start = fconvert(Monthly, first(rangeof(t1)), round_to=:next)
+    r3_MIT_end = fconvert(Monthly, last(rangeof(t1)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     r4 = fconvert(Monthly, t1, method=:sum)
     @test r4.values == [sum(1:31), sum((31+1):(31+28)), sum((31+28+1):(31+28+31))]
@@ -944,14 +1231,29 @@ end
     r5 = fconvert(Monthly, t2, method=:mean)
     @test r5.values == [mean(22:(22+31-1)), mean(53:(53+30-1))]   #[37, 67.5]
     @test rangeof(r5) == 1M5:1M6
+    r5_range = fconvert(Monthly, rangeof(t2), method=:both)
+    @test r5_range == 1M5:1M6
+    r5_MIT_start = fconvert(Monthly, first(rangeof(t2)), round_to=:next)
+    r5_MIT_end = fconvert(Monthly, last(rangeof(t2)), round_to=:previous)
+    @test r5_MIT_start:r5_MIT_end == r5_range
     
     r6 = fconvert(Monthly, t2, method=:end)
     @test r6.values == [21, 21+31, 21+31+30]
     @test rangeof(r6) == 1M4:1M6
+    r6_range = fconvert(Monthly, rangeof(t2), method=:end)
+    @test r6_range == 1M4:1M6
+    r6_MIT_start = fconvert(Monthly, first(rangeof(t2)), round_to=:current)
+    r6_MIT_end = fconvert(Monthly, last(rangeof(t2)), round_to=:previous)
+    @test r6_MIT_start:r6_MIT_end == r6_range
 
     r7 = fconvert(Monthly, t2, method=:begin)
     @test r7.values == [22, 22+31, 22+31+30]
     @test rangeof(r7) == 1M5:1M7
+    r7_range = fconvert(Monthly, rangeof(t2), method=:begin)
+    @test r7_range == 1M5:1M7
+    r7_MIT_start = fconvert(Monthly, first(rangeof(t2)), round_to=:next)
+    r7_MIT_end = fconvert(Monthly, last(rangeof(t2)), round_to=:current)
+    @test r7_MIT_start:r7_MIT_end == r7_range
 
     r8 = fconvert(Monthly, t2, method=:sum)
     @test r8.values == [sum(22:(22+31-1)), sum(53:(53+30-1))]
@@ -965,32 +1267,60 @@ end
     r1 = fconvert(Quarterly, t1, method=:mean)
     @test r1.values == [mean(1:(31+28+31)), mean(91:(91+30+31+30-1)), mean(182:(182+31+31+30-1)), mean(274:(274+31+30+31-1))]
     @test rangeof(r1) == 1Q1:1Q4
+    r1_range = fconvert(Quarterly, rangeof(t1), method=:both)
+    @test r1_range == 1Q1:1Q4
+    r1_MIT_start = fconvert(Quarterly, first(rangeof(t1)), round_to=:next)
+    r1_MIT_end = fconvert(Quarterly, last(rangeof(t1)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
     
     r2 = fconvert(Quarterly, t1, method=:end)
     @test r2.values == [90, 181, 273, 365]
     @test rangeof(r2) == 1Q1:1Q4
+    r2_range = fconvert(Quarterly, rangeof(t1), method=:end)
+    @test r2_range == 1Q1:1Q4
+    r2_MIT_start = fconvert(Quarterly, first(rangeof(t1)), round_to=:current)
+    r2_MIT_end = fconvert(Quarterly, last(rangeof(t1)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
 
     r3 = fconvert(Quarterly, t1, method=:begin)
     @test r3.values == [1, 91,182,274,366]
     @test rangeof(r3) == 1Q1:2Q1
+    r3_range = fconvert(Quarterly, rangeof(t1), method=:begin)
+    @test r3_range == 1Q1:2Q1
+    r3_MIT_start = fconvert(Quarterly, first(rangeof(t1)), round_to=:next)
+    r3_MIT_end = fconvert(Quarterly, last(rangeof(t1)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     r4 = fconvert(Quarterly, t1, method=:sum)
     @test r4.values == [sum(1:(31+28+31)), sum(91:(91+30+31+30-1)), sum(182:(182+31+31+30-1)), sum(274:(274+31+30+31-1))]
     @test rangeof(r4) == 1Q1:1Q4
-
-    # t2 = TSeries(MIT{Daily}(100), collect(1:100))
-
+    
     r5 = fconvert(Quarterly{1}, t1, method=:mean)
     @test r5.values == [mean(32:(32+28+31+30-1)), mean(121:(121+31+30+31-1)), mean(213:(213+31+30+31-1)), mean(305:(305+30+31+31-1))]
     @test rangeof(r5) == 1Q2:2Q1
+    r5_range = fconvert(Quarterly{1}, rangeof(t1), method=:both)
+    @test r5_range == 1Q2:2Q1
+    r5_MIT_start = fconvert(Quarterly{1}, first(rangeof(t1)), round_to=:next)
+    r5_MIT_end = fconvert(Quarterly{1}, last(rangeof(t1)), round_to=:previous)
+    @test r5_MIT_start:r5_MIT_end == r5_range
     
     r6 = fconvert(Quarterly{1}, t1, method=:end)
     @test r6.values == [31,120,212,304,396]
     @test rangeof(r6) == 1Q1:2Q1
+    r6_range = fconvert(Quarterly{1}, rangeof(t1), method=:end)
+    @test r6_range == 1Q1:2Q1
+    r6_MIT_start = fconvert(Quarterly{1}, first(rangeof(t1)), round_to=:current)
+    r6_MIT_end = fconvert(Quarterly{1}, last(rangeof(t1)), round_to=:previous)
+    @test r6_MIT_start:r6_MIT_end == r6_range
 
     r7 = fconvert(Quarterly{1}, t1, method=:begin)
     @test r7.values == [32,121,213,305,397]
     @test rangeof(r7) == 1Q2:2Q2
+    r7_range = fconvert(Quarterly{1}, rangeof(t1), method=:begin)
+    @test r7_range == 1Q2:2Q2
+    r7_MIT_start = fconvert(Quarterly{1}, first(rangeof(t1)), round_to=:next)
+    r7_MIT_end = fconvert(Quarterly{1}, last(rangeof(t1)), round_to=:current)
+    @test r7_MIT_start:r7_MIT_end == r7_range
 
     r8 = fconvert(Quarterly{1}, t1, method=:sum)
     @test r8.values == [sum(32:(32+28+31+30-1)), sum(121:(121+31+30+31-1)), sum(213:(213+31+30+31-1)), sum(305:(305+30+31+31-1))]
@@ -1004,14 +1334,30 @@ end
     r1 = fconvert(Yearly, t1, method=:mean)
     @test r1.values == [mean(1:(365+0)), mean((1*365+1):(2*365)), mean((2*365+1):(3*365)), mean((3*365+1):(4*365 + 1)), mean((4*365+2):(5*365 + 1))]
     @test rangeof(r1) == 1Y:5Y
+    r1_range = fconvert(Yearly, rangeof(t1), method=:both)
+    @test r1_range == 1Y:5Y
+    r1_MIT_start = fconvert(Yearly, first(rangeof(t1)), round_to=:next)
+    r1_MIT_end = fconvert(Yearly, last(rangeof(t1)), round_to=:previous)
+    @test r1_MIT_start:r1_MIT_end == r1_range
     
     r2 = fconvert(Yearly, t1, method=:end)
     @test r2.values == [365, 2*365, 3*365, 4*365+1, 5*365+1]
     @test rangeof(r2) == 1Y:5Y
+    r2_range = fconvert(Yearly, rangeof(t1), method=:end)
+    @test r2_range == 1Y:5Y
+    r2_MIT_start = fconvert(Yearly, first(rangeof(t1)), round_to=:current)
+    r2_MIT_end = fconvert(Yearly, last(rangeof(t1)), round_to=:previous)
+    @test r2_MIT_start:r2_MIT_end == r2_range
+
 
     r3 = fconvert(Yearly, t1, method=:begin)
     @test r3.values == [1, 365+1, 2*365+1, 3*365+1, 4*365+2, 5*365+2]
     @test rangeof(r3) == 1Y:6Y
+    r3_range = fconvert(Yearly, rangeof(t1), method=:begin)
+    @test r3_range == 1Y:6Y
+    r3_MIT_start = fconvert(Yearly, first(rangeof(t1)), round_to=:next)
+    r3_MIT_end = fconvert(Yearly, last(rangeof(t1)), round_to=:current)
+    @test r3_MIT_start:r3_MIT_end == r3_range
 
     r4 = fconvert(Yearly, t1, method=:sum)
     @test r4.values == [sum(1:(365+0)), sum((1*365+1):(2*365)), sum((2*365+1):(3*365)), sum((3*365+1):(4*365 + 1)), sum((4*365+2):(5*365 + 1))]
@@ -1020,14 +1366,29 @@ end
     r5 = fconvert(Yearly{8}, t1, method=:mean)
     @test r5.values == [mean(244:(365 + 243)), mean((1*365 + 244):(2*365 + 243)), mean((2*365 + 244):(3*365 + 243 + 1)), mean((3*365 + 244 + 1):(4*365 + 243 + 1))]
     @test rangeof(r5) == 2Y:5Y
+    r5_range = fconvert(Yearly{8}, rangeof(t1), method=:both)
+    @test r5_range == 2Y:5Y
+    r5_MIT_start = fconvert(Yearly{8}, first(rangeof(t1)), round_to=:next)
+    r5_MIT_end = fconvert(Yearly{8}, last(rangeof(t1)), round_to=:previous)
+    @test r5_MIT_start:r5_MIT_end == r5_range
     
     r6 = fconvert(Yearly{8}, t1, method=:end)
     @test r6.values == [243, 1*365 + 243, 2*365 + 243, 3*365 + 243 + 1, 4*365 + 243 + 1]
     @test rangeof(r6) == 1Y:5Y
+    r6_range = fconvert(Yearly{8}, rangeof(t1), method=:end)
+    @test r6_range == 1Y:5Y
+    r6_MIT_start = fconvert(Yearly{8}, first(rangeof(t1)), round_to=:current)
+    r6_MIT_end = fconvert(Yearly{8}, last(rangeof(t1)), round_to=:previous)
+    @test r6_MIT_start:r6_MIT_end == r6_range
 
     r7 = fconvert(Yearly{8}, t1, method=:begin)
     @test r7.values == [244, 1*365 + 244, 2*365 + 244, 3*365 + 244 + 1, 4*365 + 244 + 1]
     @test rangeof(r7) == 2Y:6Y
+    r7_range = fconvert(Yearly{8}, rangeof(t1), method=:begin)
+    @test r7_range == 2Y:6Y
+    r7_MIT_start = fconvert(Yearly{8}, first(rangeof(t1)), round_to=:next)
+    r7_MIT_end = fconvert(Yearly{8}, last(rangeof(t1)), round_to=:current)
+    @test r7_MIT_start:r7_MIT_end == r7_range
 
     r8 = fconvert(Yearly{8}, t1, method=:sum)
     @test r8.values == [sum(244:(365 + 243)), sum((1*365 + 244):(2*365 + 243)), sum((2*365 + 244):(3*365 + 243 + 1)), sum((3*365 + 244 + 1):(4*365 + 243 + 1))]
