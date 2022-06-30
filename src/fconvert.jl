@@ -41,6 +41,12 @@ Convert the time series `t` to the desired frequency `F`.
 fconvert(F::Type{<:Frequency}, t::TSeries; args...) = error("""
 Conversion from $(frequencyof(t)) to $F not implemented.
 """)
+fconvert(F::Type{<:Frequency}, t::UnitRange{MIT}; args...) = error("""
+Conversion from $(frequencyof(t)) to $F not implemented.
+""")
+fconvert(F::Type{<:Frequency}, t::MIT; args...) = error("""
+Conversion from $(frequencyof(t)) to $F not implemented.
+""")
 
 # do nothing when the source and target frequencies are the same.
 fconvert(::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
@@ -128,6 +134,9 @@ end
     or from/to a YPFrequency with an unsupported reference month.
     """
 function _validate_fconvert_yp(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}})  where {N1,N2}
+    if N1 == N2
+        error("Conversion from $F_from to $F_to not implemented.")
+    end
     if N1 > N2
     (np, r) = divrem(N1, N2)
     if r != 0
@@ -483,6 +492,7 @@ function fconvert(F::Type{<:Daily}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}
     end
 end
 
+
 function _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol) where {N1,N2,N3,N4}
     trunc_start = 0
     trunc_end = 0
@@ -524,23 +534,29 @@ end
 """
 round_to ∈ (:current, :next, :previous)
 """
-function fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N4}}}, MIT_from::Union{MIT{Weekly{N3}},MIT{Weekly},MIT{Daily}}; round_to=:current) where {N1,N2,N3,N4}
+function fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly}}, MIT_from::Union{MIT{Weekly{N3}},MIT{Weekly}}; round_to=:current) where {N1,N2,N3}
     _d0 = Date("0001-01-01") - Day(1)
-    
-    
-    if frequencyof(MIT_from) <: Weekly
-        adjustment = Day(0) 
-        if @isdefined N3
-            adjustment = Day(7 - N3)
-        end
-        dates = [_d0 + Day(Int(MIT_from))*7 - adjustment]
-    else #daily 
-        dates = [_d0 + Day(Int(MIT_from))]
+    adjustment = Day(0) 
+    if @isdefined N3
+        adjustment = Day(7 - N3)
     end
-
+    dates = [_d0 + Day(Int(MIT_from))*7 - adjustment]
     out_index = _get_out_indices(F_to, dates)
     fi = eval(Meta.parse("fi = $(out_index[begin])"))
-    # li = eval(Meta.parse("li = $(out_index[end])"))
+    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(MIT_from), dates, :both)
+    if round_to == :next
+        return fi+trunc_start
+    elseif round_to == :previous
+        return fi-trunc_end
+    else
+        return fi
+    end
+ end
+ function fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, MIT_from::MIT{Daily}; round_to=:current) where {N1,N2,N3}
+    _d0 = Date("0001-01-01") - Day(1)
+    dates = [_d0 + Day(Int(MIT_from))]
+    out_index = _get_out_indices(F_to, dates)
+    fi = eval(Meta.parse("fi = $(out_index[begin])"))
     trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(MIT_from), dates, :both)
     if round_to == :next
         return fi+trunc_start
@@ -558,24 +574,26 @@ the `method` argument in this case refers to which observations of the output fr
 :both menas that both the first and last date in each output period must be covered.
 Note: one can also pass :mean, :sum, which are equivalent to :both
 """
-function fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N4}}}, range_from::Union{UnitRange{MIT{Weekly{N3}}},UnitRange{MIT{Weekly}},UnitRange{MIT{Daily}}}; method=:both) where {N1,N2,N3,N4}
+function fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly}}, range_from::Union{UnitRange{MIT{Weekly{N3}}},UnitRange{MIT{Weekly}}}; method=:both) where {N1,N2,N3}
     _d0 = Date("0001-01-01") - Day(1)
-    # d1 + Dates.Month(2)
-    if frequencyof(range_from) <: Weekly
-        adjustment = Day(0) 
-        if @isdefined N3
-            adjustment = Day(7 - N3)
-        end
-        dates = [_d0 + Day(Int(val))*7 - adjustment for val in range_from]
-    else #daily 
-        dates = [_d0 + Day(Int(val)) for val in range_from]
+    adjustment = Day(0) 
+    if @isdefined N3
+        adjustment = Day(7 - N3)
     end
-    
+    dates = [_d0 + Day(Int(val))*7 - adjustment for val in range_from]
     out_index = _get_out_indices(F_to, dates)
     fi = eval(Meta.parse("fi = $(out_index[begin])"))
     li = eval(Meta.parse("li = $(out_index[end])"))
     trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(range_from), dates, method)
-    
+    return fi+trunc_start:li-trunc_end
+end
+function fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, range_from::UnitRange{MIT{Daily}}; method=:both) where {N1,N2,N3}
+    _d0 = Date("0001-01-01") - Day(1)
+    dates = [_d0 + Day(Int(val)) for val in range_from]
+    out_index = _get_out_indices(F_to, dates)
+    fi = eval(Meta.parse("fi = $(out_index[begin])"))
+    li = eval(Meta.parse("li = $(out_index[end])"))
+    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(range_from), dates, method)
     return fi+trunc_start:li-trunc_end
 end
 
@@ -689,9 +707,3 @@ function fconvert(F::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2},
 
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
 end
-
-
-#TODO
-# weekly to weekly
-# quarterly to quarterly
-# yearly to yearly
