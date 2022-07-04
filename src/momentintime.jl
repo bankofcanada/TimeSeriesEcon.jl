@@ -37,16 +37,25 @@ abstract type CalendarFrequency <: Frequency end
 
 Represents a daily frequency.
 
-See also: [`Frequency`](@ref), [`YPFrequency`](@ref)
+See also: [`Frequency`](@ref)
 """
 struct Daily <: CalendarFrequency end
+
+"""
+    struct BusinessDaily <: CalendarFrequency end
+
+Represents a business daily frequency (excludes weekends).
+
+See also: [`Frequency`](@ref)
+"""
+struct BusinessDaily <: CalendarFrequency end
 
 """
     struct Weekly <: Frequency end
 
 Represents a weekly frequency. The default weekly series ends on a Sunday (N = 7).
 
-See also: [`Frequency`](@ref), [`YPFrequency`](@ref)
+See also: [`Frequency`](@ref)
 """
 struct Weekly{N} <: CalendarFrequency where N<:Integer  end
 
@@ -215,6 +224,16 @@ _d0 = Date("0001-01-01") - Day(1)
 # _1day = Day(1)
 daily(d::Date) = MIT{Daily}(Dates.value(d - _d0))
 daily(d::String) = MIT{Daily}(Dates.value(Date(d) - _d0))
+function bdaily(d::Date) 
+    num_weekends = floor(Dates.value(d - _d0)/7)
+    return MIT{BusinessDaily}(Dates.value(d - _d0 - Day(num_weekends*2)))
+end
+function bdaily(d::String) 
+    _d = Dates.Date(d)
+    num_weekends = floor(Dates.value(_d - _d0)/7)
+    return MIT{BusinessDaily}(Dates.value(_d - _d0 - Day(num_weekends*2)))
+end
+
 
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
@@ -244,6 +263,9 @@ function Base.show(io::IO, m::MIT{Daily})
     # else
     #     print(io, Int(m), 'D')
     # end
+end
+function Base.show(io::IO, m::MIT{BusinessDaily}) 
+    print(io, _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5)))
 end
 function Base.show(io::IO, m::Union{MIT{Weekly{N}},MIT{Weekly}}) where N
     # we want the thursday
@@ -416,12 +438,11 @@ constant `Q1` makes it possible to write `2020Q1` instead of
 to `Q4` for `MIT{Quarterly}` and `M1` to `M12` for `MIT{Monthly}`
 
 """
-Y, U, D, W, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+Y, U, W, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 export Y, U, D, W, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 
 global const U = _FConst{Unit}()
 global const Y = _FPConst{Yearly,1}()
-global const D = _FConst{Daily}()
 global const W = _FConst{Weekly}()
 global const Q1 = _FPConst{Quarterly,1}()
 global const Q2 = _FPConst{Quarterly,2}()

@@ -39,10 +39,12 @@ using Serialization
 using Distributed
 using Dates
 
+include("options.jl")
+
 include("momentintime.jl")
 export MIT, Duration
 # export mm, qq, yy
-export daily
+export daily, bdaily
 export Daily, Weekly, Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit
 export year, period, mit2yp, ppy
 export frequencyof

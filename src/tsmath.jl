@@ -70,6 +70,38 @@ TSeries{Quarterly} of length 4
 ```
 """
 shift(ts::TSeries, k::Int) = copyto!(TSeries(rangeof(ts) .- k), ts.values)
+function shift(ts::TSeries{BusinessDaily}, k::Int) 
+    new_ts = copyto!(TSeries(rangeof(ts) .- k), ts.values)
+    if options[:holidays]
+        if k > 0
+            replace_nans!(new_ts, :next)
+        else
+            replace_nans!(new_ts, :previous)
+        end
+    end
+    return new_ts
+end
+
+function replace_nans!(ts::TSeries, direction=:next)
+    last_valid = NaN
+    if direction == :next
+        for (i, val) in enumerate(reverse(ts.values))
+            if isnan(val)
+                ts.values[end - (i-1)] = last_valid
+            else
+                last_valid = val
+            end    
+        end
+    elseif direction == :previous
+        for (i, val) in enumerate(ts.values)
+            if isnan(val)
+                ts.values[begin + (i-1)] = last_valid
+            else
+                last_valid = val
+            end
+        end
+    end
+end
 
 """
     shift!(x::TSeries, n)
