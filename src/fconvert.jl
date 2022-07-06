@@ -432,136 +432,6 @@ function _to_lower(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; me
     return copyto!(TSeries(eltype(ret), fi:li), ret)
 end
 
-"""
-    fconvert(F::Type{<:Union{Monthly, Quarterly, Quarterly{N1}, Yearly, Yearly{N2}, Weekly, Weekly{N3}}}, t::TSeries{Daily}; method=:mean)
-
-Convert the Daily time series `t` to the desired lower frequency `F`.
-
-The range of the result includes periods that are fully included in the range of
-the input. For each period of the lower frequency we aggregate all periods of
-the higher frequency within it. We have 4 methods currently available: `:mean`,
-`:sum`, `:begin`, and `:end`.  The default is `:mean`.
-"""
-function fconvert(F::Type{<:Union{Monthly, Quarterly, Quarterly{N1}, Yearly, Yearly{N2}, Weekly, Weekly{N3}}}, t::TSeries{Daily}; method=:mean) where {N1,N2,N3}
-    _d0 = Date("0001-01-01") - Day(1)
-    dates = [_d0 + Day(Int(val)) for val in rangeof(t)]
-
-    trunc_start, trunc_end = _get_fconvert_truncations(F, frequencyof(t), dates, method)
-    out_index = _get_out_indices(F, dates)
-    fi = eval(Meta.parse("fi = $(out_index[begin])"))
-    li = eval(Meta.parse("li = $(out_index[end])"))
-
-    if method == :mean
-        ret = [mean(t.values[out_index .== target]) for target in unique(out_index)]
-    elseif method == :sum
-        ret = [sum(t.values[out_index .== target]) for target in unique(out_index)]
-    elseif method == :begin
-        ret = [t.values[out_index .== target][begin] for target in unique(out_index)]
-    elseif method == :end
-        ret = [t.values[out_index .== target][end] for target in unique(out_index)]
-    else
-        throw(ArgumentError("Conversion method not available: $(method)."))
-    end
-
-    return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
-end
-
-"""
-    fconvert((F::Type{<:Daily}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:const, interpolation=:none)
-
-Convert the Weekly time series `t` to a daily time series.
-
-The only supported method is currently :const.
-
-When interpolation is :linear values are interpolated in a linear fashion across days between weeks.
-The recorded weekly value is ascribed to the midpoint of the week. I.e. Thursdays for weeks ending on Sundays, Wednesdays
-for weeks ending on Saturdays, etc. This is done to be consistent with the handling in FAME.
-For days beyond these midpoints, the linear line between the first two or last two weeks is extended to cover the entire day range.
-"""
-function fconvert(F::Type{<:Daily}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:const, interpolation=:none) where{N3}
-    np = 7
-    reference_day_adjust = 0
-    if @isdefined N3
-        reference_day_adjust = 7 - N3
-    end
-    
-    fi = MIT{Daily}(Int(firstindex(t))*7 - 6 - reference_day_adjust)
-    
-    if method == :const
-        if interpolation == :linear
-            values = repeat(t.values, inner=np)
-            adjust = 3
-            for i in 1:length(t.values)
-                if i == 1
-                    interpolated = collect(LinRange(values[i*7-adjust], values[(i+1)*7-adjust],8))
-                    values[1:adjust] .= values[7-adjust] .- reverse(collect(1:adjust))*(interpolated[2]-interpolated[1])
-                else
-                   values[(i-1)*7-adjust:i*7-adjust] = collect(LinRange(values[(i-1)*7-adjust], values[i*7-adjust],8))
-                    if i == length(t.values)
-                        values[i*7-adjust+1:i*7] = values[i*7-adjust] .+ collect(1:adjust)*(values[i*7-adjust] - values[i*7-adjust-1])
-                    end
-                end
-            end
-            return TSeries(fi, values)
-        else
-            return TSeries(fi, repeat(t.values, inner=np))
-        end
-        
-    else
-        throw(ArgumentError("Conversion method not available: $(method)."))
-    end
-end
-
-"""
-    _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol)
-
-This function determines whether the output periods should be truncated when converting from Weekly or Daily to a lower frequency.
-
-    It returns a pair of integers which are 1 if the start or end, respectively, of the output needs to be truncated.
-Both ends are truncated when using methods :mean or :sum. IN this case, only output periods entirely covered by the input TSeries dates
-will be included in the output. 
-
-When the method is :begin, the start is truncated if the first date in the first output period is not covered by the input TSeries dates.
-When the method is :end, the end is truncated if the last date in the last output period is not covered by the input TSeries dates.
-"""
-function _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol) where {N1,N2,N3,N4}
-    trunc_start = 0
-    trunc_end = 0
-    overlap_function = nothing
-    if F_to <: Weekly
-        overlap_function = Dates.dayofweek
-    elseif F_to <: Monthly
-        overlap_function = Dates.dayofmonth
-    elseif F_to <: Quarterly
-        overlap_function = Dates.dayofquarter
-    elseif F_to <: Yearly
-        overlap_function = Dates.dayofyear
-    end
-    input_shift = F_from == Weekly ? Day(7) : Day(1)
-    target_shift = Day(0)
-    if @isdefined N1
-        target_shift = N1 != 3 ? Month(N1) : Day(0) 
-    end
-    if @isdefined N2
-        target_shift = N2 != 12 ? Month(N2) : Day(0) 
-    end
-    if @isdefined N3
-        target_shift = N3 != 7 ? Day(N3) : Day(0) 
-    end
-
-    whole_first_period = overlap_function(dates[begin] - target_shift - input_shift) > overlap_function(dates[begin] - target_shift)
-    whole_last_period = overlap_function(dates[end] - target_shift + Day(1)) < overlap_function(dates[end] - target_shift)
-    if method ∈ (:mean, :sum, :both)
-        trunc_start = whole_first_period ? 0 : 1
-        trunc_end = whole_last_period ? 0 : 1
-    elseif method == :begin
-        trunc_start = whole_first_period ? 0 : 1
-    elseif method == :end
-        trunc_end = whole_last_period ? 0 : 1
-    end
-
-    return trunc_start, trunc_end
-end
 
 """
     fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly}}, MIT_from::Union{MIT{Weekly{N3}},MIT{Weekly}}; round_to=:current)
@@ -659,48 +529,6 @@ function fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N
 end
 
 """
-    _get_out_indices(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, dates::Vector{Dates.Date})
-
-Helper function for converting from Daily and Weekly frequencies to lower frequencies. 
-Returns an array with the length of the input range, with the values of the corresponding output frequency periods.
-"""
-function _get_out_indices(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, dates::Vector{Dates.Date}) where {N1,N2,N3}
-    months = Dates.month.(dates)
-    years = Dates.year.(dates)
-    
-    if F_to <: Weekly
-        reference_day_adjust = 0
-        if @isdefined N3
-            reference_day_adjust = 7 - N3
-        end
-        weeks = [Int(floor((Dates.value(d) -1 + reference_day_adjust)/7)) + 1 for d in dates]
-        out_index = ["MIT{$F_to}($week)" for week in weeks]
-    else
-        months = Dates.month.(dates)
-        years = Dates.year.(dates)
-    end    
-        
-    if F_to <: Monthly
-        out_index = ["$(year)M$(month)" for (year, month) in zip(years, months)]
-    elseif F_to <: Quarterly
-        if @isdefined N1
-            months .+= 3 - N1
-            years[months .> 12] .+= 1
-            months[months .> 12] .-= 12
-        end
-        quarters = [Int(floor((m -1)/3) + 1) for m in months]
-        out_index = ["$(year)Q$(quarter)" for (year, quarter) in zip(years, quarters)]
-    elseif F_to <: Yearly
-        if @isdefined N2
-            months .+= 12 - N2
-            years[months .> 12] .+= 1
-        end
-        out_index = ["$(year)Y" for year in years]
-    end
-    return out_index
-end
-
-"""
     fconvert(F::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly}}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:mean, interpolation=:none)
 
 Convert the Weekly time series `t` to a lower frequency time series.
@@ -787,4 +615,177 @@ function fconvert(F::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2},
     end
 
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
+end
+
+"""
+    fconvert((F::Type{<:Daily}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:const, interpolation=:none)
+
+Convert the Weekly time series `t` to a daily time series.
+
+The only supported method is currently :const.
+
+When interpolation is :linear values are interpolated in a linear fashion across days between weeks.
+The recorded weekly value is ascribed to the midpoint of the week. I.e. Thursdays for weeks ending on Sundays, Wednesdays
+for weeks ending on Saturdays, etc. This is done to be consistent with the handling in FAME.
+For days beyond these midpoints, the linear line between the first two or last two weeks is extended to cover the entire day range.
+"""
+function fconvert(F::Type{<:Daily}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:const, interpolation=:none) where{N3}
+    np = 7
+    reference_day_adjust = 0
+    if @isdefined N3
+        reference_day_adjust = 7 - N3
+    end
+    
+    fi = MIT{Daily}(Int(firstindex(t))*7 - 6 - reference_day_adjust)
+    
+    if method == :const
+        if interpolation == :linear
+            values = repeat(t.values, inner=np)
+            adjust = 3
+            for i in 1:length(t.values)
+                if i == 1
+                    interpolated = collect(LinRange(values[i*7-adjust], values[(i+1)*7-adjust],8))
+                    values[1:adjust] .= values[7-adjust] .- reverse(collect(1:adjust))*(interpolated[2]-interpolated[1])
+                else
+                   values[(i-1)*7-adjust:i*7-adjust] = collect(LinRange(values[(i-1)*7-adjust], values[i*7-adjust],8))
+                    if i == length(t.values)
+                        values[i*7-adjust+1:i*7] = values[i*7-adjust] .+ collect(1:adjust)*(values[i*7-adjust] - values[i*7-adjust-1])
+                    end
+                end
+            end
+            return TSeries(fi, values)
+        else
+            return TSeries(fi, repeat(t.values, inner=np))
+        end
+        
+    else
+        throw(ArgumentError("Conversion method not available: $(method)."))
+    end
+end
+
+"""
+    fconvert(F::Type{<:Union{Monthly, Quarterly, Quarterly{N1}, Yearly, Yearly{N2}, Weekly, Weekly{N3}}}, t::TSeries{Daily}; method=:mean)
+
+Convert the Daily time series `t` to the desired lower frequency `F`.
+
+The range of the result includes periods that are fully included in the range of
+the input. For each period of the lower frequency we aggregate all periods of
+the higher frequency within it. We have 4 methods currently available: `:mean`,
+`:sum`, `:begin`, and `:end`.  The default is `:mean`.
+"""
+function fconvert(F::Type{<:Union{Monthly, Quarterly, Quarterly{N1}, Yearly, Yearly{N2}, Weekly, Weekly{N3}}}, t::TSeries{Daily}; method=:mean) where {N1,N2,N3}
+    _d0 = Date("0001-01-01") - Day(1)
+    dates = [_d0 + Day(Int(val)) for val in rangeof(t)]
+
+    trunc_start, trunc_end = _get_fconvert_truncations(F, frequencyof(t), dates, method)
+    out_index = _get_out_indices(F, dates)
+    fi = eval(Meta.parse("fi = $(out_index[begin])"))
+    li = eval(Meta.parse("li = $(out_index[end])"))
+
+    if method == :mean
+        ret = [mean(t.values[out_index .== target]) for target in unique(out_index)]
+    elseif method == :sum
+        ret = [sum(t.values[out_index .== target]) for target in unique(out_index)]
+    elseif method == :begin
+        ret = [t.values[out_index .== target][begin] for target in unique(out_index)]
+    elseif method == :end
+        ret = [t.values[out_index .== target][end] for target in unique(out_index)]
+    else
+        throw(ArgumentError("Conversion method not available: $(method)."))
+    end
+
+    return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
+end
+
+"""
+    _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol)
+
+This function determines whether the output periods should be truncated when converting from Weekly or Daily to a lower frequency.
+
+    It returns a pair of integers which are 1 if the start or end, respectively, of the output needs to be truncated.
+Both ends are truncated when using methods :mean or :sum. IN this case, only output periods entirely covered by the input TSeries dates
+will be included in the output. 
+
+When the method is :begin, the start is truncated if the first date in the first output period is not covered by the input TSeries dates.
+When the method is :end, the end is truncated if the last date in the last output period is not covered by the input TSeries dates.
+"""
+function _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol) where {N1,N2,N3,N4}
+    trunc_start = 0
+    trunc_end = 0
+    overlap_function = nothing
+    if F_to <: Weekly
+        overlap_function = Dates.dayofweek
+    elseif F_to <: Monthly
+        overlap_function = Dates.dayofmonth
+    elseif F_to <: Quarterly
+        overlap_function = Dates.dayofquarter
+    elseif F_to <: Yearly
+        overlap_function = Dates.dayofyear
+    end
+    input_shift = F_from == Weekly ? Day(7) : Day(1)
+    target_shift = Day(0)
+    if @isdefined N1
+        target_shift = N1 != 3 ? Month(N1) : Day(0) 
+    end
+    if @isdefined N2
+        target_shift = N2 != 12 ? Month(N2) : Day(0) 
+    end
+    if @isdefined N3
+        target_shift = N3 != 7 ? Day(N3) : Day(0) 
+    end
+
+    whole_first_period = overlap_function(dates[begin] - target_shift - input_shift) > overlap_function(dates[begin] - target_shift)
+    whole_last_period = overlap_function(dates[end] - target_shift + Day(1)) < overlap_function(dates[end] - target_shift)
+    if method ∈ (:mean, :sum, :both)
+        trunc_start = whole_first_period ? 0 : 1
+        trunc_end = whole_last_period ? 0 : 1
+    elseif method == :begin
+        trunc_start = whole_first_period ? 0 : 1
+    elseif method == :end
+        trunc_end = whole_last_period ? 0 : 1
+    end
+
+    return trunc_start, trunc_end
+end
+
+"""
+    _get_out_indices(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, dates::Vector{Dates.Date})
+
+Helper function for converting from Daily and Weekly frequencies to lower frequencies. 
+Returns an array with the length of the input range, with the values of the corresponding output frequency periods.
+"""
+function _get_out_indices(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, dates::Vector{Dates.Date}) where {N1,N2,N3}
+    months = Dates.month.(dates)
+    years = Dates.year.(dates)
+    
+    if F_to <: Weekly
+        reference_day_adjust = 0
+        if @isdefined N3
+            reference_day_adjust = 7 - N3
+        end
+        weeks = [Int(floor((Dates.value(d) -1 + reference_day_adjust)/7)) + 1 for d in dates]
+        out_index = ["MIT{$F_to}($week)" for week in weeks]
+    else
+        months = Dates.month.(dates)
+        years = Dates.year.(dates)
+    end    
+        
+    if F_to <: Monthly
+        out_index = ["$(year)M$(month)" for (year, month) in zip(years, months)]
+    elseif F_to <: Quarterly
+        if @isdefined N1
+            months .+= 3 - N1
+            years[months .> 12] .+= 1
+            months[months .> 12] .-= 12
+        end
+        quarters = [Int(floor((m -1)/3) + 1) for m in months]
+        out_index = ["$(year)Q$(quarter)" for (year, quarter) in zip(years, quarters)]
+    elseif F_to <: Yearly
+        if @isdefined N2
+            months .+= 12 - N2
+            years[months .> 12] .+= 1
+        end
+        out_index = ["$(year)Y" for year in years]
+    end
+    return out_index
 end
