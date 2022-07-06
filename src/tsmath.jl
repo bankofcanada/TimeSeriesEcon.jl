@@ -35,8 +35,8 @@ Base.promote_shape(a::AbstractVector, b::TSeries) = promote_shape(a, _vals(b))
 
 for func in (:maximum, :minimum)
     @eval begin
-        Base.$func(t::TSeries; kwargs...) = $func(t.values; kwargs...)
-        Base.$func(f::Function, t::TSeries; kwargs...) = $func(f, t.values; kwargs...)
+        Base.$func(t::TSeries; kwargs...) = $func(values(t); kwargs...)
+        Base.$func(f::Function, t::TSeries; kwargs...) = $func(f, values(t); kwargs...)
     end
 end
 
@@ -70,19 +70,49 @@ TSeries{Quarterly} of length 4
 ```
 """
 shift(ts::TSeries, k::Int) = copyto!(TSeries(rangeof(ts) .- k), ts.values)
+
+"""
+    shift(x::TSeries{BusinessDaily}, n)
+
+As shift but with any NaN values replaced with the nearest valid value. 
+Replacements will come from later time periods when k >= 0 and from earlier time periods when k < 0.
+
+Functions exactly as [`shift`](@ref) when the TimeSeriesEcon option `:business_skip_nans`
+is set to `false`.
+
+For example:
+```julia-repl
+julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), 1)
+4-element TSeries{TimeSeriesEcon.BusinessDaily} with range 2022-07-01:2022-07-06:
+2022-07-01 : 1.0
+2022-07-04 : 2.0
+2022-07-05 : 4.0
+2022-07-06 : 4.0
+
+
+julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), -1)
+4-element TSeries{TimeSeriesEcon.BusinessDaily} with range 2022-07-05:2022-07-08:
+2022-07-05 : 1.0
+2022-07-06 : 2.0
+2022-07-07 : 2.0
+2022-07-08 : 4.0
+```
+"""
 function shift(ts::TSeries{BusinessDaily}, k::Int) 
     new_ts = copyto!(TSeries(rangeof(ts) .- k), ts.values)
-    if options[:holidays]
-        if k > 0
-            replace_nans!(new_ts, :next)
-        else
-            replace_nans!(new_ts, :previous)
-        end
-    end
+    replace_nans_if_warranted!(new_ts, k > 0 ? :next : :previous)
     return new_ts
 end
 
-function replace_nans!(ts::TSeries, direction=:next)
+"""
+    replace_nans_if_warranted!(ts::TSeries, direction=:next)
+
+An internal function used to replace NaNs in a BusinessDaily TSeries with their next or previous valid value.
+"""
+function replace_nans_if_warranted!(ts::TSeries, direction=:next)
+    if get_option(:business_skip_nans) == false
+        return
+    end
     last_valid = NaN
     if direction == :next
         for (i, val) in enumerate(reverse(ts.values))
@@ -109,6 +139,13 @@ end
 In-place version of [`shift`](@ref).
 """
 shift!(ts::TSeries, k::Int) = (ts.firstdate -= k; ts)
+
+"""
+    shift!(x::TSeries{BusinessDaily}, n)
+
+In-place version of [`shift`](@ref).
+"""
+shift!(ts::TSeries{BusinessDaily}, k::Int) = (ts.firstdate -= k; replace_nans_if_warranted!(ts, k > 0 ? :next : :previous))
 
 """
     lag(x::TSeries, k=1)

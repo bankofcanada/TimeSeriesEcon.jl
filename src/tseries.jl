@@ -82,6 +82,15 @@ rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
 
+function Base.values(t::TSeries{BusinessDaily}) 
+    holidays_map = get_option(:business_holidays_map)
+    if holidays_map !== nothing
+        # TODO check range of input
+        slice = holidays_map[rangeof(t)]
+        return t.values[slice.values]
+    end
+    return t.values
+end
 
 """
     firstdate(x)
