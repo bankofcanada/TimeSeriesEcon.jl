@@ -1395,3 +1395,95 @@ end
     @test rangeof(r8) == 2Y:5Y
     
 end
+
+@testset "fconvert, BusinessDaily to Monthly" begin
+    # First BD (Monday) in May to late June
+    t1 = TSeries(bdaily("2022-05-02"), collect(1:42))
+    r1 = fconvert(Monthly, t1)
+    @test rangeof(r1) == 2022M5:2022M5
+    @test values(r1) == [11.5]
+    dates1 = fconvert(Monthly, rangeof(t1))
+    @test dates1 == 2022M5:2022M5
+    mit1_1 = fconvert(Monthly, first(rangeof(t1)), round_to=:next)
+    mit1_2 = fconvert(Monthly, last(rangeof(t1)), round_to=:previous)
+    @test mit1_1 == 2022M5
+    @test mit1_2 == 2022M5
+
+    # Early July to late July
+    t2 = TSeries(bdaily("2022-07-06"), collect(1:13))
+    r2 = fconvert(Monthly, t2)
+    @test rangeof(r2) == 2022M8:2022M7 #hmmm
+    @test values(r2) == []
+    dates2 = fconvert(Monthly, rangeof(t2))
+    @test dates2 == 2022M8:2022M7
+    mit2_1 = fconvert(Monthly, first(rangeof(t2)), round_to=:next)
+    @test mit2_1 == 2022M8
+
+
+    # Early august (Tuesday) to last day in September (Friday)
+    t3 = TSeries(bdaily("2022-08-02"), collect(1:44)) 
+    r3 = fconvert(Monthly, t3)
+    @test rangeof(r3) == 2022M9:2022M9
+    @test values(r3) == [33.5]
+    dates3 = fconvert(Monthly, rangeof(t3))
+    @test dates3 == 2022M9:2022M9
+    mit3_1 = fconvert(Monthly, first(rangeof(t3)), round_to=:next)
+    mit3_2 = fconvert(Monthly, last(rangeof(t3)), round_to=:previous)
+    @test mit3_1 == 2022M9
+    @test mit3_2 == 2022M9
+
+    # First day in November (Tuesday) to last BD in December (Friday)
+    t4 = TSeries(bdaily("2022-11-01"), collect(1:44)) 
+    r4 = fconvert(Monthly, t4)
+    @test rangeof(r4) == 2022M11:2022M12
+    @test values(r4) == [11.5, 33.5]
+    dates4 = fconvert(Monthly, rangeof(t4))
+    @test dates4 == 2022M11:2022M12
+    mit4_1 = fconvert(Monthly, first(rangeof(t4)), round_to=:next)
+    mit4_2 = fconvert(Monthly, last(rangeof(t4)), round_to=:previous)
+    @test mit4_1 == 2022M11
+    @test mit4_2 == 2022M12
+
+    # First BD in October (Monday) to late November (Tuesday)
+    t5 = TSeries(bdaily("2022-10-03"), collect(1:42)) 
+    r5 = fconvert(Monthly, t5)
+    @test rangeof(r5) == 2022M10:2022M10
+    @test values(r5) == [11.0]
+    dates5 = fconvert(Monthly, rangeof(t5))
+    @test dates5 == 2022M10:2022M10
+    mit5_1 = fconvert(Monthly, first(rangeof(t5)), round_to=:next)
+    mit5_2 = fconvert(Monthly, last(rangeof(t5)), round_to=:previous)
+    @test mit5_1 == 2022M10
+    @test mit5_2 == 2022M10
+end
+
+@testset "fconvert, BusinessDaily to Daily" begin
+
+    t1 = TSeries(bdaily("2022-07-06"), collect(1:13))
+    @test rangeof(t1) == bdaily("2022-07-06"):bdaily("2022-07-22")
+    r1 = fconvert(Daily, t1)
+    @test values(r1) ≈ [1,2,3,NaN,NaN,4,5,6,7,8,NaN,NaN,9,10,11,12,13] nans=true
+    @test rangeof(r1) == daily("2022-07-06"):daily("2022-07-22")
+    dates1 = fconvert(Daily, rangeof(t1))
+    @test dates1 == daily("2022-07-06"):daily("2022-07-22")
+    mit1 = fconvert(Daily, first(rangeof(t1)))
+    mit2 = fconvert(Daily, last(rangeof(t1)))
+    @test mit1 == daily("2022-07-06")
+    @test mit2 == daily("2022-07-22")
+
+    r2 = fconvert(Daily, t1, interpolation=:previous)
+    @test values(r2) ≈ [1,2,3,3,3,4,5,6,7,8,8,8,9,10,11,12,13] 
+    @test rangeof(r2) == daily("2022-07-06"):daily("2022-07-22")
+
+    r3 = fconvert(Daily, t1, interpolation=:next)
+    @test values(r3) ≈ [1,2,3,4,4,4,5,6,7,8,9,9,9,10,11,12,13]
+    @test rangeof(r3) == daily("2022-07-06"):daily("2022-07-22")
+
+    r4 = fconvert(Daily, t1, interpolation=:linear)
+    @test values(r4) ≈ [1,2,3,3 + 1/3,3 + 2/3,4,5,6,7,8,8+1/3,8+2/3,9,10,11,12,13]
+    @test rangeof(r4) == daily("2022-07-06"):daily("2022-07-22")
+
+
+end
+
+

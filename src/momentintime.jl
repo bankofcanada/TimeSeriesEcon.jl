@@ -489,3 +489,20 @@ Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = mi
 
 # Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
 # Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)
+
+date(mit::MIT{Daily}) = _d0 + Day(Int(mit))
+function date(mit::MIT{BusinessDaily}) 
+    mod = Int(mit) % 5
+    if mod == 0
+        mod = 5
+    end
+    return _d0 + Day(Int(floor((Int(mit) - 1) / 5)*7 + mod))
+end
+date(mit::MIT{<:Weekly}) = _d0 + Day(Int(mit))*7
+function date(mit::MIT{<:Weekly{N}}) where N
+    adjustment = Day(0) 
+    if @isdefined N
+        adjustment = Day(7 - N)
+    end
+    return _d0 + Day(Int(mit))*7 - adjustment
+end

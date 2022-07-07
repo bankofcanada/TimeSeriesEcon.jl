@@ -45,7 +45,7 @@ include("momentintime.jl")
 export MIT, Duration
 # export mm, qq, yy
 export daily, bdaily
-export Daily, Weekly, Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit
+export Daily, BusinessDaily, Weekly, Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit, CalendarFrequency
 export year, period, mit2yp, ppy
 export frequencyof
 export U, Y, Q1, Q2, Q3, Q4
