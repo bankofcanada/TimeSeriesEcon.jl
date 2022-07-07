@@ -793,7 +793,7 @@ function fconvert(F_to::Type{<:Daily}, t::TSeries{BusinessDaily}; method=:const,
     elseif interpolation == :linear
         out_values = Array{Float64}(undef, (out_length,))
     else
-        out_values = Array{eltype(t1.values)}(undef, (out_length,))
+        out_values = Array{eltype(t.values)}(undef, (out_length,))
     end
     shift = Int(firstdate(t)) % 5
     input_position = 1
