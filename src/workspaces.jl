@@ -72,9 +72,9 @@ of all [`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of
 `w`. If there are objects of different frequencies there will be a
 mixed-frequency error.
 """
-rangeof(w::Workspace) = (
+rangeof(w::Workspace; method = intersect) = (
     iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));
-    mapreduce(rangeof, intersect, iterable)
+    mapreduce(rangeof, method, iterable)
 )
 
 

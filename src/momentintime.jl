@@ -408,3 +408,7 @@ Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = mi
 
 # Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
 # Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)
+
+#------------------------------
+# sort!() a list of MITs
+Base.sort!(a::AbstractVector{<:MIT}, args...; kwargs...) = (sort!(reinterpret(Int, a), args...; kwargs...); a)

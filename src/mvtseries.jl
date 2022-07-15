@@ -97,8 +97,8 @@ _names_as_tuple(names) = tuple((Symbol(n) for n in names)...)
 
 
 # standard constructor with default empty values
-MVTSeries(fd::MIT, names=()) = (names = _names_as_tuple(names); MVTSeries(fd, names, zeros(0, length(names))))
-MVTSeries(fd::MIT, names::Union{AbstractVector,Tuple,Base.KeySet{Symbol,<:OrderedDict}}, data::AbstractMatrix) = begin
+@inline MVTSeries(fd::MIT, names=()) = (names = _names_as_tuple(names); MVTSeries(fd, names, zeros(0, length(names))))
+@inline MVTSeries(fd::MIT, names::Union{AbstractVector,Tuple,Base.KeySet{Symbol,<:OrderedDict},Base.Generator}, data::AbstractMatrix) = begin
     names = _names_as_tuple(names)
     MVTSeries(fd, names, data)
 end
