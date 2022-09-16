@@ -75,6 +75,7 @@ include("serialize.jl")
 
 include("various.jl")
 
+include("linalg.jl")
 
 """
     rangeof(s; drop::Integer)
