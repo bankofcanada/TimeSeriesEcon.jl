@@ -158,6 +158,20 @@ Construct an [`MIT`](@ref) instance from `year` and `period`. This is valid only
 for frequencies subtyped from [`YPFrequency`](@ref).
 """ 
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
+function MIT{F}(y::Integer, p::Integer) where F <: Weekly{N} where N 
+    first_day_of_year = Dates.Date("$y-01-01")
+    days_diff = N - dayofweek(first_day_of_year)
+    d = first_day_of_year + Day(days_diff) + Week(p - 1)
+    return weekly(d, N)
+end
+function MIT{F}(y::Integer, p::Integer) where F <: BusinessDaily 
+    first_day_of_year = Dates.Date("$y-01-01")
+    first_day = dayofweek(first_day_of_year)
+    days_diff = first_day > 5 ? 8 - first_day : 0
+    d = first_day_of_year + Day(days_diff + p - 1)
+    # println(d)
+    return bdaily(d)
+end
 
 """
     mit2yp(x::MIT)
@@ -237,6 +251,13 @@ end
 
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
+weekly(d::Date, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
+weekly(d::String, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(Date(d))) / 7)) + max(0, min(1, dayofweek(Date(d)) - N)))
+
+#Date is on a Wednesday (3)
+# Week basis is on a Tuesday (2)
+# => Date is in the following week
+
 # _d0 + Day(Int(m)*7) - Day(4)
 # -------------------------
 # ppy: period per year
