@@ -566,11 +566,7 @@ end
         # @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y #current output is 1Q1:4Q4
     end
 
-    #non-user called functions
-    @test_throws ArgumentError TimeSeriesEcon._to_lower(Monthly, q)
-    @test_throws ArgumentError TimeSeriesEcon._to_higher(Yearly, q)
-
-    #wrong method for conversion direction
+   #wrong method for conversion direction
     @test_throws ArgumentError fconvert(Monthly, q, method=:mean)
     @test_throws ArgumentError fconvert(Yearly, q, method=:const)
 
