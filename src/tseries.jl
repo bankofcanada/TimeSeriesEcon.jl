@@ -82,14 +82,21 @@ rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
 
-function Base.values(t::TSeries{BusinessDaily}) 
-    holidays_map = get_option(:business_holidays_map)
-    if holidays_map !== nothing
-        # TODO check range of input
-        slice = holidays_map[rangeof(t)]
-        return t.values[slice.values]
+function Base.values(t::TSeries{BusinessDaily}; holidays::Bool=get_option(:business_skip_holidays))
+    if holidays
+        holidays_map = get_option(:business_holidays_map)
+        if holidays_map !== nothing 
+            return values(t, holidays_map)
+        end
     end
     return t.values
+end
+
+function Base.values(t::TSeries{BusinessDaily}, holidays::TSeries{BusinessDaily})
+    @boundscheck checkbounds(holidays, first(rangeof(t)))
+    @boundscheck checkbounds(holidays, last(rangeof(t)))
+    slice = holidays[rangeof(t)]
+    return t.values[slice.values]
 end
 
 """

@@ -100,37 +100,80 @@ julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), -1)
 """
 function shift(ts::TSeries{BusinessDaily}, k::Int) 
     new_ts = copyto!(TSeries(rangeof(ts) .- k), ts.values)
-    replace_nans_if_warranted!(new_ts, k > 0 ? :next : :previous)
+    replace_nans_if_warranted!(new_ts, k)
     return new_ts
 end
 
 """
-    replace_nans_if_warranted!(ts::TSeries, direction=:next)
+    replace_nans_if_warranted!(ts::TSeries, k::Integer)
 
 An internal function used to replace NaNs in a BusinessDaily TSeries with their next or previous valid value.
+When :skip_holidays is true the process only replaces NaNs when the source of the NaN is on a holiday.
 """
-function replace_nans_if_warranted!(ts::TSeries, direction=:next)
-    if get_option(:business_skip_nans) == false
+function replace_nans_if_warranted!(ts::TSeries, k::Integer)
+    skip_all_nans = get_option(:business_skip_nans)
+    skip_holidays = get_option(:business_skip_holidays)
+    if !skip_all_nans && !skip_holidays
         return
     end
+    direction = k > 0 ? :next : :previous;
+    ts_range = rangeof(ts)
+    
+    holidays = nothing
+    if skip_holidays
+        holidays = get_option(:business_holidays_map)[ts_range[begin]-abs(k):ts_range[end]+abs(k)]
+    end
+    
     last_valid = NaN
     if direction == :next
         for (i, val) in enumerate(reverse(ts.values))
+            input_is_holiday = skip_holidays ? holidays[ts_range[end - (i-1)] + k] == false : false
             if isnan(val)
-                ts.values[end - (i-1)] = last_valid
-            else
-                last_valid = val
+                # we are about to place a NaN in the output date
+                if skip_all_nans # replace all nans
+                    ts.values[end - (i-1)] = last_valid
+                elseif skip_holidays && input_is_holiday
+                    # we are about to place a NaN on non-holiday, but the NaN came from a holiday
+                    # in this case, we should replace it with the latest non-holiday
+                    ts.values[end - (i-1)] = last_valid
+                elseif skip_holidays && !input_is_holiday
+                    # in this case, we actually want to store the NaN to use it later
+                    last_valid = val
+                end
+            else #output is not a NaN
+                if skip_all_nans # replace all nans
+                    last_valid = val
+                elseif skip_holidays && !input_is_holiday
+                    last_valid = val
+                end
             end    
         end
     elseif direction == :previous
         for (i, val) in enumerate(ts.values)
+            # output_is_holiday = skip_holidays ? holidays[ts_range[begin + (i-1)]] == false : false
+            input_is_holiday = skip_holidays ? holidays[ts_range[begin + (i-1)] + k] == false : false
             if isnan(val)
-                ts.values[begin + (i-1)] = last_valid
-            else
-                last_valid = val
-            end
+                # we are about to place a NaN in the output date
+                if skip_all_nans # replace all nans
+                    ts.values[begin + (i-1)] = last_valid
+                elseif skip_holidays && input_is_holiday
+                    # we are about to place a NaN on non-holiday, but the NaN came from a holiday
+                    # in this case, we should replace it with the latest non-holiday
+                    ts.values[begin + (i-1)] = last_valid
+                elseif skip_holidays && !input_is_holiday
+                    # in this case, we actually want to store the NaN to use it later
+                    last_valid = val
+                end
+            else #output is not a NaN
+                if skip_all_nans # replace all nans
+                    last_valid = val
+                elseif skip_holidays && !input_is_holiday
+                    last_valid = val
+                end
+            end 
         end
     end
+
 end
 
 """
@@ -145,7 +188,7 @@ shift!(ts::TSeries, k::Int) = (ts.firstdate -= k; ts)
 
 In-place version of [`shift`](@ref).
 """
-shift!(ts::TSeries{BusinessDaily}, k::Int) = (ts.firstdate -= k; replace_nans_if_warranted!(ts, k > 0 ? :next : :previous))
+shift!(ts::TSeries{BusinessDaily}, k::Int) = (ts.firstdate -= k; replace_nans_if_warranted!(ts, k))
 
 """
     lag(x::TSeries, k=1)

@@ -1,5 +1,9 @@
 using TOML
-options = Dict{Symbol,Any}(:business_skip_nans => false, :business_holidays_map => nothing)
+options = Dict{Symbol,Any}(
+    :business_holidays_map => nothing,
+    :business_skip_nans => false, 
+    :business_skip_holidays => false
+)
 
 """
     set_option(option::Symbol, value)
@@ -7,10 +11,12 @@ options = Dict{Symbol,Any}(:business_skip_nans => false, :business_holidays_map 
 Sets the provided option to the provided values.
 
 Current available options are:
+* `:business_holidays_map`: This option holds a tseries of boolean values spanning from 1970-01-01 to 2049-12-31. Values on dates
+    with a `false` entry will not be returned when calling the `values` function on a BusinessDaily TSeries 
+    with the holidays=true option.
 * `:business_skip_nans`: This option controls the treatment of NaN values in BusinessDaily arrays when performing
     `shift`, `lag`,`diff`, and `pct` functions on them. NaNs are replaced with the most relevant non-NaN value when available.
-* `:business_holidays_map`: This option holds a tseries of boolean values spanning from 1970-01-01 to 2049-01-01. Values on dates
-    with a `false` entry will not be returned when calling the `values` function on a BusinessDaily TSeries.
+* `:business_skip_holidays`: When true, the values function will always be called with holidays=true for BusinessDaily series.
     
 """
 function set_option(option::Symbol, value)
@@ -76,10 +82,8 @@ See also: [`get_holidays_options`](@ref), [`clear_holidays_map`](@ref)
 function set_holidays_map(country::String, subdivision::Union{String,Nothing}=nothing)
     countries = TOML.parsefile(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.toml"))
     covered_range = bdaily("1970-01-01"):bdaily("2049-12-31");
-    holiday_maps = BitArray(undef, (length(covered_range),countries["Metadata"]["output_height"]))
+    holiday_maps = Array{UInt8}(undef, (Int(length(covered_range)/8), countries["Metadata"]["output_height"]))
     read!(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.bin"), holiday_maps)
-    # holiday_maps_large = Array{Bool}(undef, (length(covered_range),countries["Total_count"]))
-    # read!("../../holidays/output/holidays_large.bin", holiday_maps_large)
     
     col = 0
     if country in keys(countries)
@@ -111,7 +115,9 @@ function set_holidays_map(country::String, subdivision::Union{String,Nothing}=no
         throw(ArgumentError("Unsupported country: $country. Run `TimeSeriesEcon.get_holidays_options()` to see list of supported countries."))
     end
 
-    ts = TSeries(first(covered_range), holiday_maps[:,col]);
+    # The bits are packed in a UInt8 array
+    # each UInt8 corresponds to one ordering of 8 bits
+    ts = TSeries(first(covered_range), reduce(vcat, map(x -> digits(Bool, x, base=2, pad=8), holiday_maps[:,col])));
     set_option(:business_holidays_map, ts);
 end
 

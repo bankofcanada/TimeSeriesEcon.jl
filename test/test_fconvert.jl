@@ -1487,3 +1487,224 @@ end
 end
 
 
+
+# # weekly crazyness
+# @testset "more weeklies" begin
+#     """
+#     frequency WEEKLY(SUNDAY)
+#     DATE 1
+#     Series !ws1 = 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+#     """
+#     t1 = TSeries(MIT{Weekly}(1), Float64.(collect(1:20)))
+#     """
+#     Frequency WEEKLY(THURSDAY)
+#     Series !ws2 = 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
+#     """
+#     t2 = TSeries(MIT{Weekly{4}}(2), Float64.(collect(1:20)))
+
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), DISCRETE, AVERAGED)"""
+#     r1 = fconvert(Weekly{4}, t1, method=:mean, interpolation=:none)
+#     @test isapprox(r1.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r1) == 2:21
+#     r1_range = fconvert(Weekly{4}, rangeof(t1), method=:mean)
+#     @test r1_range == 2:21
+#     r1_MIT_start = fconvert(Weekly{4}, first(rangeof(t1)), round_to=:current)
+#     r1_MIT_end = fconvert(Weekly{4}, last(rangeof(t1)), round_to=:current)
+#     @test r1_MIT_start:r1_MIT_end == r1_range
+   
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), DISCRETE, END)"""
+#     r2 = fconvert(Weekly{4}, t1, method=:end, interpolation=:none)
+#     @test isapprox(r2.values,  Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r2) == 2:21
+#     r2_range = fconvert(Weekly{4}, rangeof(t1), method=:end)
+#     @test r2_range ==  2:21
+
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), DISCRETE, BEGIN)"""
+#     r3 = fconvert(Weekly{4}, t1, method=:begin, interpolation=:none)
+#     @test isapprox(r3.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r3) == 2:21
+#     r3_range = fconvert(Weekly{4}, rangeof(t1), method=:begin)
+#     @test r3_range ==  2:21
+  
+
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), DISCRETE, SUMMED)"""
+#     r4 = fconvert(Weekly{4}, t1, method=:sum, interpolation=:none)
+#     @test isapprox(r4.values, Float64.(collect(1:20)), atol=1e-0)
+#     @test rangeof(r4) == 2:21
+#     r4_range = fconvert(Weekly{4}, rangeof(t1), method=:sum)
+#     @test r4_range ==  2:21
+
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), LINEAR, AVERAGED)"""
+#     r5 = fconvert(Weekly{4}, t1, method=:mean, interpolation=:linear)
+#     @test isapprox(r5.values, collect(1.57:1:19.57), atol=1e-2)
+#     @test rangeof(r5) == 2:20
+
+
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), LINEAR, END)"""
+#     r6 = fconvert(Weekly{4}, t1, method=:end, interpolation=:linear)
+#     @test isapprox(r6.values, collect(1.57:1:19.57), atol=1e-2)
+#     @test rangeof(r6) == 2:20
+
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), LINEAR, BEGIN)"""
+#     r7 = fconvert(Weekly{4}, t1, method=:begin, interpolation=:linear) 
+#     @test isapprox(r7.values, [collect(2.57:1:19.57)..., 20.00], atol=1e-2) #OBS! FAME has different truncation
+#     @test rangeof(r7) == 3:21
+
+#     """repo CONVERT(WS1, WEEKLY(THURSDAY), LINEAR, END)"""
+#     r8 = fconvert(Weekly{4}, t1, method=:sum, interpolation=:linear) #OBS! FAME has different truncation
+#     @test isapprox(r8.values, collect(2.57:1:19.57), atol=1e-2)
+#     @test rangeof(r8) == 3:20
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, AVERAGED)"""
+#     r9 = fconvert(Weekly, t2, method=:mean, interpolation=:none)
+#     @test isapprox(r9.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r9) == 2:21
+#     r9_range = fconvert(Weekly, rangeof(t2), method=:mean)
+#     @test r9_range == 2:21
+#     r9_MIT_start = fconvert(Weekly, first(rangeof(t2)), round_to=:current)
+#     r9_MIT_end = fconvert(Weekly, last(rangeof(t2)), round_to=:current)
+#     @test r9_MIT_start:r9_MIT_end == r9_range
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, END)"""
+#     r10 = fconvert(Weekly, t2, method=:end, interpolation=:none)
+#     @test isapprox(r10.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r10) == 2:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, BEGIN)"""
+#     r11 = fconvert(Weekly, t2, method=:begin, interpolation=:none)
+#     @test isapprox(r11.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r11) == 2:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, SUMMED)"""
+#     r12 = fconvert(Weekly, t2, method=:sum, interpolation=:none)
+#     @test isapprox(r12.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r12) == 2:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, AVERAGED)"""
+#     r13 = fconvert(Weekly, t2, method=:mean, interpolation=:linear)
+#     @test isapprox(r13.values, collect(1.43:1:19.43), atol=1e-2)
+#     @test rangeof(r13) == 2:20
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, END)"""
+#     r14 = fconvert(Weekly, t2, method=:end, interpolation=:linear)
+#     @test isapprox(r14.values, collect(1.43:1:19.43), atol=1e-2)
+#     @test rangeof(r14) == 2:20
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, BEGIN)"""
+#     r15 = fconvert(Weekly, t2, method=:begin, interpolation=:linear)
+#     @test isapprox(r15.values, [collect(2.43:1:19.43)..., 20.00], atol=1e-2) #OBS! FAME has different truncation
+#     @test rangeof(r15) == 3:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, SUMMED)"""
+#     r16 = fconvert(Weekly, t2, method=:sum, interpolation=:linear)
+#     @test isapprox(r16.values, collect(2.43:1:19.43), atol=1e-2) #OBS! FAME has different truncation
+#     @test rangeof(r16) == 3:20
+
+# end
+
+# @testset "more quarterlies" begin
+#     """
+#     frequency QUARTERLY(MARCH)
+#     DATE 1 to 2
+#     Series !qs1 = 1,2,3,4,5,6
+#     """
+#     t1 = TSeries(MIT{Quarterly}(4), Float64.(collect(1:6)))
+#     """
+#     Frequency QUARTERLY(JANUARY)
+#     Series !qs2 = 1,2,3,4,5,6
+#     """
+#     t2 = TSeries(MIT{Quarterly{1}}(5), Float64.(collect(1:6)))
+
+#     """repo CONVERT(WS1, QUARTERLY(JANUARY), DISCRETE, AVERAGED)"""
+#     r1 = fconvert(Quarterly{1}, t1, method=:mean)
+#     @test isapprox(r1.values, Float64.(collect(1:6)), atol=1e-2)
+#     @test rangeof(r1) == MIT{Quarterly{1}}(4):MIT{Quarterly{1}}(9) #1Q1:2Q2
+#     r1_range = fconvert(Quarterly{1}, rangeof(t1))
+#     @test r1_range == MIT{Quarterly{1}}(4):MIT{Quarterly{1}}(9)
+#     r1_MIT_start = fconvert(Quarterly{1}, first(rangeof(t1)), round_to=:current)
+#     r1_MIT_end = fconvert(Quarterly{1}, last(rangeof(t1)), round_to=:current)
+#     @test r1_MIT_start:r1_MIT_end == r1_range
+   
+#     """repo CONVERT(WS1, QUARTERLY(JANUARY), DISCRETE, END)"""
+#     r2 = fconvert(Quarterly{1}, t1, method=:end)
+#     @test isapprox(r2.values, Float64.(collect(1:6)), atol=1e-2)
+#     @test rangeof(r2) == MIT{Quarterly{1}}(4):MIT{Quarterly{1}}(9) #1Q1:2Q2
+
+#     """repo CONVERT(WS1, QUARTERLY(JANUARY), DISCRETE, BEGIN)"""
+#     r3 = fconvert(Quarterly{1}, t1, method=:begin)
+#     @test isapprox(r3.values, Float64.(collect(1:6)), atol=1e-2)
+#     @test rangeof(r3) == MIT{Quarterly{1}}(4):MIT{Quarterly{1}}(9) #1Q1:2Q2
+  
+
+#     """repo CONVERT(WS1, QUARTERLY(JANUARY), DISCRETE, SUMMED)"""
+#     r4 = fconvert(Quarterly{1}, t1, method=:sum)
+#     @test isapprox(r4.values, Float64.(collect(1:6)), atol=1e-2)
+#     @test rangeof(r4) == MIT{Quarterly{1}}(4):MIT{Quarterly{1}}(9) #1Q1:2Q2
+
+#     """repo CONVERT(WS1, QUARTERLY(MARCH), DISCRETE, AVERAGED)"""
+#     r5 = fconvert(Quarterly, t2, method=:mean)
+#     @test isapprox(r5.values, Float64.(collect(1:6)), atol=1e-2)
+#     @test rangeof(r5) == 1Q2:2Q2
+
+
+#     """repo CONVERT(WS1, QUARTERLY(MARCH), DISCRETE, END)"""
+#     r6 = fconvert(Weekly{4}, t1, method=:end, interpolation=:linear)
+#     @test isapprox(r6.values, collect(1.57:1:19.57), atol=1e-2)
+#     @test rangeof(r6) == 2:20
+
+#     """repo CONVERT(WS1, QUARTERLY(MARCH), DISCRETE, BEGIN)"""
+#     r7 = fconvert(Weekly{4}, t1, method=:begin, interpolation=:linear) 
+#     @test isapprox(r7.values, [collect(2.57:1:19.57)..., 20.00], atol=1e-2) #OBS! FAME has different truncation
+#     @test rangeof(r7) == 3:21
+
+#     """repo CONVERT(WS1, QUARTERLY(MARCH), DISCRETE, END)"""
+#     r8 = fconvert(Weekly{4}, t1, method=:sum, interpolation=:linear) #OBS! FAME has different truncation
+#     @test isapprox(r8.values, collect(2.57:1:19.57), atol=1e-2)
+#     @test rangeof(r8) == 3:20
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, AVERAGED)"""
+#     r9 = fconvert(Weekly, t2, method=:mean, interpolation=:none)
+#     @test isapprox(r9.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r9) == 2:21
+#     r9_range = fconvert(Weekly, rangeof(t2), method=:mean)
+#     @test r9_range == 2:21
+#     r9_MIT_start = fconvert(Weekly, first(rangeof(t2)), round_to=:current)
+#     r9_MIT_end = fconvert(Weekly, last(rangeof(t2)), round_to=:current)
+#     @test r9_MIT_start:r9_MIT_end == r9_range
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, END)"""
+#     r10 = fconvert(Weekly, t2, method=:end, interpolation=:none)
+#     @test isapprox(r10.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r10) == 2:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, BEGIN)"""
+#     r11 = fconvert(Weekly, t2, method=:begin, interpolation=:none)
+#     @test isapprox(r11.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r11) == 2:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), DISCRETE, SUMMED)"""
+#     r12 = fconvert(Weekly, t2, method=:sum, interpolation=:none)
+#     @test isapprox(r12.values, Float64.(collect(1:20)), atol=1e-2)
+#     @test rangeof(r12) == 2:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, AVERAGED)"""
+#     r13 = fconvert(Weekly, t2, method=:mean, interpolation=:linear)
+#     @test isapprox(r13.values, collect(1.43:1:19.43), atol=1e-2)
+#     @test rangeof(r13) == 2:20
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, END)"""
+#     r14 = fconvert(Weekly, t2, method=:end, interpolation=:linear)
+#     @test isapprox(r14.values, collect(1.43:1:19.43), atol=1e-2)
+#     @test rangeof(r14) == 2:20
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, BEGIN)"""
+#     r15 = fconvert(Weekly, t2, method=:begin, interpolation=:linear)
+#     @test isapprox(r15.values, [collect(2.43:1:19.43)..., 20.00], atol=1e-2) #OBS! FAME has different truncation
+#     @test rangeof(r15) == 3:21
+
+#     """repo CONVERT(WS2, WEEKLY(SUNDAY), LINEAR, SUMMED)"""
+#     r16 = fconvert(Weekly, t2, method=:sum, interpolation=:linear)
+#     @test isapprox(r16.values, collect(2.43:1:19.43), atol=1e-2) #OBS! FAME has different truncation
+#     @test rangeof(r16) == 3:20
+
+# end

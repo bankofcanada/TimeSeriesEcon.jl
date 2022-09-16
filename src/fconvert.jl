@@ -135,7 +135,7 @@ end
     """
 function _validate_fconvert_yp(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}})  where {N1,N2}
     if N1 == N2
-        error("Conversion from $F_from to $F_to not implemented.")
+        throw(error("Conversion from $F_from to $F_to not implemented."))
     end
     if N1 > N2
     (np, r) = divrem(N1, N2)
@@ -489,28 +489,53 @@ the input. For each period of the lower frequency we aggregate all periods of
 the higher frequency within it. We have 4 methods currently available: `:mean`,
 `:sum`, `:begin`, and `:end`.  The default is `:mean`.
 """
-function fconvert(F::Type{<:Union{<:YPFrequency, <:Weekly}}, t::TSeries{<:Union{Daily, BusinessDaily}}; method=:mean)
+function fconvert(F::Type{<:Union{<:YPFrequency, <:Weekly}}, t::TSeries{<:Union{Daily, BusinessDaily}}; method=:mean, nans=nothing)
     dates = [date(val) for val in rangeof(t)]
+    dates_all = copy(dates)
+    if get_option(:business_skip_holidays)
+        holidays_map = get_option(:business_holidays_map)
+        dates = dates[holidays_map[rangeof(t)].values]
+    end
     out_index = _get_out_indices(F, dates)
     fi = eval(Meta.parse("fi = $(out_index[begin])"))
     li = eval(Meta.parse("li = $(out_index[end])"))
     include_weekends = frequencyof(t) <: BusinessDaily
-    trunc_start, trunc_end = _get_fconvert_truncations(F, frequencyof(t), dates, method, include_weekends=include_weekends)
-
+    trunc_start, trunc_end = _get_fconvert_truncations(F, frequencyof(t), dates_all, method, include_weekends=include_weekends)
+    
     if method == :mean
-        ret = [mean(t.values[out_index .== target]) for target in unique(out_index)]
+        ret = [mean(skip_if_warranted(values(t)[out_index .== target], nans)) for target in unique(out_index)]
     elseif method == :sum
-        ret = [sum(t.values[out_index .== target]) for target in unique(out_index)]
+        ret = [sum(skip_if_warranted(values(t)[out_index .== target], nans)) for target in unique(out_index)]
     elseif method == :begin
-        ret = [t.values[out_index .== target][begin] for target in unique(out_index)]
+        ret = [skip_if_warranted(values(t)[out_index .== target], nans)[begin] for target in unique(out_index)]
     elseif method == :end
-        ret = [t.values[out_index .== target][end] for target in unique(out_index)]
+        ret = [skip_if_warranted(values(t)[out_index .== target], nans)[end] for target in unique(out_index)]
     else
         throw(ArgumentError("Conversion method not available: $(method)."))
     end
 
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
 end
+
+"""
+    skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,nothing}=nothing)  
+
+    Skips nans in a vector if either the provided nans option is true or if no nans option is
+    passed and the :business_skip_nans option is true.
+
+    Returns the original vector otherwise.
+"""
+function skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing}=nothing)  
+    if nans == true || (nans === nothing && get_option(:business_skip_nans))
+        ret = filter(y -> !isnan(y), x);
+        if size(ret)[1] == 0
+            return [NaN]
+        end
+        return ret
+    end
+    return x
+end
+
 
 
 """
