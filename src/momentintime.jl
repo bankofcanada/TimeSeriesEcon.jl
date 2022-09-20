@@ -168,9 +168,8 @@ function MIT{F}(y::Integer, p::Integer) where F <: BusinessDaily
     first_day_of_year = Dates.Date("$y-01-01")
     first_day = dayofweek(first_day_of_year)
     days_diff = first_day > 5 ? 8 - first_day : 0
-    d = first_day_of_year + Day(days_diff + p - 1)
-    # println(d)
-    return bdaily(d)
+    d = first_day_of_year + Day(days_diff)
+    return bdaily(d) + p - 1
 end
 
 """
@@ -180,7 +179,6 @@ Recover the year and period from the given [`MIT`](@ref) value. This is valid
 only for frequencies subtyped from [`YPFrequency`](@ref).
 """
 function mit2yp end
-mit2yp(x) = throw(ArgumentError("Value of type $(typeof(x)) cannot be represented as (year, period) pair. "))
 
 # Careful with values near 0 and negative values
 # the remainder `p` returned by divrem() has the same sign 
@@ -191,6 +189,29 @@ mit2yp(x) = throw(ArgumentError("Value of type $(typeof(x)) cannot be represente
     (y, p) = divrem(Int(x), N); 
     p < 0 ? (y - 1, p + N + 1) : (y, p + 1)
 end
+@inline function mit2yp(x::MIT{Weekly{N}}) where N
+    date = Dates.Date(x);
+    return (Dates.year(date), Dates.week(date));
+end
+@inline function mit2yp(x::MIT{Weekly})
+    date = Dates.Date(x);
+    return (Dates.year(date), Dates.week(date));
+end
+@inline function mit2yp(x::MIT{Daily})
+    date = Dates.Date(x);
+    return (Dates.year(date), Dates.day(date));
+end
+@inline function mit2yp(x::MIT{BusinessDaily})
+    # This function needs to return the year and the number of business days between
+    # the start of the year and provided MIT
+    y = Dates.year(Dates.Date(x));
+    first_day_of_year = Dates.Date(y,1,1);
+    first_day = dayofweek(first_day_of_year);
+    days_diff = first_day > 5 ? 8 - first_day : 0;
+    d = first_day_of_year + Day(days_diff);
+    return (y, Int(x - bdaily(d) + 1));
+end
+mit2yp(x) = throw(ArgumentError("Value of type $(typeof(x)) cannot be represented as (year, period) pair. "))
 
 """
     year(mit)
@@ -254,11 +275,6 @@ weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
 weekly(d::Date, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
 weekly(d::String, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(Date(d))) / 7)) + max(0, min(1, dayofweek(Date(d)) - N)))
 
-#Date is on a Wednesday (3)
-# Week basis is on a Tuesday (2)
-# => Date is in the following week
-
-# _d0 + Day(Int(m)*7) - Day(4)
 # -------------------------
 # ppy: period per year
 """
@@ -274,28 +290,24 @@ ppy(x) = ppy(frequencyof(x))
 ppy(::Type{<:YPFrequency{N}}) where {N} = N
 ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year") 
 
-# -------------------------
+#-------------------------
+# date conversion
+Dates.Date(m::MIT{Daily}) = _d0 + Day(Int(m))
+Dates.Date(m::MIT{BusinessDaily}) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
+Dates.Date(m::MIT{Weekly}) = _d0 + Day(Int(m)*7)
+Dates.Date(m::MIT{Weekly{N}}) where N = _d0 + Day(Int(m)*7) - Day(7-N)
+
+#-------------------------
 # pretty printing
 
 Base.show(io::IO, m::MIT{Unit}) = print(io, Int(m), 'U')
-function Base.show(io::IO, m::MIT{Daily}) 
-    # if Int(m) >= 547498 # start of the 16th century
-    print(io, _d0 + Day(Int(m)))
-    # else
-    #     print(io, Int(m), 'D')
-    # end
-end
-function Base.show(io::IO, m::MIT{BusinessDaily}) 
-    print(io, _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5)))
-end
+Base.show(io::IO, m::MIT{Daily}) = print(io, Dates.Date(m))
+Base.show(io::IO, m::MIT{BusinessDaily}) = print(io, Dates.Date(m))
 function Base.show(io::IO, m::Union{MIT{Weekly{N}},MIT{Weekly}}) where N
-    # we want the thursday
-    #TODO adjust for weekly Wednesday, etc.
-    date = _d0 + Day(Int(m)*7) - Day(4)
+    date = Dates.Date(m)
     print(io, "$(Dates.year(date))W$(Dates.week(date))")
 end
 
-# Base.show(io::IO, m::MIT{Weekly}) = print(io, Int(m), 'W')
 function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
     if isconcretetype(F)
     periodletter = first("$(F)")
@@ -414,6 +426,8 @@ Base.:(+)(l::Integer, r::Union{MIT,Duration}) = oftype(r, l + Int(r))
 # NOTE: the rules above are meant to catch illegal arithmetic (where the units don't make sense).
 # For indexing and iterating TSeries it's more convenient to return Int rather than Duration, however
 # we choose to have the checks in place.
+Base.flipsign(x::Duration{F}, y::Duration{F}) where F = flipsign(Int(x),Int(y))
+Base.flipsign(x::MIT{F}, y::MIT{F}) where F = flipsign(Int(x),Int(y))
 
 # -------------------
 # one(x) is meant to be a dimensionless 1, so that's what we do
@@ -511,19 +525,3 @@ Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = mi
 # Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
 # Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)
 
-date(mit::MIT{Daily}) = _d0 + Day(Int(mit))
-function date(mit::MIT{BusinessDaily}) 
-    mod = Int(mit) % 5
-    if mod == 0
-        mod = 5
-    end
-    return _d0 + Day(Int(floor((Int(mit) - 1) / 5)*7 + mod))
-end
-date(mit::MIT{<:Weekly}) = _d0 + Day(Int(mit))*7
-function date(mit::MIT{<:Weekly{N}}) where N
-    adjustment = Day(0) 
-    if @isdefined N
-        adjustment = Day(7 - N)
-    end
-    return _d0 + Day(Int(mit))*7 - adjustment
-end
