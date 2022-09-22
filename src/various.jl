@@ -271,3 +271,10 @@ function reindex(w::Workspace, pair::Pair{<:MIT,<:MIT}; copy=false)
     return wo
 end
 
+###########################
+_w(a) = a
+_w(w::Workspace) = w._c
+TOML.print(w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, w._c; sorted, by)
+TOML.print(io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, io, w._c; sorted, by)
+TOML.print(f::TOML.Internals.Printer.MbyFunc, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, io, w._c; sorted, by)
+TOML.print(f::TOML.Internals.Printer.MbyFunc, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, w._c; sorted, by)

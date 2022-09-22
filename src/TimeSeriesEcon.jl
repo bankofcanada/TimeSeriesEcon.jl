@@ -37,6 +37,7 @@ using OrderedCollections
 using Statistics
 using Serialization
 using Distributed
+using TOML
 
 include("momentintime.jl")
 export MIT, Duration
