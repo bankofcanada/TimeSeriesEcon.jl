@@ -103,10 +103,10 @@
         work3 = Workspace()
         work3.A = TSeries(86Y, zeros(4))
 
-        @test TimeSeriesEcon.compare_equal(work1, work2) == true
-        @test TimeSeriesEcon.compare_equal(work1, work3) == false
-        @test TimeSeriesEcon.compare(work1, work2) == true
-        @test TimeSeriesEcon.compare(work1, work3) == false
+        @test TimeSeriesEcon.compare_equal(work1, work2; quiet=true) == true
+        @test TimeSeriesEcon.compare_equal(work1, work3; quiet=true) == false
+        @test TimeSeriesEcon.compare(work1, work2; quiet=true) == true
+        @test TimeSeriesEcon.compare(work1, work3; quiet=true) == false
     end
 
     # reindexing
