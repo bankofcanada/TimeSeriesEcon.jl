@@ -512,9 +512,13 @@ Base.copyto!(dest::MVTSeries, src::MVTSeries) = (copyto!(dest.values, src.values
 # -------------------------------------------------------------------------------
 # ways to add new columns (variables)
 
-function Base.hcat(x::MVTSeries; KW...)
-    T = reduce(Base.promote_eltype, (x, values(KW)...))
-    return MVTSeries(T, rangeof(x); pairs(x)..., KW...)
+function Base.hcat(x::MVTSeries, y::MVTSeries...; KW...)
+    T = reduce(Base.promote_eltype, (x, y..., values(KW)...), init=eltype(x))
+    kw = LittleDict{Symbol, Any}()
+    for yy in y 
+        push!(kw, pairs(yy)...)
+    end
+    return MVTSeries(T, rangeof(x); pairs(x)..., kw..., KW...)
 end
 
 function Base.vcat(x::MVTSeries, args::AbstractVecOrMat...)
