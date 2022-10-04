@@ -258,22 +258,36 @@ Construct an `MIT{Yearly}` from an year and a period.
 _d0 = Date("0001-01-01") - Day(1) 
 # _1day = Day(1)
 daily(d::Date) = MIT{Daily}(Dates.value(d - _d0))
+daily(d::Date, _::Bool) = MIT{Daily}(Dates.value(d - _d0))
 daily(d::String) = MIT{Daily}(Dates.value(Date(d) - _d0))
-function bdaily(d::Date) 
-    num_weekends = floor(Dates.value(d - _d0)/7)
-    return MIT{BusinessDaily}(Dates.value(d - _d0 - Day(num_weekends*2)))
+function bdaily(d::Date, bias_previous=true) 
+    num_weekends, rem = divrem(Dates.value(d - _d0), 7)
+    adjustment = 0
+    if bias_previous && rem == 6 
+        adjustment = 1
+    elseif !bias_previous && rem == 0
+        adjustment = -1
+    end
+    return MIT{BusinessDaily}(Dates.value(d - _d0 - Day(num_weekends*2 + adjustment)))
 end
-function bdaily(d::String) 
-    _d = Dates.Date(d)
-    num_weekends = floor(Dates.value(_d - _d0)/7)
-    return MIT{BusinessDaily}(Dates.value(_d - _d0 - Day(num_weekends*2)))
-end
-
+bdaily(d::String) = bdaily(Dates.Date(d))
+bdaily(d::String, bias_previous::Bool) = bdaily(Dates.Date(d), bias_previous)
+    
 
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
 weekly(d::Date, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
 weekly(d::String, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(Date(d))) / 7)) + max(0, min(1, dayofweek(Date(d)) - N)))
+
+function weekly(d::Date, N::Integer, normalize::Bool)
+    if normalize && N == 7
+        return MIT{Weekly}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
+    else
+        return weekly(d, N)
+    end
+    
+end
+
 
 # -------------------------
 # ppy: period per year
@@ -288,6 +302,9 @@ Return the periods per year for the frequency associated with the given value
 function ppy end
 ppy(x) = ppy(frequencyof(x))
 ppy(::Type{<:YPFrequency{N}}) where {N} = N
+ppy(::Type{<:Daily}) = 365 # approximately
+ppy(::Type{<:BusinessDaily}) = 260 # approximately
+ppy(::Type{<:Weekly}) = 52 # approximately
 ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year") 
 
 #-------------------------
@@ -296,6 +313,20 @@ Dates.Date(m::MIT{Daily}) = _d0 + Day(Int(m))
 Dates.Date(m::MIT{BusinessDaily}) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
 Dates.Date(m::MIT{Weekly}) = _d0 + Day(Int(m)*7)
 Dates.Date(m::MIT{Weekly{N}}) where N = _d0 + Day(Int(m)*7) - Day(7-N)
+function Dates.Date(m::MIT{Monthly})
+    year, month = divrem(Int(m), 12)
+    return Dates.Date("$year-01-01") + Month(month+1) - Day(1)
+end
+function Dates.Date(m::MIT{Quarterly})
+    year, quarter = divrem(Int(m), 4)
+    return Dates.Date("$year-01-01") + Month((quarter+1)*3) - Day(1)
+end
+function Dates.Date(m::MIT{Quarterly{N}}) where N 
+    year, quarter = divrem(Int(m), 4)
+    return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-N)) - Day(1)
+end
+Dates.Date(m::MIT{Yearly}) = Dates.Date("$(Int(m) + 1)-01-01") - Day(1)
+Dates.Date(m::MIT{Yearly{N}}) where N = Dates.Date("$(Int(m) + 1)-01-01") - Month(12-N) - Day(1)
 
 #-------------------------
 # pretty printing
@@ -305,7 +336,13 @@ Base.show(io::IO, m::MIT{Daily}) = print(io, Dates.Date(m))
 Base.show(io::IO, m::MIT{BusinessDaily}) = print(io, Dates.Date(m))
 function Base.show(io::IO, m::Union{MIT{Weekly{N}},MIT{Weekly}}) where N
     date = Dates.Date(m)
-    print(io, "$(Dates.year(date))W$(Dates.week(date))")
+    week = Dates.week(date)
+    year = Dates.year(date)
+    month = Dates.month(date)
+    if week > 51 && month != 12
+        year -= 1
+    end
+    print(io, "$(year)W$(week)")
 end
 
 function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
@@ -439,6 +476,9 @@ Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)
 # In the special case of YPFrequency we want the year to be the whole part and the period to be the fractional part. 
 (T::Type{<:AbstractFloat})(x::MIT{<:YPFrequency{N}}) where N = convert(T, ((y, p) = mit2yp(x); y + (p - 1) / N))
 Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
+
+# frequency comparisons
+Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) where {N1,N2} = isless(ppy(x),ppy(y))
 
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
