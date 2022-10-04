@@ -17,54 +17,54 @@ To replicate that approach, first convert your weekly series to a Daily series:
 `fconvert(BusinessDaily, fconvert(Daily, t, method=:linear))`
 
 """
-function fconvert(F::Type{<:Union{Daily, BusinessDaily}}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:const, values_base=:end) where{N3}
-np = F == BusinessDaily ? 5 : 7
-reference_day_adjust = 0
-if @isdefined N3
-    if F == BusinessDaily && N3 <= 4
-        reference_day_adjust = 5 - N3
-    elseif F == Daily
-        reference_day_adjust = np - N3
+function fconvert(F::Type{<:Union{Daily,BusinessDaily}}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method = :const, values_base = :end) where {N3}
+    np = F == BusinessDaily ? 5 : 7
+    reference_day_adjust = 0
+    if @isdefined N3
+        if F == BusinessDaily && N3 <= 4
+            reference_day_adjust = 5 - N3
+        elseif F == Daily
+            reference_day_adjust = np - N3
+        end
+    end
+
+    fi = MIT{F}(Int(firstindex(t)) * np - (np - 1) - reference_day_adjust)
+
+    if method == :const
+        return TSeries(fi, repeat(t.values, inner = np))
+    elseif method == :linear
+        values = repeat(t.values, inner = np)
+        val_day = F == Daily ? 4 : 3 # thursday for weekly, wednesday for businessdaily
+        if values_base == :beginning
+            val_day = 1
+        elseif values_base == :end
+            val_day = np
+        end
+
+        interpolation = nothing
+        max_i = length(t.values)
+        for i in 1:max_i
+            if i < max_i
+                interpolation = collect(LinRange(t.values[i], t.values[i+1], np + 1))
+            end
+            if i == 1
+                values[i:val_day] .= interpolation[np+1-val_day+1:np+1] .- interpolation[1]
+            end
+            if i != max_i
+                values[val_day+(i-1)*np+1:val_day+i*np] .= interpolation[2:np+1]
+            else
+                values[end-(np-val_day):end] .= interpolation[1:np+1-val_day] .+ (interpolation[np+1] - interpolation[1])
+            end
+        end
+        return TSeries(fi, values)
+    else
+        throw(ArgumentError("Conversion method not available: $(method)."))
     end
 end
 
-fi = MIT{F}(Int(firstindex(t))*np - (np-1) - reference_day_adjust)    
 
-if method == :const
-    return TSeries(fi, repeat(t.values, inner=np))
-elseif method == :linear
-    values = repeat(t.values, inner=np)
-    val_day = F == Daily ? 4 : 3 # thursday for weekly, wednesday for businessdaily
-    if values_base == :beginning
-        val_day = 1
-    elseif values_base == :end
-        val_day = np
-    end
-    
-    interpolation = nothing
-    max_i = length(t.values)
-    for i in 1:max_i
-        if i < max_i
-            interpolation = collect(LinRange(t.values[i], t.values[i+1], np+1))
-        end
-        if i == 1
-            values[i:val_day] .= interpolation[np+1-val_day + 1:np+1] .- interpolation[1]
-        end
-        if i != max_i
-            values[val_day + (i-1)*np + 1:val_day + i*np] .= interpolation[2:np+1]
-        else
-            values[end-(np-val_day):end] .= interpolation[1:np+1-val_day] .+ (interpolation[np+1] - interpolation[1])
-        end
-    end
-    return TSeries(fi, values)
-else
-    throw(ArgumentError("Conversion method not available: $(method)."))
-end
-end
-
-    
 """values_base has no purpose here"""
-function fconvert(F::Type{<:Union{Daily,BusinessDaily}}, t::TSeries{<:YPFrequency}; method=:const, values_base=:end)
+function fconvert(F::Type{<:Union{Daily,BusinessDaily}}, t::TSeries{<:YPFrequency}; method = :const, values_base = :end)
     date_function = F == BusinessDaily ? bdaily : daily
     d = Dates.Date(t.firstdate - 1) + Day(1)
     fi = date_function(Dates.Date(t.firstdate - 1) + Day(1), false)
@@ -76,18 +76,18 @@ function fconvert(F::Type{<:Union{Daily,BusinessDaily}}, t::TSeries{<:YPFrequenc
     end
     if method == :const
         for m in rangeof(t)
-            fi_loop = date_function(Dates.Date(m-1) + Day(1), false)
+            fi_loop = date_function(Dates.Date(m - 1) + Day(1), false)
             li_loop = date_function(Dates.Date(m))
-            ts[fi_loop:li_loop] = repeat([t[m]], inner=length(fi_loop:li_loop))
+            ts[fi_loop:li_loop] = repeat([t[m]], inner = length(fi_loop:li_loop))
         end
         return ts
     elseif method == :linear
         for m in reverse(rangeof(t))
-            fi_loop = date_function(Dates.Date(m-1) + Day(1), false)
+            fi_loop = date_function(Dates.Date(m - 1) + Day(1), false)
             li_loop = date_function(Dates.Date(m))
             n_days = length(fi_loop:li_loop)
             start_val, end_val = _get_interpolation_values(t, m, values_base)
-            interpolated = collect(LinRange(start_val, end_val, n_days + 1)) 
+            interpolated = collect(LinRange(start_val, end_val, n_days + 1))
             if values_base == :end
                 ts[fi_loop:li_loop] = interpolated[2:end]
             else # beginning
@@ -102,7 +102,7 @@ end
 
 
 """values_base only works with method=:const"""
-function fconvert(F::Type{<:Union{Weekly, Weekly{N}}}, t::TSeries{<:YPFrequency}; method=:const, values_base=:end) where N
+function fconvert(F::Type{<:Union{Weekly,Weekly{N}}}, t::TSeries{<:YPFrequency}; method = :const, values_base = :end) where {N}
     N_effective = 7
     normalize = true
     if @isdefined(N)
@@ -118,24 +118,24 @@ function fconvert(F::Type{<:Union{Weekly, Weekly{N}}}, t::TSeries{<:YPFrequency}
     end
     if method == :const
         loop_range = values_base == :end ? rangeof(t) : reverse(rangeof(t))
-        for m in loop_range 
-            fi_loop = weekly(Dates.Date(m-1) + Day(1), N_effective, normalize)
+        for m in loop_range
+            fi_loop = weekly(Dates.Date(m - 1) + Day(1), N_effective, normalize)
             li_loop = weekly(Dates.Date(m), N_effective, normalize)
-            ts[fi_loop:li_loop] = repeat([t[m]], inner=length(fi_loop:li_loop))
+            ts[fi_loop:li_loop] = repeat([t[m]], inner = length(fi_loop:li_loop))
         end
         return ts
     elseif method == :linear
         last_fi_loop = nothing
         for m in reverse(rangeof(t))
-            fi_loop = weekly(Dates.Date(m-1) + Day(1), N_effective, normalize)
+            fi_loop = weekly(Dates.Date(m - 1) + Day(1), N_effective, normalize)
             li_loop = weekly(Dates.Date(m), N_effective, normalize)
-            if li_loop == last_fi_loop 
+            if li_loop == last_fi_loop
                 # prevent some overlap
                 li_loop -= 1
             end
             n_periods = length(fi_loop:li_loop)
-            start_val, end_val = _get_interpolation_values(t, m, values_base) 
-            interpolated = collect(LinRange(start_val, end_val, n_periods + 1)) 
+            start_val, end_val = _get_interpolation_values(t, m, values_base)
+            interpolated = collect(LinRange(start_val, end_val, n_periods + 1))
             if values_base == :end
                 ts[fi_loop:li_loop] = interpolated[2:end]
             else # beginning
@@ -160,10 +160,10 @@ By default, weekend values will be filled with NaNs. Use the `interpolation` opt
 `:next`: Fill weekends with the value on the day after the weekend.
 `:linear`: Fill weekends with values interpolated between the day before and the day after the weekend.
 """
-function fconvert(F_to::Type{<:Daily}, t::TSeries{BusinessDaily}; method=:const, interpolation=:none)
+function fconvert(F_to::Type{<:Daily}, t::TSeries{BusinessDaily}; method = :const, interpolation = :none)
     fi = fconvert(F_to, firstdate(t))
     li = fconvert(F_to, lastdate(t))
-    
+
     out_length = Int(li) - Int(fi) + 1
     if interpolation == :none || any(isnan.(t.values))
         out_values = Array{Number}(undef, (out_length,))
@@ -187,7 +187,7 @@ function fconvert(F_to::Type{<:Daily}, t::TSeries{BusinessDaily}; method=:const,
             elseif interpolation == :next
                 out_values[k] = t.values[input_position]
             elseif interpolation == :linear
-                inter = LinRange(t.values[input_position]-1, t.values[input_position], 4)
+                inter = LinRange(t.values[input_position] - 1, t.values[input_position], 4)
                 if mod == 6
                     out_values[k] = inter[2]
                 else
@@ -196,9 +196,9 @@ function fconvert(F_to::Type{<:Daily}, t::TSeries{BusinessDaily}; method=:const,
             else
                 out_values[k] = NaN
             end
-            
+
         end
     end
-    
+
     return TSeries(fi, out_values)
 end

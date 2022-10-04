@@ -37,7 +37,7 @@ x = TSeries(2000M1:2000M7, collect(Float64, 1:7))
 fconvert(Quarterly, x; method = :sum)
 ```
 """
-function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=nothing, values_base=:end) where {N1,N2}
+function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = nothing, values_base = :end) where {N1,N2}
     args = Dict()
     if method !== nothing
         args[:method] = method
@@ -52,22 +52,22 @@ end
     This helper function throws errors when conversions are attempted between unsopported YPFrequencies
     or from/to a YPFrequency with an unsupported reference month.
 """
-function _validate_fconvert_yp(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}})  where {N1,N2}
+function _validate_fconvert_yp(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}) where {N1,N2}
     if N1 == N2
         throw(error("Conversion from $F_from to $F_to not implemented."))
     end
     if N1 > N2
-    (np, r) = divrem(N1, N2)
-    if r != 0
-        throw(ArgumentError("Cannot convert to higher frequency with $N1 ppy from $N2 ppy - not an exact multiple."))
-    end
+        (np, r) = divrem(N1, N2)
+        if r != 0
+            throw(ArgumentError("Cannot convert to higher frequency with $N1 ppy from $N2 ppy - not an exact multiple."))
+        end
     elseif N2 > N1
         (np, r) = divrem(N2, N1)
         if r != 0
             throw(ArgumentError("Cannot convert to lower frequency with $N1 ppy from $N2 ppy - not an exact multiple."))
         end
-        end
-        
+    end
+
     if hasproperty(F_to, :parameters) && length(F_to.parameters) > 0
         months_in_period, remainder = divrem(12, N1)
         if remainder != 0
@@ -99,7 +99,7 @@ end
 
     For the `values_base` argument see [`fconvert`](@ref)]
 """
-function _get_shift_to_higher(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}; values_base=:end, errors=true) where {N1,N2}
+function _get_shift_to_higher(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}; values_base = :end, errors = true) where {N1,N2}
     shift_length = 0
     errors && _validate_fconvert_yp(F_to, F_from)
     if hasproperty(F_from, :parameters) && length(F_from.parameters) > 0
@@ -146,7 +146,7 @@ function _get_shift_to_higher(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFr
             Since July is the end of a the third quarter in a Quarterly{1} framework
             This is the same as if we were working with a Yearly{9} data and a regular Quarterly{3} target.
             We thus need to shift the results by only one Quarter.
-        
+
         """
         rounder = floor
         if (values_base == :beginning)
@@ -154,16 +154,12 @@ function _get_shift_to_higher(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFr
         end
         effective_end_month = F_from.parameters[1]
         if hasproperty(F_to, :parameters) && length(F_to.parameters) > 0
-            effective_end_month +=  (12/N1) - F_to.parameters[1]
+            effective_end_month += (12 / N1) - F_to.parameters[1]
         end
-        shift_length = Int(N1/N2 - rounder(effective_end_month / (12 / N1) ))
+        shift_length = Int(N1 / N2 - rounder(effective_end_month / (12 / N1)))
     end
     return shift_length
 end
-
-
-
-
 
 """
 _to_higher(F_to, TSeries{MIT{F_from}}; method=:const, values_base=:end, errors=true) where {F_to <: YPFrequency, F_from <: YPFrequency}
@@ -174,22 +170,22 @@ The optional `errors` argument determines whether to verify if the requested con
 
 For the `values_base` argument see [`fconvert`](@ref)]
 """
-function _to_higher(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, values_base=:end, errors=true, args...) where {N1,N2}
-"""
-NOTE: current const method assumes we are interested in matching end-of-period values.
-FAME has other approaches (BEGINNING, AVERAGED, SUMMED, ANNUALIZED, FORMULA, HIGH, LOW)
-These are passed in an "observed" argument to the convert function.
-"""
-errors && _validate_fconvert_yp(F, frequencyof(t))
-(np, r) = divrem(N1, N2)
+function _to_higher(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :const, values_base = :end, errors = true, args...) where {N1,N2}
+    """
+    NOTE: current const method assumes we are interested in matching end-of-period values.
+    FAME has other approaches (BEGINNING, AVERAGED, SUMMED, ANNUALIZED, FORMULA, HIGH, LOW)
+    These are passed in an "observed" argument to the convert function.
+    """
+    errors && _validate_fconvert_yp(F, frequencyof(t))
+    (np, r) = divrem(N1, N2)
 
-# np = number of periods of the destination frequency for each period of the source frequency
-fi = _to_higher(F, firstindex(t), values_base=values_base, errors=false)
+    # np = number of periods of the destination frequency for each period of the source frequency
+    fi = _to_higher(F, firstindex(t), values_base = values_base, errors = false)
 
-# lastindex_s = pp(y2, p2*np; N=N1))
-if method == :const
-    return TSeries(fi, repeat(t.values, inner=np))
-else
-    throw(ArgumentError("Conversion method not available: $(method)."))
-end
+    # lastindex_s = pp(y2, p2*np; N=N1))
+    if method == :const
+        return TSeries(fi, repeat(t.values, inner = np))
+    else
+        throw(ArgumentError("Conversion method not available: $(method)."))
+    end
 end

@@ -36,9 +36,9 @@ export strip!
 
     Returns the original vector otherwise.
 """
-function skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing}=nothing)  
+function skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing} = nothing)
     if nans == true || (nans === nothing && get_option(:business_skip_nans))
-        ret = filter(y -> !isnan(y), x);
+        ret = filter(y -> !isnan(y), x)
         if size(ret)[1] == 0
             return [NaN]
         end
@@ -49,7 +49,7 @@ end
 
 
 
-function _get_interpolation_values(t::TSeries{F}, m::MIT{F}, values_base::Symbol) where F
+function _get_interpolation_values(t::TSeries{F}, m::MIT{F}, values_base::Symbol) where {F}
     start_val = nothing
     end_val = nothing
     if length(t) == 1
@@ -62,10 +62,10 @@ function _get_interpolation_values(t::TSeries{F}, m::MIT{F}, values_base::Symbol
         elseif values_base == :beginning
             start_val = t[m]
             end_val = t[m+1]
-        end 
+        end
     else
-       if values_base == :end
-            end_val =  t[m]
+        if values_base == :end
+            end_val = t[m]
             start_val = t[m-1]
         elseif values_base == :beginning && m !== rangeof(t)[end]
             start_val = t[m]
@@ -73,7 +73,7 @@ function _get_interpolation_values(t::TSeries{F}, m::MIT{F}, values_base::Symbol
         elseif values_base == :beginning
             start_val = t[m]
             end_val = t[m] + (t[m] - t[m-1])
-        end 
+        end
     end
     return (start_val, end_val)
 end
@@ -91,7 +91,7 @@ will be included in the output.
 When the method is :begin, the start is truncated if the first date in the first output period is not covered by the input TSeries dates.
 When the method is :end, the end is truncated if the last date in the last output period is not covered by the input TSeries dates.
 """
-function _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N4}, Weekly, Daily, BusinessDaily, Quarterly, Quarterly{N5}, Monthly, Yearly, Yearly{N6}}}, dates::Vector{Dates.Date}, method::Symbol; include_weekends=false) where {N1,N2,N3,N4, N5, N6}
+function _get_fconvert_truncations(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly,Weekly,Weekly{N3}}}, F_from::Type{<:Union{Weekly{N4},Weekly,Daily,BusinessDaily,Quarterly,Quarterly{N5},Monthly,Yearly,Yearly{N6}}}, dates::Vector{Dates.Date}, method::Symbol; include_weekends = false) where {N1,N2,N3,N4,N5,N6}
     trunc_start = 0
     trunc_end = 0
     overlap_function = nothing
@@ -123,13 +123,13 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Qu
     # input_shift = F_from == Weekly ? Day(7) : Day(1)
     target_shift = Day(0)
     if @isdefined N1
-        target_shift = N1 != 3 ? Month(N1) : Day(0) 
+        target_shift = N1 != 3 ? Month(N1) : Day(0)
     end
     if @isdefined N2
-        target_shift = N2 != 12 ? Month(N2) : Day(0) 
+        target_shift = N2 != 12 ? Month(N2) : Day(0)
     end
     if @isdefined N3
-        target_shift = N3 != 7 ? Day(N3) : Day(0) 
+        target_shift = N3 != 7 ? Day(N3) : Day(0)
     end
 
     ## account for Weekends in conversion from BusinessDaily
@@ -150,7 +150,7 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Qu
             if F_to <: Weekly
                 # don't do anything
             elseif Dates.dayofmonth(dates[end] + Day(2)) <= 2
-                    weekend_adjustment_end = Day(2 - Dates.dayofmonth(dates[end] + Day(2)))
+                weekend_adjustment_end = Day(2 - Dates.dayofmonth(dates[end] + Day(2)))
             end
         end
         #TODO: fix for odd weekly frequencies
@@ -179,41 +179,41 @@ end
 Helper function for converting from Daily and Weekly frequencies to lower frequencies. 
 Returns an array with the length of the input range, with the values of the corresponding output frequency periods.
 """
-function _get_out_indices(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, dates::Vector{Dates.Date}) where {N1,N2,N3}
+function _get_out_indices(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly,Weekly,Weekly{N3}}}, dates::Vector{Dates.Date}) where {N1,N2,N3}
     months = Dates.month.(dates)
     years = Dates.year.(dates)
-    
+
     if F_to <: Weekly
         reference_day_adjust = 0
         if @isdefined N3
             reference_day_adjust = 7 - N3
         end
-        weeks = [Int(floor((Dates.value(d) -1 + reference_day_adjust)/7)) + 1 for d in dates]
+        weeks = [Int(floor((Dates.value(d) - 1 + reference_day_adjust) / 7)) + 1 for d in dates]
         out_index = ["MIT{$F_to}($week)" for week in weeks]
     else
         months = Dates.month.(dates)
         years = Dates.year.(dates)
-    end    
-        
+    end
+
     if F_to <: Monthly
         out_index = ["$(year)M$(month)" for (year, month) in zip(years, months)]
         # out_index = ["MIT{$F_to}(Int((year-1)*12) + month)" for (year, month) in zip(years, months)]
     elseif F_to <: Quarterly
         if @isdefined N1
             months .+= (3 - N1)
-            years[months .> 12] .+= 1
-            months[months .> 12] .-= 12
+            years[months.>12] .+= 1
+            months[months.>12] .-= 12
         end
         # println(months)
         # out_index = ["$(year)Q$(quarter)" for (year, quarter) in zip(years, quarters)]
-        quarters = [Int(ceil(m/3) - 1) for m in months]
+        quarters = [Int(ceil(m / 3) - 1) for m in months]
         # quarters = [Int(floor((m -1)/3) + 1) for m in months]
         # println([Int(year*4) + quarter for (year, quarter) in zip(years, quarters)])
         out_index = ["MIT{$F_to}(Int($year*4) + $quarter)" for (year, quarter) in zip(years, quarters)]
     elseif F_to <: Yearly
         if @isdefined N2
             months .+= 12 - N2
-            years[months .> 12] .+= 1
+            years[months.>12] .+= 1
         end
         # out_index = ["$(year)Y" for year in years]
         out_index = ["MIT{$F_to}($year)" for year in years]
