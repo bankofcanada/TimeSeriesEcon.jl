@@ -180,43 +180,43 @@ Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, 
 # -------------------------------------------------------------
 
 # construct undefined from range
-TSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}) = TSeries(first(rng), Vector{T}(undef, length(rng)))
-TSeries(rng::UnitRange{<:MIT}) = TSeries(Float64, rng)
+TSeries(T::Type{<:Number}, rng::AbstractUnitRange{<:MIT}) = TSeries(first(rng), Vector{T}(undef, length(rng)))
+TSeries(rng::AbstractUnitRange{<:MIT}) = TSeries(Float64, rng)
 TSeries(fd::MIT) = TSeries(fd .+ (0:-1))
 TSeries(T::Type{<:Number}, fd::MIT) = TSeries(T, fd .+ (0:-1))
 TSeries(n::Integer) = TSeries(1U:n*U)
 TSeries(T::Type{<:Number}, n::Integer) = TSeries(T, 1U:n*U)
-TSeries(rng::UnitRange{<:Integer}) = TSeries(0U .+ rng)
-TSeries(T::Type{<:Number}, rng::UnitRange{<:Integer}) = TSeries(T, 0U .+ rng)
+TSeries(rng::AbstractUnitRange{<:Integer}) = TSeries(0U .+ rng)
+TSeries(T::Type{<:Number}, rng::AbstractUnitRange{<:Integer}) = TSeries(T, 0U .+ rng)
 TSeries(rng::AbstractRange, ::UndefInitializer) = TSeries(Float64, rng)
 TSeries(T::Type{<:Number}, rng::AbstractRange, ::UndefInitializer) = TSeries(T, rng)
-TSeries(rng::UnitRange{<:MIT}, ini::Function) = TSeries(first(rng), ini(length(rng)))
+TSeries(rng::AbstractUnitRange{<:MIT}, ini::Function) = TSeries(first(rng), ini(length(rng)))
 
-Base.similar(::Type{<:AbstractArray}, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT}}) = TSeries(T, shape[1])
-Base.similar(::Type{<:AbstractArray{T}}, shape::Tuple{UnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
-Base.similar(::AbstractArray, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT}}) = TSeries(T, shape[1])
-Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
+Base.similar(::Type{<:AbstractArray}, T::Type{<:Number}, shape::Tuple{AbstractUnitRange{<:MIT}}) = TSeries(T, shape[1])
+Base.similar(::Type{<:AbstractArray{T}}, shape::Tuple{AbstractUnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
+Base.similar(::AbstractArray, T::Type{<:Number}, shape::Tuple{AbstractUnitRange{<:MIT}}) = TSeries(T, shape[1])
+Base.similar(::AbstractArray{T}, shape::Tuple{AbstractUnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
 
 # construct from range and fill with the given constant or array
-Base.fill(v, shape::Tuple{UnitRange{<:MIT}}) = fill(v, shape...)
-Base.fill(v, rng::UnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
-TSeries(rng::UnitRange{<:MIT}, v::Number) = fill(v, rng)
-TSeries(rng::UnitRange{<:MIT}, v::AbstractVector{<:Number}) =
+Base.fill(v, shape::Tuple{AbstractUnitRange{<:MIT}}) = fill(v, shape...)
+Base.fill(v, rng::AbstractUnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
+TSeries(rng::AbstractUnitRange{<:MIT}, v::Number) = fill(v, rng)
+TSeries(rng::AbstractUnitRange{<:MIT}, v::AbstractVector{<:Number}) =
     length(rng) == length(v) ? TSeries(first(rng), v) : throw(ArgumentError("Range and data lengths mismatch."))
 
 for (fname, felt) in ((:zeros, :zero), (:ones, :one))
     @eval begin
-        Base.$fname(rng::UnitRange{<:MIT}) = fill($felt(Float64), rng)
-        Base.$fname(::Type{T}, rng::UnitRange{<:MIT}) where {T} = fill($felt(T), rng)
-        Base.$fname(shape::Tuple{UnitRange{<:MIT}}) = fill($felt(Float64), shape)
-        Base.$fname(::Type{T}, shape::Tuple{UnitRange{<:MIT}}) where {T} = fill($felt(T), shape)
+        Base.$fname(rng::AbstractUnitRange{<:MIT}) = fill($felt(Float64), rng)
+        Base.$fname(::Type{T}, rng::AbstractUnitRange{<:MIT}) where {T} = fill($felt(T), rng)
+        Base.$fname(shape::Tuple{AbstractUnitRange{<:MIT}}) = fill($felt(Float64), shape)
+        Base.$fname(::Type{T}, shape::Tuple{AbstractUnitRange{<:MIT}}) where {T} = fill($felt(T), shape)
     end
 end
 
 for (fname, felt) in ((:trues, true), (:falses, false))
     @eval begin
-        Base.$fname(rng::UnitRange{<:MIT}) = TSeries(rng, $fname(length(rng)))
-        Base.$fname(shape::Tuple{UnitRange{<:MIT}}) = TSeries(shape[1], $fname(length(shape[1])))
+        Base.$fname(rng::AbstractUnitRange{<:MIT}) = TSeries(rng, $fname(length(rng)))
+        Base.$fname(shape::Tuple{AbstractUnitRange{<:MIT}}) = TSeries(shape[1], $fname(length(shape[1])))
     end
 end
 
@@ -282,7 +282,7 @@ end
 
 @inline _ind_range_check(x, rng::MIT) = _ind_range_check(x, rng:rng)
 @inline _ind_range_check(x, rng::StepRange{<:MIT}) = _ind_range_check(x, first(rng):last(rng))
-function _ind_range_check(x, rng::UnitRange{<:MIT})
+function _ind_range_check(x, rng::AbstractUnitRange{<:MIT})
     fi = firstindex(x.values, 1)
     fd = firstdate(x)
     stop = oftype(fi, fi + (last(rng) - fd))
@@ -299,7 +299,7 @@ function Base.getindex(t::TSeries{F}, rng::StepRange{MIT{F},Duration{F}}) where 
     step = oftype(stop - start, rng.step)
     return t.values[start:step:stop]
 end
-function Base.getindex(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
+function Base.getindex(t::TSeries{F}, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(t, rng)
     return TSeries(first(rng), getindex(t.values, start:stop))
 end
@@ -395,8 +395,8 @@ Extend or shrink the allocated storage for `t` so that the new range of `t`
 equals the given `rng`. If `t` is extended, new entries are set to `NaN`, or the
 appropriate Not-A-Number value (see [`typenan`](@ref)).
 """
-Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
-function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
+Base.resize!(t::TSeries, rng::AbstractUnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
+function Base.resize!(t::TSeries{F}, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     orng = rangeof(t)  # old range
     if first(rng) == first(orng)
         # if the beginning doesn't change we fallback on resize!(t, n)

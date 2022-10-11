@@ -38,8 +38,10 @@ using Statistics
 using Serialization
 using Distributed
 using Dates
+using TOML
 
 include("options.jl")
+
 
 include("momentintime.jl")
 export MIT, Duration
@@ -80,6 +82,7 @@ include("serialize.jl")
 
 include("various.jl")
 
+include("linalg.jl")
 
 """
     rangeof(s; drop::Integer)

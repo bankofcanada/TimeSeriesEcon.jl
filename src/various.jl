@@ -124,7 +124,7 @@ function compare_equal(x::TSeries, y::TSeries; trange=nothing, atol=0, rtol=atol
     if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
         trange = intersect(rangeof(x), rangeof(y))
     end
-    isapprox(x[trange], y[trange]; atol, rtol, nans)
+    isempty(trange) || isapprox(x[trange], y[trange]; atol, rtol, nans)
 end
 
 function compare_equal(x::LikeWorkspace, y::LikeWorkspace; kwargs...)
@@ -153,7 +153,7 @@ function compare(x, y, name=Symbol("_");
     elseif ismissing(y)
         equal = ignoremissing
         ignoremissing || compare_print(names, "missing in $right", quiet)
-    elseif compare_equal(x, y; showequal, ignoremissing, names, left, right, kwargs...)
+    elseif compare_equal(x, y; showequal, ignoremissing, names, left, right, quiet, kwargs...)
         (showequal || length(names) == 1) && compare_print(names, "same", quiet)
         equal = true
     else
@@ -240,7 +240,7 @@ function reindex end
 export reindex
 
 function reindex(rng::UnitRange{<:MIT}, pair::Pair{<:MIT,<:MIT}; copy=false)
-    T = pair[2]+Int(rng[1] - pair[1])
+    T = pair[2] + Int(rng[1] - pair[1])
     return T:T+length(rng)-1
 end
 
@@ -257,12 +257,12 @@ end
 function reindex(w::Workspace, pair::Pair{<:MIT,<:MIT}; copy=false)
     freq_from = frequencyof(pair[1])
     wo = Workspace()
-    for (k,v) in w
+    for (k, v) in w
         if v isa Workspace
             wo[k] = reindex(w[k], pair; copy)
         elseif hasmethod(reindex, (typeof(v), Pair{<:MIT,<:MIT})) && frequencyof(v) == freq_from
-            wo[k] = reindex(v,pair; copy = copy)
-        elseif copy && hasmethod(Base.copy,(typeof(v),))
+            wo[k] = reindex(v, pair; copy=copy)
+        elseif copy && hasmethod(Base.copy, (typeof(v),))
             wo[k] = Base.copy(w[k])
         else
             wo[k] = w[k]
@@ -271,3 +271,10 @@ function reindex(w::Workspace, pair::Pair{<:MIT,<:MIT}; copy=false)
     return wo
 end
 
+###########################
+_w(a) = a
+_w(w::Workspace) = w._c
+TOML.print(w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, w._c; sorted, by)
+TOML.print(io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, io, w._c; sorted, by)
+TOML.print(f::TOML.Internals.Printer.MbyFunc, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, io, w._c; sorted, by)
+TOML.print(f::TOML.Internals.Printer.MbyFunc, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, w._c; sorted, by)
