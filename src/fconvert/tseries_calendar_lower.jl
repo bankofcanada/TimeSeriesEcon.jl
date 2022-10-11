@@ -11,7 +11,7 @@ Weekly => weekly
 """
 
 """
-fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, t::TSeries{<:Union{Daily,BusinessDaily}}; method = :mean, nans::Union{Bool,Nothing} = nothing)
+fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, t::TSeries{<:Union{Daily,BusinessDaily}}; method = :mean, skip_nans::Union{Bool,Nothing} = nothing)
 
 Convert the Daily or BusinessDaily time series `t` to the desired lower frequency `F_to`.
 
@@ -64,7 +64,7 @@ end
 
 
 """
-    fconvert(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly}}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:mean, interpolation=:none)
+fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly}}, t::TSeries{<:Weekly}; method = :mean, interpolation = :none) where {N1,N2}
 
 Convert the Weekly time series `t` to a lower frequency time series.
 
@@ -78,10 +78,15 @@ whose start-dates fall within the input periods. For method `:end` the output in
 periods whose end-dates fall within the input periods.
 
 When interpolation is :linear values are interpolated in a linear fashion across days between weeks. 
-The recorded weekly value is ascribed to the midpoint of the week. I.e. Thursdays for weeks ending on Sundays, Wednesdays
-for weeks ending on Saturdays, etc. This is done to be consistent with the handling in the FAME software.
-For days beyond these midpoints, the linear line between the first two or last two weeks is extended to cover the entire day range.
-The corresponding daily values are used when selecting or aggregating values according to the `method` argument.
+The recorded weekly value is ascribed to the end-date of the week.I.e. Sunday for weeks ending in Sundays, 
+Saturdays for weeks ending in Saturday, etc. 
+
+Note that the FAME software ascribes the value to the midpoint of the week when doing a linear interpolcation. 
+I.e. Thursdays for weeks ending on Sundays, Wednesdays for weeks ending on Saturdays, etc. 
+For days beyond these midpoints, the linear line between the first two or last two weeks is extended to cover 
+the entire date range. To reproduce this behavior, call 
+`fconvert(F_to, fconvert(Daily, t, method=:linear, values_base=:middle))`.
+
 """
 function fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly}}, t::TSeries{<:Weekly}; method = :mean, interpolation = :none) where {N1,N2}
     dates = [Dates.Date(val) for val in rangeof(t)]
@@ -114,7 +119,7 @@ function fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},
                     adjusted_values[i-1] = v1 + (1 - (d / 7)) * (v2 - v1)
                 elseif method == :mean #equivalent to technique=linear, observed=averaged
                     # convert to daily with linear interpolation, then convert to monthly
-                    return fconvert(F_to, fconvert(Daily, t; method = :linear, values_base = :middle), method = :mean)
+                    return fconvert(F_to, fconvert(Daily, t; method = :linear, values_base = :end), method = :mean)
                 elseif method == :sum #equivalent to technique=linear, observed=summed
                     # shift some part of transitionary weeks between months
                     adjusted_values[i-1] = v1 + (1 - (d / 7)) * v2

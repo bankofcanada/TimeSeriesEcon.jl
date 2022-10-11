@@ -35,7 +35,7 @@ export strip!
 #### BusinessDaily helpers
 
 """
-    skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,nothing}=nothing)  
+skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing} = nothing)
 
     Skips nans in a vector if either the provided nans option is true or if no nans option is
     passed and the :business_skip_nans option is true.

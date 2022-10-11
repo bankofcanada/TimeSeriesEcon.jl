@@ -10,7 +10,8 @@ YP => YP(same)
 
 
 """
-    fconvert(F1, x::TSeries{F2}; method) where {F1 <: YPFrequency, F2 <: YPFrequency}
+
+fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = nothing, values_base = :end) where {N1,N2}
 
 Convert between frequencies derived from [`YPFrequency`](@ref).
 
@@ -68,7 +69,7 @@ function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; 
 end
 
 """
-_to_higher(F_to, TSeries{MIT{F_from}}; method=:const, values_base=:end, errors=true) where {F_to <: YPFrequency, F_from <: YPFrequency}
+_to_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :const, values_base = :end, errors = true, args...) where {N1,N2}
 
 Convert a TSeries to a higher frequency. 
 
@@ -97,7 +98,7 @@ end
 
 
 """
-    _to_lower(F_to, TSeries{MIT{F_from}}; method=:mean, errors=true) where {F_to <: YPFrequency, F_from <: YPFrequency}
+_to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :mean, errors = true, args...) where {N1,N2}
 
     Convert a TSeries to a lower frequency. 
 """
@@ -164,7 +165,7 @@ function _fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}
 end
 
 """
-_fconvert_similar_frequency(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSeries{<:Union{Quarterly,Quarterly{N2}}}; method = :end, interpolation = :none, args...) where {N1,N2}
+_fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_effective::Integer, N_from_effective::Integer, np::Integer; method = :end, interpolation = :none, values_base=:end)
 
 Converts a TSeries between similar YP frequencies with different base months.
 

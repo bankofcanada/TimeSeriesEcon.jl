@@ -261,7 +261,9 @@ end
 
     """repo CONVERT(WS1, MONTHLY, LINEAR, AVERAGED)"""
     r1 = fconvert(Monthly, t1, method=:mean, interpolation=:linear)
-    @test isapprox(r1.values, [2.71,6.93,11.14,15.50], atol=1e-2)
+    r1_mid = fconvert(Monthly, fconvert(Daily,t1, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r1.values, [2.286,6.5,10.714,15.071], atol=1e-2)
+    @test isapprox(r1_mid.values, [2.71,6.93,11.14,15.50], atol=1e-2)
     @test rangeof(r1) == 1M1:1M4
     r1_range = fconvert(Monthly, rangeof(t1), trim=:both)
     @test r1_range == 1M1:1M4
@@ -319,7 +321,9 @@ end
 
     """repo CONVERT(WS2, MONTHLY, LINEAR, AVERAGED)"""
     r9 = fconvert(Monthly, t2, method=:mean, interpolation=:linear)
-    @test isapprox(r9.values, [6.36,10.57,14.93], atol=1e-2)
+    r9_mid = fconvert(Monthly, fconvert(Daily,t2, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r9.values, [5.929,10.143,14.5], atol=1e-2)
+    @test isapprox(r9_mid.values, [6.36,10.57,14.93], atol=1e-2)
     @test rangeof(r9) == 1M2:1M4
     r9_range = fconvert(Monthly, rangeof(t2), trim=:both)
     @test r9_range == 1M2:1M4
@@ -428,7 +432,9 @@ end
 
     """repo CONVERT(WS3, QUARTERLY, LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly, t3, method=:mean, interpolation=:linear)
-    @test isapprox(r5.values, [6.93, 19.86, 32.85, 46.07], atol=1e-1)
+    r5_mid = fconvert(Quarterly, fconvert(Daily,t3, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r5.values, [6.5, 19.43, 32.5, 45.64], atol=1e-1)
+    @test isapprox(r5_mid.values, [6.93, 19.86, 32.85, 46.07], atol=1e-1)
     @test rangeof(r5) == 1Q1:1Q4
 
     """repo CONVERT(WS3, QUARTERLY, LINEAR, END)"""
@@ -484,7 +490,9 @@ end
 
     """repo CONVERT(WS4, QUARTERLY, LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly, t4, method=:mean, interpolation=:linear)
-    @test isapprox(r13.values, [19.29, 32.28, 45.50], atol=1e-1)
+    r13_mid = fconvert(Quarterly, fconvert(Daily,t4, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r13.values, [18.86, 31.93, 45.07], atol=1e-1)
+    @test isapprox(r13_mid.values, [19.29, 32.28, 45.50], atol=1e-1)
     @test rangeof(r13) == 1Q2:1Q4
 
     """repo CONVERT(WS4, QUARTERLY, LINEAR, END)"""
@@ -554,7 +562,9 @@ end
 
     """repo CONVERT(WS5, ANNUAL, LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly, t5, method=:mean, interpolation=:linear)
-    @test isapprox(r5.values, [26.57,78.71,130.86], atol=1e-2)
+    r5_mid = fconvert(Yearly, fconvert(Daily,t5, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r5.values, [26.14, 78.29, 130.43], atol=1e-2)
+    @test isapprox(r5_mid.values, [26.57,78.71,130.86], atol=1e-2)
     @test rangeof(r5) == 1Y:3Y
 
     """repo CONVERT(WS5, ANNUAL, LINEAR, END)"""
@@ -611,7 +621,9 @@ end
 
     """repo CONVERT(WS6, ANNUAL, LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly, t6, method=:mean, interpolation=:linear)
-    @test isapprox(r13.values, [78.14,130.29], atol=1e-2)
+    r13_mid = fconvert(Yearly, fconvert(Daily,t6, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r13.values, [77.71, 129.86], atol=1e-2)
+    @test isapprox(r13_mid.values, [78.14,130.29], atol=1e-2)
     @test rangeof(r13) == 2Y:3Y
 
     """repo CONVERT(WS6, ANNUAL, LINEAR, END)"""
@@ -672,7 +684,9 @@ end
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly{1}, t3, method=:mean, interpolation=:linear)
-    @test isapprox(r5.values, [11.29,24.21,37.28,50.50], atol=1e-1)
+    r5_mid = fconvert(Quarterly{1}, fconvert(Daily,t3, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r5.values, [10.86, 23.79, 36.93, 50.07], atol=1e-1)
+    @test isapprox(r5_mid.values, [11.29,24.21,37.28,50.50], atol=1e-1)
     @test rangeof(r5) == MIT{Quarterly{1}}(5):MIT{Quarterly{1}}(8)
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), LINEAR, END)"""
@@ -729,7 +743,9 @@ end
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly{1}, t4, method=:mean, interpolation=:linear)
-    @test isapprox(r13.values, [10.71,23.64,36.71,49.93], atol=1e-1)
+    r13_mid = fconvert(Quarterly{1}, fconvert(Daily,t4, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r13.values, [10.29, 23.21, 36.36, 49.5], atol=1e-1)
+    @test isapprox(r13_mid.values, [10.71,23.64,36.71,49.93], atol=1e-1)
     @test rangeof(r13) == MIT{Quarterly{1}}(5):MIT{Quarterly{1}}(8)
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), LINEAR, END)"""
@@ -788,7 +804,9 @@ end
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly{2}, t3, method=:mean, interpolation=:linear)
-    @test isapprox(r5.values, [15.50,28.64,41.64], atol=1e-1)
+    r5_mid = fconvert(Quarterly{2}, fconvert(Daily,t3, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r5.values, [15.07, 28.21, 41.29], atol=1e-1)
+    @test isapprox(r5_mid.values, [15.50,28.64,41.64], atol=1e-1)
     @test rangeof(r5) == MIT{Quarterly{2}}(5):MIT{Quarterly{2}}(7)
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), LINEAR, END)"""
@@ -845,7 +863,9 @@ end
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly{2}, t4, method=:mean, interpolation=:linear)
-    @test isapprox(r13.values, [14.93,28.07,41.07], atol=1e-1) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
+    r13_mid = fconvert(Quarterly{2}, fconvert(Daily,t4, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r13.values, [14.5, 27.64, 40.71], atol=1e-1) 
+    @test isapprox(r13_mid.values, [14.93,28.07,41.07], atol=1e-1) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test rangeof(r13) == MIT{Quarterly{2}}(5):MIT{Quarterly{2}}(7)
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), LINEAR, END)"""
@@ -904,7 +924,9 @@ end
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly{8}, t5, method=:mean, interpolation=:linear)
-    @test isapprox(r5.values, [61.29,113.43,165.64], atol=1e-2)
+    r5_mid = fconvert(Yearly{8}, fconvert(Daily,t5, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r5.values, [60.86, 113, 165.21], atol=1e-2)
+    @test isapprox(r5_mid.values, [61.29,113.43,165.64], atol=1e-2)
     @test rangeof(r5) == MIT{Yearly{8}}(2):MIT{Yearly{8}}(4)
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), LINEAR, END)"""
@@ -961,7 +983,9 @@ end
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly{8}, t6, method=:mean, interpolation=:linear)
-    @test isapprox(r13.values, [60.71,112.86,165.07], atol=1e-2)
+    r13_mid = fconvert(Yearly{8}, fconvert(Daily,t6, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r13.values, [60.29, 112.43, 164.64], atol=1e-2)
+    @test isapprox(r13_mid.values, [60.71,112.86,165.07], atol=1e-2)
     @test rangeof(r13) == MIT{Yearly{8}}(2):MIT{Yearly{8}}(4)
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), LINEAR, END)"""
@@ -1021,7 +1045,9 @@ end
 
     """repo CONVERT(WS5, ANNUAL(MARCH), LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly{3}, t5, method=:mean, interpolation=:linear)
-    @test isapprox(r5.values, [39.43,91.57,143.79], atol=1e-2)
+    r5_mid = fconvert(Yearly{3}, fconvert(Daily,t5, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r5.values, [39.0, 91.14, 143.36], atol=1e-2)
+    @test isapprox(r5_mid.values, [39.43,91.57,143.79], atol=1e-2)
     @test rangeof(r5) == MIT{Yearly{3}}(2):MIT{Yearly{3}}(4)
 
     """repo CONVERT(WS5, ANNUAL(MARCH), LINEAR, END)"""
@@ -1078,7 +1104,9 @@ end
 
     """repo CONVERT(WS6, ANNUAL(MARCH), LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly{3}, t6, method=:mean, interpolation=:linear)
-    @test isapprox(r13.values, [38.86,91.00,143.21], atol=1e-2)
+    r13_mid = fconvert(Yearly{3}, fconvert(Daily,t6, method=:linear, values_base=:middle), method=:mean)
+    @test isapprox(r13.values, [38.43, 90.57, 142.79], atol=1e-2)
+    @test isapprox(r13_mid.values, [38.86,91.00,143.21], atol=1e-2)
     @test rangeof(r13) == MIT{Yearly{3}}(2):MIT{Yearly{3}}(4)
 
     """repo CONVERT(WS6, ANNUAL(MARCH), LINEAR, END)"""

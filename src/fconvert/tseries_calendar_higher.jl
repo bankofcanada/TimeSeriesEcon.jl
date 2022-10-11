@@ -12,20 +12,24 @@ Business => Daily
 
 
 """
-fconvert(F_to::Type{<:Daily}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method=:const, interpolation=:none)
+fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method = :const, values_base = :end) where {N3}
 
 Convert the Weekly time series `t` to a Daily time series.
 
 The only supported method is currently :const.
 
 When interpolation is :linear values are interpolated in a linear fashion across days between weeks.
-The recorded weekly value is ascribed to the midpoint of the week. I.e. Thursdays for weeks ending on Sundays, Wednesdays
-for weeks ending on Saturdays, etc. This is done to be consistent with the handling in FAME.
-For days beyond these midpoints, the linear line between the first two or last two weeks is extended to cover the entire day range.
+The recorded weekly value is ascribed to the end-date of the week.I.e. Sunday for weeks ending in Sundays, 
+Saturdays for weeks ending in Saturday, etc.
+    
+Note that the FAME software ascribes the value to the midpoint of the week when doing a linear interpolcation. 
+I.e. Thursdays for weeks ending on Sundays, Wednesdays for weeks ending on Saturdays, etc. For days beyond 
+these midpoints, the linear line between the first two or last two weeks is extended to cover the entire date
+range. To reproduce this behavior, `pass values_base=:middle`.
 
-For BusinessDaily frequencies this approach differs from the approach in FAME which interpolates for all weekdays and then drops weekends. 
+Note also that the results for BusinessDaily frequencies also differ from that of the FAME software.
+FAME interpolates for all weekdays and then drops weekends. 
 To replicate that approach, first convert your weekly series to a Daily series:
-
 `fconvert(BusinessDaily, fconvert(Daily, t, method=:linear))`
 
 """
@@ -46,11 +50,11 @@ function fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::Union{TSeries{Wee
         return TSeries(fi, repeat(t.values, inner = np))
     elseif method == :linear
         values = repeat(Float64.(t.values), inner = np)
-        val_day = F_to == Daily ? 4 : 3 # thursday for weekly, wednesday for businessdaily
+        val_day = np
         if values_base == :begin
             val_day = 1
-        elseif values_base == :end
-            val_day = np
+        elseif values_base == :middle
+            val_day = F_to == Daily ? 4 : 3 # thursday for weekly, wednesday for businessdaily
         end
 
         interpolation = nothing
