@@ -1533,6 +1533,37 @@ end
     @test mit5_2 == 2022M10
 end
 
+@testset "fconvert, BusinessDaily to Weekly" begin
+    t1 = TSeries(bdaily("2000-01-03"), collect(1:10))
+    r1 = fconvert(Weekly, t1)
+    @test r1.values == [3, 8]
+    @test rangeof(r1) == MIT{Weekly}(104304):MIT{Weekly}(104305)
+    @test rangeof(r1) == fconvert(Weekly, rangeof(t1))
+    @test rangeof(r1)[begin] == fconvert(Weekly, rangeof(t1)[begin], values_base=:begin, round_to=:next)
+    @test rangeof(r1)[end] == fconvert(Weekly, rangeof(t1)[end], values_base=:end, round_to=:previous)
+    
+    t2 = TSeries(bdaily("2000-01-06"), collect(1:10))
+    r2 = fconvert(Weekly{3}, t2)
+    @test r2.values == [3, 8]
+    @test rangeof(r2) == MIT{Weekly{3}}(104305):MIT{Weekly{3}}(104306)
+    @test rangeof(r2) == fconvert(Weekly{3}, rangeof(t2))
+    @test rangeof(r2)[begin] == fconvert(Weekly{3}, rangeof(t2)[begin], values_base=:begin, round_to=:next)
+    @test rangeof(r2)[end] == fconvert(Weekly{3}, rangeof(t2)[end], values_base=:end, round_to=:previous)
+    
+    r3 = fconvert(Weekly{3}, t1)
+    @test r2.values == [3, 8]
+
+    r4 = fconvert(Weekly{6}, t1)
+    @test r4.values == [3, 8]
+
+    r5 = fconvert(Weekly{5}, t1)
+    @test r5.values == [3, 8]
+
+    r6 = fconvert(Weekly{7}, t1)
+    @test r6.values == [3, 8]
+
+end
+
 @testset "fconvert, BusinessDaily to Daily" begin
 
     t1 = TSeries(bdaily("2022-07-06"), collect(1:13))
@@ -1775,8 +1806,8 @@ end
     counter = 1
     t_from = nothing
     last_F_from = nothing
-    @showprogress "combinations" for (F_from, F_to) in combinations
-    # for (F_from, F_to) in combinations
+    # @showprogress "combinations" for (F_from, F_to) in combinations
+    for (F_from, F_to) in combinations
         if F_from != last_F_from
             last_F_from = F_from
             t_from = TSeries(MIT{F_from}(100), collect(1:800))

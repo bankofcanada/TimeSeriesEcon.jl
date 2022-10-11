@@ -154,29 +154,40 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
         target_shift -= Month(12-N3)
     end
 
-    # Account for weekends
+    # Account for weekends when going from BusinessDaily to a lower frequency
     weekend_adjustment_start = Day(0)
     weekend_adjustment_end = Day(0)
     if include_weekends == true
-        if dayofweek(dates[begin]) == 1 # First date is a Monday
-            if F_to <: Weekly
+        start_weekday = dayofweek(dates[begin])
+        end_weekday = dayofweek(dates[end])
+        if start_weekday == 1 # First date is a Monday
+            if F_to == Weekly 
                 # don't do anything
-            else
-                if Dates.dayofmonth(dates[begin]) <= 3
-                    weekend_adjustment_start = Day(Dates.dayofmonth(dates[begin]) - 1)
-                end
+            elseif !(F_to <: Weekly) && Dates.dayofmonth(dates[begin]) <= 3
+                weekend_adjustment_start = Day(Dates.dayofmonth(dates[begin]) - 1)
             end
             # _dates[begin] = _dates[begin] - Day(2)
         end
-        if dayofweek(dates[end]) == 5 # last date is a Friday
-            if F_to <: Weekly
-                # don't do anything
-                
-            elseif Dates.dayofmonth(dates[end] + Day(2)) <= 2
+        if end_weekday == 5 # last date is a Friday
+             if F_to == Weekly 
+                weekend_adjustment_end = Day(2)
+            elseif !(F_to <: Weekly) && Dates.dayofmonth(dates[end] + Day(2)) <= 2
                 weekend_adjustment_end = Day(2 - Dates.dayofmonth(dates[end] + Day(2)))
             end
         end
-        #TODO: fix for odd weekly frequencies
+        # Accounting for odd weekly frequencies
+        if F_to <: Weekly && @isdefined N1
+            if N1 == 6 && end_weekday == 5
+                weekend_adjustment_end = Day(1)
+            elseif N1 == 7 && end_weekday == 5
+                weekend_adjustment_end = Day(2)
+            end
+            if N1==6 && start_weekday == 1
+                weekend_adjustment_start = Day(1)
+            elseif N1==5 && start_weekday == 1
+                weekend_adjustment_start = Day(2)
+            end
+        end  
     end
 
     # println(dates[begin], ", i: ", input_shift, ", t: ", target_shift, ", w: ", weekend_adjustment_start)
