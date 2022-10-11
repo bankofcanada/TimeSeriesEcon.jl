@@ -188,7 +188,7 @@ end
     q2 = fconvert(Quarterly, tsbd)
     @test q2.values ≈ [1.152, 1.486, NaN, NaN] nans=true atol=1e-3
 
-    q3 = fconvert(Quarterly, tsbd, nans=true)
+    q3 = fconvert(Quarterly, tsbd, skip_nans=true)
     @test q3.values ≈ [1.152, 1.486, 1.235, 1.580] nans=true atol=1e-3
 
     TimeSeriesEcon.set_holidays_map("CA", "ON");
@@ -198,7 +198,7 @@ end
     q4 = fconvert(Quarterly, tsbd)
     @test q4.values ≈ [1.152, 1.486, 1.235, 1.580] nans=true atol=1e-3
 
-    q5 = fconvert(Quarterly, tsbd, nans=false)
+    q5 = fconvert(Quarterly, tsbd, skip_nans=false)
     @test q5.values ≈ [1.152, 1.486, NaN, NaN] nans=true atol=1e-3
 
     TimeSeriesEcon.clear_holidays_map()
@@ -207,9 +207,9 @@ end
     
     q6 = fconvert(Quarterly, tsbd)
     @test q6.values ≈[1.152, 1.487, 1.235, 1.577] nans=true atol=1e-3
-    q7 = fconvert(Quarterly, tsbd, nans=true)
+    q7 = fconvert(Quarterly, tsbd, skip_nans=true)
     @test q7.values ≈ [1.152, 1.487, 1.235, 1.577] nans=true atol=1e-3
-    q8 = fconvert(Quarterly, tsbd, nans=false)
+    q8 = fconvert(Quarterly, tsbd, skip_nans=false)
     @test q8.values ≈ [NaN, NaN, NaN, NaN] nans=true atol=1e-3
 
     TimeSeriesEcon.clear_holidays_map()

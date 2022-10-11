@@ -119,7 +119,7 @@ export compare, @compare
 
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
 @inline compare_equal(x::Number, y::Number; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
-@inline compare_equal(x::AbstractVector, y::AbstractVector; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
+@inline compare_equal(x::AbstractVector{<:Number}, y::AbstractVector{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
 function compare_equal(x::TSeries, y::TSeries; trange=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
     if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
         trange = intersect(rangeof(x), rangeof(y))
@@ -199,12 +199,14 @@ end
 """
     reindex(ts, from => to; copy = false)
     reindex(w, from => to; copy = false)
+    reindex(rng, from => to)
 
-The function `reindex` re-indexes the `TSeries` or `MVTSeries` `ts`
-or those contained in the `Workspace` `w`
+The function `reindex` re-indexes the `TSeries` or `MVTSeries` `ts`, 
+or those contained in the `Workspace` `w`, 
+or the `UnitRange` `rng`, 
 so that the `MIT` `from` becomes the `MIT` `to` leaving the data unchanged.
-For a `Workspace`, only the `TSeries` with the same frequency as the first element of the pair
-will be reindexed.
+For a `Workspace`, only objects  with the same frequency as the first element of the pair
+will be reindexed; also, nested `Workspace`s are reindexed recursively.
 
 By default, the data is not copied.
 
@@ -229,9 +231,18 @@ w2 = reindex(w, 2021Q1 => 1U; copy = true)
 w.a[2020Q1] = 9999
 MVTSeries(; w1_a = w1.a, w2_a = w2.a)
 ```
+With a `UnitRange`
+```
+reindex(2021Q1:2022Q4, 2022Q1 => 1U)
+```
 """
 function reindex end
 export reindex
+
+function reindex(rng::UnitRange{<:MIT}, pair::Pair{<:MIT,<:MIT}; copy=false)
+    T = pair[2]+Int(rng[1] - pair[1])
+    return T:T+length(rng)-1
+end
 
 function reindex(ts::TSeries, pair::Pair{<:MIT,<:MIT}; copy=false)
     ts_lag = firstdate(ts) - pair[1]
@@ -247,7 +258,9 @@ function reindex(w::Workspace, pair::Pair{<:MIT,<:MIT}; copy=false)
     freq_from = frequencyof(pair[1])
     wo = Workspace()
     for (k,v) in w
-        if isa(v,Union{TSeries,MVTSeries}) && frequencyof(v) == freq_from
+        if v isa Workspace
+            wo[k] = reindex(w[k], pair; copy)
+        elseif hasmethod(reindex, (typeof(v), Pair{<:MIT,<:MIT})) && frequencyof(v) == freq_from
             wo[k] = reindex(v,pair; copy = copy)
         elseif copy && hasmethod(Base.copy,(typeof(v),))
             wo[k] = Base.copy(w[k])
