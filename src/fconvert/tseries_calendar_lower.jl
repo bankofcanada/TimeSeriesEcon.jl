@@ -93,6 +93,9 @@ function fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},
 
     # interpolate for weeks spanning divides
     adjusted_values = copy(t.values)
+    if interpolation ∉ (:none, :linear)
+        throw(ArgumentError("interpolation argument must be :none, or :linear. Received: $(interpolation)."))
+    end
     if interpolation == :linear
         months_rotation = Day(0)
         if @isdefined N1

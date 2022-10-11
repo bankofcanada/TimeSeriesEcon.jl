@@ -57,7 +57,7 @@ end
     @test fconvert(Quarterly, y1.firstdate, values_base=:begin, round_to=:next) == 22Q1
     @test fconvert(Quarterly, y1.firstdate, values_base=:begin, round_to=:current) == 22Q1
     @test fconvert(Quarterly, y1.firstdate, values_base=:end, round_to=:previous) == 22Q4
-    @test fconvert(Quarterly, y1.firstdate, values_base=:end, round_to=:nex) == 22Q4
+    @test fconvert(Quarterly, y1.firstdate, values_base=:end, round_to=:next) == 22Q4
     @test fconvert(Quarterly, y1.firstdate, values_base=:end, round_to=:current) == 22Q4
     
     y2 = TSeries(MIT{Yearly{7}}(22), [1,2])

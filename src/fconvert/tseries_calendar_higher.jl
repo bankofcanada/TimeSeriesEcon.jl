@@ -34,6 +34,7 @@ To replicate that approach, first convert your weekly series to a Daily series:
 
 """
 function fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::Union{TSeries{Weekly{N3}},TSeries{Weekly}}; method = :const, values_base = :end) where {N3}
+   
     np = F_to == BusinessDaily ? 5 : 7
     reference_day_adjust = 0
     if @isdefined N3
@@ -46,6 +47,9 @@ function fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::Union{TSeries{Wee
 
     fi = MIT{F_to}(Int(firstindex(t)) * np - (np - 1) - reference_day_adjust)
 
+    if values_base ∉ (:begin, :end, :middle)
+        throw(ArgumentError("values_base argument must be :begin, :end, or :middle. Received: $(values_base)."))
+    end
     if method == :const
         return TSeries(fi, repeat(t.values, inner = np))
     elseif method == :linear
@@ -103,7 +107,7 @@ function fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::TSeries{<:YPFrequ
     li = date_function(Dates.Date(rangeof(t)[end]))
     ts = TSeries(fi:li)
     if values_base ∉ (:end, :begin)
-        throw(ArgumentError("values_base argument must be :begin or :end."))
+        throw(ArgumentError("values_base argument must be :begin or :end. Received: $(values_base)."))
     end
     if method == :const
         for m in rangeof(t)
@@ -167,7 +171,7 @@ function fconvert(F_to::Type{<:Union{Weekly,Weekly{N}}}, t::TSeries{<:YPFrequenc
     li = weekly(Dates.Date(rangeof(t)[end]), N_effective, normalize)
     ts = TSeries(fi:li)
     if values_base ∉ (:end, :begin)
-        throw(ArgumentError("values_base argument must be :begin or :end."))
+        throw(ArgumentError("values_base argument must be :begin or :end. Received: $(values_base)."))
     end
     if method == :const
         loop_range = values_base == :end ? rangeof(t) : reverse(rangeof(t))
@@ -210,7 +214,7 @@ Convert the BusinessDaily time series `t` to a Daily time series.
 
 The options are 
 method = :const or :linear
-values_base = :end, :begin, or :middle. Default is :end
+values_base = :end, :begin, or :middle. Default is :middle
 
 For method = :const, weekends and NaN values will be filled with the nearest valid value in the direction of :values_base.
 They will not be replaced if values_base is set to :middle.
@@ -228,6 +232,12 @@ function fconvert(F_to::Type{<:Daily}, t::TSeries{BusinessDaily}; method = :cons
     out_dates = daily.(Dates.Date.(collect(rangeof(t))))
     ts[out_dates] .= t.values
 
+    if values_base ∉ (:end, :begin, :middle)
+        throw(ArgumentError("values_base argument must be :begin, :end, or :middle. Received: $(values_base)."))
+    end
+    if method ∉ (:const, :linear)
+        throw(ArgumentError("method must be :const or :linear. Received: $(values_base)."))
+    end
     if method == :linear || values_base != :middle
         nan_indices = findall(x -> isnan(x), ts.values)
         i = 1

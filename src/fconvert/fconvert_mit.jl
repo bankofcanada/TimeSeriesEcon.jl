@@ -63,6 +63,14 @@ function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:U
     elseif round_to == :current && values_base == :begin
         return _get_out_indices(F_to, [Dates.Date(MIT_from - 1) + Day(1)])[begin]
     end
+    
+    # error checking
+    if values_base ∉ (:end, :begin)
+        throw(ArgumentError("values_base argument must be :begin or :end. Received: $(values_base)."))
+    end
+    if round_to ∉ (:current, :previous, :next)
+        throw(ArgumentError("round_to argument must be :current, :previous, or :next. Received: $(round_to)."))
+    end
 
     # accounting for rounding
     dates = [Dates.Date(MIT_from - 1) + Day(1), Dates.Date(MIT_from)]
@@ -138,6 +146,8 @@ function fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly, <:Y
             throw(ArgumentError("$d is on a weekend. Pass round_to = :previous or :next to convert to $F_to"))
         end
         return bdaily(d)
+    else
+        throw(ArgumentError("round_to argument must be :current, :previous, or :next. Received: $(round_to)."))
     end
 end
 
@@ -155,6 +165,9 @@ Note: one can also pass :mean, :sum, which are equivalent to :both
 """
 function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency, <:YPFrequency}}}; trim = :both, errors=true)
     errors && _validate_fconvert_yp(F_to, frequencyof(first(range_from)))
+    if errors && trim ∉ (:both, :begin, :end)
+        throw(ArgumentError("trim argument must be :both, :begin, or :end. Received: $(trim)."))
+    end
     dates = [Dates.Date(range_from[begin] - 1) + Day(1), Dates.Date(range_from[end])]
     out_index = _get_out_indices(F_to, dates)
     include_weekends = frequencyof(range_from) <: BusinessDaily
