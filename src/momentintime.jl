@@ -269,7 +269,7 @@ function bdaily(d::Date, bias_previous::Bool=true)
     return MIT{BusinessDaily}(Dates.value(d - _d0 - Day(num_weekends*2 + adjustment)))
 end
 bdaily(d::String) = bdaily(Dates.Date(d))
-bdaily(d::String, bias_previous::Bool=true) = bdaily(Dates.Date(d), bias_previous)
+bdaily(d::String, bias_previous::Bool) = bdaily(Dates.Date(d), bias_previous)
     
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
