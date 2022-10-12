@@ -1,9 +1,9 @@
 """
-YP => YP(higher)
+YP => YP (higher)
     options:  method = :const, values_base = :begin/:end            # could use a linear method...
-YP => YP(lower)
+YP => YP (lower)
     options: method=:mean/:sum/:end/:begin
-YP => YP(same)
+YP => YP (same)
     options: method = :mean/:begin/:end, interpolation = :none      # sum not available
 
 """

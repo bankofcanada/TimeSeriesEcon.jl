@@ -23,7 +23,6 @@ fconvert(::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
 
 include("fconvert_helpers.jl")
 include("fconvert_mit.jl")
-include("tseries_tseries_yp.jl")
-include("tseries_calendar_higher.jl")
-include("tseries_calendar_lower.jl")
+include("fconvert_tseries_yp.jl")
+include("fconvert_tseries_calendar.jl")
 
