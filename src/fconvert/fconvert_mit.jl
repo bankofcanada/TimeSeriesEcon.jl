@@ -56,14 +56,14 @@ When values_base is :begin and round_to is :next then the output will be the sam
 round_to = :current.
 
 """
-function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:Union{<:CalendarFrequency,<:YPFrequency}}; values_base = :end, round_to=:current)
+function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:Union{<:CalendarFrequency,<:YPFrequency}}; values_base=:end, round_to=:current)
     # simple case
     if round_to == :current && values_base == :end
         return _get_out_indices(F_to, [Dates.Date(MIT_from)])[begin]
     elseif round_to == :current && values_base == :begin
         return _get_out_indices(F_to, [Dates.Date(MIT_from - 1) + Day(1)])[begin]
     end
-    
+
     # error checking
     if values_base ∉ (:end, :begin)
         throw(ArgumentError("values_base argument must be :begin or :end. Received: $(values_base)."))
@@ -76,7 +76,7 @@ function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:U
     dates = [Dates.Date(MIT_from - 1) + Day(1), Dates.Date(MIT_from)]
     out_index = _get_out_indices(F_to, dates)
     include_weekends = frequencyof(MIT_from) <: BusinessDaily
-    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(MIT_from), dates, :both, include_weekends = include_weekends, shift_input=false, pad_input=false)
+    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(MIT_from), dates, :both, include_weekends=include_weekends, shift_input=false, pad_input=false)
 
     # values_base == :begin ==> check if the start of p1 is at the start of p2
     if values_base == :begin && (trunc_start == 0 || round_to == :current)
@@ -100,7 +100,7 @@ function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:U
         # but we are biasing forwards so just return the period
         return out_index[end]
     elseif values_base == :end && round_to == :previous
-         # the end of the MIT_from comes before the end of the corresponding MIT_to
+        # the end of the MIT_from comes before the end of the corresponding MIT_to
         # and we are biasing backwards
         return out_index[end] - 1
     end
@@ -135,7 +135,7 @@ which returns the closest preceeding Friday. The other options are `:next` and `
 
 Weekends will result in an ArgumentError when `:current` is provided.
 """
-function fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly, <:YPFrequency, Daily}}, round_to=:previous)
+function fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency,Daily}}, round_to=:previous)
     if round_to == :previous
         return bdaily(Dates.Date(MIT_from))
     elseif round_to == :next
@@ -163,7 +163,7 @@ the `trim` argument determines which observations of the output frequency must b
 :both means that both the first and last date in each output period must be covered.
 Note: one can also pass :mean, :sum, which are equivalent to :both
 """
-function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency, <:YPFrequency}}}; trim = :both, errors=true)
+function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency,<:YPFrequency}}}; trim=:both, errors=true)
     errors && _validate_fconvert_yp(F_to, frequencyof(first(range_from)))
     if errors && trim ∉ (:both, :begin, :end)
         throw(ArgumentError("trim argument must be :both, :begin, or :end. Received: $(trim)."))
@@ -171,11 +171,11 @@ function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitR
     dates = [Dates.Date(range_from[begin] - 1) + Day(1), Dates.Date(range_from[end])]
     out_index = _get_out_indices(F_to, dates)
     include_weekends = frequencyof(range_from) <: BusinessDaily
-    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(range_from), dates, trim, include_weekends = include_weekends, shift_input=false, pad_input=false)
+    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(range_from), dates, trim, include_weekends=include_weekends, shift_input=false, pad_input=false)
     return out_index[begin]+trunc_start:out_index[end]-trunc_end
 end
 
-fconvert(F_to::Type{Daily}, range_from::UnitRange{<:MIT{<:Union{<:Weekly, Daily, <:YPFrequency}}}) = daily(Dates.Date(range_from[begin] - 1) + Day(1)):daily(Dates.Date(range_from[end]))
+fconvert(F_to::Type{Daily}, range_from::UnitRange{<:MIT{<:Union{<:Weekly,Daily,<:YPFrequency}}}) = daily(Dates.Date(range_from[begin] - 1) + Day(1)):daily(Dates.Date(range_from[end]))
 fconvert(F_to::Type{<:Daily}, range_from::UnitRange{MIT{BusinessDaily}}) = daily(Dates.Date(range_from[begin])):daily(Dates.Date(range_from[end]))
-fconvert(F_to::Type{BusinessDaily}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency, <:YPFrequency}}}) = bdaily(Dates.Date(range_from[begin] - 1) + Day(1), false):bdaily(Dates.Date(range_from[end]), true)
+fconvert(F_to::Type{BusinessDaily}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency,<:YPFrequency}}}) = bdaily(Dates.Date(range_from[begin] - 1) + Day(1), false):bdaily(Dates.Date(range_from[end]), true)
 

@@ -42,7 +42,7 @@ skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing} = nothin
 
     Returns the original vector otherwise.
 """
-function skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing} = nothing)
+function skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing}=nothing)
     if nans == true || (nans === nothing && get_option(:business_skip_nans))
         ret = filter(y -> !isnan(y), x)
         if size(ret)[1] == 0
@@ -98,10 +98,10 @@ will be included in the output.
 When the method is :begin, the start is truncated if the first date in the first output period is not covered by the input TSeries dates.
 When the method is :end, the end is truncated if the last date in the last output period is not covered by the input TSeries dates.
 """
-function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,Quarterly{N2},Quarterly,Yearly{N3},Yearly}}, F_from::Type{<:Union{Weekly{N4},Weekly,Daily,BusinessDaily,Quarterly,Quarterly{N5},Monthly,Yearly,Yearly{N6}}}, dates::Vector{Dates.Date}, method::Symbol; include_weekends = false, shift_input = true, pad_input=true) where {N1,N2,N3,N4,N5,N6}
+function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,Quarterly{N2},Quarterly,Yearly{N3},Yearly}}, F_from::Type{<:Union{Weekly{N4},Weekly,Daily,BusinessDaily,Quarterly,Quarterly{N5},Monthly,Yearly,Yearly{N6}}}, dates::Vector{Dates.Date}, method::Symbol; include_weekends=false, shift_input=true, pad_input=true) where {N1,N2,N3,N4,N5,N6}
     trunc_start = 0
     trunc_end = 0
-    
+
     overlap_function = nothing
     if F_to <: Weekly
         overlap_function = Dates.dayofweek
@@ -116,18 +116,18 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
     # Account for input frequency
     input_shift = Day(0)
     if F_from <: Weekly
-        if pad_input 
+        if pad_input
             input_shift -= Day(7) - Day(1)
         end
         if shift_input && @isdefined N4
-            input_shift -= Day(7-N4)
+            input_shift -= Day(7 - N4)
         end
     elseif F_from <: Quarterly
-        if pad_input 
+        if pad_input
             input_shift -= Month(3) - Day(1)
         end
         if shift_input && @isdefined N5
-            input_shift -= Month(3-N5)
+            input_shift -= Month(3 - N5)
         end
     elseif F_from <: Monthly
         if (pad_input)
@@ -138,20 +138,20 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
             input_shift -= Year(1) - Day(1)
         end
         if shift_input && @isdefined N6
-            input_shift -= Month(12-N6)
+            input_shift -= Month(12 - N6)
         end
     end
 
     # Account for output frequency
     target_shift = Day(0)
     if F_to <: Weekly && @isdefined N1
-        target_shift -= Day(7-N1)
+        target_shift -= Day(7 - N1)
     end
     if F_to <: Quarterly && @isdefined N2
-        target_shift -= Month(3-N2)
+        target_shift -= Month(3 - N2)
     end
     if F_to <: Yearly && @isdefined N3
-        target_shift -= Month(12-N3)
+        target_shift -= Month(12 - N3)
     end
 
     # Account for weekends when going from BusinessDaily to a lower frequency
@@ -161,7 +161,7 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
         start_weekday = dayofweek(dates[begin])
         end_weekday = dayofweek(dates[end])
         if start_weekday == 1 # First date is a Monday
-            if F_to == Weekly 
+            if F_to == Weekly
                 # don't do anything
             elseif !(F_to <: Weekly) && Dates.dayofmonth(dates[begin]) <= 3
                 weekend_adjustment_start = Day(Dates.dayofmonth(dates[begin]) - 1)
@@ -169,7 +169,7 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
             # _dates[begin] = _dates[begin] - Day(2)
         end
         if end_weekday == 5 # last date is a Friday
-             if F_to == Weekly 
+            if F_to == Weekly
                 weekend_adjustment_end = Day(2)
             elseif !(F_to <: Weekly) && Dates.dayofmonth(dates[end] + Day(2)) <= 2
                 weekend_adjustment_end = Day(2 - Dates.dayofmonth(dates[end] + Day(2)))
@@ -182,12 +182,12 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
             elseif N1 == 7 && end_weekday == 5
                 weekend_adjustment_end = Day(2)
             end
-            if N1==6 && start_weekday == 1
+            if N1 == 6 && start_weekday == 1
                 weekend_adjustment_start = Day(1)
-            elseif N1==5 && start_weekday == 1
+            elseif N1 == 5 && start_weekday == 1
                 weekend_adjustment_start = Day(2)
             end
-        end  
+        end
     end
 
     # println(dates[begin], ", i: ", input_shift, ", t: ", target_shift, ", w: ", weekend_adjustment_start)
@@ -196,7 +196,7 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
     # println(dates[end] + input_shift - target_shift + + weekend_adjustment_end + Day(1))
     whole_first_period = overlap_function(dates[begin] + input_shift - target_shift - weekend_adjustment_start) == 1
     whole_last_period = overlap_function(dates[end] + input_shift - target_shift + weekend_adjustment_end + Day(1)) == 1
-    
+
     if method ∈ (:mean, :sum, :both)
         trunc_start = whole_first_period ? 0 : 1
         trunc_end = whole_last_period ? 0 : 1
@@ -270,7 +270,7 @@ end
 
     For the `values_base` argument see [`fconvert`](@ref)]
 """
-function _get_shift_to_higher(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}; values_base = :end, errors = true) where {N1,N2}
+function _get_shift_to_higher(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}; values_base=:end, errors=true) where {N1,N2}
     shift_length = 0
     errors && _validate_fconvert_yp(F_to, F_from)
     if hasproperty(F_from, :parameters) && length(F_from.parameters) > 0
@@ -341,7 +341,7 @@ end
 
     The optional `errors` argument determines whether to verify if the requested conversion is a valid one.
 """
-function _get_shift_to_lower(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}; errors = true) where {N1,N2}
+function _get_shift_to_lower(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}; errors=true) where {N1,N2}
     errors && _validate_fconvert_yp(F_to, F_from)
 
     shift_length = 0

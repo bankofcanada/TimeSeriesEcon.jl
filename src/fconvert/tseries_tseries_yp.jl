@@ -49,12 +49,12 @@ x = TSeries(2000M1:2000M7, collect(Float64, 1:7))
 fconvert(Quarterly, x; method = :sum)
 ```
 """
-function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = nothing, values_base = :end) where {N1,N2}
+function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=nothing, values_base=:end) where {N1,N2}
     args = Dict()
     if method !== nothing
         args[:method] = method
     end
-    if N1 > N2 
+    if N1 > N2
         args[:values_base] = values_base
         return _to_higher(F_to, t; args...)
     elseif N1 < N2
@@ -67,7 +67,7 @@ function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; 
         return _fconvert_similar_quarterly(F_to, t; args...)
     else
         return t
-    end 
+    end
 end
 
 """
@@ -79,7 +79,7 @@ The optional `errors` argument determines whether to verify if the requested con
 
 For the `values_base` argument see [`fconvert`](@ref)]
 """
-function _to_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :const, values_base = :end, errors = true, args...) where {N1,N2}
+function _to_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, values_base=:end, errors=true, args...) where {N1,N2}
     """
     NOTE: current const method assumes we are interested in matching end-of-period values.
     FAME has other approaches (BEGINNING, AVERAGED, SUMMED, ANNUALIZED, FORMULA, HIGH, LOW)
@@ -87,12 +87,12 @@ function _to_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}
     """
     errors && _validate_fconvert_yp(F_to, frequencyof(t))
     (np, r) = divrem(N1, N2)
-    shift_length = _get_shift_to_higher(F_to, frequencyof(t); values_base = values_base, errors = false)
+    shift_length = _get_shift_to_higher(F_to, frequencyof(t); values_base=values_base, errors=false)
     (y1, p1) = mit2yp(t.firstdate)
     fi = MIT{F_to}(y1, (p1 - 1) * np + 1) - shift_length
 
     if method == :const
-        return TSeries(fi, repeat(t.values, inner = np))
+        return TSeries(fi, repeat(t.values, inner=np))
     else
         throw(ArgumentError("Conversion method not available: $(method)."))
     end
@@ -104,8 +104,8 @@ _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method =
 
     Convert a TSeries to a lower frequency. 
 """
-function _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :mean, errors = true) where {N1,N2}
-# function _to_lower(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :mean, errors = true) where {N1,N2}
+function _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:mean, errors=true) where {N1,N2}
+    # function _to_lower(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :mean, errors = true) where {N1,N2}
     F_from = frequencyof(t)
     errors && _validate_fconvert_yp(F_to, F_from)
     if hasproperty(F_from, :parameters) && length(F_from.parameters) > 0
@@ -114,10 +114,10 @@ function _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}};
         All the specialized YPFrequencies (Yearly{N}, Quarterly{N}) are based on some monthly shift.
         We therefore convert the series to monthly, before recalling fconvert on the output.
         """
-        return fconvert(F_to, fconvert(Monthly, t), method = method)
+        return fconvert(F_to, fconvert(Monthly, t), method=method)
     end
     (np, r) = divrem(N2, N1)
-    shift_length = _get_shift_to_lower(F_to, F_from, errors = false)
+    shift_length = _get_shift_to_lower(F_to, F_from, errors=false)
     (y1, p1) = mit2yp(t.firstdate + shift_length)
     (d1, r1) = divrem(p1 - 1, np)
     fi = MIT{F_to}(y1, d1 + 1) + (r1 > 0)
@@ -128,9 +128,9 @@ function _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}};
 
     vals = t[begin+(r1>0)*(np-r1):end-(r2<np-1)*(1+r2)].values
     if method == :mean
-        ret = mean(reshape(vals, np, :); dims = 1)
+        ret = mean(reshape(vals, np, :); dims=1)
     elseif method == :sum
-        ret = sum(reshape(vals, np, :); dims = 1)
+        ret = sum(reshape(vals, np, :); dims=1)
     elseif method == :begin
         ret = reshape(vals, np, :)[begin, :]
     elseif method == :end
@@ -147,11 +147,11 @@ _fconvert_similar_yearly(F_to::Type{<:Union{<:Yearly,Yearly{N1}}}, t::TSeries{<:
 
 An intermediate helper function for converting between similar YP frequencies with different base months..
 """
-function _fconvert_similar_yearly(F_to::Type{<:Union{<:Yearly,Yearly{N1}}}, t::TSeries{<:Union{<:Yearly,Yearly{N2}}}; method = :end, values_base=:end) where {N1,N2}
+function _fconvert_similar_yearly(F_to::Type{<:Union{<:Yearly,Yearly{N1}}}, t::TSeries{<:Union{<:Yearly,Yearly{N2}}}; method=:end, values_base=:end) where {N1,N2}
     np = 12
     N_to_effective = @isdefined(N1) ? N1 : np
     N_from_effective = @isdefined(N2) ? N2 : np
-    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method = method, values_base=values_base)
+    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method=method, values_base=values_base)
 end
 
 """
@@ -159,11 +159,11 @@ _fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSe
 
 An intermediate helper function for converting between similar YP frequencies with different base months.
 """
-function _fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSeries{<:Union{Quarterly,Quarterly{N2}}}; method = :end, values_base=:end) where {N1,N2}
+function _fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSeries{<:Union{Quarterly,Quarterly{N2}}}; method=:end, values_base=:end) where {N1,N2}
     np = 3
     N_to_effective = @isdefined(N1) ? N1 : np
     N_from_effective = @isdefined(N2) ? N2 : np
-    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method = method, values_base=values_base)
+    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method=method, values_base=values_base)
 end
 
 """
@@ -176,7 +176,7 @@ Currently the only methods available are `:mean`, `:begin`, `:end`, and `:const`
 
 There is currently no interpolation available.
 """
-function _fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_effective::Integer, N_from_effective::Integer, np::Integer; method = :end, values_base=:end)
+function _fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_effective::Integer, N_from_effective::Integer, np::Integer; method=:end, values_base=:end)
     N_shift = N_to_effective - N_from_effective
     if N_shift == 0
         return TSeries(MIT{F_to}(Int(t.firstdate)), t.values)
@@ -184,7 +184,7 @@ function _fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_e
     if values_base ∉ (:end, :begin)
         throw(ArgumentError("values_base argument must be :begin or :end."))
     end
-    if method == :const 
+    if method == :const
         method = values_base
     end
 

@@ -3,11 +3,6 @@
 
 import Statistics: mean
 
-
-#### strip and strip!
-
-
-
 """
     fconvert(F_to, t)
 

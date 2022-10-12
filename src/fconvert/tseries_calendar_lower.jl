@@ -29,7 +29,7 @@ NaN values in `t` will be skipped for determining the values in the output frequ
 The default `skip_nans` value is `nothing`. In this case, the behavior will follow the the value 
 TimeSeriesEcon global option: `:business_skip_nans`. This can be overwritten by passing skip_nans=false.  
 """
-function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, t::TSeries{<:Union{Daily,BusinessDaily}}; method = :mean, skip_nans::Union{Bool,Nothing} = nothing)
+function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, t::TSeries{<:Union{Daily,BusinessDaily}}; method=:mean, skip_nans::Union{Bool,Nothing}=nothing)
     F_from = frequencyof(t)
     if F_from == BusinessDaily
         dates = [Dates.Date(val) for val in rangeof(t)]
@@ -45,7 +45,7 @@ function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, t::TSeries{<:Unio
     fi = out_index[begin]
     li = out_index[end]
     include_weekends = frequencyof(t) <: BusinessDaily
-    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(t), dates_all, method, include_weekends = include_weekends)
+    trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(t), dates_all, method, include_weekends=include_weekends)
 
     if method == :mean
         ret = [mean(skip_if_warranted(values(t)[out_index.==target], skip_nans)) for target in unique(out_index)]
@@ -88,7 +88,7 @@ the entire date range. To reproduce this behavior, call
 `fconvert(F_to, fconvert(Daily, t, method=:linear, values_base=:middle))`.
 
 """
-function fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly}}, t::TSeries{<:Weekly}; method = :mean, interpolation = :none) where {N1,N2}
+function fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly}}, t::TSeries{<:Weekly}; method=:mean, interpolation=:none) where {N1,N2}
     dates = [Dates.Date(val) for val in rangeof(t)]
 
     # interpolate for weeks spanning divides
@@ -122,7 +122,7 @@ function fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},
                     adjusted_values[i-1] = v1 + (1 - (d / 7)) * (v2 - v1)
                 elseif method == :mean #equivalent to technique=linear, observed=averaged
                     # convert to daily with linear interpolation, then convert to monthly
-                    return fconvert(F_to, fconvert(Daily, t; method = :linear, values_base = :end), method = :mean)
+                    return fconvert(F_to, fconvert(Daily, t; method=:linear, values_base=:end), method=:mean)
                 elseif method == :sum #equivalent to technique=linear, observed=summed
                     # shift some part of transitionary weeks between months
                     adjusted_values[i-1] = v1 + (1 - (d / 7)) * v2
@@ -169,14 +169,14 @@ Values falling on weekend days are simply excluded from the output.
 """
 function fconvert(F_to::Type{<:BusinessDaily}, t::TSeries{Daily})
     fi = fconvert(F_to, firstdate(t))
-    
+
     out_map_week = repeat([true], 7)
     first_day = dayofweek(Dates.Date(firstdate(t)))
     saturday = first_day == 7 ? 7 : 7 - first_day
     sunday = first_day == 7 ? 1 : saturday + 1
     out_map_week[[saturday, sunday]] .= false
-    out_map = repeat(out_map_week, ceil(Int, length(t)/7))[1:length(t)]
-    
+    out_map = repeat(out_map_week, ceil(Int, length(t) / 7))[1:length(t)]
+
     return TSeries(fi, t.values[out_map])
 end
 
@@ -198,6 +198,6 @@ with the recorded weekly value landing on the end-date of each weekly period. Va
 weekly period will have values interpolated based on the progression in the second weekly period.
 The resulting daily values are used when selecting or aggregating values according to the `method` argument.
 """
-function fconvert(F_to::Type{<:Union{<:Weekly,Weekly{N1}}}, t::TSeries{<:Union{<:Weekly,Weekly{N2}}}; method = :mean, interpolation = :none) where {N1,N2}
-    return fconvert(F_to, fconvert(Daily, t, method = interpolation == :linear ? :linear : :const), method = method)
+function fconvert(F_to::Type{<:Union{<:Weekly,Weekly{N1}}}, t::TSeries{<:Union{<:Weekly,Weekly{N2}}}; method=:mean, interpolation=:none) where {N1,N2}
+    return fconvert(F_to, fconvert(Daily, t, method=interpolation == :linear ? :linear : :const), method=method)
 end

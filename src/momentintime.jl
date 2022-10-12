@@ -37,7 +37,7 @@ abstract type CalendarFrequency <: Frequency end
 
 Represents a daily frequency.
 
-See also: [`Frequency`](@ref)
+See also: [`CalendarFrequency`](@ref)
 """
 struct Daily <: CalendarFrequency end
 
@@ -76,14 +76,12 @@ abstract type YPFrequency{N} <: Frequency end
 A concrete frequency defined as 1 period per year.
 """
 struct Yearly{N} <: YPFrequency{1} where N<:Integer  end
-# struct Yearly <: YearlyFrequency{12} end
 
 """
     struct Quarterly <: YPFrequency{4} end
 
 A concrete frequency defined as 4 periods per year.
 """
-# abstract type QuarterlyFrequency{N} <: YPFrequency{4} end
 struct Quarterly{N} <: YPFrequency{4} where N<:Integer end
 
 """
@@ -92,7 +90,6 @@ struct Quarterly{N} <: YPFrequency{4} where N<:Integer end
 A concrete frequency defined as 12 periods per year.
 """
 struct Monthly <: YPFrequency{12} end
-
 
 # ----------------------------------------
 # 2. MIT (moment in time) and Duration 
@@ -256,11 +253,12 @@ yy(y::Integer, p::Integer=1) = MIT{Yearly}(y, p)
 Construct an `MIT{Yearly}` from an year and a period.
 """
 _d0 = Date("0001-01-01") - Day(1) 
-# _1day = Day(1)
 daily(d::Date) = MIT{Daily}(Dates.value(d - _d0))
 daily(d::Date, _::Bool) = MIT{Daily}(Dates.value(d - _d0))
 daily(d::String) = MIT{Daily}(Dates.value(Date(d) - _d0))
-function bdaily(d::Date, bias_previous=true) 
+daily(d::String, _::Bool) = MIT{Daily}(Dates.value(Date(d) - _d0))
+
+function bdaily(d::Date, bias_previous::Bool=true) 
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
     adjustment = 0
     if bias_previous && rem == 6 
@@ -271,22 +269,20 @@ function bdaily(d::Date, bias_previous=true)
     return MIT{BusinessDaily}(Dates.value(d - _d0 - Day(num_weekends*2 + adjustment)))
 end
 bdaily(d::String) = bdaily(Dates.Date(d))
-bdaily(d::String, bias_previous::Bool) = bdaily(Dates.Date(d), bias_previous)
+bdaily(d::String, bias_previous::Bool=true) = bdaily(Dates.Date(d), bias_previous)
     
-
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
 weekly(d::Date, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
 weekly(d::String, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(Date(d))) / 7)) + max(0, min(1, dayofweek(Date(d)) - N)))
-
 function weekly(d::Date, N::Integer, normalize::Bool)
     if normalize && N == 7
         return MIT{Weekly}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
     else
         return weekly(d, N)
-    end
-    
+    end    
 end
+weekly(d::String, N::Integer, normalize::Bool) = weekly(Dates.Date(d), N, normalize)
 
 
 # -------------------------
@@ -296,7 +292,10 @@ end
     ppy(T)
 
 Return the periods per year for the frequency associated with the given value
-`x` or type `T`. This is valid only for frequencies subtyped from
+`x` or type `T`.
+
+It returns approximations for CalendarFrequencies. Used in part for comparing frequencies.
+
 [`YPFrequency`](@ref).
 """
 function ppy end
@@ -463,8 +462,6 @@ Base.:(+)(l::Integer, r::Union{MIT,Duration}) = oftype(r, l + Int(r))
 # NOTE: the rules above are meant to catch illegal arithmetic (where the units don't make sense).
 # For indexing and iterating TSeries it's more convenient to return Int rather than Duration, however
 # we choose to have the checks in place.
-Base.flipsign(x::Duration{F}, y::Duration{F}) where F = flipsign(Int(x),Int(y))
-Base.flipsign(x::MIT{F}, y::MIT{F}) where F = flipsign(Int(x),Int(y))
 
 # -------------------
 # one(x) is meant to be a dimensionless 1, so that's what we do
@@ -513,12 +510,11 @@ constant `Q1` makes it possible to write `2020Q1` instead of
 to `Q4` for `MIT{Quarterly}` and `M1` to `M12` for `MIT{Monthly}`
 
 """
-Y, U, W, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
-export Y, U, D, W, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+export Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 
 global const U = _FConst{Unit}()
 global const Y = _FPConst{Yearly,1}()
-global const W = _FConst{Weekly}()
 global const Q1 = _FPConst{Quarterly,1}()
 global const Q2 = _FPConst{Quarterly,2}()
 global const Q3 = _FPConst{Quarterly,3}()
