@@ -92,7 +92,7 @@ function fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},
     dates = [Dates.Date(val) for val in rangeof(t)]
 
     # interpolate for weeks spanning divides
-    adjusted_values = copy(t.values)
+    adjusted_values = copy(Float64.(t.values))
     if interpolation ∉ (:none, :linear)
         throw(ArgumentError("interpolation argument must be :none, or :linear. Received: $(interpolation)."))
     end

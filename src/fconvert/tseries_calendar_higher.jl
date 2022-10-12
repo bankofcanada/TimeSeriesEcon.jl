@@ -1,6 +1,6 @@
 """
 Weekly => Daily/Business
-    options: method = const/linear, values_base = end/begin
+    options: method = const/linear, values_base = end/begin/middle
 YP => Daily/Business
     options: method = const/linear, values_base = end/begin
 YP => Weekly

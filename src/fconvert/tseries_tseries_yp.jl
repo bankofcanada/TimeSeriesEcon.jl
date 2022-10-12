@@ -54,14 +54,16 @@ function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; 
     if method !== nothing
         args[:method] = method
     end
-    args[:values_base] = values_base
     if N1 > N2 
+        args[:values_base] = values_base
         return _to_higher(F_to, t; args...)
     elseif N1 < N2
         return _to_lower(F_to, t; args...)
     elseif N1 == 1
+        args[:values_base] = values_base
         return _fconvert_similar_yearly(F_to, t; args...)
     elseif N1 == 4
+        args[:values_base] = values_base
         return _fconvert_similar_quarterly(F_to, t; args...)
     else
         return t
@@ -102,7 +104,7 @@ _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method =
 
     Convert a TSeries to a lower frequency. 
 """
-function _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :mean, errors = true, args...) where {N1,N2}
+function _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :mean, errors = true) where {N1,N2}
 # function _to_lower(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method = :mean, errors = true) where {N1,N2}
     F_from = frequencyof(t)
     errors && _validate_fconvert_yp(F_to, F_from)
@@ -141,31 +143,31 @@ end
 
 
 """
-_fconvert_similar_yearly(F_to::Type{<:Union{<:Yearly,Yearly{N1}}}, t::TSeries{<:Union{<:Yearly,Yearly{N2}}}; method = :end, interpolation = :none, values_base=:end, args...) where {N1,N2}
+_fconvert_similar_yearly(F_to::Type{<:Union{<:Yearly,Yearly{N1}}}, t::TSeries{<:Union{<:Yearly,Yearly{N2}}}; method = :end, values_base=:end) where {N1,N2}
 
 An intermediate helper function for converting between similar YP frequencies with different base months..
 """
-function _fconvert_similar_yearly(F_to::Type{<:Union{<:Yearly,Yearly{N1}}}, t::TSeries{<:Union{<:Yearly,Yearly{N2}}}; method = :end, interpolation = :none, values_base=:end, args...) where {N1,N2}
+function _fconvert_similar_yearly(F_to::Type{<:Union{<:Yearly,Yearly{N1}}}, t::TSeries{<:Union{<:Yearly,Yearly{N2}}}; method = :end, values_base=:end) where {N1,N2}
     np = 12
     N_to_effective = @isdefined(N1) ? N1 : np
     N_from_effective = @isdefined(N2) ? N2 : np
-    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method = method, interpolation = interpolation, args...)
+    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method = method, values_base=values_base)
 end
 
 """
-_fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSeries{<:Union{Quarterly,Quarterly{N2}}}; method = :end, interpolation = :none, args...) where {N1,N2}
+_fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSeries{<:Union{Quarterly,Quarterly{N2}}}; method = :end, values_base=:end) where {N1,N2}
 
-An intermediate helper function for converting between similar YP frequencies with different base months..
+An intermediate helper function for converting between similar YP frequencies with different base months.
 """
-function _fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSeries{<:Union{Quarterly,Quarterly{N2}}}; method = :end, interpolation = :none, args...) where {N1,N2}
+function _fconvert_similar_quarterly(F_to::Type{<:Union{Quarterly,Quarterly{N1}}}, t::TSeries{<:Union{Quarterly,Quarterly{N2}}}; method = :end, values_base=:end) where {N1,N2}
     np = 3
     N_to_effective = @isdefined(N1) ? N1 : np
     N_from_effective = @isdefined(N2) ? N2 : np
-    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method = method, interpolation = interpolation, args...)
+    return _fconvert_similar_frequency(F_to, t, N_to_effective, N_from_effective, np; method = method, values_base=values_base)
 end
 
 """
-_fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_effective::Integer, N_from_effective::Integer, np::Integer; method = :end, interpolation = :none, values_base=:end)
+_fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_effective::Integer, N_from_effective::Integer, np::Integer; method = :end, values_base=:end)
 
 Converts a TSeries between similar YP frequencies with different base months.
 
@@ -174,7 +176,7 @@ Currently the only methods available are `:mean`, `:begin`, `:end`, and `:const`
 
 There is currently no interpolation available.
 """
-function _fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_effective::Integer, N_from_effective::Integer, np::Integer; method = :end, interpolation = :none, values_base=:end)
+function _fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_effective::Integer, N_from_effective::Integer, np::Integer; method = :end, values_base=:end)
     N_shift = N_to_effective - N_from_effective
     if N_shift == 0
         return TSeries(MIT{F_to}(Int(t.firstdate)), t.values)
@@ -186,36 +188,32 @@ function _fconvert_similar_frequency(F_to::Type{<:Frequency}, t::TSeries, N_to_e
         method = values_base
     end
 
-    if interpolation == :none
-        if method == :end
-            # example: December to June = -6, in this case we want the same Int
-            # example: June to December = 6, in this case we want the previous year, as there is no December value for the last year in the from series
-            fi = N_shift < 0 ? MIT{F_to}(Int(t.firstdate)) : MIT{F_to}(Int(t.firstdate) - 1)
-            return TSeries(fi, t.values)
-        elseif method == :begin
-            # example: December to August = -4, in this case we want the next year, since the value at the beginning of the June year is the December value
-            # example: August to December = 4, in this case we want the same Int
-            fi = N_shift < 0 ? MIT{F_to}(Int(t.firstdate + 1)) : MIT{F_to}(Int(t.firstdate))
-            return TSeries(fi, t.values)
-        elseif method == :mean
-            if N_shift < 0
-                # December to August (4/12 last year, 8/12 this year) => - 4
-                weights = [(abs(N_shift)) / np, (np + N_shift) / np]
-                fi = MIT{F_to}(Int(t.firstdate + 1))
-                values = [weights[1] * t.values[i-1] + weights[2] * t.values[i] for i in 2:length(t.values)]
-                return TSeries(fi, values)
-            elseif N_shift > 0
-                # August to December (8/12 this year, 4/12 next year) => 4
-                weights = [(np - N_shift) / np, N_shift / np]
-                fi = MIT{F_to}(Int(t.firstdate))
-                values = [weights[1] * t.values[i] + weights[2] * t.values[i+1] for i in 1:length(t.values)-1]
-                return TSeries(fi, values)
-            end
-        else
-            throw(ArgumentError("Conversion method not available when converting between similar frequencies: $(method) ."))
+    if method == :end
+        # example: December to June = -6, in this case we want the same Int
+        # example: June to December = 6, in this case we want the previous year, as there is no December value for the last year in the from series
+        fi = N_shift < 0 ? MIT{F_to}(Int(t.firstdate)) : MIT{F_to}(Int(t.firstdate) - 1)
+        return TSeries(fi, t.values)
+    elseif method == :begin
+        # example: December to August = -4, in this case we want the next year, since the value at the beginning of the June year is the December value
+        # example: August to December = 4, in this case we want the same Int
+        fi = N_shift < 0 ? MIT{F_to}(Int(t.firstdate + 1)) : MIT{F_to}(Int(t.firstdate))
+        return TSeries(fi, t.values)
+    elseif method == :mean
+        if N_shift < 0
+            # December to August (4/12 last year, 8/12 this year) => - 4
+            weights = [(abs(N_shift)) / np, (np + N_shift) / np]
+            fi = MIT{F_to}(Int(t.firstdate + 1))
+            values = [weights[1] * t.values[i-1] + weights[2] * t.values[i] for i in 2:length(t.values)]
+            return TSeries(fi, values)
+        elseif N_shift > 0
+            # August to December (8/12 this year, 4/12 next year) => 4
+            weights = [(np - N_shift) / np, N_shift / np]
+            fi = MIT{F_to}(Int(t.firstdate))
+            values = [weights[1] * t.values[i] + weights[2] * t.values[i+1] for i in 1:length(t.values)-1]
+            return TSeries(fi, values)
         end
     else
-        throw(ArgumentError("Conversion interpolation not available: $(interpolation)."))
+        throw(ArgumentError("Conversion method not available when converting between similar frequencies: $(method) ."))
     end
 end
 
