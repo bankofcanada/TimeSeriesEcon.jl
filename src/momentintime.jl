@@ -197,7 +197,7 @@ end
 end
 @inline function mit2yp(x::MIT{Daily})
     date = Dates.Date(x);
-    return (Dates.year(date), Dates.day(date));
+    return (Dates.year(date), Dates.dayofyear(date));
 end
 @inline function mit2yp(x::MIT{BusinessDaily})
     # This function needs to return the year and the number of business days between
@@ -477,6 +477,10 @@ Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
 
 # frequency comparisons
 Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) where {N1,N2} = isless(ppy(x),ppy(y))
+
+# needed for comparisons
+Base.flipsign(x::Duration{F}, y::Duration{F}) where F = flipsign(Int(x),Int(y))
+Base.flipsign(x::MIT{F}, y::MIT{F}) where F = flipsign(Int(x),Int(y))
 
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
