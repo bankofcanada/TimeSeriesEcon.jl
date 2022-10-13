@@ -157,9 +157,8 @@ for frequencies subtyped from [`YPFrequency`](@ref).
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
 function MIT{F}(y::Integer, p::Integer) where F <: Weekly{N} where N 
     first_day_of_year = Dates.Date("$y-01-01")
-    days_diff = N - dayofweek(first_day_of_year)
-    d = first_day_of_year + Day(days_diff) + Week(p - 1)
-    return weekly(d, N)
+    d = first_day_of_year + Day(7*(p - 1))
+    return weekly(d, N, true)
 end
 function MIT{F}(y::Integer, p::Integer) where F <: BusinessDaily 
     first_day_of_year = Dates.Date("$y-01-01")
@@ -167,6 +166,10 @@ function MIT{F}(y::Integer, p::Integer) where F <: BusinessDaily
     days_diff = first_day > 5 ? 8 - first_day : 0
     d = first_day_of_year + Day(days_diff)
     return bdaily(d) + p - 1
+end
+function MIT{F}(y::Integer, p::Integer) where F <: Daily 
+    first_day_of_year = Dates.Date("$y-01-01")
+    return daily(first_day_of_year) + p - 1
 end
 
 """
@@ -186,13 +189,11 @@ function mit2yp end
     (y, p) = divrem(Int(x), N); 
     p < 0 ? (y - 1, p + N + 1) : (y, p + 1)
 end
-@inline function mit2yp(x::MIT{Weekly{N}}) where N
+@inline function mit2yp(x::MIT{<:Weekly})
     date = Dates.Date(x);
-    return (Dates.year(date), Dates.week(date));
-end
-@inline function mit2yp(x::MIT{Weekly})
-    date = Dates.Date(x);
-    return (Dates.year(date), Dates.week(date));
+    year = Dates.year(date);
+    week = ceil(Int, dayofyear(date) / 7)
+    return (year, week);
 end
 @inline function mit2yp(x::MIT{Daily})
     date = Dates.Date(x);
