@@ -342,10 +342,11 @@ whose start-dates fall within the input periods. For method `:end` the output in
 periods whose end-dates fall within the input periods.
 
 When interpolation is :linear values are interpolated in a linear fashion across days between weeks. 
-The recorded weekly value is ascribed to the end-date of the week.I.e. Sunday for weeks ending in Sundays, 
-Saturdays for weeks ending in Saturday, etc. 
+The recorded weekly value is ascribed to the end-date of the week for most methods. I.e. Sunday for weeks ending in Sundays, 
+Saturdays for weeks ending in Saturday, etc. For method=:begin, the weekly value is ascribed to the 
+start-date of each week and interpolated forward to the following week.
 
-Note that the FAME software ascribes the value to the midpoint of the week when doing a linear interpolcation. 
+Note that the FAME software ascribes the value to the midpoint of the week when doing a linear interpolation. 
 I.e. Thursdays for weeks ending on Sundays, Wednesdays for weeks ending on Saturdays, etc. 
 For days beyond these midpoints, the linear line between the first two or last two weeks is extended to cover 
 the entire date range. To reproduce this behavior, call 

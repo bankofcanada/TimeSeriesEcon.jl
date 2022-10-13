@@ -15,8 +15,9 @@ Current available options are:
     with a `false` entry will not be returned when calling the `values` function on a BusinessDaily TSeries 
     with the holidays=true option.
 * `:business_skip_nans`: This option controls the treatment of NaN values in BusinessDaily arrays when performing
-    `shift`, `lag`,`diff`, and `pct` functions on them. NaNs are replaced with the most relevant non-NaN value when available.
-* `:business_skip_holidays`: When true, the values function will always be called with holidays=true for BusinessDaily series.
+    `shift`, `lag`,`diff`, and `pct` functions on them. When true, NaNs are replaced with the most relevant non-NaN value when available.
+* `:business_skip_holidays`: When true, the values function will always be called with holidays=true for BusinessDaily series. 
+    This also controls the behavior of the `shift`, `lag`, `diff`, and `pct` functions, but only NaNs falling on holidays are replaced.
     
 """
 function set_option(option::Symbol, value)
