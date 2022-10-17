@@ -55,7 +55,7 @@ end
 
 ### Linerar interpolation helper
 
-function _get_interpolation_values(t::TSeries{F}, m::MIT{F}, values_base::Symbol) where {F}
+function _get_interpolation_values(t::TSeries{F}, m::MIT{F}; values_base::Symbol=:end) where {F}
     start_val = nothing
     end_val = nothing
     if length(t) == 1

@@ -129,7 +129,7 @@ function fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::TSeries{<:YPFrequ
             fi_loop = date_function(Dates.Date(m - 1) + Day(1), false)
             li_loop = date_function(Dates.Date(m))
             n_days = length(fi_loop:li_loop)
-            start_val, end_val = _get_interpolation_values(t, m, values_base)
+            start_val, end_val = _get_interpolation_values(t, m; values_base=values_base)
             interpolated = collect(LinRange(start_val, end_val, n_days + 1))
             if values_base == :end
                 ts[fi_loop:li_loop] = interpolated[2:end]
@@ -199,7 +199,7 @@ function fconvert(F_to::Type{<:Union{Weekly,Weekly{N}}}, t::TSeries{<:YPFrequenc
                 li_loop -= 1
             end
             n_periods = length(fi_loop:li_loop)
-            start_val, end_val = _get_interpolation_values(t, m, values_base)
+            start_val, end_val = _get_interpolation_values(t, m; values_base=values_base)
             interpolated = collect(LinRange(start_val, end_val, n_periods + 1))
             if values_base == :end
                 ts[fi_loop:li_loop] = interpolated[2:end]

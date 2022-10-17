@@ -4,7 +4,7 @@ YP => YP (higher)
 YP => YP (lower)
     options: method=:mean/:sum/:end/:begin
 YP => YP (same)
-    options: method = :mean/:begin/:end, interpolation = :none      # sum not available
+    options: method = :mean/:begin/:end,                            # sum not available
 
 """
 

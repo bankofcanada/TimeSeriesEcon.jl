@@ -46,13 +46,13 @@ input period (according to the `values_base` argument).
 When values_base is :end and round_to is :previous then the output period will be the one immediately
 preceeding the output period within which falls the end-date of the input period, unless this end-date 
 aligns with the end-date of an output period.
-When values_base is :end and round_to is :previous then the output will be the same as with 
+When values_base is :end and round_to is :next then the output will be the same as with 
 round_to = :current.
 
 When values_base is :begin and round_to is :next, then the output period will be the one immediately 
 following output period within which falls the start-date of the input period, unless this start-date
 aligns with the start-date of an output period.
-When values_base is :begin and round_to is :next then the output will be the same as with 
+When values_base is :begin and round_to is :previous then the output will be the same as with 
 round_to = :current.
 
 """
@@ -127,7 +127,7 @@ function fconvert(F_to::Type{<:Daily}, MIT_from::MIT{BusinessDaily})
 end
 
 """
-fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly, <:YPFrequency, Daily}}, round_to=:previous)
+fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly, <:YPFrequency, Daily}}; round_to=:previous)
 
 Converts a MIT instance to a BusinessDaily frequency. The optional parameter `round_to` determines which 
 business day to return when the end-date of the input period falls on a weekend. The default behavior is `:previous`,
@@ -135,11 +135,11 @@ which returns the closest preceeding Friday. The other options are `:next` and `
 
 Weekends will result in an ArgumentError when `:current` is provided.
 """
-function fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency,Daily}}, round_to=:previous)
+function fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency,Daily}}; round_to=:previous)
     if round_to == :previous
         return bdaily(Dates.Date(MIT_from))
     elseif round_to == :next
-        return bdaily(Dates.Date(MIT_from), bias_previous=false)
+        return bdaily(Dates.Date(MIT_from); bias_previous=false)
     elseif round_to == :current
         d = Dates.Date(MIT_from)
         if (dayofweek(d) >= 6)
