@@ -309,24 +309,53 @@ ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year
 
 #-------------------------
 # date conversion
-Dates.Date(m::MIT{Daily}) = _d0 + Day(Int(m))
-Dates.Date(m::MIT{BusinessDaily}) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
-Dates.Date(m::MIT{Weekly}) = _d0 + Day(Int(m)*7)
-Dates.Date(m::MIT{Weekly{N}}) where N = _d0 + Day(Int(m)*7) - Day(7-N)
-function Dates.Date(m::MIT{Monthly})
+Dates.Date(m::MIT{Daily}, values_base::Symbol=:end) = _d0 + Day(Int(m))
+Dates.Date(m::MIT{BusinessDaily}, values_base::Symbol=:end) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
+function Dates.Date(m::MIT{Weekly}, values_base::Symbol=:end) 
+    if values_base == :begin
+        return _d0 + Day(Int(m)*7 - 6) 
+    end
+    return _d0 + Day(Int(m)*7)
+end
+function Dates.Date(m::MIT{Weekly{N}}, values_base::Symbol = :end) where N 
+    if values_base == :begin
+        return _d0 + Day(Int(m)*7 - 6) - Day(7-N)
+    end
+    return _d0 + Day(Int(m)*7) - Day(7-N)
+end
+function Dates.Date(m::MIT{Monthly}, values_base::Symbol=:end)
     year, month = divrem(Int(m), 12)
+    if values_base == :begin
+        return Dates.Date("$year-01-01") + Month(month)    
+    end
     return Dates.Date("$year-01-01") + Month(month+1) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly})
+function Dates.Date(m::MIT{Quarterly}, values_base::Symbol=:end)
     year, quarter = divrem(Int(m), 4)
+    if values_base == :begin
+        return Dates.Date("$year-01-01") + Month(quarter*3)
+    end
     return Dates.Date("$year-01-01") + Month((quarter+1)*3) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly{N}}) where N 
+function Dates.Date(m::MIT{Quarterly{N}}, values_base::Symbol=:end) where N 
     year, quarter = divrem(Int(m), 4)
+    if values_base == :begin
+        return Dates.Date("$year-01-01") + Month(quarter*3 - (3-N))    
+    end
     return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-N)) - Day(1)
 end
-Dates.Date(m::MIT{Yearly}) = Dates.Date("$(Int(m) + 1)-01-01") - Day(1)
-Dates.Date(m::MIT{Yearly{N}}) where N = Dates.Date("$(Int(m) + 1)-01-01") - Month(12-N) - Day(1)
+function Dates.Date(m::MIT{Yearly}, values_base::Symbol=:end) 
+    if values_base == :begin
+        return Dates.Date("$(Int(m))-01-01")
+    end
+    return Dates.Date("$(Int(m) + 1)-01-01") - Day(1)
+end
+function Dates.Date(m::MIT{Yearly{N}}, values_base::Symbol=:end) where N 
+    if values_base == :begin
+        return Dates.Date("$(Int(m))-01-01") - Month(12-N)
+    end
+    return Dates.Date("$(Int(m) + 1)-01-01") - Month(12-N) - Day(1)
+end
 
 #-------------------------
 # pretty printing
