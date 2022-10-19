@@ -52,6 +52,7 @@ export frequencyof
 export U, Y, Q1, Q2, Q3, Q4
 export M1, M2, M3, M4, M5, M6
 export M7, M8, M9, M10, M11, M12
+export @d_str, @bd_str
 
 include("tseries.jl")
 export TSeries
