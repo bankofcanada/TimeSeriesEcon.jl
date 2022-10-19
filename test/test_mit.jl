@@ -2,6 +2,7 @@
 # All rights reserved.
 
 import TimeSeriesEcon: qq, mm, yy
+using Dates
 
 @testset "MIT,Duration" begin
     # mit2yp conversions
@@ -246,4 +247,28 @@ end
     end
     @test year(mm(2020, 12)) == 2020
     @test period(mm(2020, 12)) == 12
+end
+
+@testset "daily, business_daily" begin
+    d1 = MIT{Daily}(738156)
+    @test Dates.Date(d1) == Dates.Date("2022-01-01")
+    d2 = daily("2022-01-01")
+    @test typeof(d2) == MIT{Daily}
+    @test d2 == d1
+    d3 = d"2022-01-01"
+    @test typeof(d3) == MIT{Daily}
+    @test d3 == d1
+
+    bd1 = MIT{BusinessDaily}(527256)
+    @test Dates.Date(bd1) == Dates.Date("2022-01-03")
+    bd2 = bdaily("2022-01-03")
+    @test typeof(bd2) == MIT{BusinessDaily}
+    @test bd2 == bd1
+    bd3 = bd"2022-01-03"
+    @test typeof(bd3) == MIT{BusinessDaily}
+    @test bd3 == bd1
+    bd_weekend1 = bdaily("2022-01-02")
+    @test Dates.Date(bd_weekend1) == Dates.Date("2021-12-31")
+    bd_weekend2 = bdaily("2022-01-02", bias_previous=false)
+    @test Dates.Date(bd_weekend2) == Dates.Date("2022-01-03")
 end
