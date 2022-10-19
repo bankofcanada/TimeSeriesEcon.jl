@@ -1661,31 +1661,31 @@ end
     @test length(d3_lin2) == 365 * 2
 
     bd1_lin = fconvert(BusinessDaily, t1, method=:linear)
-    @test bd1_lin[bdaily("2022-01-01", false):bdaily("2022-01-31")].values == collect(LinRange(0, 1, 22))[2:22]
-    @test bd1_lin[bdaily("2022-02-01", false):bdaily("2022-02-28")].values == collect(LinRange(1, 2, 21))[2:21]
-    @test bd1_lin[bdaily("2022-04-01", false):bdaily("2022-04-30")].values == collect(LinRange(3, 4, 22))[2:22]
+    @test bd1_lin[bdaily("2022-01-01", bias_previous=false):bdaily("2022-01-31")].values == collect(LinRange(0, 1, 22))[2:22]
+    @test bd1_lin[bdaily("2022-02-01", bias_previous=false):bdaily("2022-02-28")].values == collect(LinRange(1, 2, 21))[2:21]
+    @test bd1_lin[bdaily("2022-04-01", bias_previous=false):bdaily("2022-04-30")].values == collect(LinRange(3, 4, 22))[2:22]
     @test length(bd1_lin) == 260
 
     bd1_lin2 = fconvert(BusinessDaily, t1, method=:linear, values_base=:begin)
-    @test bd1_lin2[bdaily("2022-01-01", false):bdaily("2022-01-31")].values == collect(LinRange(1, 2, 22))[1:21]
-    @test bd1_lin2[bdaily("2022-02-01", false):bdaily("2022-02-28")].values == collect(LinRange(2, 3, 21))[1:20]
-    @test bd1_lin2[bdaily("2022-04-01", false):bdaily("2022-04-30")].values == collect(LinRange(4, 5, 22))[1:21]
+    @test bd1_lin2[bdaily("2022-01-01", bias_previous=false):bdaily("2022-01-31")].values == collect(LinRange(1, 2, 22))[1:21]
+    @test bd1_lin2[bdaily("2022-02-01", bias_previous=false):bdaily("2022-02-28")].values == collect(LinRange(2, 3, 21))[1:20]
+    @test bd1_lin2[bdaily("2022-04-01", bias_previous=false):bdaily("2022-04-30")].values == collect(LinRange(4, 5, 22))[1:21]
     @test length(bd1_lin2) == 260
 
     bd2_lin = fconvert(BusinessDaily, t2, method=:linear)
-    @test bd2_lin[bdaily("2022-01-01", false):bdaily("2022-03-31")].values == collect(LinRange(0, 1, 65))[2:65]
+    @test bd2_lin[bdaily("2022-01-01", bias_previous=false):bdaily("2022-03-31")].values == collect(LinRange(0, 1, 65))[2:65]
     @test length(bd2_lin) == 260
 
     bd2_lin2 = fconvert(BusinessDaily, t2, method=:linear, values_base=:begin)
-    @test bd2_lin2[bdaily("2022-01-01", false):bdaily("2022-03-31")].values == collect(LinRange(1, 2, 65))[1:64]
+    @test bd2_lin2[bdaily("2022-01-01", bias_previous=false):bdaily("2022-03-31")].values == collect(LinRange(1, 2, 65))[1:64]
     @test length(bd2_lin2) == 260
 
     bd3_lin = fconvert(BusinessDaily, t3, method=:linear)
-    @test bd3_lin[bdaily("2022-01-01", false):bdaily("2022-12-31")].values == collect(LinRange(0, 1, 261))[2:261]
+    @test bd3_lin[bdaily("2022-01-01", bias_previous=false):bdaily("2022-12-31")].values == collect(LinRange(0, 1, 261))[2:261]
     @test length(bd3_lin) == 260 * 2
 
     bd3_lin2 = fconvert(BusinessDaily, t3, method=:linear, values_base=:begin)
-    @test bd3_lin2[bdaily("2022-01-01", false):bdaily("2022-12-31")].values == collect(LinRange(1, 2, 261))[1:260]
+    @test bd3_lin2[bdaily("2022-01-01", bias_previous=false):bdaily("2022-12-31")].values == collect(LinRange(1, 2, 261))[1:260]
     @test length(bd3_lin2) == 260 * 2
 
 
@@ -1909,15 +1909,20 @@ end
             # MITs
             mit_to = @suppress fconvert(F_to, t_from.firstdate)
             @test frequencyof(mit_to) == F_to
-            if F_to <: YPFrequency && F_from <: YPFrequency
-                mit_to_current = @suppress fconvert(F_to, t_from.firstdate, round_to=:current)
+            if F_to <:Union{<:YPFrequency,<:Weekly, BusinessDaily} && F_from <:Union{<:CalendarFrequency,<:YPFrequency}
+                mit_to_current = @suppress fconvert(F_to, t_from.firstdate) # round_to=:current, except for BusinessDaily
                 @test frequencyof(mit_to_current) == F_to
                 mit_to_next = @suppress fconvert(F_to, t_from.firstdate, round_to=:next)
                 @test frequencyof(mit_to_next) == F_to
                 mit_to_previous = @suppress fconvert(F_to, t_from.firstdate, round_to=:previous)
                 @test frequencyof(mit_to_previous) == F_to
+                mit_to_current_begin = @suppress fconvert(F_to, t_from.firstdate, values_base=:begin) #round_to=:current, except for BusinessDaily
+                @test frequencyof(mit_to_current_begin) == F_to
+                mit_to_next_begin = @suppress fconvert(F_to, t_from.firstdate, round_to=:next, values_base=:begin)
+                @test frequencyof(mit_to_next_begin) == F_to
+                mit_to_previous_begin = @suppress fconvert(F_to, t_from.firstdate, round_to=:previous, values_base=:begin)
+                @test frequencyof(mit_to_previous_begin) == F_to
             end
-
             counter += 1
         end
     end

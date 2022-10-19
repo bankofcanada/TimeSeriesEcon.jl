@@ -61,7 +61,7 @@ function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:U
     if round_to == :current && values_base == :end
         return _get_out_indices(F_to, [Dates.Date(MIT_from)])[begin]
     elseif round_to == :current && values_base == :begin
-        return _get_out_indices(F_to, [Dates.Date(MIT_from - 1) + Day(1)])[begin]
+        return _get_out_indices(F_to, [Dates.Date(MIT_from, :begin)])[begin]
     end
 
     # error checking
@@ -73,7 +73,7 @@ function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:U
     end
 
     # accounting for rounding
-    dates = [Dates.Date(MIT_from - 1) + Day(1), Dates.Date(MIT_from)]
+    dates = [Dates.Date(MIT_from, :begin), Dates.Date(MIT_from)]
     out_index = _get_out_indices(F_to, dates)
     include_weekends = frequencyof(MIT_from) <: BusinessDaily
     trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(MIT_from), dates, :both, include_weekends=include_weekends, shift_input=false, pad_input=false)
@@ -111,7 +111,7 @@ end
 
     Converts a MIT instance to a Daily frequency, based on the end-date of the provided MIT.
 """
-fconvert(F_to::Type{Daily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency}}) = daily(Dates.Date(MIT_from))
+fconvert(F_to::Type{Daily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency}}, values_base=:end) = daily(Dates.Date(MIT_from, values_base))
 
 """
 fconvert(F_to::Type{<:Daily}, MIT_from::MIT{BusinessDaily})
@@ -135,11 +135,11 @@ which returns the closest preceeding Friday. The other options are `:next` and `
 
 Weekends will result in an ArgumentError when `:current` is provided.
 """
-function fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency,Daily}}; round_to=:previous)
+function fconvert(F_to::Type{BusinessDaily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency,Daily}}; values_base=:end, round_to=:previous)
     if round_to == :previous
-        return bdaily(Dates.Date(MIT_from))
+        return bdaily(Dates.Date(MIT_from, values_base))
     elseif round_to == :next
-        return bdaily(Dates.Date(MIT_from); bias_previous=false)
+        return bdaily(Dates.Date(MIT_from, values_base); bias_previous=false)
     elseif round_to == :current
         d = Dates.Date(MIT_from)
         if (dayofweek(d) >= 6)
@@ -177,5 +177,5 @@ end
 
 fconvert(F_to::Type{Daily}, range_from::UnitRange{<:MIT{<:Union{<:Weekly,Daily,<:YPFrequency}}}) = daily(Dates.Date(range_from[begin] - 1) + Day(1)):daily(Dates.Date(range_from[end]))
 fconvert(F_to::Type{<:Daily}, range_from::UnitRange{MIT{BusinessDaily}}) = daily(Dates.Date(range_from[begin])):daily(Dates.Date(range_from[end]))
-fconvert(F_to::Type{BusinessDaily}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency,<:YPFrequency}}}) = bdaily(Dates.Date(range_from[begin] - 1) + Day(1), false):bdaily(Dates.Date(range_from[end]), true)
+fconvert(F_to::Type{BusinessDaily}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency,<:YPFrequency}}}) = bdaily(Dates.Date(range_from[begin] - 1) + Day(1), bias_previous=false):bdaily(Dates.Date(range_from[end]))
 

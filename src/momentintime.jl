@@ -254,12 +254,12 @@ yy(y::Integer, p::Integer=1) = MIT{Yearly}(y, p)
 Construct an `MIT{Yearly}` from an year and a period.
 """
 _d0 = Date("0001-01-01") - Day(1) 
-daily(d::Date) = MIT{Daily}(Dates.value(d - _d0))
-daily(d::Date, _::Bool) = MIT{Daily}(Dates.value(d - _d0))
-daily(d::String) = MIT{Daily}(Dates.value(Date(d) - _d0))
-daily(d::String, _::Bool) = MIT{Daily}(Dates.value(Date(d) - _d0))
+daily(d::Date; args...) = MIT{Daily}(Dates.value(d - _d0))
+# daily(d::Date, _::Bool) = MIT{Daily}(Dates.value(d - _d0))
+daily(d::String, args...) = MIT{Daily}(Dates.value(Date(d) - _d0))
+# daily(d::String, _::Bool) = MIT{Daily}(Dates.value(Date(d) - _d0))
 
-function bdaily(d::Date, bias_previous::Bool=true) 
+function bdaily(d::Date; bias_previous=true) 
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
     adjustment = 0
     if bias_previous && rem == 6 
@@ -269,9 +269,8 @@ function bdaily(d::Date, bias_previous::Bool=true)
     end
     return MIT{BusinessDaily}(Dates.value(d - _d0 - Day(num_weekends*2 + adjustment)))
 end
-bdaily(d::String) = bdaily(Dates.Date(d))
-bdaily(d::String, bias_previous::Bool) = bdaily(Dates.Date(d), bias_previous)
-    
+bdaily(d::String; bias_previous::Bool=true) = bdaily(Dates.Date(d), bias_previous=bias_previous)
+
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
 weekly(d::Date, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))

@@ -109,8 +109,8 @@ Tail-end periods will have values interpolated based on the progression in the a
 """
 function fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::TSeries{<:YPFrequency}; method=:const, values_base=:end)
     date_function = F_to == BusinessDaily ? bdaily : daily
-    d = Dates.Date(t.firstdate - 1) + Day(1)
-    fi = date_function(Dates.Date(t.firstdate - 1) + Day(1), false)
+    d = Dates.Date(t.firstdate, :begin)
+    fi = date_function(Dates.Date(t.firstdate, :begin), bias_previous=false)
     d2 = Dates.Date(rangeof(t)[end])
     li = date_function(Dates.Date(rangeof(t)[end]))
     ts = TSeries(fi:li)
@@ -119,14 +119,14 @@ function fconvert(F_to::Type{<:Union{Daily,BusinessDaily}}, t::TSeries{<:YPFrequ
     end
     if method == :const
         for m in rangeof(t)
-            fi_loop = date_function(Dates.Date(m - 1) + Day(1), false)
+            fi_loop = date_function(Dates.Date(m, :begin), bias_previous=false)
             li_loop = date_function(Dates.Date(m))
             ts[fi_loop:li_loop] = repeat([t[m]], inner=length(fi_loop:li_loop))
         end
         return ts
     elseif method == :linear
         for m in reverse(rangeof(t))
-            fi_loop = date_function(Dates.Date(m - 1) + Day(1), false)
+            fi_loop = date_function(Dates.Date(m, :begin), bias_previous=false)
             li_loop = date_function(Dates.Date(m))
             n_days = length(fi_loop:li_loop)
             start_val, end_val = _get_interpolation_values(t, m; values_base=values_base)
