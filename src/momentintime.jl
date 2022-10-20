@@ -256,7 +256,13 @@ Construct an `MIT{Yearly}` from an year and a period.
 _d0 = Date("0001-01-01") - Day(1) 
 daily(d::Date; args...) = MIT{Daily}(Dates.value(d - _d0))
 daily(d::String, args...) = MIT{Daily}(Dates.value(Date(d) - _d0))
-macro d_str(d); daily(d); end
+macro d_str(d) ;
+    if findfirst(":", d) !== nothing;
+        dsplit = split(d, ":");
+        return daily(Dates.Date(dsplit[1])):daily(Dates.Date(dsplit[2]));
+    end;
+    return daily(d); 
+end
 
 function bdaily(d::Date; bias_previous=true) 
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
@@ -269,7 +275,29 @@ function bdaily(d::Date; bias_previous=true)
     return MIT{BusinessDaily}(Dates.value(d - _d0 - Day(num_weekends*2 + adjustment)))
 end
 bdaily(d::String; bias_previous::Bool=true) = bdaily(Dates.Date(d), bias_previous=bias_previous)
-macro bd_str(d); bdaily(d); end
+macro bd_str(d); 
+    if findfirst(":", d) !== nothing;
+        dsplit = split(d, ":");
+        rng = bdaily(string(dsplit[1]), bias_previous=false):bdaily(string(dsplit[2]));
+        if last(rng) < first(rng)
+            throw(ArgumentError("The provided range, $d, does not include any business days."))
+        end
+        return rng
+    end;
+    return bdaily(d);
+end;
+macro bd_str(d, bias);
+    if findfirst(":", d) !== nothing;
+        throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
+    end
+    if bias ∉ ("n", "next", "p", "previous")
+        throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous")."""))
+    end
+    if bias == "n" || bias == "next"
+        return bdaily(d, bias_previous = false);    
+    end
+    return bdaily(d);
+end;
 
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))

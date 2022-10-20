@@ -250,6 +250,7 @@ end
 end
 
 @testset "daily, business_daily" begin
+    # daily
     d1 = MIT{Daily}(738156)
     @test Dates.Date(d1) == Dates.Date("2022-01-01")
     d2 = daily("2022-01-01")
@@ -259,6 +260,14 @@ end
     @test typeof(d3) == MIT{Daily}
     @test d3 == d1
 
+    # range
+    d_rng = d"2022-01-01:2022-01-20"
+    @test frequencyof(d_rng) == Daily
+    @test typeof(d_rng) == UnitRange{MIT{Daily}}
+    @test Dates.Date(first(d_rng)) == Dates.Date("2022-01-01")
+    @test Dates.Date(last(d_rng)) == Dates.Date("2022-01-20")
+
+    # business daily
     bd1 = MIT{BusinessDaily}(527256)
     @test Dates.Date(bd1) == Dates.Date("2022-01-03")
     bd2 = bdaily("2022-01-03")
@@ -271,4 +280,18 @@ end
     @test Dates.Date(bd_weekend1) == Dates.Date("2021-12-31")
     bd_weekend2 = bdaily("2022-01-02", bias_previous=false)
     @test Dates.Date(bd_weekend2) == Dates.Date("2022-01-03")
+    bd_weekend3 = bd"2022-01-02"
+    @test Dates.Date(bd_weekend3) == Dates.Date("2021-12-31")
+    bd_weekend4 = bd"2022-01-02"n
+    @test Dates.Date(bd_weekend4) == Dates.Date("2022-01-03")
+    bd_weekend5 = bd"2022-01-02"next
+    @test Dates.Date(bd_weekend5) == Dates.Date("2022-01-03")
+
+    # range
+    bd_rng = bd"2022-01-01:2022-01-22"
+    @test frequencyof(bd_rng) == BusinessDaily
+    @test typeof(bd_rng) == UnitRange{MIT{BusinessDaily}}
+    @test Dates.Date(first(bd_rng)) == Dates.Date("2022-01-03")
+    @test Dates.Date(last(bd_rng)) == Dates.Date("2022-01-21")
+
 end
