@@ -164,7 +164,23 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     @test values(tsbd_diffed3[end-9:end]) ≈ [0.06, 0.06, -0.02, 0.02, 0.02, 0.01, -0.02] nans = true
     @test values(tsbd_pct3[end-9:end]) ≈ [4.55, 4.35, -1.39, 1.41, 1.39, 0.68, -1.36] nans = true atol = 0.01
 
+    # passing holidays map directly produces the same results
+    ontario_map = copy(TimeSeriesEcon.get_option(:business_holidays_map))
+    TimeSeriesEcon.clear_holidays_map()
+    TimeSeriesEcon.set_option(:business_skip_holidays, false)
+    TimeSeriesEcon.set_option(:business_skip_nans, false)
 
+    tsbd_shifted4 = shift(tsbd, 1, holidays_map=ontario_map)
+    tsbd_diffed4 = diff(tsbd, holidays_map=ontario_map)
+    tsbd_lagged4 = lag(tsbd, holidays_map=ontario_map)
+    tsbd_pct4 = pct(tsbd, holidays_map=ontario_map)
+    @test values(tsbd[end-9:end], holidays_map=ontario_map) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45] nans = true
+    @test values(tsbd_shifted4[end-9:end]) ≈  values(tsbd_shifted3[end-9:end])  nans = true
+    @test values(tsbd_lagged4[end-9:end]) ≈  values(tsbd_lagged3[end-9:end])  nans = true
+    @test values(tsbd_diffed4[end-9:end]) ≈  values(tsbd_diffed3[end-9:end])  nans = true
+    @test values(tsbd_pct4[end-9:end]) ≈  values(tsbd_pct3[end-9:end])  nans = true
+
+    # reset
     TimeSeriesEcon.clear_holidays_map()
     TimeSeriesEcon.set_option(:business_skip_holidays, false)
     TimeSeriesEcon.set_option(:business_skip_nans, false)

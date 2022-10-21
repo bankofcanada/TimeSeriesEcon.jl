@@ -82,20 +82,23 @@ rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
 
-function Base.values(t::TSeries{BusinessDaily}; holidays::Bool=get_option(:business_skip_holidays))
+function Base.values(t::TSeries{BusinessDaily}, holidays::Bool=get_option(:business_skip_holidays))
     if holidays
         holidays_map = get_option(:business_holidays_map)
         if holidays_map !== nothing 
-            return values(t, holidays_map)
+            return values(t, holidays_map=holidays_map)
         end
     end
     return t.values
 end
 
-function Base.values(t::TSeries{BusinessDaily}, holidays::TSeries{BusinessDaily})
-    @boundscheck checkbounds(holidays, first(rangeof(t)))
-    @boundscheck checkbounds(holidays, last(rangeof(t)))
-    slice = holidays[rangeof(t)]
+function Base.values(t::TSeries{BusinessDaily}; holidays_map::TSeries{BusinessDaily}=nothing)
+    if holidays_map === nothing
+        return t.values
+    end
+    @boundscheck checkbounds(holidays_map, first(rangeof(t)))
+    @boundscheck checkbounds(holidays_map, last(rangeof(t)))
+    slice = holidays_map[rangeof(t)]
     return t.values[slice.values]
 end
 
@@ -456,6 +459,7 @@ given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
 Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
+Base.diff(x::TSeries{BusinessDaily}, k::Integer=-1; holidays_map=nothing) = x - lag(x, -k; holidays_map=holidays_map)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
@@ -480,6 +484,20 @@ function pct(ts::TSeries, shift_value::Int=-1; islog::Bool=false)
 
     TSeries(result.firstdate, result.values)
 end
+function pct(ts::TSeries{BusinessDaily}, shift_value::Int=-1; islog::Bool=false, holidays_map=nothing)
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value; holidays_map=holidays_map)
+    else
+        a = ts
+        b = shift(ts, shift_value; holidays_map=holidays_map)
+    end
+
+    result = @. ((a - b) / b) * 100
+
+    TSeries(result.firstdate, result.values)
+end
+
 export pct
 
 """
