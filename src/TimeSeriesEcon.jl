@@ -42,7 +42,7 @@ using TOML
 include("momentintime.jl")
 export MIT, Duration
 # export mm, qq, yy
-export Monthly, Quarterly, SemiYearly, Yearly, Frequency, YPFrequency, Unit
+export Monthly, Quarterly, HalfYearly, Yearly, Frequency, YPFrequency, Unit
 export year, period, mit2yp, ppy
 export frequencyof
 export U, Y, H1, H2, Q1, Q2, Q3, Q4
