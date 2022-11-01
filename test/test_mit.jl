@@ -2,7 +2,7 @@
 # All rights reserved.
 
 import TimeSeriesEcon: qq, mm, yy
-using Dates
+import Dates
 
 @testset "MIT,Duration" begin
     # mit2yp conversions
