@@ -2,6 +2,7 @@
 # All rights reserved.
 
 import TimeSeriesEcon: qq, mm, yy
+using Dates
 
 @testset "MIT,Duration" begin
     # mit2yp conversions
@@ -246,4 +247,51 @@ end
     end
     @test year(mm(2020, 12)) == 2020
     @test period(mm(2020, 12)) == 12
+end
+
+@testset "daily, business_daily" begin
+    # daily
+    d1 = MIT{Daily}(738156)
+    @test Dates.Date(d1) == Dates.Date("2022-01-01")
+    d2 = daily("2022-01-01")
+    @test typeof(d2) == MIT{Daily}
+    @test d2 == d1
+    d3 = d"2022-01-01"
+    @test typeof(d3) == MIT{Daily}
+    @test d3 == d1
+
+    # range
+    d_rng = d"2022-01-01:2022-01-20"
+    @test frequencyof(d_rng) == Daily
+    @test typeof(d_rng) == UnitRange{MIT{Daily}}
+    @test Dates.Date(first(d_rng)) == Dates.Date("2022-01-01")
+    @test Dates.Date(last(d_rng)) == Dates.Date("2022-01-20")
+
+    # business daily
+    bd1 = MIT{BDaily}(527256)
+    @test Dates.Date(bd1) == Dates.Date("2022-01-03")
+    bd2 = bdaily("2022-01-03")
+    @test typeof(bd2) == MIT{BDaily}
+    @test bd2 == bd1
+    bd3 = bd"2022-01-03"
+    @test typeof(bd3) == MIT{BDaily}
+    @test bd3 == bd1
+    bd_weekend1 = bdaily("2022-01-02")
+    @test Dates.Date(bd_weekend1) == Dates.Date("2021-12-31")
+    bd_weekend2 = bdaily("2022-01-02", bias_previous=false)
+    @test Dates.Date(bd_weekend2) == Dates.Date("2022-01-03")
+    bd_weekend3 = bd"2022-01-02"
+    @test Dates.Date(bd_weekend3) == Dates.Date("2021-12-31")
+    bd_weekend4 = bd"2022-01-02"n
+    @test Dates.Date(bd_weekend4) == Dates.Date("2022-01-03")
+    bd_weekend5 = bd"2022-01-02"next
+    @test Dates.Date(bd_weekend5) == Dates.Date("2022-01-03")
+
+    # range
+    bd_rng = bd"2022-01-01:2022-01-22"
+    @test frequencyof(bd_rng) == BDaily
+    @test typeof(bd_rng) == UnitRange{MIT{BDaily}}
+    @test Dates.Date(first(bd_rng)) == Dates.Date("2022-01-03")
+    @test Dates.Date(last(bd_rng)) == Dates.Date("2022-01-21")
+
 end

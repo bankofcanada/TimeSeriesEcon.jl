@@ -4,6 +4,7 @@ authors = ["Atai Akunov <aakunov@bankofcanada.ca>", "Boyan Bejanov <bbejanov@ban
 version = "0.4.3"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"

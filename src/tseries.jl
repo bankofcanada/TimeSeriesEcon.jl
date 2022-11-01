@@ -83,6 +83,28 @@ rawdata(t::TSeries) = t.values
 Base.values(t::TSeries) = values(t.values)
 
 
+function Base.values(t::TSeries{BDaily}, holidays::Bool=get_option(:bdaily_skip_holidays); holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+    if holidays_map !== nothing
+        return TimeSeriesEcon.bdvalues(t, holidays_map=holidays_map)
+    elseif holidays
+        return TimeSeriesEcon.bdvalues(t, holidays_map=TimeSeriesEcon.get_option(:bdaily_holidays_map))
+    end
+    return t.values
+end
+
+function bdvalues(t::TSeries{BDaily}; holidays_map=nothing)
+    if holidays_map === nothing
+        return t.values
+    end
+    if !(holidays_map isa TSeries{BDaily})
+        throw(ArgumentError("Passed holidays_map must be a TSeries{BDaily}"))
+    end
+    @boundscheck checkbounds(holidays_map, first(rangeof(t)))
+    @boundscheck checkbounds(holidays_map, last(rangeof(t)))
+    slice = holidays_map[rangeof(t)]
+    return t.values[slice.values]
+end
+
 """
     firstdate(x)
 
@@ -440,6 +462,7 @@ given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
 Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
+Base.diff(x::TSeries{BDaily}, k::Integer=-1; holidays_map=nothing) = x - lag(x, -k; holidays_map=holidays_map)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
@@ -464,6 +487,20 @@ function pct(ts::TSeries, shift_value::Int=-1; islog::Bool=false)
 
     TSeries(result.firstdate, result.values)
 end
+function pct(ts::TSeries{BDaily}, shift_value::Int=-1; islog::Bool=false, holidays_map=nothing)
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value; holidays_map=holidays_map)
+    else
+        a = ts
+        b = shift(ts, shift_value; holidays_map=holidays_map)
+    end
+
+    result = @. ((a - b) / b) * 100
+
+    TSeries(result.firstdate, result.values)
+end
+
 export pct
 
 """
