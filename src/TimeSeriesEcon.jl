@@ -63,7 +63,9 @@ include("tsbroadcast.jl")
 include("tsmath.jl")
 export shift, shift!, lag, lag!, lead, lead!
 
-include("fconvert.jl")
+include("fconvert/fconvert_helpers.jl")
+include("fconvert/fconvert_mit.jl")
+include("fconvert/fconvert_tseries.jl")
 export overlay, fconvert
 
 include("mvtseries.jl")

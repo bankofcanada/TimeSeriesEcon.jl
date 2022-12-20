@@ -47,7 +47,7 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     @test values(tsbd_pct[begin:begin+9]) ≈ [NaN, 2.94, 7.14, 5.33, 2.53, 2.47, 1.20, -3.57, 6.17, -5.81] nans = true atol = 0.01
     @test rangeof(tsbd_pct[begin:begin+9]) == TimeSeriesEcon.bdaily("2021-01-04"):TimeSeriesEcon.bdaily("2021-01-15")
 
-    # Holidays OFF
+    # Skip NaNs OFF
     TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
     tsbd_shifted2 = shift(tsbd, 1)
     @test values(tsbd_shifted2[end-9:end]) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, NaN, NaN, 1.47, 1.45, 1.42] nans = true
@@ -82,16 +82,14 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     test_ts[bdaily("2021-12-27"):bdaily("2021-12-28")] .= false
     TimeSeriesEcon.set_option(:bdaily_holidays_map, test_ts)
     TimeSeriesEcon.set_option(:bdaily_skip_holidays, true)
+    TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
     # tsmall = TSeries(TimeSeriesEcon.bdaily("2021-12-20"), [1,2,3,4,5,NaN,NaN,8,9,10])
     tsmall = TSeries(TimeSeriesEcon.bdaily("2021-12-20"), [1, 2, 3, 4, 5, NaN, NaN, 8, NaN, 10])
     tsmall_shifted = shift(tsmall, 1)
     tsmall_diffed = diff(tsmall)
     tsmall_lagged = lag(tsmall)
     tsmall_pct = pct(tsmall)
-    # MVTSeries(orig = tsmall, lagged = shift(tsmall, -1), diffed = diff(tsmall), pct = pct(tsmall))
-
-    # TimeSeriesEcon.set_holidays_map("ON", test_ts);
-
+    
     # Shifts and lags when business_skip_holidays = true, but business_skip_nans = false
     # NaNs on holidays will be replaced with the appropriate non-holiday, non-nan value
     # NaNs on non-holidays will not be replaced and will be shifted appropriately 
