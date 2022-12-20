@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2022, Bank of Canada
+# All rights reserved.
+
 """
     fconvert(F_to, MIT_from::MIT)
 
@@ -274,95 +277,3 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
         return fi, li, trunc_start, trunc_end
     end
 end
-
-
-# function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency, <:YPFrequency}}}; trim=:both, errors=true)
-#     errors && _validate_fconvert_yp(F_to, frequencyof(first(range_from)))
-#     if errors && trim ∉ (:both, :begin, :end)
-#         throw(ArgumentError("trim argument must be :both, :begin, or :end. Received: $(trim)."))
-#     end
-#     F_from = frequencyof(range_from)
-#     if F_to > F_from
-#         if F_from <: BDaily
-#             dates = [Dates.Date(range_from[begin]), Dates.Date(range_from[end])]
-#             if get_option(:bdaily_skip_holidays)
-#                 holidays_map = get_option(:bdaily_holidays_map)
-#                 dates = dates[holidays_map[rng_from].values]
-#             end
-#         else
-#             dates = [Dates.Date(range_from[begin] - 1) + Day(1), Dates.Date(range_from[end])]
-#         end
-#         out_index = _get_out_indices(F_to, dates)
-#         fi = out_index[1]
-#         # trunc_start = fconvert(F_from, fi, values_base=:begin) == fconvert(F_from, fi - 1, values_base=:begin) ? 1 : 0
-#         trunc_start = fconvert(F_from, fi, values_base=:begin) == fconvert(F_from, fi - 1, values_base=:begin) ? 1 : 0
-#         if trim == :end
-#             trunc_start = 0
-#         end
-#         li = out_index[end]
-#         trunc_end =  fconvert(F_from,li, values_base=:end) == fconvert(F_from, li + 1, values_base=:end) ? 1 : 0
-#         if trim == :begin
-#             trunc_end = 0
-#         end
-#         return fi, li, trunc_start, trunc_end
-#     end
-   
-#     if F_from <: BDaily
-#         if get_option(:bdaily_skip_holidays)
-#             holidays_map = get_option(:bdaily_holidays_map)
-#             padded_dates = padded_dates[holidays_map[rng_from].values]
-#             # find the nearest non-holidays to see if they are in a different output period
-#             pad_start_date = first(rng_from) - 1
-#             while holidays_map[proposed_pad_start_date] == 0
-#                 pad_start_date = pad_start_date - 1
-#             end
-#             pad_end_date = last(rng_from) + 1
-#             while holidays_map[pad_end_date] == 0
-#                 pad_end_date = pad_end_date + 1
-#             end
-#             padded_dates = [pad_start_date, padded_dates..., pad_end_date]
-#         else
-#             padded_dates = [Dates.Date(range_from[begin] - 1), Dates.Date(range_from[begin]), Dates.Date(range_from[end]), Dates.Date(range_from[end] + 1)]
-#         end
-#     else
-#         if F_to > F_from
-#             padded_dates = [Dates.Date(range_from[begin] - 1, :begin), Dates.Date(range_from[begin], :begin), Dates.Date(range_from[end]), Dates.Date(range_from[end] + 1)]
-#         else
-#             padded_dates = [Dates.Date(range_from[begin] - 1), Dates.Date(range_from[begin]), Dates.Date(range_from[end]), Dates.Date(range_from[end] + 1)]
-#         end
-#     end
-#     out_index = _get_out_indices(F_to, padded_dates)
-    
-#     # include_weekends = frequencyof(range_from) <: BDaily
-#     # trunc_start, trunc_end = _get_fconvert_truncations(F_to, frequencyof(range_from), dates, trim, include_weekends=include_weekends, shift_input=false, pad_input=false)
-
-#     fi = out_index[2]
-#     trunc_start = out_index[1] == out_index[2] ? 1 : 0
-#     if trim == :end
-#         trunc_start = 0
-#     end
-#     # if the default and padded output periods are the same, then we do not have
-#     # the whole of the last output period
-#     li = out_index[end-1]
-#     trunc_end = out_index[end] == out_index[end-1] ? 1 : 0
-#     if trim == :begin
-#         trunc_end = 0
-#     end
-#     return fi, li, trunc_start, trunc_end
-#     # return out_index[begin]+trunc_start:out_index[end]-trunc_end
-# end
-
-# function _fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, remainder=false, skip_parameter=false)
-#     F_from = frequencyof(MIT_from)
-#     values_base_adjust = values_base == :end ? 1 : 0
-#     rounder = values_base == :end ? ceil : floor
-#     from_month = Int(MIT_from+values_base_adjust) * 12 / ppy(F_from) - values_base_adjust
-#     if !skip_parameter 
-#         from_month -= (12 / ppy(F_from)) - getproperty(F_from, :parameters)[1]
-#     end
-#     out_period = (from_month + values_base_adjust) / (12 / ppy(F_to)) - values_base_adjust
-#     if remainder
-#         return MIT{F_to}(rounder(Integer, out_period)), out_period
-#     end
-#     return MIT{F_to}(rounder(Integer, out_period))
-# end

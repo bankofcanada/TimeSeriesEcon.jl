@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2022, Bank of Canada
+# All rights reserved.
+
 using TOML
 options = Dict{Symbol,Any}(
     :bdaily_holidays_map => nothing,
