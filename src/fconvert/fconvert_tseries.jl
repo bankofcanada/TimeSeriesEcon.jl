@@ -46,11 +46,11 @@ the last MIT in the input range ends partway through an MIT in the output freque
 then the start of the output range will be truncated whenever the first MIT of the input range starts partway 
 through an MIT in the output frequency.
 
-When the method is not `:point`, both ends of the output range will be truncated when warranted.
+When the method is **not** `:point`, both ends of the output range will be truncated when warranted.
 
 Both method and values_base are ignored when converting from Daily to BDaily.
 
-Note that the approach taken here is not always precise. Because the values in the input trange are groups by MITs in the 
+Note that the approach taken here is not always precise. Because the values in the input trange are grouped by MITs in the 
 output frequency, without any further accounting for transitions and relative sizes of input and output frequencies
 there may be some loss of accuracy. When more accuracy is desired, it is recommended to first convert the input tseries
 to Monthly or Daily frequency, before converting it to the desired output frequency.
@@ -67,8 +67,11 @@ When method is :linear values are interpolated in a linear fashion across days/b
 frequency periods. The specifics depends on values_base. When values_base is `:end` the values will be interpolated 
 between the end-dates of adjacent periods. When values_base = `:begin` the values will be interpolated between start-dates 
 of adjacent periods. Tail-end periods will have values interpolated based on the progression in the adjacent non-tail-end period.
-When values_base = `:middle`, the mid-point in input periods is rounded up, so the input value will fall 
-on the 16th of most months when interpolating linearly from monthly to Daily, for example.
+When values_base = `:middle`, the values are interpolated between mid-points in adjacent MITs in the input period.
+When converting to Daily or Business Daily, this mid-point is rounded up, so the input value will fall 
+on the 16th of most months when interpolating linearly from monthly to Daily, for example. When converting to Monthly,
+the mid-point is not rounded so some output series will not have the input series values present
+in any of the output periods. This is the case when converting from HalfYearly to monthly, for example.
 
 `values_base` has no effect when method is `:const` or `:even`.
 
@@ -394,34 +397,36 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
     
     fi_truncation_adjustment = trunc_start == 1 ? mpp_to : 0
     if method == :point
+        # for the point method we just need to specify the indices in the input
+        # which correspond to the MITs in the output. These will all be np apart.
         if values_base == :end
             fi_from_end_month = fi_from_start_month + mpp_from -1
             fi_to_end_month = fi_to_start_month + mpp_to -1
-            missalignment = fi_to_end_month + fi_truncation_adjustment - fi_from_end_month
+            months_of_missalignment = fi_to_end_month + fi_truncation_adjustment - fi_from_end_month
         elseif values_base == :begin
-            missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month    
+            months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month    
         end
-        start_index_shift = floor(Int, missalignment / mpp_from)
+        periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
         
-        indices = filter(x-> x > 0, 1+start_index_shift:np:length(t.values))[1:length(out_range)]
+        indices = filter(x-> x > 0, 1+periods_of_missalignment:np:length(t.values))[1:length(out_range)]
         
         ret = t.values[indices]
     else # mean/sum/min/max
-        missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month    
-        start_index_shift = floor(Int, missalignment / mpp_from)
-        start_index = 1 + start_index_shift
+        months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month    
+        periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
+        start_index = 1 + periods_of_missalignment
         end_index = start_index + np*length(out_range) - 1
         if start_index < 1
             # same as while start_index < 1 : start_index += np
             (d,r) = divrem(start_index, np)
-            d = r !== 0 ? d +1 : d
+            d = r !== 0 ? d + 1 : d
             start_index += d * np
         end
         if end_index > length(t.values)
             # same as while end_index > length(t.values) : end_index -= np
             (d, r) = divrem(end_index - length(t.values), np)
-            d = r !== 0 ? d +1 : d
-            start_index -= d * np
+            d = r !== 0 ? d + 1 : d
+            end_index -= d * np
         end
         vals = t.values[start_index:end_index]
         if method == :mean
