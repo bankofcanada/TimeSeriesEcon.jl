@@ -6,5 +6,8 @@
 Manifest.toml
 .vscode
 
+coverage
+*.cov
+
 docs/build
 docs/Manifest.toml
