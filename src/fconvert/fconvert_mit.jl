@@ -33,6 +33,7 @@ fconvert(Quarterly, 22Y, values_base=:begin) ==> 2022Q1
 # having these different signatures significantly speeds up the performance; from a few microseconds to a few nanoseconds
 fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base,skip_parameter=false, round_to=round_to)
 fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{Yearly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
+fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{HalfYearly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
 fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{Quarterly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
 fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{Monthly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
 function _fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, skip_parameter=false, round_to=:current)
@@ -98,9 +99,9 @@ This is a helper function used when converting TSeries or MIT UnitRanges between
 """
 # having these different signatures significantly speeds up the performance; from a few microseconds to a few nanoseconds
 fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end) = _fconvert_parts(F_to, MIT_from, values_base=values_base)
-fconvert_parts(F_to::Type{<:Union{Quarterly{N},Yearly{N}}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end) where N = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_to=true)
-fconvert_parts(F_to::Type{<:Union{Quarterly{N1},Yearly{N1}}}, MIT_from::MIT{<:Union{Quarterly{N2},Yearly{N2}}}; values_base=:end) where {N1, N2} = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_to=true, check_parameter_from=true)
-fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{Quarterly{N},Yearly{N}}}; values_base=:end) where N = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_from=true)
+fconvert_parts(F_to::Type{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end) where N = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_to=true)
+fconvert_parts(F_to::Type{<:Union{Quarterly{N1},HalfYearly{N1},Yearly{N1}}}, MIT_from::MIT{<:Union{Quarterly{N2},HalfYearly{N2},Yearly{N2}}}; values_base=:end) where {N1, N2} = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_to=true, check_parameter_from=true)
+fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}; values_base=:end) where N = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_from=true)
 function _fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, check_parameter_from=false, check_parameter_to=false)
     F_from = frequencyof(MIT_from)
     mpp_from = div( 12, ppy(F_from))
@@ -163,9 +164,9 @@ fconvert(Quarterly, 2022M2:2022M7, trim=:both) => 2022Q2:2022Q2
 # MIT range: YP => YP
 # having these different signatures significantly speeds up the performance; from a few microseconds to a few nanoseconds 
 fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, parts=false) = _fconvert(F_to, range_from, trim=trim, parts=parts)
-fconvert(F_to::Type{<:Union{Quarterly{N},Yearly{N}}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, parts=false) where N = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_to=true)
-fconvert(F_to::Type{<:Union{Quarterly{N1},Yearly{N1}}}, range_from::UnitRange{<:MIT{<:Union{Quarterly{N2},Yearly{N2}}}}; trim=:both, parts=false) where {N1, N2} = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_to=true, check_parameter_from=true)
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:MIT{<:Union{Quarterly{N},Yearly{N}}}}; trim=:both, parts=false) where N = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_from=true)
+fconvert(F_to::Type{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, parts=false) where N = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_to=true)
+fconvert(F_to::Type{<:Union{Quarterly{N1},HalfYearly{N1},Yearly{N1}}}, range_from::UnitRange{<:MIT{<:Union{Quarterly{N2},HalfYearly{N2},Yearly{N2}}}}; trim=:both, parts=false) where {N1, N2} = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_to=true, check_parameter_from=true)
+fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:MIT{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}}; trim=:both, parts=false) where N = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_from=true)
 function _fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, parts=false, check_parameter_from=false, check_parameter_to=false)
     fi_to_period, fi_from_start_month, fi_to_start_month = _fconvert_parts(F_to, first(range_from), values_base=:begin, check_parameter_from=check_parameter_from, check_parameter_to = check_parameter_to)
     li_to_period, li_from_end_month, li_to_end_month = _fconvert_parts(F_to, last(range_from), values_base=:end, check_parameter_from=check_parameter_from, check_parameter_to = check_parameter_to)

@@ -82,7 +82,7 @@ struct Yearly{N} <: YPFrequency{1} where N<:Integer  end
 
 A concrete frequency defined as 2 periods per year.
 """
-struct HalfYearly <: YPFrequency{2} end
+struct HalfYearly{N} <: YPFrequency{2} end
 
 """
     struct Quarterly <: YPFrequency{4} end
@@ -377,6 +377,20 @@ function Dates.Date(m::MIT{Quarterly{N}}, values_base::Symbol=:end) where N
         return Dates.Date("$year-01-01") + Month(quarter*3 - (3-N))    
     end
     return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-N)) - Day(1)
+end
+function Dates.Date(m::MIT{HalfYearly}, values_base::Symbol=:end)
+    year, half = divrem(Int(m), 2)
+    if values_base == :begin
+        return Dates.Date("$year-01-01") + Month(half*6)
+    end
+    return Dates.Date("$year-01-01") + Month((half+1)*6) - Day(1)
+end
+function Dates.Date(m::MIT{HalfYearly{N}}, values_base::Symbol=:end) where N 
+    year, half = divrem(Int(m), 2)
+    if values_base == :begin
+        return Dates.Date("$year-01-01") + Month(half*6 - (6-N))    
+    end
+    return Dates.Date("$year-01-01") + Month((half+1) * 6 - (6-N)) - Day(1)
 end
 function Dates.Date(m::MIT{Yearly}, values_base::Symbol=:end) 
     if values_base == :begin

@@ -85,7 +85,7 @@ function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; 
     N1 > N2 ? _fconvert_higher(F_to, t; kwargs...) : _fconvert_lower(F_to, t; kwargs...)
 end
 fconvert(F_to::Type{<:Union{Weekly,Weekly{N}}}, t::TSeries{<:YPFrequency}; method=:const, values_base=:end) where {N} = _fconvert_higher(F_to, t, method=method, values_base=values_base)
-fconvert(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly,Weekly,Weekly{N3}}}, t::TSeries{<:CalendarFrequency}; method=:mean, values_base=:end) where {N1,N2,N3} = _fconvert_lower(F_to, t, method=method, values_base=values_base)
+fconvert(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly{N},Yearly,Weekly,Weekly{N}}}, t::TSeries{<:CalendarFrequency}; method=:mean, values_base=:end) where {N} = _fconvert_lower(F_to, t, method=method, values_base=values_base)
 fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, values_base=:end) = _fconvert_higher(F_to, t, method=method, values_base=values_base)
 fconvert(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, values_base=:begin) = _fconvert_lower(F_to, t, method=method, values_base=values_base)
 fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, values_base=:end) = _fconvert_higher(F_to, t, method=method, values_base=values_base)
@@ -440,7 +440,7 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
 end
 
 # Calendar to YP + Weekly
-function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly,Weekly,Weekly{N3}}}, t::TSeries{<:CalendarFrequency}; method=:mean, values_base=:end) where {N1,N2,N3}
+function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:CalendarFrequency}; method=:mean, values_base=:end) where {N}
     
     F_from = frequencyof(t)
     skip_nans = false

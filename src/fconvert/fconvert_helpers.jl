@@ -165,6 +165,8 @@ function _date_plus_half(m::MIT{F}, values_base::Symbol=:end; round=:down) where
         n_days = Dates.value(base_date + Month(1) - base_date)
     elseif F <: Quarterly
         n_days = Dates.value(base_date + Quarter(1) - base_date)
+    elseif F <: HalfYearly
+        n_days = Dates.value(base_date + Month(6) - base_date)
     elseif F <: Yearly
         n_days = Dates.value(base_date + Year(1) - base_date)
     elseif F <: Weekly
@@ -175,7 +177,18 @@ function _date_plus_half(m::MIT{F}, values_base::Symbol=:end; round=:down) where
     return base_date
 end
 
-### MIT range conversion
+function dayofhalfyear(d::Date)
+    q = Dates.quarterofyear(d)
+    if q == 1 || q == 3
+        return Dates.dayofquarter(d)
+    elseif q == 2
+        first_quarter = Dates.dayofyear(Dates.Date("$(year(d))-03-31"))
+        return first_quarter + Dates.dayofquarter(d)
+    elseif q == 4
+        first_three_quarters = Dates.dayofyear(Dates.Date("$(year(d))-08-31"))
+        return first_three_quarters + Dates.dayofquarter(d)
+    end
+end
 
 """
     _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol, include_weekends::Bool=false)
@@ -189,7 +202,7 @@ will be included in the output.
 When the method is :begin, the start is truncated if the first date in the first output period is not covered by the input TSeries dates.
 When the method is :end, the end is truncated if the last date in the last output period is not covered by the input TSeries dates.
 """
-function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,Quarterly{N2},Quarterly,Yearly{N3},Yearly}}, F_from::Type{<:Union{Weekly{N4},Weekly,Daily,BDaily,Quarterly,Quarterly{N5},Monthly,Yearly,Yearly{N6}}}, dates::Vector{Dates.Date}, method::Symbol; include_weekends=false, shift_input=true, pad_input=true) where {N1,N2,N3,N4,N5,N6}
+function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{NtW},Weekly,Monthly,Quarterly{NtQ},Quarterly,HalfYearly,HalfYearly{NtH},Yearly{NtY},Yearly}}, F_from::Type{<:Union{Weekly{NfW},Weekly,Daily,BDaily,Quarterly,Quarterly{NfQ},Monthly,HalfYearly,HalfYearly{NfH},Yearly,Yearly{NfY}}}, dates::Vector{Dates.Date}, method::Symbol; include_weekends=false, shift_input=true, pad_input=true) where {NtW,NtQ,NtY,NfW,NfQ,NfY,NtH,NfH}
     trunc_start = 0
     trunc_end = 0
 
@@ -200,6 +213,8 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
         overlap_function = Dates.dayofmonth
     elseif F_to <: Quarterly
         overlap_function = Dates.dayofquarter
+    elseif F_to <: HalfYearly
+        overlap_function = dayofhalfyear
     elseif F_to <: Yearly
         overlap_function = Dates.dayofyear
     end
@@ -210,39 +225,49 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
         if pad_input
             input_shift -= Day(7) - Day(1)
         end
-        if shift_input && @isdefined N4
-            input_shift -= Day(7 - N4)
+        if shift_input && @isdefined NfW
+            input_shift -= Day(7 - NfW)
         end
     elseif F_from <: Quarterly
         if pad_input
             input_shift -= Month(3) - Day(1)
         end
-        if shift_input && @isdefined N5
-            input_shift -= Month(3 - N5)
+        if shift_input && @isdefined NfQ
+            input_shift -= Month(3 - NfQ)
         end
     elseif F_from <: Monthly
         if (pad_input)
             input_shift -= Month(1) - Day(1)
         end
+    elseif F_from <: HalfYearly
+        if (pad_input)
+            input_shift -= Month(6) - Day(1)
+        end
+        if shift_input && @isdefined NfH
+            input_shift -= Month(6 - NfH)
+        end
     elseif F_from <: Yearly
         if pad_input
             input_shift -= Year(1) - Day(1)
         end
-        if shift_input && @isdefined N6
-            input_shift -= Month(12 - N6)
+        if shift_input && @isdefined NfY
+            input_shift -= Month(12 - NfY)
         end
     end
 
     # Account for output frequency
     target_shift = Day(0)
-    if F_to <: Weekly && @isdefined N1
-        target_shift -= Day(7 - N1)
+    if F_to <: Weekly && @isdefined NtW
+        target_shift -= Day(7 - NtW)
     end
-    if F_to <: Quarterly && @isdefined N2
-        target_shift -= Month(3 - N2)
+    if F_to <: Quarterly && @isdefined NtQ
+        target_shift -= Month(3 - NtQ)
     end
-    if F_to <: Yearly && @isdefined N3
-        target_shift -= Month(12 - N3)
+    if F_to <: HalfYearly && @isdefined NtH
+        target_shift -= Month(6 - NtH)
+    end
+    if F_to <: Yearly && @isdefined NtY
+        target_shift -= Month(12 - NtY)
     end
 
     # Account for weekends when going from BDaily to a lower frequency
@@ -267,15 +292,15 @@ function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{N1},Weekly,Monthly,
             end
         end
         # Accounting for odd weekly frequencies
-        if F_to <: Weekly && @isdefined N1
-            if N1 == 6 && end_weekday == 5
+        if F_to <: Weekly && @isdefined NtW
+            if NtW == 6 && end_weekday == 5
                 weekend_adjustment_end = Day(1)
-            elseif N1 == 7 && end_weekday == 5
+            elseif NtW == 7 && end_weekday == 5
                 weekend_adjustment_end = Day(2)
             end
-            if N1 == 6 && start_weekday == 1
+            if NtW == 6 && start_weekday == 1
                 weekend_adjustment_start = Day(1)
-            elseif N1 == 5 && start_weekday == 1
+            elseif NtW == 5 && start_weekday == 1
                 weekend_adjustment_start = Day(2)
             end
         end
@@ -306,9 +331,9 @@ end
 
 Takes an array of dates and returns an array of MITs of the `F_to` frequency corresponding to each date.
 """
-_get_out_indices(F_to::Type{<:Union{Quarterly{N1},Yearly{N2},Weekly{N3}}}, dates::Vector{Dates.Date}) where {N1, N2, N3} = _get_out_indices_actual(F_to, dates, check_parameter_to=true)
-_get_out_indices(F_to::Type{<:Union{Monthly,Quarterly,Yearly,Weekly}}, dates::Vector{Dates.Date}) = _get_out_indices_actual(F_to, dates, check_parameter_to=false)
-function _get_out_indices_actual(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarterly,Yearly{N2},Yearly,Weekly,Weekly{N3}}}, dates::Vector{Dates.Date}; check_parameter_to=false) where {N1,N2,N3}
+_get_out_indices(F_to::Type{<:Union{Quarterly{NtQ},HalfYearly{NtH},Yearly{NtY},Weekly{NtW}}}, dates::Vector{Dates.Date}) where {NtQ,NtH,NtY,NtW} = _get_out_indices_actual(F_to, dates, check_parameter_to=true)
+_get_out_indices(F_to::Type{<:Union{Monthly,Quarterly,HalfYearly,Yearly,Weekly}}, dates::Vector{Dates.Date}) = _get_out_indices_actual(F_to, dates, check_parameter_to=false)
+function _get_out_indices_actual(F_to::Type{<:Union{Monthly,Quarterly{NtQ},Quarterly,HalfYearly{NtH},HalfYearly,Yearly{NtY},Yearly,Weekly,Weekly{NtW}}}, dates::Vector{Dates.Date}; check_parameter_to=false) where {NtQ,NtH,NtY,NtW}
     months = Dates.month.(dates)
     years = Dates.year.(dates)
 
@@ -316,7 +341,7 @@ function _get_out_indices_actual(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarte
         N_effective = 7
         normalize = true
         if check_parameter_to
-            N_effective = N3
+            N_effective = NtW
             normalize=false
         end
         out_index = [weekly(date, N_effective, normalize) for date in dates]
@@ -327,25 +352,27 @@ function _get_out_indices_actual(F_to::Type{<:Union{Monthly,Quarterly{N1},Quarte
 
     if F_to <: Monthly
         out_index = [MIT{F_to}(year, month) for (year, month) in zip(years, months)]
-        # out_index = ["MIT{$F_to}(Int((year-1)*12) + month)" for (year, month) in zip(years, months)]
     elseif F_to <: Quarterly
         if check_parameter_to
-            months .+= (3 - N1)
+            months .+= (3 - NtQ)
             years[months.>12] .+= 1
             months[months.>12] .-= 12
         end
-        # println(months)
-        # out_index = ["$(year)Q$(quarter)" for (year, quarter) in zip(years, quarters)]
         quarters = [Int(ceil(m / 3)) for m in months]
-        # quarters = [Int(floor((m -1)/3) + 1) for m in months]
-        # println([Int(year*4) + quarter for (year, quarter) in zip(years, quarters)])
         out_index = [MIT{F_to}(year, quarter) for (year, quarter) in zip(years, quarters)]
+    elseif F_to <: HalfYearly
+        if check_parameter_to
+            months .+= (6 - NtH)
+            years[months.>12] .+= 1
+            months[months.>12] .-= 12
+        end
+        halfyears = [Int(ceil(m / 6)) for m in months]
+        out_index = [MIT{F_to}(year, half) for (year, half) in zip(years, halfyears)]
     elseif F_to <: Yearly
         if check_parameter_to
-            months .+= 12 - N2
+            months .+= 12 - NtY
             years[months.>12] .+= 1
         end
-        # out_index = ["$(year)Y" for year in years]
         out_index = [MIT{F_to}(year) for year in years]
     end
     return out_index

@@ -20,6 +20,13 @@ using Statistics
     @test fconvert(Yearly, q, method=:point, values_base=:begin).values == [1.0, 5.0, 9.0]
     @test fconvert(Yearly, q, method=:sum).values == [10.0, 26.0]
 
+    h = TSeries(5H1, 1.0*collect(1:10))
+    yh = fconvert(Yearly, h)
+    @test typeof(yh) == TSeries{Yearly,Float64,Vector{Float64}}
+    @test fconvert(Yearly, h, method=:mean).values == [1.5, 3.5, 5.5, 7.5, 9.5]
+    @test fconvert(Yearly, h, method=:point, values_base=:end).values == [2,4,6,8,10]
+    @test fconvert(Yearly, h, method=:point, values_base=:begin).values == [1,3,5,7,9]
+    @test fconvert(Yearly, h, method=:sum).values == [3,7,11,15,19]
 
     for i = 1:11
         @test rangeof(fconvert(Yearly, TSeries(1M1 .+ (i:50)), method=:mean)) == 2Y:4Y
@@ -28,6 +35,9 @@ using Statistics
     for i = 1:3
         @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (i:50)), method=:mean)) == 2Y:12Y
         @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (0:47+i)))) == 1Y:12Y 
+    end
+    for i = 1:2
+        @test rangeof(fconvert(Yearly, TSeries(1H1 .+ (i:50)), method=:mean)) == 2Y:25Y
     end
     for i = 1:11
         @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (i:50)), method=:mean)) == 1Q2+div(i - 1, 3):5Q1
@@ -135,6 +145,23 @@ end
     @test rangeof(m7_middle) == 2022M1:2024M12
     @test values(m7_middle) == [0.6666666666666665, 1.0, 1.3333333333333335, 1.6666666666666665, 2.0, 2.3333333333333335, 2.666666666666667, 3.0, 3.333333333333333, 3.6666666666666665, 4.0, 4.333333333333334, 4.666666666666666, 5.0, 5.333333333333334, 5.666666666666667, 6.0, 6.333333333333333, 6.666666666666666, 7.0, 7.333333333333334, 7.666666666666666, 8.0, 8.333333333333334, 8.666666666666668, 9.0, 9.333333333333334, 9.666666666666666, 10.0, 10.333333333333334, 10.666666666666668, 11.0, 11.333333333333334, 11.666666666666668, 12.0, 12.333333333333332]
 
+    h8 = TSeries(2022H1, collect(1:5))
+    m8 = fconvert(Monthly, h8)
+    @test rangeof(m8) == 2022M1:2024M6
+    @test values(m8) == [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5]
+    m8_begin = fconvert(Monthly, h8, method=:linear, values_base=:begin)
+    @test rangeof(m8_begin) == 2022M1:2024M6
+    @test values(m8_begin)[1:13] ≈ [1,1+1/6,1+2/6,1+3/6,1+4/6,1+5/6,2,2+1/6,2+2/6,2+3/6,2+4/6,2+5/6,3]
+    m8_end = fconvert(Monthly, h8, method=:linear, values_base=:end)
+    @test rangeof(m8_end) == 2022M1:2024M6
+    @test values(m8_end)[1:13] ≈ [0+1/6,0+2/6,0+3/6,0+4/6,0+5/6,1,1+1/6,1+2/6,1+3/6,1+4/6,1+5/6,2,2+1/6]
+    m8_middle = fconvert(Monthly, h8, method=:linear, values_base=:middle)
+    @test rangeof(m8_middle) == 2022M1:2024M6
+    @test values(m8_middle)[1:13] ≈ [.75-1/6, .75, .75+1/6,1.25-1/6, 1.25, 1.25+1/6, 1.75-1/6, 1.75, 1.75+1/6, 2.25-1/6, 2.25,2.25+1/6,2.75-1/6]
+    m8_even = fconvert(Monthly, h8, method=:even)
+    @test rangeof(m8_even) == 2022M1:2024M6
+    @test values(m8_even) == [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5] ./ 6
+    
 end
 
 @testset "fconvert, YPFrequencies, to lower" begin
@@ -1861,6 +1888,13 @@ end
         Quarterly{1},
         Quarterly{2},
         Quarterly{3},
+        HalfYearly,
+        HalfYearly{1},
+        HalfYearly{2},
+        HalfYearly{3},
+        HalfYearly{4},
+        HalfYearly{5},
+        HalfYearly{6},
         Yearly,
         Yearly{1},
         Yearly{2},
@@ -1880,8 +1914,8 @@ end
     counter = 1
     t_from = nothing
     last_F_from = nothing
-    # @showprogress "combinations" for (F_from, F_to) in combinations
-    for (F_from, F_to) in combinations
+    @showprogress "combinations" for (F_from, F_to) in combinations
+    # for (F_from, F_to) in combinations
         if F_from != last_F_from
             last_F_from = F_from
             t_from = TSeries(MIT{F_from}(100), collect(1:800))
