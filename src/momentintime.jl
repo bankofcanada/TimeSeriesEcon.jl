@@ -78,6 +78,13 @@ A concrete frequency defined as 1 period per year.
 struct Yearly{N} <: YPFrequency{1} where N<:Integer  end
 
 """
+    struct HalfYearly <: YPFrequency{2} end
+
+A concrete frequency defined as 2 periods per year.
+"""
+struct HalfYearly <: YPFrequency{2} end
+
+"""
     struct Quarterly <: YPFrequency{4} end
 
 A concrete frequency defined as 4 periods per year.
@@ -402,13 +409,10 @@ function Base.show(io::IO, m::Union{MIT{Weekly{N}},MIT{Weekly}}) where N
 end
 
 function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
-    if isconcretetype(F)
-    periodletter = first("$(F)")
-    else
-        periodletter =  N == 1 ? 'Y' :
-                        N == 4 ? 'Q' :
-                        N == 12 ? 'M' : 'P';
-    end
+    periodletter =  N == 1 ? 'Y' :
+                    N == 2 ? 'H' :
+                    N == 4 ? 'Q' :
+                    N == 12 ? 'M' : 'P';
     print(io, year(m), periodletter)
     if N > 1
         # print(io, rpad(period(m), length(string(N))))
@@ -572,10 +576,12 @@ to `Q4` for `MIT{Quarterly}` and `M1` to `M12` for `MIT{Monthly}`
 
 """
 Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
-export Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+export Y, U, H1, H2, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 
 global const U = _FConst{Unit}()
 global const Y = _FPConst{Yearly,1}()
+global const H1 = _FPConst{HalfYearly,1}()
+global const H2 = _FPConst{HalfYearly,2}()
 global const Q1 = _FPConst{Quarterly,1}()
 global const Q2 = _FPConst{Quarterly,2}()
 global const Q3 = _FPConst{Quarterly,3}()

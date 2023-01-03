@@ -27,8 +27,6 @@ function Base.similar(bc::Broadcast.Broadcasted{<:MVTSeriesStyle}, ::Type{ElType
     end
 end
 
-const _MVTSAxesType = Tuple{<:AbstractUnitRange{<:MIT},NTuple{N,Symbol}} where {N}
-
 @inline Base.Broadcast._eachindex(t::_MVTSAxesType) = CartesianIndices(map(length, t))
 
 #----------------------
