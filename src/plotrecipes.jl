@@ -43,7 +43,7 @@ end
     @assert frequencyof(x) == frequencyof(y)
     # @info "Plotting TSeries"
     mit_loc = get(plotattributes, :mit_loc, :left)
-    rng = get(plotattributes, :range, x)
+    rng = get(plotattributes, :trange, x)
     rng = intersect(rng, rangeof(y))
     y := values(y[rng])
     x := Float64.(rng) .+ mit_offset(Val(mit_loc), frequencyof(rng))
@@ -60,12 +60,7 @@ end
     for t = ts
         @series begin
             seriestype := :tseries
-            if trng === nothing
-                (rangeof(t), t)
-            else
-                xrange --> (first(trng), last(trng))
-                (trng, t)
-            end
+            (rangeof(t), t)
         end
     end
 end
@@ -100,7 +95,6 @@ end
 
     # common attributes for all subplots
     titlefont --> ("computer modern", 11)
-    seriestype := :tseries
 
     for (ind, var) in enumerate(vars)
         # subplot attributes
@@ -122,12 +116,8 @@ end
                 series = getproperty(data, vname)
                 @series begin
                     # the series itself
-                    if trng === nothing
-                        (rangeof(series), series)
-                    else
-                        xrange --> (first(trng), last(trng))
-                        (trng, series)
-                    end
+                    seriestype := :tseries
+                    (rangeof(series), series)
                 end
             else
                 @series begin

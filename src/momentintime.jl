@@ -556,6 +556,14 @@ Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) where {N1,N2} = isless(p
 Base.flipsign(x::Duration{F}, y::Duration{F}) where F = flipsign(Int(x),Int(y))
 Base.flipsign(x::MIT{F}, y::MIT{F}) where F = flipsign(Int(x),Int(y))
 
+# needed for charting
+Base.:(/)(a::Duration, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
+Base.:(/)(a::MIT, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
+Base.:(/)(a::Duration{F}, b::Duration{F}) where {F<:Frequency} = Int(a) / Int(b)
+Base.:(/)(a::MIT{F}, b::Duration{F}) where {F<:Frequency} = (a - MIT{F}(0)) / b
+Base.promote_rule(::Type{<:Duration}, ::Type{T}) where T <: AbstractFloat = T
+(T::Type{<:AbstractFloat})(x::Duration) = convert(T, Int(x))
+
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
 # ----------------------------------------
