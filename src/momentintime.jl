@@ -51,13 +51,13 @@ See also: [`Frequency`](@ref)
 struct BDaily <: CalendarFrequency end
 
 """
-    struct Weekly <: Frequency end
+    struct Weekly{end_day} <: Frequency end
 
-Represents a weekly frequency. The default weekly series ends on a Sunday (N = 7).
+Represents a weekly frequency. The default weekly series ends on a Sunday (end_day = 7).
 
 See also: [`Frequency`](@ref)
 """
-struct Weekly{N} <: CalendarFrequency where N<:Integer  end
+struct Weekly{end_day} <: CalendarFrequency where end_day<:Integer  end
 
 """
     abstract type YPFrequency{N} <: Frequency end
@@ -71,18 +71,18 @@ abstract type YPFrequency{N} <: Frequency end
 
 
 """
-    struct Yearly <: YPFrequency{1} end
+    struct Yearly{end_month} <: YPFrequency{1} end
 
-A concrete frequency defined as 1 period per year.
+A concrete frequency defined as 1 period per year. The default end_month is 12.
 """
-struct Yearly{N} <: YPFrequency{1} where N<:Integer  end
+struct Yearly{end_month} <: YPFrequency{1} where end_month<:Integer  end
 
 """
-    struct Quarterly <: YPFrequency{4} end
+    struct Quarterly{end_month} <: YPFrequency{4} end
 
-A concrete frequency defined as 4 periods per year.
+A concrete frequency defined as 4 periods per year. The default end_month is 3.
 """
-struct Quarterly{N} <: YPFrequency{4} where N<:Integer end
+struct Quarterly{end_month} <: YPFrequency{4} where end_month<:Integer end
 
 """
     struct Monthly <: YPFrequency{12} end
@@ -155,10 +155,11 @@ Construct an [`MIT`](@ref) instance from `year` and `period`. This is valid only
 for frequencies subtyped from [`YPFrequency`](@ref).
 """ 
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
-function MIT{F}(y::Integer, p::Integer) where F <: Weekly{N} where N 
+function MIT{F}(y::Integer, p::Integer) where F <: Weekly{end_day} where end_day 
     first_day_of_year = Dates.Date("$y-01-01")
     d = first_day_of_year + Day(7*(p - 1))
-    return weekly(d, N, true)
+    return weekly(d, end_day, true)
+end
 end
 function MIT{F}(y::Integer, p::Integer) where F <: BDaily 
     first_day_of_year = Dates.Date("$y-01-01")
@@ -301,16 +302,16 @@ end;
 
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
-weekly(d::Date, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
-weekly(d::String, N::Integer) = MIT{Weekly{N}}(Int(ceil((Dates.value(Date(d))) / 7)) + max(0, min(1, dayofweek(Date(d)) - N)))
-function weekly(d::Date, N::Integer, normalize::Bool)
-    if normalize && N == 7
-        return MIT{Weekly}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - N)))
+weekly(d::Date, end_day::Integer) = MIT{Weekly{end_day}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - end_day)))
+weekly(d::String, end_day::Integer) = MIT{Weekly{end_day}}(Int(ceil((Dates.value(Date(d))) / 7)) + max(0, min(1, dayofweek(Date(d)) - end_day)))
+function weekly(d::Date, end_day::Integer, normalize::Bool)
+    if normalize && end_day == 7
+        return MIT{Weekly}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - end_day)))
     else
-        return weekly(d, N)
+        return weekly(d, end_day)
     end    
 end
-weekly(d::String, N::Integer, normalize::Bool) = weekly(Dates.Date(d), N, normalize)
+weekly(d::String, end_day::Integer, normalize::Bool) = weekly(Dates.Date(d), end_day, normalize)
 
 
 # -------------------------
@@ -344,11 +345,11 @@ function Dates.Date(m::MIT{Weekly}, values_base::Symbol=:end)
     end
     return _d0 + Day(Int(m)*7)
 end
-function Dates.Date(m::MIT{Weekly{N}}, values_base::Symbol = :end) where N 
+function Dates.Date(m::MIT{Weekly{end_day}}, values_base::Symbol = :end) where end_day 
     if values_base == :begin
-        return _d0 + Day(Int(m)*7 - 6) - Day(7-N)
+        return _d0 + Day(Int(m)*7 - 6) - Day(7-end_day)
     end
-    return _d0 + Day(Int(m)*7) - Day(7-N)
+    return _d0 + Day(Int(m)*7) - Day(7-end_day)
 end
 function Dates.Date(m::MIT{Monthly}, values_base::Symbol=:end)
     year, month = divrem(Int(m), 12)
@@ -364,12 +365,12 @@ function Dates.Date(m::MIT{Quarterly}, values_base::Symbol=:end)
     end
     return Dates.Date("$year-01-01") + Month((quarter+1)*3) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly{N}}, values_base::Symbol=:end) where N 
+function Dates.Date(m::MIT{Quarterly{end_month}}, values_base::Symbol=:end) where end_month 
     year, quarter = divrem(Int(m), 4)
     if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(quarter*3 - (3-N))    
+        return Dates.Date("$year-01-01") + Month(quarter*3 - (3-end_month))    
     end
-    return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-N)) - Day(1)
+    return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-end_month)) - Day(1)
 end
 function Dates.Date(m::MIT{Yearly}, values_base::Symbol=:end) 
     if values_base == :begin
@@ -377,11 +378,11 @@ function Dates.Date(m::MIT{Yearly}, values_base::Symbol=:end)
     end
     return Dates.Date("$(Int(m) + 1)-01-01") - Day(1)
 end
-function Dates.Date(m::MIT{Yearly{N}}, values_base::Symbol=:end) where N 
+function Dates.Date(m::MIT{Yearly{end_month}}, values_base::Symbol=:end) where end_month 
     if values_base == :begin
-        return Dates.Date("$(Int(m))-01-01") - Month(12-N)
+        return Dates.Date("$(Int(m))-01-01") - Month(12-end_month)
     end
-    return Dates.Date("$(Int(m) + 1)-01-01") - Month(12-N) - Day(1)
+    return Dates.Date("$(Int(m) + 1)-01-01") - Month(12-end_month) - Day(1)
 end
 
 #-------------------------
@@ -390,7 +391,7 @@ end
 Base.show(io::IO, m::MIT{Unit}) = print(io, Int(m), 'U')
 Base.show(io::IO, m::MIT{Daily}) = print(io, Dates.Date(m))
 Base.show(io::IO, m::MIT{BDaily}) = print(io, Dates.Date(m))
-function Base.show(io::IO, m::Union{MIT{Weekly{N}},MIT{Weekly}}) where N
+function Base.show(io::IO, m::Union{MIT{Weekly{end_day}},MIT{Weekly}}) where end_day
     date = Dates.Date(m)
     week = Dates.week(date)
     year = Dates.year(date)
