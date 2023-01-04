@@ -253,14 +253,33 @@ Construct an `MIT{Yearly}` from an year and a period.
 """
 yy(y::Integer, p::Integer=1) = MIT{Yearly}(y, p)
 
-"""
-    yy(year, period)
 
-Construct an `MIT{Yearly}` from an year and a period.
-"""
 _d0 = Date("0001-01-01") - Day(1) 
+"""
+    daily(d::Date)
+
+Convert a Date object to an MIT{Daily}.
+"""
 daily(d::Date; args...) = MIT{Daily}(Dates.value(d - _d0))
+
+"""
+    daily(d::String)
+
+Convert a String object to an MIT{Daily}. The string must be convertible to a Date via the `Dates.Date(d::String)` method.
+"""
 daily(d::String, args...) = MIT{Daily}(Dates.value(Date(d) - _d0))
+
+"""
+    d_str(d)
+
+A macro which converts a string to an MIT{Daily} or a UnitRange{MIT{Daily}}.
+
+To return a UnitRange, provide a single string with two dates separated by `:`.
+
+Example:
+    christmas = d"2022-12-25"
+    days_of_february = d"2022-02-01:2022-02-28"
+"""
 macro d_str(d) ;
     if findfirst(":", d) !== nothing;
         dsplit = split(d, ":");
@@ -269,7 +288,17 @@ macro d_str(d) ;
     return daily(d); 
 end
 
-function bdaily(d::Date; bias_previous=true) 
+"""
+    bdaily(d::Date; bias_previous::Bool=true) 
+
+Construct an `MIT{BDaily}` from a Date object. 
+
+The optional `bias_previous` argument determines which side of a weekend
+to land on when the provided date is Saturday or Sunday. The default
+is `true`, meaning that the preceding Friday is returned.
+
+"""
+function bdaily(d::Date; bias_previous::Bool=true) 
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
     adjustment = 0
     if bias_previous && rem == 6 
@@ -279,6 +308,17 @@ function bdaily(d::Date; bias_previous=true)
     end
     return MIT{BDaily}(Dates.value(d - _d0 - Day(num_weekends*2 + adjustment)))
 end
+
+"""
+    bdaily(d::String; bias_previous::Bool=true)
+
+Construct an `MIT{BDaily}` from a String. The string must be convertible to a Date via the `Dates.Date(d::String)` method.
+
+The optional `bias_previous` argument determines which side of a weekend
+to land on when the provided date is Saturday or Sunday. The default
+is `true`, meaning that the preceding Friday is returned.
+
+"""
 bdaily(d::String; bias_previous::Bool=true) = bdaily(Dates.Date(d), bias_previous=bias_previous)
 macro bd_str(d); 
     if findfirst(":", d) !== nothing;
@@ -291,6 +331,25 @@ macro bd_str(d);
     end;
     return bdaily(d);
 end;
+
+"""
+    bd_str(d, bias)
+
+A macro which converts a string to an MIT{BDaily} or a UnitRange{MIT{BDaily}}.
+
+The optional `bias`` determines which business day is returned when the provided 
+date is on a Saturday or Sunday. Available options are `"n"` or `"next"` for 
+biasing the next business day, and "p", or "previous" for the next business day.
+
+To return a UnitRange, provide a single string with two dates separated by `:`. 
+In this case the first date will be biased to the following business day and the
+second date will be biased to the previous business day. The `bias` argument cannot 
+be provided when converting a range of dates.
+
+Example:
+    april_first = bd"2022-04-01"
+    second_week_of_april = bd"2022-04-04:2022-04-08"
+"""
 macro bd_str(d, bias);
     if findfirst(":", d) !== nothing;
         throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
@@ -304,6 +363,18 @@ macro bd_str(d, bias);
     return bdaily(d);
 end;
 
+"""
+    weekly(d::Date) 
+    weekly(d::String)
+    weekly(d::Date, end_day::Integer)
+    weekly(d::String, end_day::Integer)
+
+These functions return an MIT{Weekly} from a provided Date object or String.
+The String must be convertible to a Date object via the `Dates.Date(d::String)` method.
+
+Returns an object of type MIT{Weekly{end_day}} when the end_day argument is provided.
+
+"""
 weekly(d::Date) = MIT{Weekly}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly}(Int(ceil(Dates.value(Date(d)) / 7)))
 weekly(d::Date, end_day::Integer) = MIT{Weekly{end_day}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - end_day)))
@@ -341,6 +412,12 @@ ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year
 
 #-------------------------
 # date conversion
+"""
+Dates.Date(m::MIT, values_base::Symbol=:end)
+    
+Returns a Date object representing the last day in the provided MIT.
+Returns the first day in the provided MIT when `values_base == true`.
+"""
 Dates.Date(m::MIT{Daily}, values_base::Symbol=:end) = _d0 + Day(Int(m))
 Dates.Date(m::MIT{BDaily}, values_base::Symbol=:end) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
 function Dates.Date(m::MIT{Weekly}, values_base::Symbol=:end) 
