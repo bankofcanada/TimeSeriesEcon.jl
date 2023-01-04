@@ -57,7 +57,7 @@ Represents a weekly frequency. The default weekly series ends on a Sunday (end_d
 
 See also: [`Frequency`](@ref)
 """
-struct Weekly{end_day} <: CalendarFrequency where end_day<:Integer  end
+struct Weekly{end_day} <: CalendarFrequency end
 
 """
     abstract type YPFrequency{N} <: Frequency end
@@ -75,14 +75,14 @@ abstract type YPFrequency{N} <: Frequency end
 
 A concrete frequency defined as 1 period per year. The default end_month is 12.
 """
-struct Yearly{end_month} <: YPFrequency{1} where end_month<:Integer  end
+struct Yearly{end_month} <: YPFrequency{1} end
 
 """
     struct Quarterly{end_month} <: YPFrequency{4} end
 
 A concrete frequency defined as 4 periods per year. The default end_month is 3.
 """
-struct Quarterly{end_month} <: YPFrequency{4} where end_month<:Integer end
+struct Quarterly{end_month} <: YPFrequency{4} end
 
 """
     struct Monthly <: YPFrequency{12} end
