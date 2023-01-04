@@ -476,8 +476,7 @@ function Base.show(io::IO, m::Union{MIT{Weekly{end_day}},MIT{Weekly}}) where end
     date = Dates.Date(m)
     week = Dates.week(date)
     year = Dates.year(date)
-    month = Dates.month(date)
-    if week > 51 && month != 12
+    if week > 51 && Dates.month(date) != 12
         year -= 1
     end
     print(io, "$(year)W$(week)")
