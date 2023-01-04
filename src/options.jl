@@ -45,7 +45,7 @@ Returns a dictionary of country codes for supported countries and their subdivis
 Holiday calendars are produced using the [python-holidays](https://github.com/dr-prodigy/python-holidays) libary. See their site for more.
 """
 function get_holidays_options(country::Union{String,Nothing}=nothing)
-    countries = TOML.parsefile(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.toml"))
+    countries = TOML.parsefile(joinpath(@__DIR__, "..", "data", "holidays.toml"))
     
     if country !== nothing && country ∉ keys(countries)
         throw(ArgumentError("$country is not a supported country. Run without an argument to see supported countries."))
@@ -81,10 +81,10 @@ Sets the current holidays map to the given country and subdivision. Holiday maps
 See also: [`get_holidays_options`](@ref), [`clear_holidays_map`](@ref)
 """
 function set_holidays_map(country::String, subdivision::Union{String,Nothing}=nothing)
-    countries = TOML.parsefile(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.toml"))
+    countries = TOML.parsefile(joinpath(@__DIR__, "..", "data", "holidays.toml"))
     covered_range = bdaily("1970-01-01"):bdaily("2049-12-31");
     holiday_maps = Array{UInt8}(undef, (Int(length(covered_range)/8), countries["Metadata"]["output_height"]))
-    read!(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.bin"), holiday_maps)
+    read!(joinpath(@__DIR__, "..", "data", "holidays.bin"), holiday_maps)
     
     col = 0
     if country in keys(countries)
