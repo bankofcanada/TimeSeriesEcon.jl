@@ -160,6 +160,10 @@ function MIT{F}(y::Integer, p::Integer) where F <: Weekly{end_day} where end_day
     d = first_day_of_year + Day(7*(p - 1))
     return weekly(d, end_day, true)
 end
+function MIT{Weekly}(y::Integer, p::Integer)
+    first_day_of_year = Dates.Date("$y-01-01")
+    d = first_day_of_year + Day(7*(p - 1))
+    return weekly(d, 7, true)
 end
 function MIT{F}(y::Integer, p::Integer) where F <: BDaily 
     first_day_of_year = Dates.Date("$y-01-01")
