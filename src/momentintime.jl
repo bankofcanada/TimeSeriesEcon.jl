@@ -537,7 +537,7 @@ Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)
 Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
 
 # frequency comparisons
-Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) where {N1,N2} = isless(ppy(x),ppy(y))
+Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) = isless(ppy(x),ppy(y))
 
 # needed for comparisons
 Base.flipsign(x::Duration{F}, y::Duration{F}) where F = flipsign(Int(x),Int(y))
