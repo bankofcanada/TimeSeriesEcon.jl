@@ -295,3 +295,19 @@ end
     @test Dates.Date(last(bd_rng)) == Dates.Date("2022-01-21")
 
 end
+
+@testset "Weekly from ISO" begin
+    w1 = weekly_from_iso(2021,52)
+    @test Dates.Date(w1) == Dates.Date("2022-01-02")
+    w2 = weekly_from_iso(2022,1)
+    @test Dates.Date(w2) == Dates.Date("2022-01-09")
+    w3 = weekly_from_iso(2022,2)
+    @test Dates.Date(w3) == Dates.Date("2022-01-16")
+    # no week 53 in 2021
+    @test_throws ArgumentError weekly_from_iso(2021, 53)
+
+    # there is a week 53 in 2020
+    w4 = weekly_from_iso(2020,53)
+    @test Dates.Date(w4) == Dates.Date("2021-01-03")
+    
+end

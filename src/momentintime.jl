@@ -384,6 +384,24 @@ weekly(d::Date) = MIT{Weekly{7}}(Int(ceil(Dates.value(d) / 7)))
 weekly(d::String) = MIT{Weekly{7}}(Int(ceil(Dates.value(Date(d)) / 7)))
 weekly(d::Date, end_day::Integer) = MIT{Weekly{end_day}}(Int(ceil((Dates.value(d)) / 7)) + max(0, min(1, dayofweek(d) - end_day)))
 weekly(d::String, end_day::Integer) = MIT{Weekly{end_day}}(Int(ceil((Dates.value(Date(d))) / 7)) + max(0, min(1, dayofweek(Date(d)) - end_day)))
+function weekly_from_iso(y::Int, p::Int)
+    if p > 53 || p < 1
+        throw(ArgumentError("The provided period must be between 1 and 53 (inclusive)."))
+    end
+    first_day_of_year = Dates.Date("$(y)-01-01")
+    week_of_first_day = week(first_day_of_year)
+    year_end_padding = week_of_first_day !== 1 ? 1 : 0
+    d2 = first_day_of_year + Day(((p-1)+year_end_padding)*7)
+    w = weekly(first_day_of_year + Day(((p-1)+year_end_padding)*7))
+    proposed_mit = weekly(first_day_of_year + Day(((p-1)+year_end_padding)*7))
+    # sanity checks
+    d = Dates.Date(proposed_mit)
+    if Dates.year(d) !== y && week(d) < 52
+        throw(ArgumentError("The year $(y) does not have a week $(p)."))
+    end
+    return proposed_mit
+end
+export weekly, weekly_from_iso
 
 # -------------------------
 # ppy: period per year
