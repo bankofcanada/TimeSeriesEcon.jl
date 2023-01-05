@@ -163,12 +163,11 @@ for frequencies subtyped from [`YPFrequency`](@ref).
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
 MIT{Yearly}(y::Integer, p::Integer) = MIT{Yearly{12}}(y, p)
 MIT{Quarterly}(y::Integer, p::Integer) = MIT{Quarterly{3}}(y, p)
-function MIT{F}(y::Integer, p::Integer) where F <: Weekly{end_day} where end_day 
+function _weekly_from_yp(F::Type{<:Weekly{end_day}}, y, p) where end_day
     first_day_of_year = Dates.Date("$y-01-01")
     d = first_day_of_year + Day(7*(p - 1))
-    return weekly(d, end_day, true)
+    return weekly(d, end_day)
 end
-MIT{Weekly}(y::Integer, p::Integer) = MIT{Weekly{7}}(y, p)
 function MIT{F}(y::Integer, p::Integer) where F <: BDaily 
     first_day_of_year = Dates.Date("$y-01-01")
     first_day = dayofweek(first_day_of_year)
@@ -403,6 +402,26 @@ function weekly_from_iso(y::Int, p::Int)
 end
 export weekly, weekly_from_iso
 
+"""
+    w_str(d)
+
+A macro which converts a string to an MIT{Weekly{7}} or a UnitRange{MIT{Weekly{7}}}.
+
+To return a UnitRange, provide a single string with two dates separated by `:`.
+
+The resulting week(s) will be the week(s) containing the provided date(s).
+
+Example:
+    week_of_christmas = w"2022-12-25"
+    week_overlapping_with_february = w"2022-02-01:2022-02-28"
+"""
+macro w_str(d) ;
+    if findfirst(":", d) !== nothing;
+        dsplit = split(d, ":");
+        return weekly(Dates.Date(dsplit[1])):weekly(Dates.Date(dsplit[2]));
+    end;
+    return weekly(d); 
+end
 # -------------------------
 # ppy: period per year
 """
@@ -489,6 +508,12 @@ end
 Base.string(m::MIT{<:Frequency}) = repr(m)
 Base.print(io::IO, m::MIT{<:Frequency}) = print(io, string(m))
 
+function Base.show(io::IO, r::UnitRange{MIT{F}}, args...) where F <: Union{<:Weekly, <:Daily, <:BDaily}
+    if !get(io, :compact, false)
+        print(io, "$F ")
+    end
+    print(io, "$(first(r)):$(last(r))")
+end
 Base.show(io::IO, d::Duration) = print(io, Int(d))
 Base.string(d::Duration) = repr(d)
 Base.print(io::IO, d::Duration) = print(io, string(d))
