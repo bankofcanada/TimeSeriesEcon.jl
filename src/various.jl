@@ -278,3 +278,17 @@ TOML.print(w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, w._c;
 TOML.print(io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, io, w._c; sorted, by)
 TOML.print(f::TOML.Internals.Printer.MbyFunc, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, io, w._c; sorted, by)
 TOML.print(f::TOML.Internals.Printer.MbyFunc, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, w._c; sorted, by)
+
+
+## isyearly, isquarterly, isweekly, ismonthly
+isyearly(F::Type{<:Frequency}) = F <: Yearly
+isquarterly(F::Type{<:Frequency}) = F <: Quarterly
+ismonthly(F::Type{<:Frequency}) = F <: Monthly
+isweekly(F::Type{<:Frequency}) = F <: Weekly
+isyearly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isyearly(frequencyof(x))
+isquarterly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isquarterly(frequencyof(x))
+ismonthly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = ismonthly(frequencyof(x))
+isweekly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isweekly(frequencyof(x))
+export isyearly, isquarterly, isweekly
+
+

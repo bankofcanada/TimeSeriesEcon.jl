@@ -19,11 +19,11 @@ import Dates
     @test mit2yp(MIT{Quarterly}(-5)) == (-2, 4)
     @test mit2yp(MIT{Quarterly}(-6)) == (-2, 3)
     # subtractions
-    @test typeof(qq(2020, 1) - qq(2019, 2)) == Duration{Quarterly}
-    @test typeof(qq(2020, 1) - 2) == MIT{Quarterly}
-    @test typeof(qq(2020, 1) - Duration{Quarterly}(2)) == MIT{Quarterly}
-    @test typeof(Duration{Quarterly}(5) - 2) == Duration{Quarterly}
-    @test typeof(Duration{Quarterly}(5) - Duration{Quarterly}(2)) == Duration{Quarterly}
+    @test typeof(qq(2020, 1) - qq(2019, 2)) == Duration{Quarterly{3}}
+    @test typeof(qq(2020, 1) - 2) == MIT{Quarterly{3}}
+    @test typeof(qq(2020, 1) - Duration{Quarterly}(2)) == MIT{Quarterly{3}}
+    @test typeof(Duration{Quarterly}(5) - 2) == Duration{Quarterly{3}}
+    @test typeof(Duration{Quarterly}(5) - Duration{Quarterly}(2)) == Duration{Quarterly{3}}
     @test_throws ArgumentError qq(2020, 1) - mm(2019, 2)
     @test_throws ArgumentError qq(2020, 1) - Duration{Monthly}(5)
     @test_throws ArgumentError Duration{Quarterly}(8) - Duration{Monthly}(5)
@@ -66,11 +66,11 @@ import Dates
     @test qq(2020, 1) + Duration{Quarterly}(4) == qq(2021, 1)
     @test Duration{Quarterly}(5) + Duration{Quarterly}(2) == 7
     @test Duration{Quarterly}(5) + 2 == 7
-    @test Duration{Quarterly}(5) + 2 isa Duration{Quarterly}
+    @test Duration{Quarterly}(5) + 2 isa Duration{Quarterly{3}}
     @test 2 + Duration{Quarterly}(5) == 7
-    @test 2 + Duration{Quarterly}(5) isa Duration{Quarterly}
+    @test 2 + Duration{Quarterly}(5) isa Duration{Quarterly{3}}
     @test_throws ArgumentError Duration{Quarterly}(5) + Duration{Monthly}(2)
-    @test Duration{Quarterly}(5) + Duration{Quarterly}(2) isa Duration{Quarterly}
+    @test Duration{Quarterly}(5) + Duration{Quarterly}(2) isa Duration{Quarterly{3}}
     @test_throws ArgumentError 20Q1 + Duration{Monthly}(2)
     # conversions to float (for plotting)
     @test 2000Q1 + 1 == 2000Q2
@@ -100,20 +100,20 @@ import Dates
     @test_throws ArgumentError rem(d2,d3)
 
     #hash
-    @test hash(1Q1, UInt(8)) == hash(("Quarterly", 4), UInt(8))
-    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly", 2), UInt(8))
+    @test hash(1Q1, UInt(8)) == hash(("Quarterly{3}", 4), UInt(8))
+    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly{3}", 2), UInt(8))
 end
 
 @testset "Range" begin
     rng = 2020Q1:2020Q4
-    @test rng isa UnitRange{MIT{Quarterly}}
+    @test rng isa UnitRange{MIT{Quarterly{3}}}
     @test isempty(2020Q1:2019Q1)
     @test length(rng) isa Int
     @test length(rng) == 4
     @test step(rng) isa Int
     @test step(rng) == 1
     for (i, m) in enumerate(rng)
-        @test m isa MIT{Quarterly}
+        @test m isa MIT{Quarterly{3}}
         @test first(rng) <= m <= last(rng)
         @test rng[i] == m
     end
@@ -218,18 +218,18 @@ end
 end
 
 @testset "frequencyof" begin
-    @test frequencyof(qq(2000, 1)) == Quarterly
+    @test frequencyof(qq(2000, 1)) == Quarterly{3}
     @test frequencyof(mm(2000, 1)) == Monthly
-    @test frequencyof(yy(2000)) == Yearly
+    @test frequencyof(yy(2000)) == Yearly{12}
     @test frequencyof(1U) == Unit
-    @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly
+    @test frequencyof(qq(2001, 1):qq(2002, 1)) == Quarterly{3}
     @test_throws ArgumentError frequencyof(1)
     @test_throws ArgumentError frequencyof(Int)
-    @test frequencyof(qq(2000, 1) - qq(2000, 1)) == Quarterly
+    @test frequencyof(qq(2000, 1) - qq(2000, 1)) == Quarterly{3}
     @test frequencyof(mm(2000, 1) - mm(2000, 1)) == Monthly
-    @test frequencyof(yy(2000, 1) - yy(2000, 1)) == Yearly
+    @test frequencyof(yy(2000, 1) - yy(2000, 1)) == Yearly{12}
     @test frequencyof(5U - 3U) == Unit
-    @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly
+    @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly{12}
 end
 
 @testset "mm, qq, yy" begin

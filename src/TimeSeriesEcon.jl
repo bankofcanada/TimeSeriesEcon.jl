@@ -102,7 +102,7 @@ julia> rangeof(q; drop=-4)
 julia> q[begin:begin+1] .= 1;
 julia> @rec rangeof(q; drop=2) q[t] = q[t-1] + q[t-2];
 julia> q
-8-element TSeries{Quarterly} with range 20Q1:21Q4:
+8-element TSeries{Quarterly{3}} with range 20Q1:21Q4:
     20Q1 : 1.0
     20Q2 : 1.0
     20Q3 : 2.0

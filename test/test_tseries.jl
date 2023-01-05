@@ -5,7 +5,7 @@ import TimeSeriesEcon: qq, mm, yy
 @testset "TSeries" begin
     # test constructors
     s = TSeries(20Q1, collect(10.0 .+ (1:12)))
-    @test typeof(s) === TSeries{Quarterly,Float64,Array{Float64,1}}
+    @test typeof(s) === TSeries{Quarterly{3},Float64,Array{Float64,1}}
     @test size(s) == (12,)
     @test axes(s) == (20Q1:22Q4,)
     @test length(s) == 12
@@ -22,7 +22,7 @@ import TimeSeriesEcon: qq, mm, yy
 
     # constructing with similar()
     t = similar(ones(Float64, 5), (2Q1:4Q4))
-    @test typeof(t) === TSeries{Quarterly,Float64,Vector{Float64}} && t.firstdate == 2Q1 && length(t.values) == 12
+    @test typeof(t) === TSeries{Quarterly{3},Float64,Vector{Float64}} && t.firstdate == 2Q1 && length(t.values) == 12
 
     # indexing
     @test s[1] == 11.0
@@ -77,9 +77,9 @@ import TimeSeriesEcon: qq, mm, yy
     # similar with an abstract array
     val = Float32(22.3)
     t2 = similar(typeof([val]), (2Q1:4Q4))
-    @test typeof(t2) === TSeries{Quarterly,Float32,Vector{Float32}} && t2.firstdate == 2Q1 && length(t2.values) == 12
+    @test typeof(t2) === TSeries{Quarterly{3},Float32,Vector{Float32}} && t2.firstdate == 2Q1 && length(t2.values) == 12
     t3 = similar([val], (2Q1:4Q4))
-    @test typeof(t3) === TSeries{Quarterly,Float32,Vector{Float32}} && t3.firstdate == 2Q1 && length(t3.values) == 12
+    @test typeof(t3) === TSeries{Quarterly{3},Float32,Vector{Float32}} && t3.firstdate == 2Q1 && length(t3.values) == 12
 
     # fill
     t4 = fill(2, (20Y:22Y))
@@ -286,8 +286,8 @@ end
     tu = TSeries(11U, copy(tq.values))
 
     tmp = tq .* 5
-    @test 5tq isa TSeries{Quarterly} 
-    @test tq * 5 isa TSeries{Quarterly} 
+    @test 5tq isa TSeries{Quarterly{3}} 
+    @test tq * 5 isa TSeries{Quarterly{3}} 
     @test 5tq == tmp
     @test tq * 5 == tmp
     @test (5tm).values == (5tq).values && 5tm ≠ 5tq
@@ -546,7 +546,7 @@ end
     @test fconvert(Monthly, q, method=:const).values == repeat(1.0:10, inner=3)
 
     yq = fconvert(Yearly, q)
-    @test typeof(yq) === TSeries{Yearly, Float64, Vector{Float64}}
+    @test typeof(yq) === TSeries{Yearly{12}, Float64, Vector{Float64}}
     @test fconvert(Yearly, q, method=:mean).values == [2.5, 6.5]
     @test fconvert(Yearly, q, method=:end).values == [4.0, 8.0]
     @test fconvert(Yearly, q, method=:begin).values == [1.0, 5.0]

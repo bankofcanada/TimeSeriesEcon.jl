@@ -513,7 +513,7 @@ Examples
 julia> x = TSeries(qq(2018, 1), Vector(1:8));
 
 julia> apct(x)
-TSeries{Quarterly} of length 7
+TSeries{Quarterly{3}} of length 7
 2018Q2: 1500.0
 2018Q3: 406.25
 2018Q4: 216.04938271604937

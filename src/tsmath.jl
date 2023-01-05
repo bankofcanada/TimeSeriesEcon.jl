@@ -54,7 +54,7 @@ copies the data over. See [`shift!`](@ref) for in-place version.
 For example:
 ```julia-repl
 julia> shift(TSeries(2020Q1, 1:4), 1)
-TSeries{Quarterly} of length 4
+TSeries{Quarterly{3}} of length 4
 2019Q4: 1.0
 2020Q1: 2.0
 2020Q2: 3.0
@@ -62,7 +62,7 @@ TSeries{Quarterly} of length 4
 
 
 julia> shift(TSeries(2020Q1, 1:4), -1)
-TSeries{Quarterly} of length 4
+TSeries{Quarterly{3}} of length 4
 2020Q2: 1.0
 2020Q3: 2.0
 2020Q4: 3.0
