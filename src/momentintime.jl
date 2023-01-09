@@ -347,13 +347,21 @@ to land on when the provided date is Saturday or Sunday. The default
 is `true`, meaning that the preceding Friday is returned.
 
 """
-function bdaily(d::Date; bias_previous::Bool=true) 
+function bdaily(d::Date; bias::Symbol=getoption(:bdaily_creation_bias)) 
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
     adjustment = 0
-    if bias_previous && rem == 6 
-        adjustment = 1
-    elseif !bias_previous && rem == 0
-        adjustment = -1
+    if rem == 0 # Sunday
+        if bias ∈ (:next, :nearest)
+            adjustment = -1
+        elseif bias == :strict
+            throw(ArgumentError("$d is not a valid business day, it is a $(dayname(d))."))
+        end
+    elseif rem == 6 # Saturday
+        if bias ∈ (:previous, :nearest)
+            adjustment = 1
+        elseif bias == :strict
+            throw(ArgumentError("$d is not a valid business day, it is a $(dayname(d))."))
+        end
     end
     return MIT{BDaily}(Dates.value(d - _d0 - Day(num_weekends*2 + adjustment)))
 end
@@ -368,11 +376,11 @@ to land on when the provided date is Saturday or Sunday. The default
 is `true`, meaning that the preceding Friday is returned.
 
 """
-bdaily(d::String; bias_previous::Bool=true) = bdaily(Dates.Date(d), bias_previous=bias_previous)
+bdaily(d::String; bias::Symbol=getoption(:bdaily_creation_bias)) = bdaily(Dates.Date(d), bias=bias)
 macro bd_str(d); 
     if findfirst(":", d) !== nothing;
         dsplit = split(d, ":");
-        rng = bdaily(string(dsplit[1]), bias_previous=false):bdaily(string(dsplit[2]));
+        rng = bdaily(string(dsplit[1]), bias=:next):bdaily(string(dsplit[2]), bias=:previous);
         if last(rng) < first(rng)
             throw(ArgumentError("The provided range, $d, does not include any business days."))
         end
@@ -388,7 +396,9 @@ A macro which converts a string to an MIT{BDaily} or a UnitRange{MIT{BDaily}}.
 
 The optional `bias`` determines which business day is returned when the provided 
 date is on a Saturday or Sunday. Available options are `"n"` or `"next"` for 
-biasing the next business day, and "p", or "previous" for the next business day.
+biasing the next business day, and "p", or "previous" for the next business day,
+`"near"` or `"nearest"` for biasing the nearest business day, and `"s"` or `"strict"`
+in which case passing a day on a weekend will return an error.
 
 To return a UnitRange, provide a single string with two dates separated by `:`. 
 In this case the first date will be biased to the following business day and the
@@ -403,13 +413,21 @@ macro bd_str(d, bias);
     if findfirst(":", d) !== nothing;
         throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
     end
-    if bias ∉ ("n", "next", "p", "previous")
-        throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous")."""))
+    if bias ∉ ("n", "next", "p", "previous", "s", "strict", "nearest")
+        throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous", "s", "strict", "near", "nearest")."""))
     end
-    if bias == "n" || bias == "next"
-        return bdaily(d, bias_previous = false);    
+    if bias == ""
+        return bdaily(d);
+    elseif bias == "n" || bias == "next"
+        return bdaily(d, bias=:next);    
+    elseif bias == "p" || bias == "p"
+        return bdaily(d, bias=:previous)
+    elseif bias == "s" || bias == "strict"
+        return bdaily(d, bias=:strict)
+    elseif bias == "near" || bias == "nearest"
+        return bdaily(d, bias=:nearest)
     end
-    return bdaily(d);
+   
 end;
 
 """

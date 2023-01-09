@@ -1,12 +1,13 @@
 using TOML
 options = Dict{Symbol,Any}(
     :bdaily_holidays_map => nothing,
-    :bdaily_skip_nans => false, 
-    :bdaily_skip_holidays => false
+    :bdaily_creation_bias => :strict,
+    # :bdaily_skip_nans => false, 
+    # :bdaily_skip_holidays => false
 )
 
 """
-    set_option(option::Symbol, value)
+    setoption(option::Symbol, value)
 
 Sets the provided option to the provided values.
 
@@ -20,19 +21,22 @@ Current available options are:
     This also controls the behavior of the `shift`, `lag`, `diff`, and `pct` functions, but only NaNs falling on holidays are replaced.
     
 """
-function set_option(option::Symbol, value)
+function setoption(option::Symbol, value)
+    if option==:bdaily_creation_bias && value ∉ (:strict, :previous, :next, :nearest)
+        throw(ArgumentError(":bdaily_creation_bias must be :strict, :previous, :next or :nearest. Received: $value"))
+    end
     options[option] = value;
     nothing #don't return anything
 end
 
 """
-    get_option(option::Symbol)
+    getoption(option::Symbol)
 
 Returns the current value of the provided option.
 
-See also [`set_option`](@ref)
+See also [`setoption`](@ref)
 """
-function get_option(option::Symbol)
+function getoption(option::Symbol)
     options[option];
 end
 
@@ -119,7 +123,7 @@ function set_holidays_map(country::String, subdivision::Union{String,Nothing}=no
     # The bits are packed in a UInt8 array
     # each UInt8 corresponds to one ordering of 8 bits
     ts = TSeries(first(covered_range), reduce(vcat, map(x -> digits(Bool, x, base=2, pad=8), holiday_maps[:,col])));
-    set_option(:bdaily_holidays_map, ts);
+    setoption(:bdaily_holidays_map, ts);
 end
 
 
@@ -131,5 +135,5 @@ Clears the current holidays map.
 See also: [`get_holidays_options`](@ref), [`set_holidays_map`](@ref)
 """
 function clear_holidays_map()
-    set_option(:bdaily_holidays_map, nothing);
+    setoption(:bdaily_holidays_map, nothing);
 end

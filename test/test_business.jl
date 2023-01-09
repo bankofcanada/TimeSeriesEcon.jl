@@ -13,8 +13,8 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     tsbd = TSeries(TimeSeriesEcon.bdaily("2021-01-01"), bonds_data)
     @test length(tsbd) == 261
 
-    # TimeSeriesEcon.set_option(:bdaily_skip_nans, true)
-    # TimeSeriesEcon.set_option(:bdaily_skip_holidays, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_nans, true)
+    # TimeSeriesEcon.setoption(:bdaily_skip_holidays, false)
     TimeSeriesEcon.clear_holidays_map()
 
     @test values(tsbd[end-9:end]) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, NaN, NaN, 1.47, 1.45, 1.42] nans = true
@@ -48,7 +48,7 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     @test rangeof(tsbd_pct[begin:begin+9]) == TimeSeriesEcon.bdaily("2021-01-04"):TimeSeriesEcon.bdaily("2021-01-15")
 
     # Holidays OFF
-    TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
+    TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
     tsbd_shifted2 = shift(tsbd, 1)
     @test values(tsbd_shifted2[end-9:end]) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, NaN, NaN, 1.47, 1.45, 1.42] nans = true
     @test rangeof(tsbd_shifted2[end-9:end]) == TimeSeriesEcon.bdaily("2021-12-17"):TimeSeriesEcon.bdaily("2021-12-30")
@@ -74,14 +74,14 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     @test rangeof(tsbd_pct2[begin:begin+9]) == TimeSeriesEcon.bdaily("2021-01-04"):TimeSeriesEcon.bdaily("2021-01-15")
 
     # reset the option
-    TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
+    TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
 
     ## Testing holidays map
     covered_range = bdaily("1970-01-01"):bdaily("2049-12-31")
     test_ts = TSeries(first(covered_range), ones(Bool, length(covered_range)))
     test_ts[bdaily("2021-12-27"):bdaily("2021-12-28")] .= false
-    TimeSeriesEcon.set_option(:bdaily_holidays_map, test_ts)
-    TimeSeriesEcon.set_option(:bdaily_skip_holidays, true)
+    TimeSeriesEcon.setoption(:bdaily_holidays_map, test_ts)
+    TimeSeriesEcon.setoption(:bdaily_skip_holidays, true)
     # tsmall = TSeries(TimeSeriesEcon.bdaily("2021-12-20"), [1,2,3,4,5,NaN,NaN,8,9,10])
     tsmall = TSeries(TimeSeriesEcon.bdaily("2021-12-20"), [1, 2, 3, 4, 5, NaN, NaN, 8, NaN, 10])
     tsmall_shifted = shift(tsmall, 1, holidays_map=test_ts)
@@ -139,7 +139,7 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     @test cleanedvalues(tsmall2_pct[end-8:end], holidays_map=test_ts) ≈ [100, 50, 100 / 3, 25, NaN, NaN, 100 / 9] nans = true atol = 0.01
 
     # The cleanedvalues function returns only a subset of values (skip_holidays uses stored map)
-    TimeSeriesEcon.set_option(:bdaily_holidays_map, test_ts)
+    TimeSeriesEcon.setoption(:bdaily_holidays_map, test_ts)
     @test cleanedvalues(tsbd[end-9:end], skip_holidays=true) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42] nans = true
     @test cleanedvalues(tsbd_shifted[end-9:end], skip_holidays=true) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42] nans = true
     @test cleanedvalues(tsbd_lagged[end-9:end], skip_holidays=true) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42] nans = true
@@ -165,13 +165,13 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
 
 
     TimeSeriesEcon.clear_holidays_map()
-    # TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
-    # TimeSeriesEcon.set_option(:bdaily_skip_holidays, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_holidays, false)
 
     ## Testing ON holidays map
     TimeSeriesEcon.set_holidays_map("CA", "ON")
-    # TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
-    # TimeSeriesEcon.set_option(:bdaily_skip_holidays, true)
+    # TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_holidays, true)
     @test cleanedvalues(tsbd[end-9:end], skip_holidays=true) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42] nans = true
     # @test cleanedvalues(tsbd_shifted[end-9:end], skip_holidays=true) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42] nans = true
     # @test cleanedvalues(tsbd_lagged[end-9:end], skip_holidays=true) ≈ [1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45] nans = true
@@ -189,10 +189,10 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     @test cleanedvalues(tsbd_pct3[end-9:end], skip_holidays=true) ≈ [4.55, 4.35, -1.39, 1.41, 1.39, 0.68, -1.36, -2.07] nans = true atol = 0.01
 
     # passing holidays map directly produces the same results
-    ontario_map = copy(TimeSeriesEcon.get_option(:bdaily_holidays_map))
+    ontario_map = copy(TimeSeriesEcon.getoption(:bdaily_holidays_map))
     TimeSeriesEcon.clear_holidays_map()
-    # TimeSeriesEcon.set_option(:bdaily_skip_holidays, false)
-    # TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_holidays, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
 
     tsbd_shifted4 = shift(tsbd, 1, holidays_map=ontario_map)
     tsbd_diffed4 = diff(tsbd, holidays_map=ontario_map)
@@ -206,6 +206,6 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
 
     # reset
     TimeSeriesEcon.clear_holidays_map()
-    # TimeSeriesEcon.set_option(:bdaily_skip_holidays, false)
-    # TimeSeriesEcon.set_option(:bdaily_skip_nans, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_holidays, false)
+    # TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
 end

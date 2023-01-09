@@ -88,7 +88,7 @@ function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holid
     elseif skip_all_nans
         return filter(x -> !isnan(x), t.values)
     elseif skip_holidays
-        return TimeSeriesEcon.bdvalues(t, holidays_map=TimeSeriesEcon.get_option(:bdaily_holidays_map))
+        return TimeSeriesEcon.bdvalues(t, holidays_map=TimeSeriesEcon.getoption(:bdaily_holidays_map))
     end
     return t.values 
 end

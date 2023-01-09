@@ -132,7 +132,7 @@ function replace_nans_if_warranted!(ts::TSeries, k::Integer; skip_all_nans::Bool
         skip_holidays = true # overwriting global option
         holidays = holidays_map[ts_range[begin]-abs(k):ts_range[end]+abs(k)]
     elseif skip_holidays
-        holidays = get_option(:bdaily_holidays_map)[ts_range[begin]-abs(k):ts_range[end]+abs(k)]
+        holidays = getoption(:bdaily_holidays_map)[ts_range[begin]-abs(k):ts_range[end]+abs(k)]
     end
     
     last_valid = NaN
