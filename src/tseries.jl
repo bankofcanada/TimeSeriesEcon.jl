@@ -82,15 +82,17 @@ rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
 
-
-function Base.values(t::TSeries{BDaily}, holidays::Bool=get_option(:bdaily_skip_holidays); holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
     if holidays_map !== nothing
         return TimeSeriesEcon.bdvalues(t, holidays_map=holidays_map)
-    elseif holidays
+    elseif skip_all_nans
+        return filter(x -> !isnan(x), t.values)
+    elseif skip_holidays
         return TimeSeriesEcon.bdvalues(t, holidays_map=TimeSeriesEcon.get_option(:bdaily_holidays_map))
     end
-    return t.values
+    return t.values 
 end
+export cleanedvalues;
 
 function bdvalues(t::TSeries{BDaily}; holidays_map=nothing)
     if holidays_map === nothing
@@ -462,7 +464,7 @@ given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
 Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
-Base.diff(x::TSeries{BDaily}, k::Integer=-1; holidays_map=nothing) = x - lag(x, -k; holidays_map=holidays_map)
+Base.diff(x::TSeries{BDaily}, k::Integer=-1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = x - lag(x, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
@@ -487,13 +489,13 @@ function pct(ts::TSeries, shift_value::Int=-1; islog::Bool=false)
 
     TSeries(result.firstdate, result.values)
 end
-function pct(ts::TSeries{BDaily}, shift_value::Int=-1; islog::Bool=false, holidays_map=nothing)
+function pct(ts::TSeries{BDaily}, shift_value::Int=-1; islog::Bool=false, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing)
     if islog
         a = exp.(ts)
-        b = shift(exp.(ts), shift_value; holidays_map=holidays_map)
+        b = shift(exp.(ts), shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
     else
         a = ts
-        b = shift(ts, shift_value; holidays_map=holidays_map)
+        b = shift(ts, shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
     end
 
     result = @. ((a - b) / b) * 100

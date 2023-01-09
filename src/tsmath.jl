@@ -72,25 +72,27 @@ TSeries{Quarterly{3}} of length 4
 shift(ts::TSeries, k::Int) = copyto!(TSeries(rangeof(ts) .- k), ts.values)
 
 """
-    shift(x::TSeries{BDaily}, n, holidays_map=nothing)
+    shift(x::TSeries{BDaily}, n, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing)
 
 As [`shift`](@ref) but with behavor depending on the TimeSeriesEcon options `:bdaily_skip_nans`, `:bdaily_skip_holidays`
 and the optional `holidays_map` argument.
 
-When `:bdaily_skip_nans` is  `true`, any NaN values replaced with the nearest valid value. 
+When `skip_all_nans` is  `true`, any NaN values replaced with the nearest valid value. 
 Replacements will come from later time periods when k >= 0 and from earlier time periods when k < 0.
 
-When `:bdaily_skip_nans` is `false` but `:bdaily_skip_holidays` is `true` or a 
+When `skip_all_nans` is `false` but `skip_holidays` is `true` or a 
 `holidays_map` is passed to the function, then NaN originating from Holidays will be replaced with the nearest valid value.
 Replacements will come from later time periods when k >= 0 and from earlier time periods when k < 0.
 
 Options:
-* holidays_map : A Boolean-values BDaily TSeries with true values on days which are not holidays.
+* skip_all_nans : A Boolean. Default is false.
+* skip_holidays : A Boolean. Default is false.
+* holidays_map : A Boolean-values BDaily TSeries with true values on days which are not holidays. Default is nothing.
 
 
 Example:
 ```julia-repl
-julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), 1)
+julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), 1, skip_all_nans=true)
 4-element TSeries{TimeSeriesEcon.BDaily} with range 2022-07-01:2022-07-06:
 2022-07-01 : 1.0
 2022-07-04 : 2.0
@@ -98,7 +100,7 @@ julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), 1)
 2022-07-06 : 4.0
 
 
-julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), -1)
+julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), -1, skip_all_nans=true)
 4-element TSeries{TimeSeriesEcon.BDaily} with range 2022-07-05:2022-07-08:
 2022-07-05 : 1.0
 2022-07-06 : 2.0
@@ -106,9 +108,9 @@ julia> shift(TSeries(bdaily("2022-07-04"), [1,2,NaN,4]), -1)
 2022-07-08 : 4.0
 ```
 """
-function shift(ts::TSeries{BDaily}, k::Int; holidays_map=nothing) 
+function shift(ts::TSeries{BDaily}, k::Int; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) 
     new_ts = copyto!(TSeries(rangeof(ts) .- k), ts.values)
-    replace_nans_if_warranted!(new_ts, k; holidays_map=holidays_map)
+    replace_nans_if_warranted!(new_ts, k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
     return new_ts
 end
 
@@ -116,11 +118,9 @@ end
     replace_nans_if_warranted!(ts::TSeries, k::Integer)
 
 An internal function used to replace NaNs in a BDaily TSeries with their next or previous valid value.
-When :skip_holidays is true the process only replaces NaNs when the source of the NaN is on a holiday.
+When skip_holidays is true or a holidays_map is passed the process only replaces NaNs when the source of the NaN is on a holiday.
 """
-function replace_nans_if_warranted!(ts::TSeries, k::Integer; holidays_map=nothing)
-    skip_all_nans = get_option(:bdaily_skip_nans)
-    skip_holidays = get_option(:bdaily_skip_holidays)
+function replace_nans_if_warranted!(ts::TSeries, k::Integer; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing)
     if !skip_all_nans && !skip_holidays && holidays_map === nothing
         return
     end
@@ -194,7 +194,7 @@ end
 In-place version of [`shift`](@ref).
 """
 shift!(ts::TSeries, k::Int) = (ts.firstdate -= k; ts)
-shift!(ts::TSeries{BDaily}, k::Int; holidays_map=nothing) = (ts.firstdate -= k; replace_nans_if_warranted!(ts, k, holidays_map=holidays_map))
+shift!(ts::TSeries{BDaily}, k::Int; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = (ts.firstdate -= k; replace_nans_if_warranted!(ts, k, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map))
 
 """
     lag(x::TSeries, k=1)
@@ -203,7 +203,7 @@ Shift the dates of `x` by `k` period to produce the `k`-th lag of `x`. This is
 the same [`shift(x, -k)`](@ref).
 """
 lag(t::TSeries, k::Int=1) = shift(t, -k)
-lag(t::TSeries{BDaily}, k::Int=1; holidays_map=nothing) = shift(t, -k; holidays_map=holidays_map)
+lag(t::TSeries{BDaily}, k::Int=1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = shift(t, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
 """
     lag!(x::TSeries, k=1)
@@ -211,7 +211,7 @@ lag(t::TSeries{BDaily}, k::Int=1; holidays_map=nothing) = shift(t, -k; holidays_
 In-place version of [`lag`](@ref)
 """
 lag!(t::TSeries, k::Int=1) = shift!(t, -k)
-lag!(t::TSeries{BDaily}, k::Int=1; holidays_map=nothing) = shift!(t, -k; holidays_map=holidays_map)
+lag!(t::TSeries{BDaily}, k::Int=1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = shift!(t, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
 """
     lead(x::TSeries, k=1)
@@ -220,7 +220,7 @@ Shift the dates of `x` by `k` period to produce the `k`-th lead of `x`. This is
 the same [`shift(x, k)`](@ref).
 """
 lead(t::TSeries, k::Int=1) = shift(t, k)
-lead(t::TSeries{BDaily}, k::Int=1; holidays_map=nothing) = shift(t, k; holidays_map=holidays_map)
+lead(t::TSeries{BDaily}, k::Int=1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = shift(t, k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
 """
     lead!(x::TSeries, k=1)
@@ -228,5 +228,5 @@ lead(t::TSeries{BDaily}, k::Int=1; holidays_map=nothing) = shift(t, k; holidays_
 In-place version of [`lead`](@ref)
 """
 lead!(t::TSeries, k::Int=1) = shift!(t, k)
-lead!(t::TSeries{BDaily}, k::Int=1; holidays_map=nothing) = shift!(t, k, holidays_map=holidays_map)
+lead!(t::TSeries{BDaily}, k::Int=1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = shift!(t, k, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
