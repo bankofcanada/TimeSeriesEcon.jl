@@ -76,6 +76,17 @@ abstract type YPFrequency{N} <: CalendarFrequency end
 A concrete frequency defined as 1 period per year. The default end_month is 12.
 """
 struct Yearly{end_month} <: YPFrequency{1} end
+abstract type Y{end_month} end; 
+function Base.:*(y::Int, ::Type{Y{end_month}}) where end_month 
+    if !(typeof(end_month) <: Integer)
+        throw(ArgumentError("The end_month for a Yearly frequency must be and integer. Received: $end_month"))
+    end
+    if end_month > 12 || end_month < 1
+        throw(ArgumentError("The end_month for a Yearly frequency must be between 1 and 12. Received: $end_month"))
+    end
+    return MIT{Yearly{end_month}}(y)
+end
+Base.:*(y::Int, ::Type{Y}) = MIT{Yearly{12}}(y)
 
 """
     struct Quarterly{end_month} <: YPFrequency{4} end
@@ -83,6 +94,40 @@ struct Yearly{end_month} <: YPFrequency{1} end
 A concrete frequency defined as 4 periods per year. The default end_month is 3.
 """
 struct Quarterly{end_month} <: YPFrequency{4} end
+abstract type Q1{end_month} end; 
+abstract type Q2{end_month} end; 
+abstract type Q3{end_month} end; 
+abstract type Q4{end_month} end; 
+function validate_quarterly(end_month)
+    if !(typeof(end_month) <: Integer)
+        throw(ArgumentError("The end_month for a Quarterly frequency must be and integer. Received: $end_month"))
+    end
+    if end_month > 3 || end_month < 1
+        throw(ArgumentError("The end_month for a Quarterly frequency must be between 1 and 3. Received: $end_month"))
+    end
+end
+function Base.:*(y::Int, ::Type{Q1{end_month}}) where end_month 
+    validate_quarterly(end_month)
+    return MIT{Quarterly{end_month}}(y, 1)
+end
+Base.:*(y::Int, ::Type{Q1}) = MIT{Quarterly{3}}(y, 1)
+function Base.:*(y::Int, ::Type{Q2{end_month}}) where end_month 
+    validate_quarterly(end_month)
+    return MIT{Quarterly{end_month}}(y, 2)
+end
+Base.:*(y::Int, ::Type{Q2}) = MIT{Quarterly{3}}(y, 2)
+function Base.:*(y::Int, ::Type{Q3{end_month}}) where end_month 
+    validate_quarterly(end_month)
+    return MIT{Quarterly{end_month}}(y, 3)
+end
+Base.:*(y::Int, ::Type{Q3}) = MIT{Quarterly{3}}(y, 3)
+function Base.:*(y::Int, ::Type{Q4{end_month}}) where end_month 
+    validate_quarterly(end_month)
+    return MIT{Quarterly{end_month}}(y, 4)
+end
+Base.:*(y::Int, ::Type{Q4}) = MIT{Quarterly{3}}(y, 4)
+
+
 
 """
     struct Monthly <: YPFrequency{12} end
@@ -483,11 +528,15 @@ end
 #-------------------------
 # pretty printing
 
+Base.show(io::IO, F::Type{Quarterly{3}}) = print(io, "Quarterly")
+Base.show(io::IO, F::Type{Yearly{12}}) = print(io, "Yearly")
+Base.show(io::IO, F::Type{Weekly{7}}) = print(io, "Weekly")
+
 Base.show(io::IO, m::MIT{Unit}) = print(io, Int(m), 'U')
 Base.show(io::IO, m::MIT{Daily}) = print(io, Dates.Date(m))
 Base.show(io::IO, m::MIT{BDaily}) = print(io, Dates.Date(m))
 function Base.show(io::IO, m::MIT{Weekly{end_day}}) where end_day
-    print(io, "week of $(Dates.Date(m))")
+    print(io, "$(Dates.Date(m))")
 end
 
 function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
@@ -503,6 +552,13 @@ function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
         # print(io, rpad(period(m), length(string(N))))
         print(io, period(m))
     end
+    end_month = endperiod(F)
+    if N == 4 && end_month !== 3
+        print(io, "{$end_month}")
+    end
+    if N == 1 && end_month !== 12
+        print(io, "{$end_month}")
+    end
 end
 
 Base.string(m::MIT{<:Frequency}) = repr(m)
@@ -514,6 +570,7 @@ function Base.show(io::IO, r::UnitRange{MIT{F}}, args...) where F <: Union{<:Wee
     end
     print(io, "$(first(r)):$(last(r))")
 end
+
 Base.show(io::IO, d::Duration) = print(io, Int(d))
 Base.string(d::Duration) = repr(d)
 Base.print(io::IO, d::Duration) = print(io, string(d))
@@ -670,11 +727,6 @@ Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 export Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 
 global const U = _FConst{Unit}()
-global const Y = _FPConst{Yearly,1}()
-global const Q1 = _FPConst{Quarterly,1}()
-global const Q2 = _FPConst{Quarterly,2}()
-global const Q3 = _FPConst{Quarterly,3}()
-global const Q4 = _FPConst{Quarterly,4}()
 global const M1 = _FPConst{Monthly,1}()
 global const M2 = _FPConst{Monthly,2}()
 global const M3 = _FPConst{Monthly,3}()
