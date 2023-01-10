@@ -65,7 +65,7 @@ struct Weekly{end_day} <: CalendarFrequency end
 Represents a calendar frequency defined by a number of periods in a year. The
 type parameter `N` is the number of periods and must be a positive integer. 
 
-See also: [`Frequency`](@ref), [`Yearly`](@ref), [`Quarterly`](@ref), [`Monthly`](@ref)
+See also: [`Frequency`](@ref), [`Yearly`](@ref), [`HalfYearly`](@ref), [`Quarterly`](@ref), [`Monthly`](@ref)
 """
 abstract type YPFrequency{N} <: CalendarFrequency end
 
@@ -190,12 +190,14 @@ MIT, Duration
 MIT{F}(x::Int) where F <: Frequency = reinterpret(MIT{F}, x)
 MIT{Yearly}(x::Int) = MIT{Yearly{12}}(x)
 MIT{Quarterly}(x::Int) = MIT{Quarterly{3}}(x)
+MIT{HalfYearly}(x::Int) = MIT{HalfYearly{6}}(x)
 MIT{Weekly}(x::Int) = MIT{Weekly{7}}(x)
 Int(x::MIT) = reinterpret(Int, x)
 
 Duration{F}(x::Int) where F <: Frequency = reinterpret(Duration{F}, x)
 Duration{Yearly}(x::Int) = Duration{Yearly{12}}(x)
 Duration{Quarterly}(x::Int) = Duration{Quarterly{3}}(x)
+Duration{HalfYearly}(x::Int) = Duration{HalfYearly{6}}(x)
 Duration{Weekly}(x::Int) = Duration{Weekly{7}}(x)
 Int(x::Duration) = reinterpret(Int, x)
 
@@ -235,6 +237,7 @@ for frequencies subtyped from [`YPFrequency`](@ref).
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
 MIT{Yearly}(y::Integer, p::Integer) = MIT{Yearly{12}}(y, p)
 MIT{Quarterly}(y::Integer, p::Integer) = MIT{Quarterly{3}}(y, p)
+MIT{HalfYearly}(y::Integer, p::Integer) = MIT{HalfYearly{6}}(y, p)
 function _weekly_from_yp(F::Type{<:Weekly{end_day}}, y, p) where end_day
     first_day_of_year = Dates.Date("$y-01-01")
     d = first_day_of_year + Day(7*(p - 1))
@@ -563,6 +566,13 @@ function Dates.Date(m::MIT{Quarterly{end_month}}, values_base::Symbol=:end) wher
     end
     return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-end_month)) - Day(1)
 end
+function Dates.Date(m::MIT{HalfYearly{end_month}}, values_base::Symbol=:end) where end_month 
+    year, half = divrem(Int(m), 2)
+    if values_base == :begin
+        return Dates.Date("$year-01-01") + Month(half*6 - (6-end_month))    
+    end
+    return Dates.Date("$year-01-01") + Month((half+1) * 6 - (6-end_month)) - Day(1)
+end
 function Dates.Date(m::MIT{Yearly{end_month}}, values_base::Symbol=:end) where end_month 
     if values_base == :begin
         return Dates.Date("$(Int(m))-01-01") - Month(12-end_month)
@@ -574,6 +584,7 @@ end
 # pretty printing
 
 Base.show(io::IO, F::Type{Quarterly{3}}) = print(io, "Quarterly")
+Base.show(io::IO, F::Type{HalfYearly{6}}) = print(io, "HalfYearly")
 Base.show(io::IO, F::Type{Yearly{12}}) = print(io, "Yearly")
 Base.show(io::IO, F::Type{Weekly{7}}) = print(io, "Weekly")
 
@@ -599,6 +610,9 @@ function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
         print(io, "{$end_month}")
     end
     if N == 1 && end_month !== 12
+        print(io, "{$end_month}")
+    end
+    if N == 2 && end_month !== 6
         print(io, "{$end_month}")
     end
 end
@@ -827,10 +841,12 @@ Base.sort!(a::AbstractVector{<:MIT}, args...; kwargs...) = (sort!(reinterpret(In
 endperiod(F::Type{<:Frequency}) = 1
 endperiod(F::Type{Weekly{end_day}}) where end_day = end_day
 endperiod(F::Type{Quarterly{end_month}}) where end_month = end_month
+endperiod(F::Type{HalfYearly{end_month}}) where end_month = end_month
 endperiod(F::Type{Yearly{end_month}}) where end_month = end_month
 
 ## default_frequency
 sanitize_frequency(F::Type{<:Frequency}) = F
 sanitize_frequency(F::Type{Weekly}) = Weekly{7}
 sanitize_frequency(F::Type{Quarterly}) = Quarterly{3}
+sanitize_frequency(F::Type{HalfYearly}) = HalfYearly{6}
 sanitize_frequency(F::Type{Yearly}) = Yearly{12}
