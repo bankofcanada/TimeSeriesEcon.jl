@@ -100,8 +100,8 @@ import Dates
     @test_throws ArgumentError rem(d2,d3)
 
     #hash
-    @test hash(1Q1, UInt(8)) == hash(("Quarterly{3}", 4), UInt(8))
-    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly{3}", 2), UInt(8))
+    @test hash(1Q1, UInt(8)) == hash(("Quarterly", 4), UInt(8))
+    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly", 2), UInt(8))
 end
 
 @testset "Range" begin
@@ -195,7 +195,7 @@ end
         show(io, 3U - 2U)
         show(io, 2000M12 - 2000M1)
         println(io, Duration{Yearly}(7))
-        show(io, Q1)
+        show(io, 1Q1)
         show(io, 1U)
         println(io, M1, M12, ".")
 
@@ -276,16 +276,17 @@ end
     bd3 = bd"2022-01-03"
     @test typeof(bd3) == MIT{BDaily}
     @test bd3 == bd1
-    bd_weekend1 = bdaily("2022-01-02")
+    bd_weekend1 = bdaily("2022-01-02", bias=:previous)
     @test Dates.Date(bd_weekend1) == Dates.Date("2021-12-31")
-    bd_weekend2 = bdaily("2022-01-02", bias_previous=false)
+    bd_weekend2 = bdaily("2022-01-02", bias=:next)
     @test Dates.Date(bd_weekend2) == Dates.Date("2022-01-03")
-    bd_weekend3 = bd"2022-01-02"
+    bd_weekend3 = bd"2022-01-02"p
     @test Dates.Date(bd_weekend3) == Dates.Date("2021-12-31")
     bd_weekend4 = bd"2022-01-02"n
     @test Dates.Date(bd_weekend4) == Dates.Date("2022-01-03")
     bd_weekend5 = bd"2022-01-02"next
     @test Dates.Date(bd_weekend5) == Dates.Date("2022-01-03")
+    @test_throws ArgumentError bdaily("2022-01-02")
 
     # range
     bd_rng = bd"2022-01-01:2022-01-22"

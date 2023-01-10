@@ -115,7 +115,7 @@ end
 
         @test firstdate(sd) == 2000Q1
         @test lastdate(sd) == 2000Q1 + 20 - 1
-        @test frequencyof(sd) == Quarterly
+        @test frequencyof(sd) <: Quarterly
         @test sd isa AbstractMatrix
         @test size(sd) == size(dta)
         # integer indexing must be identical to dta
