@@ -426,7 +426,7 @@ end
 
     @test promote_shape(x, y)[1] == 21Q1:22Q2
     @test length(promote_shape(x, y)[1]) == 6
-    @test promote_shape(x, y)[2] == (:a, :b)
+    @test promote_shape(x, y)[2] == [:a, :b]
     @test_throws DimensionMismatch promote_shape(x, y2)
 
     x = MVTSeries(20Q1, (:a, :b), rand(10, 2))
@@ -696,10 +696,10 @@ end
     @test hcat(xx) !== xx
     # make sure we can pass multiple MVTSeries positional
     @test hcat(xx, yy) isa MVTSeries
-    @test axes(hcat(xx, yy)) == (axes(xx, 1), (axes(xx, 2)..., axes(yy, 2)...))
+    @test axes(hcat(xx, yy)) == (axes(xx, 1), [axes(xx, 2)..., axes(yy, 2)...])
     @test hcat(xx, yy)[axes(xx, 2)] ≈ xx
     # make sure the column order is correct with mix of positions and keyword arguments
     @test hcat(xx, yy; d=rand(15)) isa MVTSeries
-    @test axes(hcat(xx, yy; d=rand(15))) == (axes(xx, 1), (axes(xx, 2)..., axes(yy, 2)..., :d))
+    @test axes(hcat(xx, yy; d=rand(15))) == (axes(xx, 1), [axes(xx, 2)..., axes(yy, 2)..., :d])
     @test hcat(xx, yy; d=rand(15))[axes(xx, 2)] ≈ xx
 end

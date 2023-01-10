@@ -89,7 +89,34 @@ end
 Base.:*(y::Int, ::Type{Y}) = MIT{Yearly{12}}(y)
 
 """
-    struct Quarterly{end_month} <: YPFrequency{4} end
+    struct HalfYearly{end_month} <: YPFrequency{2} end
+
+A concrete frequency defined as 2 periods per year.
+"""
+struct HalfYearly{end_month} <: YPFrequency{2} end
+abstract type H1{end_month} end; 
+abstract type H2{end_month} end; 
+function validate_halfyearly(end_month)
+    if !(typeof(end_month) <: Integer)
+        throw(ArgumentError("The end_month for a HalfYearly frequency must be and integer. Received: $end_month"))
+    end
+    if end_month > 6 || end_month < 1
+        throw(ArgumentError("The end_month for a HalfYearly frequency must be between 1 and 6. Received: $end_month"))
+    end
+end
+function Base.:*(y::Int, ::Type{H1{end_month}}) where end_month 
+    validate_halfyearly(end_month)
+    return MIT{HalfYearly{end_month}}(y, 1)
+end
+Base.:*(y::Int, ::Type{H1}) = MIT{HalfYearly{6}}(y, 1)
+function Base.:*(y::Int, ::Type{H2{HalfYearly}}) where end_month 
+    validate_halfyearly(end_month)
+    return MIT{HalfYearly{end_month}}(y, 2)
+end
+Base.:*(y::Int, ::Type{H2}) = MIT{HalfYearly{6}}(y, 2)
+
+"""
+    struct Quarterly{end_month} <: YPFrequency{4} end  
 
 A concrete frequency defined as 4 periods per year. The default end_month is 3.
 """
@@ -558,13 +585,10 @@ function Base.show(io::IO, m::MIT{Weekly{end_day}}) where end_day
 end
 
 function Base.show(io::IO, m::MIT{F}) where F <: YPFrequency{N} where N
-    if isconcretetype(F)
-    periodletter = first("$(F)")
-    else
-        periodletter =  N == 1 ? 'Y' :
-                        N == 4 ? 'Q' :
-                        N == 12 ? 'M' : 'P';
-    end
+    periodletter =  N == 1 ? 'Y' :
+                    N == 2 ? 'H' :
+                    N == 4 ? 'Q' :
+                    N == 12 ? 'M' : 'P';
     print(io, year(m), periodletter)
     if N > 1
         # print(io, rpad(period(m), length(string(N))))
@@ -708,6 +732,14 @@ Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) = isless(ppy(x),ppy(y))
 Base.flipsign(x::Duration{F}, y::Duration{F}) where F = flipsign(Int(x),Int(y))
 Base.flipsign(x::MIT{F}, y::MIT{F}) where F = flipsign(Int(x),Int(y))
 
+# needed for plot math
+Base.:(/)(a::Duration, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
+Base.:(/)(a::MIT, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
+Base.:(/)(a::Duration{F}, b::Duration{F}) where {F<:Frequency} = Int(a) / Int(b)
+Base.:(/)(a::MIT{F}, b::Duration{F}) where {F<:Frequency} = (a - MIT{F}(0)) / b
+Base.promote_rule(::Type{<:Duration}, ::Type{T}) where T <: AbstractFloat = T
+(T::Type{<:AbstractFloat})(x::Duration) = convert(T, Int(x))
+
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
 # ----------------------------------------
@@ -742,7 +774,7 @@ to `Q4` for `MIT{Quarterly}` and `M1` to `M12` for `MIT{Monthly}`
 
 """
 Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
-export Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
+export Y, U, H1, H2, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 
 global const U = _FConst{Unit}()
 global const M1 = _FPConst{Monthly,1}()
