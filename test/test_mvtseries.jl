@@ -713,7 +713,7 @@ end
     noisy_tsd .+= rand(length(tsd))
     mvtsd = MVTSeries(; clean=tsd, noisy=noisy_tsd)
     mvtsdcorr = cor(tsd, noisy_tsd) 
-    @test isapprox(mean(mvtsd, dims=1), [1.363253012048193 mean(noisy_tsd)], nans=true)    
+    @test isapprox(mean(mvtsd, dims=1), [1.3632530120481 mean(noisy_tsd)], nans=true)    
     res_mean_long = [
         mean([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         mean([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -722,7 +722,7 @@ end
         mean([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
     @test isapprox(mean(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long, nans=true)    
-    @test isapprox(mean(√, mvtsd, dims=1), [1.162330206325935 mean(√, noisy_tsd)], nans=true)    
+    @test isapprox(mean(√, mvtsd, dims=1), [1.1623302063259 mean(√, noisy_tsd)], nans=true)    
     res_mean_long2 = [
         mean(√, [tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         mean(√, [tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -732,7 +732,7 @@ end
     ]
     @test isapprox(mean(√, mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long2, nans=true)    
     
-    @test isapprox(std(mvtsd, dims=1), [0.2453294777686977 std(noisy_tsd)], nans=true) 
+    @test isapprox(std(mvtsd, dims=1), [0.24532947776869 std(noisy_tsd)], nans=true) 
     res_std_long = [
         std([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         std([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -741,7 +741,7 @@ end
         std([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
     @test isapprox(std(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_std_long, nans=true)    
-    @test isapprox(var(mvtsd, dims=1), [0.060186552662261944 var(noisy_tsd)], nans=true) 
+    @test isapprox(var(mvtsd, dims=1), [0.0601865526622619 var(noisy_tsd)], nans=true) 
     res_var_long = [
         var([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         var([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),

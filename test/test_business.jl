@@ -225,20 +225,20 @@ end
     TimeSeriesEcon.set_holidays_map("CA", "ON")
     @test isnan(mean(tsbd, skip_holidays=true)) == true
     @test isnan(mean(tsbd[bd"2021-06-01:2021-07-15"])) == true
-    @test mean(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) == 1.3912499999999999
-    @test mean(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) == 1.3912499999999999
+    @test mean(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) ≈ 1.39124999999999
+    @test mean(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) ≈ 1.39124999999999
 
     @test isnan(std(tsbd, skip_holidays=true)) == true
     @test isnan(std(tsbd[bd"2021-06-01:2021-07-15"])) == true
-    @test std(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) == 0.06617425676246401
-    @test std(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) == 0.06617425676246401
+    @test std(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) ≈ 0.066174256762464
+    @test std(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) ≈ 0.066174256762464
     
     @test isnan(stdm(tsbd, 1.3912499999999999, skip_holidays=true)) == true
     @test isnan(stdm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999)) == true
-    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_holidays=true) == 0.06617425676246401
-    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_all_nans=true) == 0.06617425676246401
-    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_holidays=true) == 1.0181537687275894
-    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_all_nans=true) == 1.0181537687275894
+    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_holidays=true) ≈ 0.066174256762464
+    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_all_nans=true) ≈ 0.066174256762464
+    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_holidays=true) ≈ 1.01815376872758
+    @test stdm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_all_nans=true) ≈ 1.01815376872758
     
     
     @test isnan(var(tsbd, skip_holidays=true)) == true
@@ -248,10 +248,10 @@ end
 
     @test isnan(varm(tsbd, 1.3912499999999999, skip_holidays=true)) == true
     @test isnan(varm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999)) == true
-    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_holidays=true) == 0.004379032258064514
-    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_all_nans=true) == 0.004379032258064514
-    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_holidays=true) == 1.0366370967741936
-    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_all_nans=true) == 1.0366370967741936
+    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_holidays=true) ≈ 0.0043790322580645
+    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999, skip_all_nans=true) ≈ 0.0043790322580645
+    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_holidays=true) ≈ 1.03663709677419
+    @test varm(tsbd[bd"2021-06-01:2021-07-15"], 2.3912499999999999, skip_all_nans=true) ≈ 1.03663709677419
     
     @test isnan(median(tsbd, skip_holidays=true)) == true
     @test isnan(median(tsbd[bd"2021-06-01:2021-07-15"])) == true
@@ -260,15 +260,15 @@ end
 
     @test_throws ArgumentError quantile(tsbd, [.25, .5, .75], skip_holidays=true)
     @test_throws ArgumentError quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75])
-    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75], skip_holidays=true) == [1.3625, 1.4, 1.4249999999999998]
-    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75], skip_all_nans=true) == [1.3625, 1.4, 1.4249999999999998]
-    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], .98, skip_holidays=true) == 1.5076
-    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], .98, skip_all_nans=true) == 1.5076
+    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75], skip_holidays=true) ≈ [1.3625, 1.4, 1.42499999999999]
+    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75], skip_all_nans=true) ≈ [1.3625, 1.4, 1.42499999999999]
+    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], .98, skip_holidays=true) ≈ 1.5076
+    @test quantile(tsbd[bd"2021-06-01:2021-07-15"], .98, skip_all_nans=true) ≈ 1.5076
 
 
     @test isnan(cov(tsbd[bd"2021-06-01:2021-07-15"])) == true
-    @test cov(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) == 0.004379032258064514
-    @test cov(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) == 0.004379032258064514
+    @test cov(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) ≈ 0.00437903225806
+    @test cov(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) ≈ 0.00437903225806
     @test isnan(cov(tsbd[bd"2021-06-01:2021-07-15"], noisy_tsbd[bd"2021-06-01:2021-07-15"])) == true
     @test cov(tsbd[bd"2021-06-01:2021-07-15"], noisy_tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) < 1.0
     @test cov(tsbd[bd"2021-06-01:2021-07-15"], noisy_tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) < 1.0
@@ -295,14 +295,14 @@ end
     @test isapprox(cov(mvtsbd, skip_all_nans=true), [ mvtscov1 mvtscov3 ; mvtscov3 mvtscov2], nans = true)
 
     @test isapprox(mean(mvtsbd, dims=1), [NaN NaN], nans=true)    
-    @test isapprox(mean(mvtsbd, dims=1, skip_all_nans=true), [1.363253012048193 mean(noisy_tsbd, skip_all_nans=true)], nans=true)    
+    @test isapprox(mean(mvtsbd, dims=1, skip_all_nans=true), [1.3632530120481 mean(noisy_tsbd, skip_all_nans=true)], nans=true)    
     res_mean_long = [
         mean([tsbd[bd"2021-06-29"], noisy_tsbd[bd"2021-06-29"]]),
         mean([tsbd[bd"2021-06-30"], noisy_tsbd[bd"2021-06-30"]]),
         mean([tsbd[bd"2021-07-02"], noisy_tsbd[bd"2021-07-02"]]),
     ]
     @test isapprox(mean(mvtsbd[bd"2021-06-29:2021-07-03"], dims=2, skip_all_nans=true), res_mean_long, nans=true)    
-    @test isapprox(mean(√, mvtsbd, dims=1, skip_all_nans=true), [1.162330206325935 mean(√, noisy_tsbd, skip_all_nans=true)], nans=true)    
+    @test isapprox(mean(√, mvtsbd, dims=1, skip_all_nans=true), [1.1623302063259 mean(√, noisy_tsbd, skip_all_nans=true)], nans=true)    
     res_mean_long2 = [
         mean(√, [tsbd[bd"2021-06-29"], noisy_tsbd[bd"2021-06-29"]]),
         mean(√, [tsbd[bd"2021-06-30"], noisy_tsbd[bd"2021-06-30"]]),
@@ -311,7 +311,7 @@ end
     @test isapprox(mean(√, mvtsbd[bd"2021-06-29:2021-07-03"], dims=2, skip_all_nans=true), res_mean_long2, nans=true)    
     
 
-    @test isapprox(std(mvtsbd, dims=1, skip_all_nans=true), [0.2453294777686977 std(noisy_tsbd, skip_all_nans=true)], nans=true) 
+    @test isapprox(std(mvtsbd, dims=1, skip_all_nans=true), [0.24532947776869 std(noisy_tsbd, skip_all_nans=true)], nans=true) 
     res_std_long = [
         std([tsbd[bd"2021-06-29"], noisy_tsbd[bd"2021-06-29"]]),
         std([tsbd[bd"2021-06-30"], noisy_tsbd[bd"2021-06-30"]]),
@@ -319,7 +319,7 @@ end
     ]
     @test isapprox(std(mvtsbd[bd"2021-06-29:2021-07-03"], dims=2, skip_all_nans=true), res_std_long, nans=true)    
     
-    @test isapprox(var(mvtsbd, dims=1, skip_all_nans=true), [0.060186552662261944 var(noisy_tsbd, skip_all_nans=true)], nans=true)    
+    @test isapprox(var(mvtsbd, dims=1, skip_all_nans=true), [0.0601865526622619 var(noisy_tsbd, skip_all_nans=true)], nans=true)    
     res_var_long = [
         var([tsbd[bd"2021-06-29"], noisy_tsbd[bd"2021-06-29"]]),
         var([tsbd[bd"2021-06-30"], noisy_tsbd[bd"2021-06-30"]]),
