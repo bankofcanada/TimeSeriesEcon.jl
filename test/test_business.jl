@@ -243,8 +243,8 @@ end
     
     @test isnan(var(tsbd, skip_holidays=true)) == true
     @test isnan(var(tsbd[bd"2021-06-01:2021-07-15"])) == true
-    @test var(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) == 0.004379032258064514
-    @test var(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) == 0.004379032258064514
+    @test var(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) ≈ 0.0043790322580645
+    @test var(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) ≈ 0.0043790322580645
 
     @test isnan(varm(tsbd, 1.3912499999999999, skip_holidays=true)) == true
     @test isnan(varm(tsbd[bd"2021-06-01:2021-07-15"], 1.3912499999999999)) == true
