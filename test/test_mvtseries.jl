@@ -703,3 +703,61 @@ end
     @test axes(hcat(xx, yy; d=rand(15))) == (axes(xx, 1), [axes(xx, 2)..., axes(yy, 2)..., :d])
     @test hcat(xx, yy; d=rand(15))[axes(xx, 2)] ≈ xx
 end
+
+@testset "Statistics" begin
+    # Test MVTS Daily
+    bonds_data = [NaN, 0.68, 0.7, 0.75, 0.79, 0.81, 0.83, 0.84, 0.81, 0.86, 0.81, 0.8, 0.8, 0.83, 0.87, 0.84, 0.81, 0.82, 0.8, 0.82, 0.84, 0.88, 0.91, 0.94, 0.96, 1, 1.01, 0.99, 0.99, 0.99, 1.03, NaN, 1.12, 1.11, 1.14, 1.21, 1.23, 1.26, 1.31, 1.46, 1.35, 1.35, 1.33, 1.4, 1.49, 1.5, 1.53, 1.45, 1.41, 1.43, 1.58, 1.54, 1.56, 1.58, 1.61, 1.59, 1.55, 1.49, 1.47, 1.46, 1.49, 1.53, 1.53, 1.55, 1.51, NaN, 1.56, 1.49, 1.5, 1.46, 1.5, 1.51, 1.5, 1.53, 1.45, 1.53, 1.53, 1.5, 1.52, 1.52, 1.51, 1.53, 1.56, 1.53, 1.56, 1.54, 1.52, 1.53, 1.51, 1.51, 1.49, 1.51, 1.54, 1.59, 1.56, 1.55, 1.57, 1.56, 1.58, 1.54, 1.54, NaN, 1.46, 1.45, 1.49, 1.49, 1.49, 1.5, 1.49, 1.52, 1.46, 1.47, 1.45, 1.41, 1.38, 1.38, 1.39, 1.38, 1.44, 1.4, 1.37, 1.41, 1.4, 1.42, 1.41, 1.45, 1.41, 1.42, 1.39, NaN, 1.37, 1.4, 1.32, 1.29, 1.26, 1.32, 1.32, 1.34, 1.29, 1.26, 1.24, 1.14, 1.17, 1.22, 1.19, 1.21, 1.22, 1.16, 1.17, 1.19, 1.2, NaN, 1.12, 1.13, 1.16, 1.24, 1.25, 1.27, 1.26, 1.25, 1.19, 1.16, 1.15, 1.16, 1.13, 1.14, 1.16, 1.18, 1.25, 1.23, 1.2, 1.18, 1.22, 1.18, 1.15, 1.19, NaN, 1.23, 1.2, 1.17, 1.23, 1.22, 1.17, 1.22, 1.23, 1.29, 1.22, 1.22, 1.21, 1.33, 1.38, 1.41, 1.5, 1.51, NaN, 1.47, 1.49, 1.53, 1.5, 1.56, 1.62, NaN, 1.62, 1.61, 1.53, 1.58, 1.58, 1.63, 1.63, 1.68, 1.65, 1.65, 1.63, 1.6, 1.66, 1.72, 1.74, 1.72, 1.71, 1.64, 1.59, 1.63, 1.59, 1.68, NaN, 1.67, 1.72, 1.77, 1.7, 1.69, 1.66, 1.76, 1.81, 1.77, 1.77, 1.59, 1.61, 1.58, 1.5, 1.49, 1.45, 1.51, 1.58, 1.56, 1.5, 1.47, 1.4, 1.43, 1.41, 1.35, 1.32, 1.38, 1.44, 1.42, 1.44, 1.46, NaN, NaN, 1.47, 1.45, 1.42,];
+    
+    tsd = TSeries(d"2021-01-01", filter(x -> !isnan(x), bonds_data))
+    noisy_tsd = copy(tsd)
+    noisy_tsd .+= rand(length(tsd))
+    mvtsd = MVTSeries(; clean=tsd, noisy=noisy_tsd)
+    mvtsdcorr = cor(tsd, noisy_tsd) 
+    @test isapprox(mean(mvtsd, dims=1), [1.363253012048193 mean(noisy_tsd)], nans=true)    
+    res_mean_long = [
+        mean([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
+        mean([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
+        mean([tsd[d"2021-07-01"], noisy_tsd[d"2021-07-01"]]),
+        mean([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
+        mean([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
+    ]
+    @test isapprox(mean(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long, nans=true)    
+    @test isapprox(mean(√, mvtsd, dims=1), [1.162330206325935 mean(√, noisy_tsd)], nans=true)    
+    res_mean_long2 = [
+        mean(√, [tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
+        mean(√, [tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
+        mean(√, [tsd[d"2021-07-01"], noisy_tsd[d"2021-07-01"]]),
+        mean(√, [tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
+        mean(√, [tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
+    ]
+    @test isapprox(mean(√, mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long2, nans=true)    
+    
+    @test isapprox(std(mvtsd, dims=1), [0.2453294777686977 std(noisy_tsd)], nans=true) 
+    res_std_long = [
+        std([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
+        std([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
+        std([tsd[d"2021-07-01"], noisy_tsd[d"2021-07-01"]]),
+        std([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
+        std([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
+    ]
+    @test isapprox(std(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_std_long, nans=true)    
+    @test isapprox(var(mvtsd, dims=1), [0.060186552662261944 var(noisy_tsd)], nans=true) 
+    res_var_long = [
+        var([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
+        var([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
+        var([tsd[d"2021-07-01"], noisy_tsd[d"2021-07-01"]]),
+        var([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
+        var([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
+    ]
+    @test isapprox(var(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_var_long, nans=true)    
+    @test isapprox(median(mvtsd, dims=1), [1.43 median(noisy_tsd)], nans=true) 
+    res_median_long = [
+        median([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
+        median([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
+        median([tsd[d"2021-07-01"], noisy_tsd[d"2021-07-01"]]),
+        median([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
+        median([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
+    ]
+    @test isapprox(median(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_median_long, nans=true)    
+
+end

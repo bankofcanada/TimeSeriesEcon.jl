@@ -82,6 +82,17 @@ rawdata(t::TSeries) = t.values
 
 Base.values(t::TSeries) = values(t.values)
 
+
+"""
+    cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+
+    Returns the values of a BDaily TSeries filtered according to the provided optional arguments. By default, all values are returned.
+
+    Optional arguments:
+    * `skip_all_nans` : When `true`, returns all values which are not NaN values. Default is `false`.
+    * `skip_holidays` : When `true`, returns all values which do not fall on a holiday according to the holidays map set in TimeSeriesEcon.getoption(:bdaily_holidays_map). Default: `false`.
+    * `holidays_map`  : Returns all values that do not fall on a holiday according to the provided map which must be a BDaily TSeries of Booleans. Default is `nothing`.
+"""
 function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
     if holidays_map !== nothing
         return TimeSeriesEcon.bdvalues(t, holidays_map=holidays_map)
@@ -92,7 +103,6 @@ function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holid
     end
     return t.values 
 end
-export cleanedvalues;
 
 function bdvalues(t::TSeries{BDaily}; holidays_map=nothing)
     if holidays_map === nothing

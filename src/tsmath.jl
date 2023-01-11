@@ -230,3 +230,51 @@ In-place version of [`lead`](@ref)
 lead!(t::TSeries, k::Int=1) = shift!(t, k)
 lead!(t::TSeries{BDaily}, k::Int=1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = shift!(t, k, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
+# Overload statistics functions
+Statistics.mean(f, itr::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+Statistics.mean(itr::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = mean(identity, cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+
+# Statistics.var(f, itr::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+Statistics.std(itr::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = std(cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+Statistics.var(itr::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = var(cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+Statistics.median(itr::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = median(cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+Statistics.quantile(itr::TSeries{BDaily}, p; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = quantile(cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), p, kwargs...)
+Statistics.stdm(itr::TSeries{BDaily}, mean; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = stdm(cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), mean, kwargs...)
+Statistics.varm(itr::TSeries{BDaily}, mean; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = varm(cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), mean, kwargs...)
+
+function Statistics.cor(x::TSeries, y::TSeries;kwargs...) 
+    if frequencyof(x) == frequencyof(y) && x.firstdate == y.firstdate
+        return cor(x.values, y.values; kwargs...)
+    else
+        throw(ArgumentError("Correlations can only be implicitly run on TSeries with the same frequency and start date. Call the function with values(x), values(y) to pass the potentially missaligned data."))
+    end
+end
+function Statistics.cov(x::TSeries, y::TSeries;kwargs...) 
+    if frequencyof(x) == frequencyof(y) && x.firstdate == y.firstdate
+        return cov(x.values, y.values; kwargs...)
+    else
+        throw(ArgumentError("Covariance can only be implicitly run on TSeries with the same frequency and start date. Call the function with values(x), values(y) to pass the potentially missaligned data."))
+    end
+end
+
+
+Statistics.cor(x::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = cor(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+function Statistics.cor(x::TSeries{BDaily}, y::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) 
+    if frequencyof(x) == frequencyof(y) && x.firstdate == y.firstdate
+        return cor(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), cleanedvalues(y, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+    else
+        throw(ArgumentError("Correlations can only be implicitly run on TSeries with the same frequency and start date. Call the function with cleanedvalues(x), cleanedvalues(y) to pass the potentially missaligned data."))
+    end
+end
+Statistics.cov(itr::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = cov(cleanedvalues(itr, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+function Statistics.cov(x::TSeries{BDaily}, y::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) 
+    if frequencyof(x) == frequencyof(y) && x.firstdate == y.firstdate
+        return cov(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), cleanedvalues(y, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+    else
+        throw(ArgumentError("Covariance can only be implicitly run on TSeries with the same frequency and start date. Call the function with cleanedvalues(x), cleanedvalues(y) to pass the potentially missaligned data."))
+    end
+end
+
+# TODO: cor for MVTS
+
+# stdm, varm

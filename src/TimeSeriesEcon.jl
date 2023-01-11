@@ -68,7 +68,7 @@ export overlay, fconvert
 
 include("mvtseries.jl")
 export MVTSeries
-export rawdata, colnames, columns
+export rawdata, colnames, columns, cleanedvalues
 
 include("recursive.jl")
 export @rec
