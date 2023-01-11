@@ -282,10 +282,12 @@ TOML.print(f::TOML.Internals.Printer.MbyFunc, w::Workspace; sorted::Bool=false, 
 
 ## isyearly, isquarterly, isweekly, ismonthly
 isyearly(F::Type{<:Frequency}) = F <: Yearly
+ishalfyearly(F::Type{<:Frequency}) = F <: HalfYearly
 isquarterly(F::Type{<:Frequency}) = F <: Quarterly
 ismonthly(F::Type{<:Frequency}) = F <: Monthly
 isweekly(F::Type{<:Frequency}) = F <: Weekly
 isyearly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isyearly(frequencyof(x))
+ishalfyearly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = ishalfyearly(frequencyof(x))
 isquarterly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isquarterly(frequencyof(x))
 ismonthly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = ismonthly(frequencyof(x))
 isweekly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isweekly(frequencyof(x))

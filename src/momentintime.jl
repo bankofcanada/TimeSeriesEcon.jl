@@ -109,7 +109,7 @@ function Base.:*(y::Int, ::Type{H1{end_month}}) where end_month
     return MIT{HalfYearly{end_month}}(y, 1)
 end
 Base.:*(y::Int, ::Type{H1}) = MIT{HalfYearly{6}}(y, 1)
-function Base.:*(y::Int, ::Type{H2{HalfYearly}}) where end_month 
+function Base.:*(y::Int, ::Type{H2{HalfYearly{end_month}}}) where end_month 
     validate_halfyearly(end_month)
     return MIT{HalfYearly{end_month}}(y, 2)
 end
