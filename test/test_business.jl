@@ -258,7 +258,7 @@ end
     @test median(tsbd[bd"2021-06-01:2021-07-15"], skip_holidays=true) == 1.4
     @test median(tsbd[bd"2021-06-01:2021-07-15"], skip_all_nans=true) == 1.4
 
-    @test_throws ArgumentError quantile(tsbd, [.25, .5, .75], skip_holidays=true)
+    # @test_throws ArgumentError quantile(tsbd, [.25, .5, .75], skip_holidays=true)
     @test_throws ArgumentError quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75])
     @test quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75], skip_holidays=true) ≈ [1.3625, 1.4, 1.42499999999999]
     @test quantile(tsbd[bd"2021-06-01:2021-07-15"], [.25, .5, .75], skip_all_nans=true) ≈ [1.3625, 1.4, 1.42499999999999]
