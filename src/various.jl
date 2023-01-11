@@ -292,3 +292,62 @@ isweekly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F
 export isyearly, isquarterly, isweekly
 
 
+"""
+    clean_old_frequencies(m::MIT)
+    clean_old_frequencies(ts::TSeries)
+    clean_old_frequencies(mvts::MVTSeries)
+    clean_old_frequencies(ws::Workspace)
+    clean_old_frequencies!(ws::Workspace)
+
+The internal representation for Quarterly and Yearly frequencies has changed
+between v0.4 and v0.5 of the TimeSeriesEcon package. Some stored data from old
+frequencies may need to be processed after loading to convert the objects to ones
+using the new frequencies.
+
+Example:
+    using JLD2
+    ws = Workspace(load("stored_workspace.jld2"))
+    TimeSeriesEcon.clean_old_frequencies!(ws)
+"""
+clean_old_frequencies(x) = x
+function clean_old_frequencies(m::MIT)
+    sanitized_frequency = sanitize_frequency(frequencyof(m))
+    if sanitized_frequency !== frequencyof(m)
+        return MIT{sanitized_frequency}(Int(m))
+    end
+    return m
+end
+function clean_old_frequencies(ts::TSeries)
+    new_firstdate = clean_old_frequencies(ts.firstdate)
+    if frequencyof(new_firstdate) !== frequencyof(ts.firstdate)
+        new_lastdate = new_firstdate+length(rangeof(ts)) - 1
+        return copyto!(TSeries(eltype(values(ts)), new_firstdate:new_lastdate), values(ts))
+    end
+    return ts
+end
+function clean_old_frequencies(mvts::MVTSeries)
+    if sanitize_frequency(frequencyof(mvts)) !== frequencyof(mvts)
+        new_pairs = Vector{Pair{Symbol,TSeries}}()
+        for (key, val) in pairs(mvts)
+            push!(new_pairs, key => clean_old_frequencies(val))
+        end
+        return MVTSeries(; new_pairs...)
+    end
+    return mvts
+end
+function clean_old_frequencies(ws::Workspace)
+    new_ws = Workspace()
+    for (key, val) in ws
+        new_ws[key] = clean_old_frequencies(val)
+    end
+    return new_ws
+end
+function clean_old_frequencies!(ws::Workspace)
+    for (key, val) in ws
+        if val isa Workspace
+           TimeSeriesEcon.clean_old_frequencies!(val)
+        else
+            ws[key] = TimeSeriesEcon.clean_old_frequencies(val)
+        end
+    end
+end

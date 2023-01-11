@@ -88,7 +88,7 @@ mutable struct MVTSeries{F<:Frequency,T<:Number,C<:AbstractMatrix{T}} <: Abstrac
         end
         columns = OrderedDict(nm => TSeries(firstdate, view(values, :, ind))
                               for (nm, ind) in zip(names, axes(values, 2)))
-        new{F,eltype(values),typeof(values)}(firstdate, columns, values)
+        new{sanitize_frequency(F),eltype(values),typeof(values)}(firstdate, columns, values)
     end
 end
 
