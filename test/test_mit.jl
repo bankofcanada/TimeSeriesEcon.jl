@@ -1,7 +1,7 @@
 # Copyright (c) 2020-2021, Bank of Canada
 # All rights reserved.
 
-import TimeSeriesEcon: qq, mm, yy
+import TimeSeriesEcon: qq, mm, yy, ppy, endperiod, sanitize_frequency
 import Dates
 
 @testset "MIT,Duration" begin
@@ -215,6 +215,36 @@ end
         # @test foo == ["2020Q120P35U12", "1117", "1Q11U1M11M12."]
         @test foo == ["2020Q15U12", "1117", "1Q11U1M11M12.", "1Q2", "1P2", "1U"]
     end
+    let io = IOBuffer()
+        println(io, frequencyof(2022Q1))
+        println(io, frequencyof(2022H1))
+        println(io, frequencyof(2022Y))
+        println(io, frequencyof(weekly("2022-01-01")))
+        foo = readlines(seek(io, 0))
+        @test foo == ["Quarterly", "HalfYearly","Yearly", "Weekly"]
+    end
+    let io = IOBuffer()
+        println(io, 2022Q1)
+        println(io, 2022H1)
+        println(io, 2022Y)
+        println(io, 2022Q1{3})
+        println(io, 2022H1{6})
+        println(io, 2022Y{12})
+        println(io, 2022Q1{2})
+        println(io, 2022H1{2})
+        println(io, 2022Y{2})
+        foo = readlines(seek(io, 0))
+        @test foo == ["2022Q1","2022H1","2022Y","2022Q1","2022H1","2022Y","2022Q1{2}", "2022H1{2}","2022Y{2}"]
+    end
+
+    let io = IOBuffer()
+        println(io, d"2022-01-03")
+        println(io, bd"2022-01-03")
+        println(io, weekly("2022-01-03"))
+        foo = readlines(seek(io, 0))
+        @test foo == ["2022-01-03", "2022-01-03", "2022-01-09"]
+    end
+    
 end
 
 @testset "frequencyof" begin
@@ -230,6 +260,78 @@ end
     @test frequencyof(yy(2000, 1) - yy(2000, 1)) == Yearly{12}
     @test frequencyof(5U - 3U) == Unit
     @test frequencyof(TSeries(yy(2000), zeros(5))) == Yearly{12}
+end
+
+@testset "constructors" begin
+    # shorthand
+    @test frequencyof(2022Y) == Yearly{12}
+    @test frequencyof(2022Y{7}) == Yearly{7}
+    @test frequencyof(2022H1) == HalfYearly{6}
+    @test frequencyof(2022H2) == HalfYearly{6}
+    @test frequencyof(2022H1{3}) == HalfYearly{3}
+    @test frequencyof(2022H2{3}) == HalfYearly{3}
+    @test frequencyof(2022Q1) == Quarterly{3}
+    @test frequencyof(2022Q2) == Quarterly{3}
+    @test frequencyof(2022Q3) == Quarterly{3}
+    @test frequencyof(2022Q4) == Quarterly{3}
+    @test frequencyof(2022Q1{2}) == Quarterly{2}
+    @test frequencyof(2022Q2{2}) == Quarterly{2}
+    @test frequencyof(2022Q3{2}) == Quarterly{2}
+    @test frequencyof(2022Q4{2}) == Quarterly{2}
+    @test_throws ArgumentError 2022H1{-1}
+    @test_throws ArgumentError 2022H1{7}
+    @test_throws ArgumentError 2022H1{:hmm}
+    @test_throws ArgumentError 2022Q1{-1}
+    @test_throws ArgumentError 2022Q1{4}
+    @test_throws ArgumentError 2022Q1{:hmm}
+    @test_throws ArgumentError 2022Y{-1}
+    @test_throws ArgumentError 2022Y{13}
+    @test_throws ArgumentError 2022Y{:hmm}
+
+    # integer
+    @test frequencyof(MIT{Quarterly}(22)) == Quarterly{3}
+    @test frequencyof(MIT{YPFrequency{4}}(22)) == Quarterly{3}
+    @test frequencyof(MIT{Quarterly{2}}(22)) == Quarterly{2}
+    @test frequencyof(MIT{Yearly}(22)) == Yearly{12}
+    @test frequencyof(MIT{YPFrequency{1}}(22)) == Yearly{12}
+    @test frequencyof(MIT{Yearly{2}}(22)) == Yearly{2}
+    @test frequencyof(MIT{HalfYearly}(22)) == HalfYearly{6}
+    @test frequencyof(MIT{YPFrequency{2}}(22)) == HalfYearly{6}
+    @test frequencyof(MIT{HalfYearly{2}}(22)) == HalfYearly{2}
+    @test frequencyof(MIT{Weekly}(22)) == Weekly{7}
+    @test frequencyof(MIT{Weekly{2}}(22)) == Weekly{2}
+    @test frequencyof(MIT{YPFrequency{12}}(22)) == Monthly
+
+    # interger durations
+    @test frequencyof(Duration{Quarterly}(22)) == Quarterly{3}
+    @test frequencyof(Duration{YPFrequency{4}}(22)) == Quarterly{3}
+    @test frequencyof(Duration{Quarterly{2}}(22)) == Quarterly{2}
+    @test frequencyof(Duration{Yearly}(22)) == Yearly{12}
+    @test frequencyof(Duration{YPFrequency{1}}(22)) == Yearly{12}
+    @test frequencyof(Duration{Yearly{2}}(22)) == Yearly{2}
+    @test frequencyof(Duration{HalfYearly}(22)) == HalfYearly{6}
+    @test frequencyof(Duration{YPFrequency{2}}(22)) == HalfYearly{6}
+    @test frequencyof(Duration{HalfYearly{2}}(22)) == HalfYearly{2}
+    @test frequencyof(Duration{YPFrequency{12}}(22)) == Monthly
+    @test frequencyof(Duration{Weekly}(22)) == Weekly{7}
+    @test frequencyof(Duration{Weekly{2}}(22)) == Weekly{2}
+
+    # year period
+    @test MIT{Quarterly}(2022, 2) == 2022Q2
+    @test MIT{Quarterly{2}}(2022, 2) == 2022Q2{2}
+    @test MIT{HalfYearly}(2022, 2) == 2022H2
+    @test MIT{HalfYearly{2}}(2022, 2) == 2022H2{2}
+    @test MIT{Yearly}(2022, 1) == 2022Y
+    @test MIT{Yearly{2}}(2022, 1) == 2022Y{2}
+    
+    
+    @test frequencyof(MIT{YPFrequency{4}}(2022, 1)) == Quarterly{3}
+    @test frequencyof(MIT{Yearly}(22)) == Yearly{12}
+    @test frequencyof(MIT{YPFrequency{1}}(22)) == Yearly{12}
+    @test frequencyof(MIT{HalfYearly}(22)) == HalfYearly{6}
+    @test frequencyof(MIT{YPFrequency{2}}(22)) == HalfYearly{6}
+    @test frequencyof(MIT{Weekly}(22)) == Weekly{7}
+    @test frequencyof(MIT{YPFrequency{12}}(22)) == Monthly
 end
 
 @testset "mm, qq, yy" begin
@@ -259,6 +361,7 @@ end
     d3 = d"2022-01-01"
     @test typeof(d3) == MIT{Daily}
     @test d3 == d1
+    @test MIT{Daily}(2022, 1) == d1
 
     # range
     d_rng = d"2022-01-01:2022-01-20"
@@ -267,15 +370,34 @@ end
     @test Dates.Date(first(d_rng)) == Dates.Date("2022-01-01")
     @test Dates.Date(last(d_rng)) == Dates.Date("2022-01-20")
 
+    #year, period
+    @test mit2yp(d"2022-01-01") == (2022, 1)
+    @test mit2yp(d"2022-01-03") == (2022, 3)
+    @test mit2yp(bd"2022-01-03") == (2022, 1)
+    @test mit2yp(bd"2022-01-04") == (2022, 2)
+
     # business daily
     bd1 = MIT{BDaily}(527256)
     @test Dates.Date(bd1) == Dates.Date("2022-01-03")
+    @test MIT{BDaily}(2022, 1) == bd1
     bd2 = bdaily("2022-01-03")
     @test typeof(bd2) == MIT{BDaily}
     @test bd2 == bd1
     bd3 = bd"2022-01-03"
     @test typeof(bd3) == MIT{BDaily}
     @test bd3 == bd1
+    @test bd"2022-01-03"s == bd1
+    @test bd"2022-01-03"strict == bd1
+
+    # near on a saturday becomes friday
+    @test bd"2022-01-01"near == bd"2021-12-31"
+    @test bd"2022-01-01"nearest == bd"2021-12-31"
+    @test bdaily("2022-01-01", bias=:nearest) == bd"2021-12-31"
+    # near on a sunday becomes monday
+    @test bd"2022-01-02"near == bd"2022-01-03"
+    @test bd"2022-01-02"nearest == bd"2022-01-03"
+    @test bdaily("2022-01-02", bias=:nearest) == bd"2022-01-03"
+    
     bd_weekend1 = bdaily("2022-01-02", bias=:previous)
     @test Dates.Date(bd_weekend1) == Dates.Date("2021-12-31")
     bd_weekend2 = bdaily("2022-01-02", bias=:next)
@@ -295,20 +417,80 @@ end
     @test Dates.Date(first(bd_rng)) == Dates.Date("2022-01-03")
     @test Dates.Date(last(bd_rng)) == Dates.Date("2022-01-21")
 
+    # this test does not catch the error for some reason
+    # @test_throws ArgumentError bd"2022-01-01:2022-01-22"p
 end
 
-@testset "Weekly from ISO" begin
-    w1 = weekly_from_iso(2021,52)
-    @test Dates.Date(w1) == Dates.Date("2022-01-02")
-    w2 = weekly_from_iso(2022,1)
-    @test Dates.Date(w2) == Dates.Date("2022-01-09")
-    w3 = weekly_from_iso(2022,2)
-    @test Dates.Date(w3) == Dates.Date("2022-01-16")
+@testset "Weekly" begin
+
+    w1 = MIT{Weekly}(105451)
+    @test frequencyof(w1) == Weekly{7}
+    @test weekly("2022-01-01") == w1
+    @test weekly("2022-01-01", 7) == w1
+    @test TimeSeriesEcon._weekly_from_yp(Weekly{7}, 2022, 1) == w1
+    w2 = MIT{Weekly{6}}(105451)
+    @test weekly("2022-01-01", 6) == w2
+    @test TimeSeriesEcon._weekly_from_yp(Weekly{6}, 2022, 1) == w2
+    
+    # year, period
+    @test TimeSeriesEcon._mit2yp(w1) == (2022, 1)
+
+    # weekly from iso
+    w_iso1 = weekly_from_iso(2021,52)
+    @test Dates.Date(w_iso1) == Dates.Date("2022-01-02")
+    w_iso2 = weekly_from_iso(2022,1)
+    @test Dates.Date(w_iso2) == Dates.Date("2022-01-09")
+    w_iso3 = weekly_from_iso(2022,2)
+    @test Dates.Date(w_iso3) == Dates.Date("2022-01-16")
     # no week 53 in 2021
     @test_throws ArgumentError weekly_from_iso(2021, 53)
 
     # there is a week 53 in 2020
-    w4 = weekly_from_iso(2020,53)
-    @test Dates.Date(w4) == Dates.Date("2021-01-03")
+    w_iso4 = weekly_from_iso(2020,53)
+    @test Dates.Date(w_iso4) == Dates.Date("2021-01-03")
     
+end
+
+@testset "Dates" begin
+    @test Date(2022Y) == Date("2022-12-31")
+    @test Date(2022Y, :begin) == Date("2022-01-01")
+    @test Date(2022Q1) == Date("2022-03-31")
+    @test Date(2022Q1, :begin) == Date("2022-01-01")
+    @test Date(2022H1) == Date("2022-06-30")
+    @test Date(2022H1, :begin) == Date("2022-01-01")
+    @test Date(2022M1) == Date("2022-01-31")
+    @test Date(2022M1, :begin) == Date("2022-01-01")
+    @test Date(weekly("2022-01-01")) == Date("2022-01-02")
+    @test Date(weekly("2022-01-01"), :begin) == Date("2021-12-27")
+    @test Date(weekly("2022-01-01", 6)) == Date("2022-01-01")
+    @test Date(d"2022-01-01") == Date("2022-01-01")
+    @test Date(bd"2022-01-03") == Date("2022-01-03")
+end
+
+@testset "ppy" begin
+    @test ppy(Daily) == 365
+    @test ppy(BDaily) == 260
+    @test ppy(Weekly) == 52
+    @test ppy(Weekly{7}) == 52
+    @test ppy(Weekly{3}) == 52
+end
+
+@testset "endperiod" begin
+    @test endperiod(frequencyof(2022Y)) == 12
+    @test endperiod(frequencyof(2022Y{2})) == 2
+    @test endperiod(frequencyof(2022Q2)) == 3
+    @test endperiod(frequencyof(2022Q2{2})) == 2
+    @test endperiod(frequencyof(2022H1)) == 6
+    @test endperiod(frequencyof(2022H1{4})) == 4
+    @test endperiod(frequencyof(2022M1)) == 1
+    @test endperiod(frequencyof(weekly("2022-01-01"))) == 7
+    @test endperiod(frequencyof(weekly("2022-01-01", 6))) == 6
+end
+
+@testset "sanitize_frequency" begin
+    @test sanitize_frequency(Monthly) == Monthly
+    @test sanitize_frequency(Yearly) == Yearly{12}
+    @test sanitize_frequency(Quarterly) == Quarterly{3}
+    @test sanitize_frequency(HalfYearly) == HalfYearly{6}
+    @test sanitize_frequency(Weekly) == Weekly{7}
 end

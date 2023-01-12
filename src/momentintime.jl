@@ -109,7 +109,7 @@ function Base.:*(y::Int, ::Type{H1{end_month}}) where end_month
     return MIT{HalfYearly{end_month}}(y, 1)
 end
 Base.:*(y::Int, ::Type{H1}) = MIT{HalfYearly{6}}(y, 1)
-function Base.:*(y::Int, ::Type{H2{HalfYearly{end_month}}}) where end_month 
+function Base.:*(y::Int, ::Type{H2{end_month}}) where end_month 
     validate_halfyearly(end_month)
     return MIT{HalfYearly{end_month}}(y, 2)
 end
@@ -206,7 +206,7 @@ Duration{Weekly}(x::Int) = Duration{Weekly{7}}(x)
 Duration{YPFrequency{1}}(x::Int) = Duration{Yearly{12}}(x)
 Duration{YPFrequency{2}}(x::Int) = Duration{HalfYearly{6}}(x)
 Duration{YPFrequency{4}}(x::Int) = Duration{Quarterly{3}}(x)
-Duration{YPFrequency{12}}(x::Int) = Duration{Moenthly}(x)
+Duration{YPFrequency{12}}(x::Int) = Duration{Monthly}(x)
 Int(x::Duration) = reinterpret(Int, x)
 
 
@@ -448,10 +448,10 @@ Example:
     second_week_of_april = bd"2022-04-04:2022-04-08"
 """
 macro bd_str(d, bias);
-    if findfirst(":", d) !== nothing;
+    if findfirst(":", d) !== nothing
         throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
     end
-    if bias ∉ ("n", "next", "p", "previous", "s", "strict", "nearest")
+    if bias ∉ ("n", "next", "p", "previous", "s", "strict", "near", "nearest")
         throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous", "s", "strict", "near", "nearest")."""))
     end
     if bias == ""
