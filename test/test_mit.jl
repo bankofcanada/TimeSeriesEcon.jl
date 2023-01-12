@@ -2,7 +2,7 @@
 # All rights reserved.
 
 import TimeSeriesEcon: qq, mm, yy, ppy, endperiod, sanitize_frequency
-import Dates
+import Dates: Date
 
 @testset "MIT,Duration" begin
     # mit2yp conversions
@@ -354,7 +354,7 @@ end
 @testset "daily, business_daily" begin
     # daily
     d1 = MIT{Daily}(738156)
-    @test Dates.Date(d1) == Dates.Date("2022-01-01")
+    @test Date(d1) == Date("2022-01-01")
     d2 = daily("2022-01-01")
     @test typeof(d2) == MIT{Daily}
     @test d2 == d1
@@ -367,8 +367,8 @@ end
     d_rng = d"2022-01-01:2022-01-20"
     @test frequencyof(d_rng) == Daily
     @test typeof(d_rng) == UnitRange{MIT{Daily}}
-    @test Dates.Date(first(d_rng)) == Dates.Date("2022-01-01")
-    @test Dates.Date(last(d_rng)) == Dates.Date("2022-01-20")
+    @test Date(first(d_rng)) == Date("2022-01-01")
+    @test Date(last(d_rng)) == Date("2022-01-20")
 
     #year, period
     @test mit2yp(d"2022-01-01") == (2022, 1)
@@ -378,7 +378,7 @@ end
 
     # business daily
     bd1 = MIT{BDaily}(527256)
-    @test Dates.Date(bd1) == Dates.Date("2022-01-03")
+    @test Date(bd1) == Date("2022-01-03")
     @test MIT{BDaily}(2022, 1) == bd1
     bd2 = bdaily("2022-01-03")
     @test typeof(bd2) == MIT{BDaily}
@@ -399,23 +399,23 @@ end
     @test bdaily("2022-01-02", bias=:nearest) == bd"2022-01-03"
     
     bd_weekend1 = bdaily("2022-01-02", bias=:previous)
-    @test Dates.Date(bd_weekend1) == Dates.Date("2021-12-31")
+    @test Date(bd_weekend1) == Date("2021-12-31")
     bd_weekend2 = bdaily("2022-01-02", bias=:next)
-    @test Dates.Date(bd_weekend2) == Dates.Date("2022-01-03")
+    @test Date(bd_weekend2) == Date("2022-01-03")
     bd_weekend3 = bd"2022-01-02"p
-    @test Dates.Date(bd_weekend3) == Dates.Date("2021-12-31")
+    @test Date(bd_weekend3) == Date("2021-12-31")
     bd_weekend4 = bd"2022-01-02"n
-    @test Dates.Date(bd_weekend4) == Dates.Date("2022-01-03")
+    @test Date(bd_weekend4) == Date("2022-01-03")
     bd_weekend5 = bd"2022-01-02"next
-    @test Dates.Date(bd_weekend5) == Dates.Date("2022-01-03")
+    @test Date(bd_weekend5) == Date("2022-01-03")
     @test_throws ArgumentError bdaily("2022-01-02")
 
     # range
     bd_rng = bd"2022-01-01:2022-01-22"
     @test frequencyof(bd_rng) == BDaily
     @test typeof(bd_rng) == UnitRange{MIT{BDaily}}
-    @test Dates.Date(first(bd_rng)) == Dates.Date("2022-01-03")
-    @test Dates.Date(last(bd_rng)) == Dates.Date("2022-01-21")
+    @test Date(first(bd_rng)) == Date("2022-01-03")
+    @test Date(last(bd_rng)) == Date("2022-01-21")
 
     # this test does not catch the error for some reason
     # @test_throws ArgumentError bd"2022-01-01:2022-01-22"p
@@ -437,17 +437,17 @@ end
 
     # weekly from iso
     w_iso1 = weekly_from_iso(2021,52)
-    @test Dates.Date(w_iso1) == Dates.Date("2022-01-02")
+    @test Date(w_iso1) == Date("2022-01-02")
     w_iso2 = weekly_from_iso(2022,1)
-    @test Dates.Date(w_iso2) == Dates.Date("2022-01-09")
+    @test Date(w_iso2) == Date("2022-01-09")
     w_iso3 = weekly_from_iso(2022,2)
-    @test Dates.Date(w_iso3) == Dates.Date("2022-01-16")
+    @test Date(w_iso3) == Date("2022-01-16")
     # no week 53 in 2021
     @test_throws ArgumentError weekly_from_iso(2021, 53)
 
     # there is a week 53 in 2020
     w_iso4 = weekly_from_iso(2020,53)
-    @test Dates.Date(w_iso4) == Dates.Date("2021-01-03")
+    @test Date(w_iso4) == Date("2021-01-03")
     
 end
 
