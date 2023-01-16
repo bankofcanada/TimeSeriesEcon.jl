@@ -132,7 +132,11 @@ function replace_nans_if_warranted!(ts::TSeries, k::Integer; skip_all_nans::Bool
         skip_holidays = true # overwriting global option
         holidays = holidays_map[ts_range[begin]-abs(k):ts_range[end]+abs(k)]
     elseif skip_holidays
-        holidays = getoption(:bdaily_holidays_map)[ts_range[begin]-abs(k):ts_range[end]+abs(k)]
+        h_map = getoption(:bdaily_holidays_map)
+        if !(h_map isa TSeries{BDaily})
+            throw(ArgumentError("The holidays map stored in :bdaily_holidays_map is not a TSeries{BusinessDaily} it is a $(typeof(h_map)). \n You may need to load one with TimeSeriesEcon.set_holidays_map()."))
+        end
+        holidays = h_map[ts_range[begin]-abs(k):ts_range[end]+abs(k)]
     end
     
     last_valid = NaN

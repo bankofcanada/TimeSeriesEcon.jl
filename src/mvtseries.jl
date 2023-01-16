@@ -137,7 +137,7 @@ end
 """
 function cleanedvalues(mvts::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
     if holidays_map !== nothing
-        return TimeSeriesEcon.bdvalues(mvts, holidays_map=holidays_map)
+        return bdvalues(mvts, holidays_map=holidays_map)
     elseif skip_all_nans
         valid_rows_matrix = nans_map(mvts.values)
         if any(isnan.(mvts.values[valid_rows_matrix[:,1], :]))
@@ -145,7 +145,11 @@ function cleanedvalues(mvts::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_
         end
         return mvts.values[valid_rows_matrix[:,2], :]
     elseif skip_holidays
-        return TimeSeriesEcon.bdvalues(mvts, holidays_map=TimeSeriesEcon.getoption(:bdaily_holidays_map))
+        h_map = TimeSeriesEcon.getoption(:bdaily_holidays_map)
+        if !(h_map isa TSeries{BDaily})
+            throw(ArgumentError("The holidays map stored in :bdaily_holidays_map is not a TSeries it is a $(typeof(h_map)). \n You may need to load one with TimeSeriesEcon.set_holidays_map()."))
+        end
+        return bdvalues(mvts, holidays_map=h_map)
     end
     return mvts.values 
 end
@@ -173,7 +177,7 @@ function bdvalues(mvts::MVTSeries{BDaily}; holidays_map=nothing)
     @boundscheck checkbounds(holidays_map, first(rangeof(mvts)))
     @boundscheck checkbounds(holidays_map, last(rangeof(mvts)))
     slice = holidays_map[rangeof(mvts)]
-    return mvts.values[slice.values]
+    return mvts.values[slice.values, :]
 end
 
 

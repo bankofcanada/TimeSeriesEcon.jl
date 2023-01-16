@@ -167,6 +167,7 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
 
 
     TimeSeriesEcon.clear_holidays_map()
+    @test_throws ArgumentError cleanedvalues(tsbd, skip_holidays=true)
     # TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
     # TimeSeriesEcon.setoption(:bdaily_skip_holidays, false)
 
@@ -206,6 +207,18 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     @test cleanedvalues(tsbd_diffed4[end-9:end]) ≈  values(tsbd_diffed3[end-9:end])  nans = true
     @test cleanedvalues(tsbd_pct4[end-9:end]) ≈  values(tsbd_pct3[end-9:end])  nans = true
 
+    @test_throws ArgumentError shift(tsbd, 1, skip_holidays=true)
+
+    # MVTS
+    tsbd2 = tsbd .* 2
+    mvtsbd = MVTSeries(; t1 = tsbd, t2=tsbd2)
+    @test_throws ArgumentError cleanedvalues(mvtsbd, skip_holidays=true)
+    @test cleanedvalues(mvtsbd[lastdate(mvtsbd)-9:lastdate(mvtsbd)]; holidays_map=ontario_map) ≈ reshape([1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42, 2.76, 2.88, 2.84, 2.88, 2.92, 2.94, 2.9, 2.84], (8, 2)) nans = true
+    TimeSeriesEcon.set_holidays_map("CA", "ON")
+    @test cleanedvalues(mvtsbd[lastdate(mvtsbd)-9:lastdate(mvtsbd)]; skip_holidays=true) ≈ reshape([1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42, 2.76, 2.88, 2.84, 2.88, 2.92, 2.94, 2.9, 2.84], (8, 2)) nans = true
+    @test cleanedvalues(mvtsbd[lastdate(mvtsbd)-9:lastdate(mvtsbd)]; skip_all_nans=true) ≈ reshape([1.38, 1.44, 1.42, 1.44, 1.46, 1.47, 1.45, 1.42, 2.76, 2.88, 2.84, 2.88, 2.92, 2.94, 2.9, 2.84], (8, 2)) nans = true
+
+    
     # reset
     TimeSeriesEcon.clear_holidays_map()
     # TimeSeriesEcon.setoption(:bdaily_skip_holidays, false)
