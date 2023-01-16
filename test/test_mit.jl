@@ -332,6 +332,47 @@ end
     @test frequencyof(MIT{YPFrequency{2}}(22)) == HalfYearly{6}
     @test frequencyof(MIT{Weekly}(22)) == Weekly{7}
     @test frequencyof(MIT{YPFrequency{12}}(22)) == Monthly
+
+    @test isyearly(Yearly) == true
+    @test isyearly(Yearly{2}) == true
+    @test isyearly(YPFrequency{1}) == false # should maybe be true?
+    @test isyearly(Quarterly) == false
+    @test isyearly(2022Y) == true
+    @test isyearly(2022Y{2}) == true
+
+    @test isquarterly(Quarterly) == true
+    @test isquarterly(Quarterly{2}) == true
+    @test isquarterly(YPFrequency{4}) == false # should maybe be true?
+    @test isquarterly(Yearly) == false
+    @test isquarterly(2022Q1) == true
+    @test isquarterly(2022Q1{2}) == true
+
+    @test ishalfyearly(HalfYearly) == true
+    @test ishalfyearly(HalfYearly{2}) == true
+    @test ishalfyearly(YPFrequency{2}) == false # should maybe be true?
+    @test ishalfyearly(Yearly) == false
+    @test ishalfyearly(2022H1) == true
+    @test ishalfyearly(2022H1{2}) == true
+
+    @test ismonthly(Monthly) == true
+    @test ismonthly(YPFrequency{12}) == false # should maybe be true?
+    @test ismonthly(Yearly) == false
+    @test ismonthly(2022M1) == true
+
+    @test isweekly(Weekly) == true
+    @test isweekly(Weekly{3}) == true
+    @test isweekly(Yearly) == false
+    @test isweekly(weekly("2022-01-01")) == true
+    @test isweekly(weekly("2022-01-01", 6)) == true
+
+    @test isbdaily(BDaily) == true
+    @test isbdaily(Daily) == false
+    @test isbdaily(bdaily("2022-01-03")) == true
+    
+    @test isdaily(Daily) == true
+    @test isdaily(BDaily) == false
+    @test isdaily(daily("2022-01-01")) == true
+    
 end
 
 @testset "mm, qq, yy" begin

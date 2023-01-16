@@ -286,12 +286,16 @@ ishalfyearly(F::Type{<:Frequency}) = F <: HalfYearly
 isquarterly(F::Type{<:Frequency}) = F <: Quarterly
 ismonthly(F::Type{<:Frequency}) = F <: Monthly
 isweekly(F::Type{<:Frequency}) = F <: Weekly
+isdaily(F::Type{<:Frequency}) = F <: Daily
+isbdaily(F::Type{<:Frequency}) = F <: BDaily
 isyearly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isyearly(frequencyof(x))
 ishalfyearly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = ishalfyearly(frequencyof(x))
 isquarterly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isquarterly(frequencyof(x))
 ismonthly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = ismonthly(frequencyof(x))
 isweekly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isweekly(frequencyof(x))
-export isyearly, isquarterly, isweekly
+isdaily(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isdaily(frequencyof(x))
+isbdaily(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isbdaily(frequencyof(x))
+export isyearly, isquarterly, ismonthly, isweekly, ishalfyearly, isweekly, isdaily, isbdaily
 
 
 """
