@@ -713,6 +713,7 @@ end
     noisy_tsd .+= rand(length(tsd))
     mvtsd = MVTSeries(; clean=tsd, noisy=noisy_tsd)
     mvtsdcorr = cor(tsd, noisy_tsd) 
+    mvtsdcov = cov(tsd, noisy_tsd) 
     @test isapprox(mean(mvtsd, dims=1), [1.3632530120481 mean(noisy_tsd)], nans=true)    
     res_mean_long = [
         mean([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
@@ -759,5 +760,8 @@ end
         median([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
     @test isapprox(median(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_median_long, nans=true)    
+
+    @test isapprox(cor(mvtsd), [1.0 mvtsdcorr; mvtsdcorr 1.0])
+    @test isapprox(cov(mvtsd), [var(tsd) mvtsdcov; mvtsdcov var(noisy_tsd)])
 
 end

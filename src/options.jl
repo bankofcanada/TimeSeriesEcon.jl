@@ -93,7 +93,7 @@ function set_holidays_map(country::String, subdivision::Union{String,Nothing}=no
     col = 0
     if country in keys(countries)
         if country == "IN"
-            @warn "Diwali and Holi holidays available from 2010 to 2030 only"
+            @warn "Diwali and Holi holidays available from 2010 to 2030 only."
         end
         if subdivision !== nothing
             if !(countries[country] isa Dict)

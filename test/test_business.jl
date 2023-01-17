@@ -221,8 +221,11 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     
     # reset
     TimeSeriesEcon.clear_holidays_map()
-    # TimeSeriesEcon.setoption(:bdaily_skip_holidays, false)
-    # TimeSeriesEcon.setoption(:bdaily_skip_nans, false)
+
+    
+    # coverage tests
+    @test TimeSeriesEcon.bdvalues(tsbd) ≈ tsbd.values nans=true
+    @test_throws ArgumentError TimeSeriesEcon.bdvalues(tsbd; holidays_map=:something) == tsbd.values
 end
 
 @testset "BDaily statistics" begin
@@ -349,4 +352,22 @@ end
     @test isapprox(median(mvtsbd[bd"2021-06-29:2021-07-03"], dims=2, skip_all_nans=true), res_median_long, nans=true)    
 
     TimeSeriesEcon.clear_holidays_map()
+end
+
+
+@testset "BDaily options" begin
+    @test_throws ArgumentError TimeSeriesEcon.set_holidays_map("CA", "BL")
+    @test_throws ArgumentError TimeSeriesEcon.set_holidays_map("VM", "BL")
+    @test_throws ArgumentError TimeSeriesEcon.set_holidays_map("DK", "BL")
+    @test_throws ArgumentError TimeSeriesEcon.get_holidays_options("VM")
+    @test_throws ArgumentError TimeSeriesEcon.setoption(:bdaily_creation_bias, :rounded)
+
+    @test TimeSeriesEcon.get_holidays_options() isa Dict{String, Any}
+    @test TimeSeriesEcon.get_holidays_options("DK") isa String
+    @test TimeSeriesEcon.get_holidays_options("CA") isa Vector{String}
+
+    @test_logs (:warn,"Diwali and Holi holidays available from 2010 to 2030 only.") TimeSeriesEcon.set_holidays_map("IN", "AS")
+    @test_logs (:warn,"Defaulting to subdivision ON of CA.") TimeSeriesEcon.set_holidays_map("CA")
+    #country with no default
+    @test_throws ArgumentError TimeSeriesEcon.set_holidays_map("IN")
 end
