@@ -176,6 +176,29 @@ end
     #additional tests for code coverage
     @test Base.Broadcast._eachindex((1U:4U,)) == 1:4
 
+    t2 = TSeries(5U:10U, collect(1:6))
+    r2 = t2 .+ 5
+    t3 = t2 .+ r2
+    @test Base.Broadcast.preprocess(t2, r2).x ≈ [6, 7, 8, 9, 10, 11]
+    @test Base.Broadcast.preprocess(t2, r2).keeps == (true, )
+    @test Base.Broadcast.preprocess(t2, r2).defaults == (1, )
+
+    Base.Broadcast.check_broadcast_shape((1U:10U,), (1,)) == nothing
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((10,), (1U:10U,))
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((2U:11U,), (1U:10U,))
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).keeps == (true, )
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).defaults == (1, )
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).x == [1,2,3,4,5,6,7,8,9,10]
+    @test Base.Broadcast.BroadcastStyle(TimeSeriesEcon.TSeriesStyle{Monthly}(), TimeSeriesEcon.TSeriesStyle{Monthly}()) == TimeSeriesEcon.TSeriesStyle{Monthly}()
+    bcStyle = TimeSeriesEcon.TSeriesStyle{Monthly}()
+    bcStyle2 = TimeSeriesEcon.TSeriesStyle{Unit}()
+    
+    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.TSeriesStyle{Monthly}}(Monthly, (1, ))
+    @test_throws DimensionMismatch Base.similar(bcasted, Float64)
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((1U:10U,), (10, ))
+    @test Base.Broadcast.check_broadcast_shape((1U:10U,), ()) === nothing
+    @test Base.Broadcast.preprocess(t2, 10.0) == 10
+
 end
 
 ts_u = TSeries(5)

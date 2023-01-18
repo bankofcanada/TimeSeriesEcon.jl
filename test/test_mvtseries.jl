@@ -414,6 +414,102 @@ end
         @test p[21Q1:21Q4, :d].values == 5ones(4)
     end
 
+    # additional test for code coverage
+    x2 = MVTSeries(20Q1, (:a, :b), [collect(1:10) collect(11:20)])
+    x2_monthly = MVTSeries(20M1, (:a, :b), [collect(1:10) collect(11:20)])
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(21:30) collect(31:40)])
+    # x2 = MVTSeries(20Q1, (:a, :b), rand(10, 2))
+    t2 = TSeries(20Q1, ones(10))
+    t_monthly = TSeries(20M1, ones(10))
+    s2 = [2.0 3.0]
+
+    @test (x2 .+ t2).values == x2.values .+ t2.values
+    @test (x2.values .+ t2).values == x2.a.values .+ t2.values
+    @test (x2 .+ t2.values).values == x2.values .+ t2.values
+    @test (t2 .+ x2).values == x2.values .+ t2.values
+    @test (t2.values .+ x2).values == x2.values .+ t2.values
+    @test (t2 .+ x2.values).values == (t2.values .+ x2.values)[:,1]
+    @test (x2 .+ x3).values == x2.values .+ x3.values
+    @test_throws ArgumentError x2 .+ t_monthly
+    @test_throws ArgumentError x2 .+ x2_monthly
+    
+    # when no columns overlap we get an MVTSeries with no variables
+    @test x2 .+ MVTSeries(20Q1, (:c, :d), [collect(1:10) collect(11:20)]) isa MVTSeries
+    @test collect(keys(x2 .+ MVTSeries(20Q1, (:c, :d), [collect(1:10) collect(11:20)]))) == Symbol[]
+
+    # when some columns overlap we get the intersection
+    @test x2 .+ MVTSeries(20Q1, (:b, :d), [collect(1:10) collect(11:20)]) isa MVTSeries
+    @test collect(keys(x2 .+ MVTSeries(20Q1, (:b, :d), [collect(1:10) collect(11:20)]))) == [:b]
+
+    # when ranges partially overlap we get the intersection
+    @test rangeof(x2 .+ MVTSeries(20Q4, (:a, :b), [collect(1:10) collect(11:20)])) == 20Q4:22Q2
+    @test rangeof(MVTSeries(20Q4, (:a, :b), [collect(1:10) collect(11:20)]) .+ x2) == 20Q4:22Q2
+
+    # when ranges don't overlap we get a tseries with a broken range
+    @test rangeof(x2 .+ MVTSeries(30Q1, (:a, :b), [collect(1:10) collect(11:20)])) == 30Q1:29Q4
+
+    
+
+    bcStyle = TimeSeriesEcon.MVTSeriesStyle{Quarterly{3}}()
+    @test Base.Broadcast.BroadcastStyle(bcStyle, TimeSeriesEcon.MVTSeriesStyle{Quarterly{3}}()) == bcStyle
+
+    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.MVTSeriesStyle{Monthly}}(Monthly, (1, ))
+    @test_throws DimensionMismatch Base.similar(bcasted, Float64)
+    
+    @test 1U:4U isa TimeSeriesEcon._MVTSAxes1
+    @test (:a, ) isa TimeSeriesEcon._MVTSAxes2
+    @test (1U:4U, (:a, )) isa TimeSeriesEcon._MVTSAxesType
+    @test Base.Broadcast._eachindex((1U:4U, (:a, ))) == CartesianIndices((4, 1))
+
+    # check broadcast shape (this seems a little broken)
+    axes1 = (1U:4U, (:a, ))
+    axes2 = (5U:8U, (:b, ))
+    axes3 = (1U:8U, (:b, ))
+    x_axes1 = MVTSeries(1U:4U; a=collect(1:4))
+    x_axes2 = MVTSeries(5U:8U; a=collect(1:4))
+    x_axes3 = MVTSeries(1U:8U; a=collect(1:8))
+    x_axes4 = MVTSeries(1U:4U; a=collect(1:4), b=collect(5:8))
+    # TODO: should these throw errors?
+    @test x_axes1 + x_axes2 isa MVTSeries # should maybe throw an error?
+    @test x_axes2 + x_axes3 isa MVTSeries # should maybe throw an error?
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes1, axes2)
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes2, axes3)
+    @test Base.Broadcast.check_broadcast_shape(axes3, axes2) === nothing
+    
+    @test Base.Broadcast.check_broadcast_shape(axes(x_axes1), axes(TSeries(2U:3U))) === nothing
+    @test x_axes1 .+ TSeries(2U:3U, collect(1:2)) isa MVTSeries
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(x_axes1), axes(TSeries(2U:5U)))
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(TSeries(2U:5U)), axes(x_axes1))
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(x_axes4), axes(TSeries(2U:5U, collect(1:4))))
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(x_axes1), (1U:4U, 1U:4U)) # TSeriesAxesType should have length 1
+    @test Base.Broadcast.check_broadcast_shape((1:4, ), axes(x_axes1)) === nothing
+    # TODO: should these throw errors?
+    @test x_axes1 .+ TSeries(2U:5U, collect(1:4)) isa MVTSeries #should maybe throw an error?
+    @test TSeries(2U:5U, collect(1:4)) .+ x_axes1 isa MVTSeries #should maybe throw an error?
+    @test TSeries(2U:5U, collect(1:4)) .+ x_axes4 isa MVTSeries #should maybe throw an error?
+    @test Base.Broadcast.check_broadcast_shape(axes1, ()) == nothing # should maybe throw an error
+
+    # preprocess
+    extruded = [21  31
+    22  32
+    23  33
+    24  34
+    25  35
+    26  36
+    27  37
+    28  38
+    29  39
+    30  40]
+    Base.Broadcast.preprocess(x2,x3).x == extruded
+    Base.Broadcast.preprocess(x2,x3).keeps == (true, true)
+    Base.Broadcast.preprocess(x2,x3).defaults == (1, 1)
+    @test Base.Broadcast.preprocess(x2, x3.values).x == extruded
+    Base.Broadcast.preprocess(x2,x3.values).keeps == (true, true)
+    Base.Broadcast.preprocess(x2,x3.values).defaults == (1, 1)
+    @test Base.Broadcast.preprocess(x2, t2).x == ones(10)
+    @test Base.Broadcast.preprocess(x2, t2).keeps == (true,)
+    @test Base.Broadcast.preprocess(x2, t2).defaults == (1,)
+    @test Base.Broadcast.preprocess(x2, 2.3) == 2.3
 end
 
 @testset "MVTSeries math" begin
