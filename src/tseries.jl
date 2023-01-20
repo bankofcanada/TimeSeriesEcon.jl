@@ -484,6 +484,9 @@ function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
 end
 
+# fix compare
+LinearAlgebra.norm(A::TSeries, p::Real=2) = LinearAlgebra.norm(A.values, p)
+
 
 """
     pct(x; islog=false)

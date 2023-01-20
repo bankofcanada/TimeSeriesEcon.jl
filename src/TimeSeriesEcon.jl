@@ -34,6 +34,7 @@ using RecipesBase
 using OrderedCollections
 
 # standard library
+using LinearAlgebra
 using Statistics
 using Serialization
 using Distributed
