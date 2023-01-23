@@ -84,6 +84,44 @@ Base.values(t::TSeries) = values(t.values)
 
 
 """
+    cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+
+    Returns the values of a BDaily TSeries filtered according to the provided optional arguments. By default, all values are returned.
+
+    Optional arguments:
+    * `skip_all_nans` : When `true`, returns all values which are not NaN values. Default is `false`.
+    * `skip_holidays` : When `true`, returns all values which do not fall on a holiday according to the holidays map set in TimeSeriesEcon.getoption(:bdaily_holidays_map). Default: `false`.
+    * `holidays_map`  : Returns all values that do not fall on a holiday according to the provided map which must be a BDaily TSeries of Booleans. Default is `nothing`.
+"""
+function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+    if holidays_map !== nothing
+        return bdvalues(t, holidays_map=holidays_map)
+    elseif skip_all_nans
+        return filter(x -> !isnan(x), t.values)
+    elseif skip_holidays
+        h_map = TimeSeriesEcon.getoption(:bdaily_holidays_map)
+        if !(h_map isa TSeries{BDaily})
+            throw(ArgumentError("The holidays map stored in :bdaily_holidays_map is not a TSeries it is a $(typeof(h_map)). \n You may need to load one with TimeSeriesEcon.set_holidays_map()."))
+        end
+        return bdvalues(t, holidays_map=h_map)
+    end
+    return t.values 
+end
+
+function bdvalues(t::TSeries{BDaily}; holidays_map=nothing)
+    if holidays_map === nothing
+        return t.values
+    end
+    if !(holidays_map isa TSeries{BDaily})
+        throw(ArgumentError("Passed holidays_map must be a TSeries{BDaily}"))
+    end
+    @boundscheck checkbounds(holidays_map, first(rangeof(t)))
+    @boundscheck checkbounds(holidays_map, last(rangeof(t)))
+    slice = holidays_map[rangeof(t)]
+    return t.values[slice.values]
+end
+
+"""
     firstdate(x)
 
 Return the first date of the range of allocated storage for the given
@@ -440,11 +478,11 @@ given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
 Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
+Base.diff(x::TSeries{BDaily}, k::Integer=-1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = x - lag(x, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
 end
-
 
 """
     pct(x; islog=false)
@@ -464,6 +502,20 @@ function pct(ts::TSeries, shift_value::Int=-1; islog::Bool=false)
 
     TSeries(result.firstdate, result.values)
 end
+function pct(ts::TSeries{BDaily}, shift_value::Int=-1; islog::Bool=false, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing)
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+    else
+        a = ts
+        b = shift(ts, shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+    end
+
+    result = @. ((a - b) / b) * 100
+
+    TSeries(result.firstdate, result.values)
+end
+
 export pct
 
 """
@@ -476,7 +528,7 @@ Examples
 julia> x = TSeries(qq(2018, 1), Vector(1:8));
 
 julia> apct(x)
-TSeries{Quarterly} of length 7
+TSeries{Quarterly{3}} of length 7
 2018Q2: 1500.0
 2018Q3: 406.25
 2018Q4: 216.04938271604937

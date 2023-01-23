@@ -72,12 +72,14 @@ x = TSeries(2000M1:2000M7, collect(Float64, 1:7))
 fconvert(Quarterly, x; method = :sum)
 ```
 """
-function fconvert(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=nothing) where {N1,N2}
+fconvert(F::Type{Quarterly}, t::TSeries{<:Union{Yearly{12}, Quarterly{3}, Monthly}}; method=nothing) = fconvert(Quarterly{3}, t, method=method)
+fconvert(F::Type{Yearly}, t::TSeries{<:Union{Yearly{12}, Quarterly{3}, Monthly}}; method=nothing) = fconvert(Yearly{12}, t, method=method)
+function fconvert(F::Type{<:Union{Yearly{12}, Quarterly{3}, Monthly}}, t::TSeries{<:Union{Yearly{12}, Quarterly{3}, Monthly}}; method=nothing)
     args = Dict()
     if method !== nothing
         args[:method] = method
     end
-    N1 > N2 ? _to_higher(F, t; args...) : _to_lower(F, t; args...)
+    F > frequencyof(t) ? _to_higher(F, t; args...) : _to_lower(F, t; args...)
 end
 
 function _to_higher(F::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const) where {N1,N2}

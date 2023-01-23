@@ -76,7 +76,7 @@ function Base.Broadcast.preprocess(dest::MVTSeries, x::AbstractArray)
     Base.Broadcast.preprocess(_vals(dest), x)
 end
 
-function Base.Broadcast.preprocess(::MVTSeries, x::Number)
+function Base.Broadcast.preprocess(dest::MVTSeries, x::Number)
     # Base.Broadcast.extrude(x)
     Base.Broadcast.preprocess(_vals(dest), x)
 end
