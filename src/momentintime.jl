@@ -736,6 +736,9 @@ Base.:(+)(l::Integer, r::Union{MIT,Duration}) = oftype(r, l + Int(r))
 # For indexing and iterating TSeries it's more convenient to return Int rather than Duration, however
 # we choose to have the checks in place.
 
+# checkindex, however, needs to work with an Int
+Base.checkindex(::Type{Bool}, inds::AbstractUnitRange{<:MIT}, i::Int) = 1 <= i <= length(inds)
+
 # -------------------
 # one(x) is meant to be a dimensionless 1, so that's what we do
 Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)

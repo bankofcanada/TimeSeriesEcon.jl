@@ -102,12 +102,18 @@
         work2.A = TSeries(87Y, ones(4))
         work3 = Workspace()
         work3.A = TSeries(86Y, zeros(4))
+        work4 = Workspace()
+        work4.A = TSeries(86Y, zeros(300))
+        work5 = Workspace()
+        work5.A = TSeries(86Y, zeros(300))
 
         @test TimeSeriesEcon.compare_equal(work1, work2; quiet=true) == true
         @test TimeSeriesEcon.compare_equal(work1, work3; quiet=true) == false
+        @test TimeSeriesEcon.compare_equal(work4, work5; quiet=true) == true
         @test TimeSeriesEcon.compare(work1, work2; quiet=true) == true
         @test TimeSeriesEcon.compare(work1, work3; quiet=true) == false
-    end
+        @test TimeSeriesEcon.compare(work4, work5; quiet=true) == true
+    end;
 
     # reindexing
     let work1 = Workspace()

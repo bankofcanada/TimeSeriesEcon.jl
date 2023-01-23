@@ -646,6 +646,12 @@ end
     c = TSeries(89Y, ones(7)*1.1)
     @test TimeSeriesEcon.compare_equal(a, c) == false
     @test TimeSeriesEcon.compare_equal(a, c, atol=0.3) == true
+
+    # test with nans
+    d = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
+    e = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
+    @test TimeSeriesEcon.compare(d, e, nans=true) == true
+    
        
     #reindexing
     ts = TSeries(2020Q1,randn(10))
