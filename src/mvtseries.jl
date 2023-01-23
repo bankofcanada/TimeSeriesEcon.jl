@@ -88,7 +88,7 @@ mutable struct MVTSeries{F<:Frequency,T<:Number,C<:AbstractMatrix{T}} <: Abstrac
         end
         columns = OrderedDict(nm => TSeries(firstdate, view(values, :, ind))
                               for (nm, ind) in zip(names, axes(values, 2)))
-        new{F,eltype(values),typeof(values)}(firstdate, columns, values)
+        new{sanitize_frequency(F),eltype(values),typeof(values)}(firstdate, columns, values)
     end
 end
 
@@ -122,6 +122,64 @@ function _col(x::MVTSeries, col::Symbol)
     end
     return ret
 end
+
+
+"""
+    cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+
+    Returns a matrix of values of a BDaily MVTSeries filtered according to the provided optional arguments. 
+    By default, all values are returned.
+
+    Optional arguments:
+    * `skip_all_nans` : When `true`, returns all rows for which none of the values are NaN. Displays a warning if rows are removed where some of the values are not Nan. Default is `false`.
+    * `skip_holidays` : When `true`, returns all rows which do not fall on a holiday according to the holidays map set in TimeSeriesEcon.getoption(:bdaily_holidays_map). Default: `false`.
+    * `holidays_map`  : Returns all rows that do not fall on a holiday according to the provided map which must be a BDaily TSeries of Booleans. Default is `nothing`.
+"""
+function cleanedvalues(mvts::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+    if holidays_map !== nothing
+        return bdvalues(mvts, holidays_map=holidays_map)
+    elseif skip_all_nans
+        valid_rows_matrix = nans_map(mvts.values)
+        if any(isnan.(mvts.values[valid_rows_matrix[:,1], :]))
+            @warn "NaNs unequal across columns. Rows with some valid values removed."
+        end
+        return mvts.values[valid_rows_matrix[:,2], :]
+    elseif skip_holidays
+        h_map = TimeSeriesEcon.getoption(:bdaily_holidays_map)
+        if !(h_map isa TSeries{BDaily})
+            throw(ArgumentError("The holidays map stored in :bdaily_holidays_map is not a TSeries it is a $(typeof(h_map)). \n You may need to load one with TimeSeriesEcon.set_holidays_map()."))
+        end
+        return bdvalues(mvts, holidays_map=h_map)
+    end
+    return mvts.values 
+end
+
+# creates a two-column Boolean Matrix.
+# The first column is true whenever any of the series for the given MIT/row is not NaN.
+# The second column is true whenever all of the series for the given MIT/row are not NaN.
+
+function nans_map(x)
+    nrows = length(x[:,1])
+    m = Matrix{Bool}(undef, (nrows, 2))
+    for i in 1:nrows
+        m[i,:] = [!all(isnan.(x[i,:])), !any(isnan.(x[i,:]))]
+    end
+    return m
+end
+
+function bdvalues(mvts::MVTSeries{BDaily}; holidays_map=nothing)
+    if holidays_map === nothing
+        return mvts.values
+    end
+    if !(holidays_map isa TSeries{BDaily})
+        throw(ArgumentError("Passed holidays_map must be a TSeries{BDaily}"))
+    end
+    @boundscheck checkbounds(holidays_map, first(rangeof(mvts)))
+    @boundscheck checkbounds(holidays_map, last(rangeof(mvts)))
+    slice = holidays_map[rangeof(mvts)]
+    return mvts.values[slice.values, :]
+end
+
 
 """
     columns(x::MVTSeries)
@@ -211,10 +269,12 @@ Base.hash(x::MVTSeries, h::UInt) = hash((_vals(x), firstdate(x), colnames(x)...)
 # -------------------------------------------------------------------------------
 # Indexing with integers and booleans - same as matrices
 
+_vals(a) = a
+
 # Indexing with integers falls back to AbstractArray
-const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex}
-Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), i1...)
-Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, i1...)
+const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex,AbstractArray{<:CartesianIndex}}
+Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), _vals.(i1)...)
+Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, _vals.(i1)...)
 
 # -------------------------------------------------------------
 # Some other constructors
@@ -238,7 +298,7 @@ MVTSeries(T::Type{<:Number}, rng::AbstractUnitRange{<:MIT}, vars::Symbol, ::Unde
 MVTSeries(rng::AbstractUnitRange{<:MIT}, vars, init::Function) = MVTSeries(first(rng), vars, init(length(rng), length(vars)))
 # no type-explicit version because the type is determined by the output of init()
 
-#initialize with a constant
+# initialize with a constant
 MVTSeries(rng::AbstractUnitRange{<:MIT}, vars, v::Number) = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
 
 # construct with a given range (rather than only the first date). We must check the range length matches the data size 1
@@ -534,7 +594,16 @@ end
 
 Base.fill!(x::MVTSeries, val) = fill!(_vals(x), val)
 
-Base.view(x::MVTSeries, I...) = view(_vals(x), I...)
+Base.view(x::MVTSeries, I...) = view(_vals(x), _vals.(I)...)
+# Base.view(::MVTSeries{F1}, ::TSeries{F2,Bool}, ::Colon=Colon()) where {F1,F2} = mixed_freq_error(F1, F2)
+# Base.view(x::MVTSeries{F}, ind::TSeries{F,Bool}, ::Colon=Colon()) where F<:Frequency = view(x, rangeof(ind)[_vals(ind)], :)
+
+Base.dotview(sd::MVTSeries, ::TSeries{F, Bool}) where F <: Frequency = mixed_freq_error(frequencyof(sd), F)
+Base.dotview(sd::MVTSeries{F}, ind::TSeries{F, Bool}) where F <: Frequency = begin
+    @boundscheck checkbounds(sd, rangeof(ind))
+    dotview(_vals(sd), _vals(ind), :)
+end
+
 
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon=Colon()) = view(x, I, axes(x, 2))
@@ -747,3 +816,30 @@ function undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:AbstractVecOrMat})
     result .+= correction
     return result
 end
+
+########
+
+Base.findall(A::MVTSeries) = findall(_vals(A))
+
+Base.getindex(sd::MVTSeries, ::TSeries{F,Bool}) where F<:Frequency = mixed_freq_error(frequencyof(sd), F)
+Base.getindex(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where F<:Frequency = getindex(_vals(sd), _vals(ind), :)
+Base.setindex!(sd::MVTSeries, ::Any, ::TSeries{F,Bool}) where F<:Frequency = mixed_freq_error(frequencyof(sd), F)
+Base.setindex!(sd::MVTSeries{F}, val, ind::TSeries{F,Bool}) where F<:Frequency = setindex!(_vals(sd), val, _vals(ind), :)
+
+# Statistics
+Statistics.mean(x::MVTSeries; kwargs...) = mean(x.values; kwargs...)
+Statistics.mean(f, x::MVTSeries; kwargs...) = mean(f, x.values; kwargs...)
+Statistics.std(x::MVTSeries; kwargs...) = std(x.values; kwargs...)
+Statistics.var(x::MVTSeries; kwargs...) = var(x.values; kwargs...)
+Statistics.median(x::MVTSeries; kwargs...) = median(x.values; kwargs...)
+Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...) 
+Statistics.cov(x::MVTSeries; kwargs...) = cov(x.values; kwargs...)
+
+Statistics.mean(f, x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.mean(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = mean(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.std(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = std(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.var(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = var(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.median(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = median(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.cor(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = cor(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+Statistics.cov(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = cov(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+

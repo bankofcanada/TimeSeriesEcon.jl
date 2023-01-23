@@ -4,12 +4,13 @@
 using TOML
 options = Dict{Symbol,Any}(
     :bdaily_holidays_map => nothing,
-    :bdaily_skip_nans => false, 
-    :bdaily_skip_holidays => false
+    :bdaily_creation_bias => :strict,
+    # :bdaily_skip_nans => false, 
+    # :bdaily_skip_holidays => false
 )
 
 """
-    set_option(option::Symbol, value)
+    setoption(option::Symbol, value)
 
 Sets the provided option to the provided values.
 
@@ -23,19 +24,22 @@ Current available options are:
     This also controls the behavior of the `shift`, `lag`, `diff`, and `pct` functions, but only NaNs falling on holidays are replaced.
     
 """
-function set_option(option::Symbol, value)
+function setoption(option::Symbol, value)
+    if option==:bdaily_creation_bias && value ∉ (:strict, :previous, :next, :nearest)
+        throw(ArgumentError(":bdaily_creation_bias must be :strict, :previous, :next or :nearest. Received: $value"))
+    end
     options[option] = value;
     nothing #don't return anything
 end
 
 """
-    get_option(option::Symbol)
+    getoption(option::Symbol)
 
 Returns the current value of the provided option.
 
-See also [`set_option`](@ref)
+See also [`setoption`](@ref)
 """
-function get_option(option::Symbol)
+function getoption(option::Symbol)
     options[option];
 end
 
@@ -48,7 +52,7 @@ Returns a dictionary of country codes for supported countries and their subdivis
 Holiday calendars are produced using the [python-holidays](https://github.com/dr-prodigy/python-holidays) libary. See their site for more.
 """
 function get_holidays_options(country::Union{String,Nothing}=nothing)
-    countries = TOML.parsefile(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.toml"))
+    countries = TOML.parsefile(joinpath(@__DIR__, "..", "data", "holidays.toml"))
     
     if country !== nothing && country ∉ keys(countries)
         throw(ArgumentError("$country is not a supported country. Run without an argument to see supported countries."))
@@ -84,15 +88,15 @@ Sets the current holidays map to the given country and subdivision. Holiday maps
 See also: [`get_holidays_options`](@ref), [`clear_holidays_map`](@ref)
 """
 function set_holidays_map(country::String, subdivision::Union{String,Nothing}=nothing)
-    countries = TOML.parsefile(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.toml"))
+    countries = TOML.parsefile(joinpath(@__DIR__, "..", "data", "holidays.toml"))
     covered_range = bdaily("1970-01-01"):bdaily("2049-12-31");
     holiday_maps = Array{UInt8}(undef, (Int(length(covered_range)/8), countries["Metadata"]["output_height"]))
-    read!(joinpath(replace(@__DIR__, "/src" => ""), "data/holidays.bin"), holiday_maps)
+    read!(joinpath(@__DIR__, "..", "data", "holidays.bin"), holiday_maps)
     
     col = 0
     if country in keys(countries)
         if country == "IN"
-            @warn "Diwali and Holi holidays available from 2010 to 2030 only"
+            @warn "Diwali and Holi holidays available from 2010 to 2030 only."
         end
         if subdivision !== nothing
             if !(countries[country] isa Dict)
@@ -122,7 +126,7 @@ function set_holidays_map(country::String, subdivision::Union{String,Nothing}=no
     # The bits are packed in a UInt8 array
     # each UInt8 corresponds to one ordering of 8 bits
     ts = TSeries(first(covered_range), reduce(vcat, map(x -> digits(Bool, x, base=2, pad=8), holiday_maps[:,col])));
-    set_option(:bdaily_holidays_map, ts);
+    setoption(:bdaily_holidays_map, ts);
 end
 
 
@@ -134,5 +138,5 @@ Clears the current holidays map.
 See also: [`get_holidays_options`](@ref), [`set_holidays_map`](@ref)
 """
 function clear_holidays_map()
-    set_option(:bdaily_holidays_map, nothing);
+    setoption(:bdaily_holidays_map, nothing);
 end
