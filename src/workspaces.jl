@@ -57,8 +57,11 @@ Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] 
 
 MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
-MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!, Base.push!, Base.delete!)
+MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
 MacroTools.@forward Workspace._c (Base.eltype,)
+
+Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
+Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
 @inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
@@ -72,7 +75,7 @@ of all [`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of
 `w`. If there are objects of different frequencies there will be a
 mixed-frequency error.
 """
-rangeof(w::Workspace; method = intersect) = (
+rangeof(w::Workspace; method=intersect) = (
     iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));
     mapreduce(rangeof, method, iterable)
 )
@@ -162,6 +165,6 @@ function strip!(w::Workspace; recursive=true)
 end
 
 ###########################
-Base.filter(f,w::Workspace) = Workspace(filter(f,_c(w)))
-Base.filter!(f,w::Workspace) = (filter!(f,_c(w)); w)
+Base.filter(f, w::Workspace) = Workspace(filter(f, _c(w)))
+Base.filter!(f, w::Workspace) = (filter!(f, _c(w)); w)
 
