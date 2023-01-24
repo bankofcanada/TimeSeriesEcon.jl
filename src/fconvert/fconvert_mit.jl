@@ -31,25 +31,19 @@ fconvert(Quarterly, 22Y, values_base=:begin) ==> 2022Q1
 
 # MIT YP => YP
 # having these different signatures significantly speeds up the performance; from a few microseconds to a few nanoseconds
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base,skip_parameter=false, round_to=round_to)
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{Yearly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{HalfYearly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{Quarterly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{Monthly}; values_base=:end, round_to=:current) = _fconvert(F_to, MIT_from, values_base=values_base, skip_parameter=true, round_to=round_to)
-function _fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, skip_parameter=false, round_to=:current)
+fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, round_to=:current) = _fconvert(sanitize_frequency(F_to), MIT_from, values_base=values_base, round_to=round_to)
+function _fconvert(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, round_to=:current)
     F_from = frequencyof(MIT_from)
     values_base_adjust = values_base == :end ? 1 : 0
     rounder = values_base == :end ? ceil : floor
     from_month = Int(MIT_from+values_base_adjust) * 12 / ppy(F_from) - values_base_adjust
-    if !skip_parameter 
-        from_month -= (12 / ppy(F_from)) - getproperty(F_from, :parameters)[1]
-    end
+    from_month -= (12 / ppy(F_from)) - endperiod(F_from)
     out_period = (from_month + values_base_adjust) / (12 / ppy(F_to)) - values_base_adjust
     return MIT{F_to}(rounder(Integer, out_period))
 end
 
 # MIT Calendar => YP + Weekly
-function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:Union{<:CalendarFrequency}}; values_base=:end, round_to=:current)
+function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:Union{Daily, BDaily, <:Weekly}}; values_base=:end, round_to=:current)
     if values_base == :end
         return _get_out_indices(F_to, [Dates.Date(MIT_from, :end)])[begin]
     elseif values_base == :begin
@@ -66,9 +60,9 @@ end
 # end
 function fconvert(F_to::Type{BDaily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency,Daily}}; values_base=:end, round_to=:previous)
     if round_to == :previous
-        return bdaily(Dates.Date(MIT_from, values_base))
+        return bdaily(Dates.Date(MIT_from, values_base), bias=:previous)
     elseif round_to == :next
-        return bdaily(Dates.Date(MIT_from, values_base); bias_previous=false)
+        return bdaily(Dates.Date(MIT_from, values_base); bias=:next)
     elseif round_to == :current
         d = Dates.Date(MIT_from)
         if (dayofweek(d) >= 6)
@@ -92,31 +86,20 @@ end
 
 
 """
-_fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, check_parameter_from=false, check_parameter_to=false)
+fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, check_parameter_from=false, check_parameter_to=false)
 
 This is a helper function used when converting TSeries or MIT UnitRanges between YPfrequencies. It provides the necessary component parts to make decisions about the completeness
     of the input tseries relative to the output frequency.
 """
-# having these different signatures significantly speeds up the performance; from a few microseconds to a few nanoseconds
-fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end) = _fconvert_parts(F_to, MIT_from, values_base=values_base)
-fconvert_parts(F_to::Type{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end) where N = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_to=true)
-fconvert_parts(F_to::Type{<:Union{Quarterly{N1},HalfYearly{N1},Yearly{N1}}}, MIT_from::MIT{<:Union{Quarterly{N2},HalfYearly{N2},Yearly{N2}}}; values_base=:end) where {N1, N2} = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_to=true, check_parameter_from=true)
-fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}; values_base=:end) where N = _fconvert_parts(F_to, MIT_from, values_base=values_base, check_parameter_from=true)
-function _fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end, check_parameter_from=false, check_parameter_to=false)
+function fconvert_parts(F_to::Type{<:Union{<:YPFrequency}}, MIT_from::MIT{<:Union{<:YPFrequency}}; values_base=:end)
     F_from = frequencyof(MIT_from)
+    F_to = sanitize_frequency(F_to)
     mpp_from = div( 12, ppy(F_from))
     mpp_to = div( 12, ppy(F_to))
 
-    from_month_adjustment = 0
-    if check_parameter_from 
-        from_month_adjustment -= mpp_from - getproperty(F_from, :parameters)[1]
-    end
+    from_month_adjustment = endperiod(F_from) - mpp_from
+    to_month_adjustment = endperiod(F_to) - mpp_to
 
-    to_month_adjustment = 0
-    if check_parameter_to 
-        to_month_adjustment -= mpp_to - getproperty(F_to, :parameters)[1]
-    end
-    
     if values_base == :begin
         from_start_month = Int(MIT_from) * mpp_from + 1 + from_month_adjustment
         to_period, rem = divrem(from_start_month - to_month_adjustment - 1,  mpp_to)
@@ -162,14 +145,9 @@ fconvert(Quarterly, 2022M2:2022M7, trim=:end) => 2022Q1:2022Q2
 fconvert(Quarterly, 2022M2:2022M7, trim=:both) => 2022Q2:2022Q2
 """
 # MIT range: YP => YP
-# having these different signatures significantly speeds up the performance; from a few microseconds to a few nanoseconds 
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, parts=false) = _fconvert(F_to, range_from, trim=trim, parts=parts)
-fconvert(F_to::Type{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, parts=false) where N = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_to=true)
-fconvert(F_to::Type{<:Union{Quarterly{N1},HalfYearly{N1},Yearly{N1}}}, range_from::UnitRange{<:MIT{<:Union{Quarterly{N2},HalfYearly{N2},Yearly{N2}}}}; trim=:both, parts=false) where {N1, N2} = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_to=true, check_parameter_from=true)
-fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:MIT{<:Union{Quarterly{N},HalfYearly{N},Yearly{N}}}}; trim=:both, parts=false) where N = _fconvert(F_to, range_from, trim=trim, parts=parts, check_parameter_from=true)
-function _fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, parts=false, check_parameter_from=false, check_parameter_to=false)
-    fi_to_period, fi_from_start_month, fi_to_start_month = _fconvert_parts(F_to, first(range_from), values_base=:begin, check_parameter_from=check_parameter_from, check_parameter_to = check_parameter_to)
-    li_to_period, li_from_end_month, li_to_end_month = _fconvert_parts(F_to, last(range_from), values_base=:end, check_parameter_from=check_parameter_from, check_parameter_to = check_parameter_to)
+function fconvert(F_to::Type{<:YPFrequency}, range_from::UnitRange{<:MIT{<:YPFrequency}}; trim=:both, parts=false)
+    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, first(range_from), values_base=:begin)
+    li_to_period, li_from_end_month, li_to_end_month = fconvert_parts(F_to, last(range_from), values_base=:end)
     
     if parts
         return fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month
@@ -177,17 +155,17 @@ function _fconvert(F_to::Type{<:Union{<:YPFrequency}}, range_from::UnitRange{<:M
 
     trunc_start = trim !== :end && fi_to_start_month < fi_from_start_month ? 1 : 0
     trunc_end = trim !== :begin && li_to_end_month > li_from_end_month ? 1 : 0
-    fi = MIT{F_to}(fi_to_period+trunc_start)
-    li = MIT{F_to}(li_to_period-trunc_end)
+    fi = MIT{sanitize_frequency(F_to)}(fi_to_period+trunc_start)
+    li = MIT{sanitize_frequency(F_to)}(li_to_period-trunc_end)
     
     return fi:li
 end
 
 
 # range: YP + Calendar => YP + Weekly (excl. YP => YP)
-fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency}}}; trim=:both, errors=true) = _fconvert_using_dates(F_to, range_from, trim=trim, errors=errors)
+fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{Daily, BDaily, <:Weekly}}}; trim=:both, errors=true) = _fconvert_using_dates(F_to, range_from, trim=trim, errors=errors)
 fconvert(F_to::Type{<:Union{<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, errors=true) = _fconvert_using_dates(F_to, range_from, trim=trim, errors=errors)
-function _fconvert_using_dates(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency, <:YPFrequency}}}; trim=:both, errors=true)
+function _fconvert_using_dates(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency}}}; trim=:both, errors=true)
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, range_from, trim=trim, errors=errors)
     return fi+trunc_start:li-trunc_end
 end
@@ -198,10 +176,10 @@ fconvert(F_to::Type{Daily}, range_from::UnitRange{<:MIT{<:Union{<:Weekly,Daily,<
 fconvert(F_to::Type{<:Daily}, range_from::UnitRange{MIT{BDaily}}) = daily(Dates.Date(range_from[begin])):daily(Dates.Date(range_from[end]))
 
 # MITRange => BDaily
-fconvert(F_to::Type{BDaily}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency,<:YPFrequency}}}) = bdaily(Dates.Date(range_from[begin] - 1) + Day(1), bias_previous=false):bdaily(Dates.Date(range_from[end]))
+fconvert(F_to::Type{BDaily}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency}}}) = bdaily(Dates.Date(range_from[begin] - 1) + Day(1), bias=:next):bdaily(Dates.Date(range_from[end]), bias=:previous)
 
 # MIT range: YP + Calendar => YP + Weekly
-function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency, <:YPFrequency}}}; trim=:both, errors=true)
+function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency}}}; trim=:both, errors=true, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
     errors && _validate_fconvert_yp(F_to, frequencyof(first(range_from)))
     if errors && trim ∉ (:both, :begin, :end)
         throw(ArgumentError("trim argument must be :both, :begin, or :end. Received: $(trim)."))
@@ -210,7 +188,9 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
     if F_to > F_from
         if F_from <: BDaily
             dates = [Dates.Date(range_from[begin]), Dates.Date(range_from[end])]
-            if get_option(:bdaily_skip_holidays)
+            if holidays_map !== nothing
+                dates = dates[holidays_map[rng_from].values]
+            elseif skip_holidays
                 holidays_map = get_option(:bdaily_holidays_map)
                 dates = dates[holidays_map[rng_from].values]
             end
@@ -234,8 +214,10 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
         return fi, li, trunc_start, trunc_end
     else # F_to <= F_from
         if F_from <: BDaily
-            if get_option(:bdaily_skip_holidays)
-                holidays_map = get_option(:bdaily_holidays_map)
+            if skip_holidays == true || holidays_map !== nothing
+                if holidays_map === nothing
+                    holidays_map = getoption(:bdaily_holidays_map)
+                end
                 padded_dates = padded_dates[holidays_map[rng_from].values]
                 # find the nearest non-holidays to see if they are in a different output period
                 pad_start_date = first(rng_from) - 1

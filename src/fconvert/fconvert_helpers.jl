@@ -338,13 +338,8 @@ function _get_out_indices_actual(F_to::Type{<:Union{Monthly,Quarterly{NtQ},Quart
     years = Dates.year.(dates)
 
     if F_to <: Weekly
-        N_effective = 7
-        normalize = true
-        if check_parameter_to
-            N_effective = NtW
-            normalize=false
-        end
-        out_index = [weekly(date, N_effective, normalize) for date in dates]
+        end_day = endperiod(sanitize_frequency(F_to))
+        out_index = [weekly(date, end_day) for date in dates]
     else
         months = Dates.month.(dates)
         years = Dates.year.(dates)

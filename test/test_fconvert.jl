@@ -14,7 +14,7 @@ using Statistics
     @test fconvert(Monthly, q, method=:const).values == repeat(1.0:10, inner=3)
 
     yq = fconvert(Yearly, q)
-    @test typeof(yq) === TSeries{Yearly,Float64,Vector{Float64}}
+    @test typeof(yq) === TSeries{Yearly{12},Float64,Vector{Float64}}
     @test fconvert(Yearly, q, method=:mean).values == [2.5, 6.5]
     @test fconvert(Yearly, q, method=:point, values_base=:end).values == [4.0, 8.0]
     @test fconvert(Yearly, q, method=:point, values_base=:begin).values == [1.0, 5.0, 9.0]
@@ -22,7 +22,7 @@ using Statistics
 
     h = TSeries(5H1, 1.0*collect(1:10))
     yh = fconvert(Yearly, h)
-    @test typeof(yh) == TSeries{Yearly,Float64,Vector{Float64}}
+    @test typeof(yh) == TSeries{Yearly{12},Float64,Vector{Float64}}
     @test fconvert(Yearly, h, method=:mean).values == [1.5, 3.5, 5.5, 7.5, 9.5]
     @test fconvert(Yearly, h, method=:point, values_base=:end).values == [2,4,6,8,10]
     @test fconvert(Yearly, h, method=:point, values_base=:begin).values == [1,3,5,7,9]
@@ -1735,31 +1735,31 @@ end
     @test length(d3_lin2) == 365 * 2
 
     bd1_lin = fconvert(BDaily, t1, method=:linear)
-    @test bd1_lin[bdaily("2022-01-01", bias_previous=false):bdaily("2022-01-31")].values == collect(LinRange(0, 1, 22))[2:22]
-    @test bd1_lin[bdaily("2022-02-01", bias_previous=false):bdaily("2022-02-28")].values == collect(LinRange(1, 2, 21))[2:21]
-    @test bd1_lin[bdaily("2022-04-01", bias_previous=false):bdaily("2022-04-30")].values == collect(LinRange(3, 4, 22))[2:22]
+    @test bd1_lin[bdaily("2022-01-01", bias=:next):bdaily("2022-01-31", bias=:previous)].values == collect(LinRange(0, 1, 22))[2:22]
+    @test bd1_lin[bdaily("2022-02-01", bias=:next):bdaily("2022-02-28", bias=:previous)].values == collect(LinRange(1, 2, 21))[2:21]
+    @test bd1_lin[bdaily("2022-04-01", bias=:next):bdaily("2022-04-30", bias=:previous)].values == collect(LinRange(3, 4, 22))[2:22]
     @test length(bd1_lin) == 260
 
     bd1_lin2 = fconvert(BDaily, t1, method=:linear, values_base=:begin)
-    @test bd1_lin2[bdaily("2022-01-01", bias_previous=false):bdaily("2022-01-31")].values == collect(LinRange(1, 2, 22))[1:21]
-    @test bd1_lin2[bdaily("2022-02-01", bias_previous=false):bdaily("2022-02-28")].values == collect(LinRange(2, 3, 21))[1:20]
-    @test bd1_lin2[bdaily("2022-04-01", bias_previous=false):bdaily("2022-04-30")].values == collect(LinRange(4, 5, 22))[1:21]
+    @test bd1_lin2[bdaily("2022-01-01", bias=:next):bdaily("2022-01-31", bias=:previous)].values == collect(LinRange(1, 2, 22))[1:21]
+    @test bd1_lin2[bdaily("2022-02-01", bias=:next):bdaily("2022-02-28", bias=:previous)].values == collect(LinRange(2, 3, 21))[1:20]
+    @test bd1_lin2[bdaily("2022-04-01", bias=:next):bdaily("2022-04-30", bias=:previous)].values == collect(LinRange(4, 5, 22))[1:21]
     @test length(bd1_lin2) == 260
 
     bd2_lin = fconvert(BDaily, t2, method=:linear)
-    @test bd2_lin[bdaily("2022-01-01", bias_previous=false):bdaily("2022-03-31")].values == collect(LinRange(0, 1, 65))[2:65]
+    @test bd2_lin[bdaily("2022-01-01", bias=:next):bdaily("2022-03-31", bias=:previous)].values == collect(LinRange(0, 1, 65))[2:65]
     @test length(bd2_lin) == 260
 
     bd2_lin2 = fconvert(BDaily, t2, method=:linear, values_base=:begin)
-    @test bd2_lin2[bdaily("2022-01-01", bias_previous=false):bdaily("2022-03-31")].values == collect(LinRange(1, 2, 65))[1:64]
+    @test bd2_lin2[bdaily("2022-01-01", bias=:next):bdaily("2022-03-31", bias=:previous)].values == collect(LinRange(1, 2, 65))[1:64]
     @test length(bd2_lin2) == 260
 
     bd3_lin = fconvert(BDaily, t3, method=:linear)
-    @test bd3_lin[bdaily("2022-01-01", bias_previous=false):bdaily("2022-12-31")].values == collect(LinRange(0, 1, 261))[2:261]
+    @test bd3_lin[bdaily("2022-01-01", bias=:next):bdaily("2022-12-31", bias=:previous)].values == collect(LinRange(0, 1, 261))[2:261]
     @test length(bd3_lin) == 260 * 2
 
     bd3_lin2 = fconvert(BDaily, t3, method=:linear, values_base=:begin)
-    @test bd3_lin2[bdaily("2022-01-01", bias_previous=false):bdaily("2022-12-31")].values == collect(LinRange(1, 2, 261))[1:260]
+    @test bd3_lin2[bdaily("2022-01-01", bias=:next):bdaily("2022-12-31", bias=:previous)].values == collect(LinRange(1, 2, 261))[1:260]
     @test length(bd3_lin2) == 260 * 2
 
 
@@ -1776,43 +1776,43 @@ end
     w1 = fconvert(Weekly, t1)
     @test w1[1:35] == [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5,5,5,6,6,6,6,7,7,7,7,7,8,8,8,8]
     @test length(w1) == 52
-    @test rangeof(w1) == MIT{Weekly{7}}(2021, 52+1):MIT{Weekly{7}}(2022, 51+1) #2021W52:2022W51
+    @test rangeof(w1) == weekly("2022-01-01"):weekly("2022-12-25") 
     w1_2001 = fconvert(Weekly, t1_2001)
     @test w1_2001[1:35] == [1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7,8,8,8,8,9]
-    @test rangeof(w1_2001) == MIT{Weekly{7}}(2001, 1):MIT{Weekly{7}}(2001, 52) #2001W1:2001W52
+    @test rangeof(w1_2001) == weekly("2001-01-01"):weekly("2001-12-30")
     w1_2017 = fconvert(Weekly, t1_2017)
     @test w1_2017[1:35] == [1,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7,8,8,8,8]
-    @test rangeof(w1_2017) == MIT{Weekly{7}}(2016, 52+1):MIT{Weekly{7}}(2017, 52+1) #2001W1:2001W52
+    @test rangeof(w1_2017) == weekly("2017-01-01"):weekly("2017-12-31") 
     w1_2021 = fconvert(Weekly{5}, t1_2021)
-    @test rangeof(w1_2021) == MIT{Weekly{5}}(2020, 52+1):MIT{Weekly{5}}(2021, 52+1) #2020W53:2021W52
+    @test rangeof(w1_2021) == weekly("2021-01-01", 5):weekly("2021-12-31", 5)
 
     w2 = fconvert(Weekly, t2)
     @test w2[1:20] == [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2]
     @test length(w2) == 52
-    @test rangeof(w2) == MIT{Weekly{7}}(2021, 52+1):MIT{Weekly{7}}(2022, 51+1) #2021W52:2022W51
+    @test rangeof(w2) == weekly("2022-01-01"):weekly("2022-12-25") 
 
     w3 = fconvert(Weekly, t3)
     @test w3[1:52] == ones(52)
     @test w3[53:105] == [(2 * ones(53))...]
     @test length(w3) == 105
-    @test rangeof(w3) == MIT{Weekly{7}}(2021, 52+1):MIT{Weekly{7}}(2023, 52+1) #2021W52:2023W52
+    @test rangeof(w3) == weekly("2022-01-01"):weekly("2023-12-31")
 
 
     w1_beg = fconvert(Weekly, t1, values_base=:begin)
     @test w1_beg[1:36] == [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9]
     @test length(w1_beg) == 52
-    @test rangeof(w1_beg) == MIT{Weekly{7}}(2022, 1+1):MIT{Weekly{7}}(2022, 52+1) #2022W1:2022W52
+    @test rangeof(w1_beg) == weekly("2022-01-08"):weekly("2022-12-31")
 
     w2_beg = fconvert(Weekly, t2, values_base=:begin)
     @test w2_beg[1:20] == [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2]
     @test length(w2_beg) == 52
-    @test rangeof(w2_beg) == MIT{Weekly{7}}(2022, 1+1):MIT{Weekly{7}}(2022, 52+1) #2022W1:2022W52
+    @test rangeof(w2_beg) == weekly("2022-01-08"):weekly("2022-12-31")
 
     w3_beg = fconvert(Weekly, t3, values_base=:begin)
     @test w3_beg[1:52] == ones(52)
     @test w3_beg[53:104] == [(2 * ones(52))...]
     @test length(w3_beg) == 104
-    @test rangeof(w3_beg) == MIT{Weekly{7}}(2022, 1+1):MIT{Weekly{7}}(2023, 52+1) #2022W1:2023W52
+    @test rangeof(w3_beg) == weekly("2022-01-08"):weekly("2023-12-31")
 
     # w1_lin = fconvert(Weekly, t1, method=:linear)
     # @test w1_lin[1:20] == [
@@ -1862,15 +1862,6 @@ end
     # @test length(w3_lin2) == 105
 end
 
-# F_from = Weekly
-# F_to = Monthly
-# t_from = TSeries(MIT{F_from}(100), collect(1:10))
-# t_from = TSeries(MIT{F_from}(101), collect(1:9))
-# t_from = TSeries(MIT{F_from}(96), collect(1:9))
-# fconvert(F_to, t_from, method=:mean, values_base=:end)
-#TODO Weekly{7}, Quarterly{2}
-#TODO Weekly, Monthly
-#TODO Weekly{7}, Monthly
 @testset "fconvert, all combinations" begin
     frequencies = [
         Daily,
@@ -1914,8 +1905,8 @@ end
     counter = 1
     t_from = nothing
     last_F_from = nothing
-    @showprogress "combinations" for (F_from, F_to) in combinations
-    # for (F_from, F_to) in combinations
+    # @showprogress "combinations" for (F_from, F_to) in combinations
+    for (F_from, F_to) in combinations
         if F_from != last_F_from
             last_F_from = F_from
             t_from = TSeries(MIT{F_from}(100), collect(1:800))
@@ -1925,7 +1916,7 @@ end
 
             # TSeries
             t_to = @suppress fconvert(F_to, t_from)
-            @test frequencyof(t_to) == F_to
+            @test frequencyof(t_to) == TimeSeriesEcon.sanitize_frequency(F_to)
             @test length(t_to.values) > 0
             # println(F_from, ", ", F_to)
             # if (F_to) <: YPFrequency && F_from <: YPFrequency
@@ -1934,7 +1925,7 @@ end
                         for values_base in (:begin, :end)
                             # @show method, values_base
                             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                            @test frequencyof(t_to_sub) == F_to
+                            @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
                             @test length(t_to_sub.values) > 0
                             @test maximum(values(t_to_sub)) < 1000000 #check for undefineds
                             @test minimum(values(t_to_sub)) > -1000000 #check for undefineds
@@ -1944,7 +1935,7 @@ end
                     for method in (:const, :even)
                         for values_base in (:begin, :end)
                             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                            @test frequencyof(t_to_sub) == F_to
+                            @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
                             @test length(t_to_sub.values) > 0
                             @test maximum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) < 1000000
                             @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
@@ -1954,7 +1945,7 @@ end
                         for method in (:linear, )
                             for values_base in (:begin, :end, :middle)
                                 t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                                @test frequencyof(t_to_sub) == F_to
+                                @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
                                 @test length(t_to_sub.values) > 0
                                 @test maximum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) < 1000000
                                 @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
@@ -2022,14 +2013,14 @@ end
 
             # unit ranges
             range_to = @suppress fconvert(F_to, rangeof(t_from))
-            @test frequencyof(range_to) == F_to
+            @test frequencyof(range_to) == TimeSeriesEcon.sanitize_frequency(F_to)
             @test length(range_to) > 0
             if F_to ∉ (Daily, BDaily)
                 range_to_begin = @suppress fconvert(F_to, rangeof(t_from), trim=:begin)
-                @test frequencyof(range_to_begin) == F_to
+                @test frequencyof(range_to_begin) == TimeSeriesEcon.sanitize_frequency(F_to)
                 @test length(range_to_begin) > 0
                 range_to_end = @suppress fconvert(F_to, rangeof(t_from), trim=:end)
-                @test frequencyof(range_to_end) == F_to
+                @test frequencyof(range_to_end) == TimeSeriesEcon.sanitize_frequency(F_to)
                 @test length(range_to_end) > 0
             end
 
