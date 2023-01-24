@@ -86,9 +86,24 @@ function overlay(workspaces::LikeWorkspace...)
     return ret
 end
 
-# overlay(stuff::Vararg{LikeWorkspace}) =
-#     Workspace(mergewith(overlay, (_c(w) for w in stuff)...))
+"""
+    overlay(data::MVTSeries, datan::MVTSeries...)
 
+When all arguments are `MVTSeries` the result is an `MVTSeries` of the overlayed
+range and the ordered union of the columns. Each column is an overlay of the
+corresponding `TSeries`.
+"""
+function overlay(args::MVTSeries...)
+    isempty(args) && return MVTSeries()
+    rng = mapreduce(rangeof, union, args)
+    names = collect(mapfoldl(keys, union, args, init=OrderedSet{Symbol}()))
+    ET = mapreduce(eltype, promote_type, args)
+    ret = MVTSeries(rng, names, typenan(ET))
+    for name in names
+        ret[:, name] .= overlay(rng, (arg[name] for arg in args if name in keys(arg))...)
+    end
+    return ret
+end
 
 #### compare and @compare 
 
