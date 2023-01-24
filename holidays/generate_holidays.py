@@ -1,7 +1,3 @@
-## imports
-# from ..pythonholidays import holidays
-# import sys
-# sys.path.insert(0, "/home/jenj/codecov/holidayspackage")
 import holidays
 from datetime import date, timedelta, datetime
 import numpy as np
