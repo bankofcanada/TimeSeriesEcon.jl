@@ -856,8 +856,18 @@ endperiod(F::Type{HalfYearly{end_month}}) where end_month = end_month
 endperiod(F::Type{Yearly{end_month}}) where end_month = end_month
 
 ## default_frequency
+"""
+    sanitize_frequency(F::Frequency)
+
+Return a concrete frequency type corresponding to the given, possibly abstract,
+frequency type. If `F` is already a concrete type, return `F` itself. Otherwise,
+if a default concrete frequency exists for the given abstract type, return that.
+
+For example, the default `Quarterly` frequency is `Quarterly{3}`.
+"""
 sanitize_frequency(F::Type{<:Frequency}) = F
 sanitize_frequency(F::Type{Weekly}) = Weekly{7}
 sanitize_frequency(F::Type{Quarterly}) = Quarterly{3}
 sanitize_frequency(F::Type{HalfYearly}) = HalfYearly{6}
 sanitize_frequency(F::Type{Yearly}) = Yearly{12}
+export sanitize_frequency

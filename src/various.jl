@@ -372,3 +372,13 @@ function clean_old_frequencies!(ws::Workspace)
         end
     end
 end
+
+"""
+    clean_old_frequencies!
+
+Like [`clean_old_frequencies`](@ref), but in place. 
+"""
+clean_old_frequencies!
+
+export clean_old_frequencies
+export clean_old_frequencies!
