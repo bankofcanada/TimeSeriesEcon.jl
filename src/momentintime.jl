@@ -225,6 +225,7 @@ function frequencyof end
 # Q: should we return `nothing` instead? 
 # A: No. We assume that `frequencyof` returns a subtype of `Frequency`. 
 frequencyof(::T) where T = frequencyof(T)
+frequencyof(F::Type{<:Frequency}) = F
 frequencyof(T::Type) = throw(ArgumentError("$(T) does not have a frequency."))
 frequencyof(::Type{MIT{F}}) where F <: Frequency = F
 frequencyof(::Type{Duration{F}}) where F <: Frequency = F

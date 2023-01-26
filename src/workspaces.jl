@@ -80,6 +80,21 @@ rangeof(w::Workspace; method=intersect) = (
     mapreduce(rangeof, method, iterable)
 )
 
+function frequencyof(w::Workspace; check=false)
+    iterable = (v for v in values(w) if hasmethod(frequencyof, (typeof(v),)))
+    freqs = unique!(mapreduce(frequencyof, vcat, iterable))
+    if length(freqs) == 1
+        return freqs[1]
+    elseif check
+        if isempty(freqs)
+            throw(ArgumentError("The given workspace doesn't have a frequency."))
+        else
+            mixed_freq_error(freqs[1], freqs[2])
+        end
+    else
+        return nothing
+    end
+end
 
 function Base.summary(io::IO, w::Workspace)
     if isempty(w)
@@ -167,4 +182,34 @@ end
 ###########################
 Base.filter(f, w::Workspace) = Workspace(filter(f, _c(w)))
 Base.filter!(f, w::Workspace) = (filter!(f, _c(w)); w)
+
+
+###########################
+_weval_impl(W, sym::Symbol) = :(haskey($W, $(Meta.quot(sym))) ? $W.$sym : $sym)
+_weval_impl(_, any::Any) = any
+_weval_impl(W, EXPR::Expr) = begin
+    if MacroTools.@capture(EXPR, func_(args__))
+        return Expr(:call, func, (_weval_impl(W, a) for a in args)...)
+    elseif MacroTools.@capture(EXPR, $W)
+        return EXPR
+    elseif MacroTools.@capture(EXPR, $W.sym_)
+        return EXPR
+    elseif MacroTools.@capture(EXPR, $W[:sym_])
+        return EXPR
+    else
+        return Expr(EXPR.head, MacroTools.postwalk.(x -> _weval_impl(W, x), EXPR.args)...)
+    end
+end
+
+"""
+    @weval W expression
+
+Evaluate an expression using the members of `Workspace` W as if they were
+variables.
+"""
+macro weval(W, EXPR)
+    return esc(_weval_impl(W, EXPR))
+end
+export @weval
+
 
