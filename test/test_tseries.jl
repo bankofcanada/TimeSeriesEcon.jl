@@ -659,6 +659,7 @@ end
     @test ts2[3U] == ts[2021Q3]
     @test length(ts2) == 10
     @test ts2[-3U] == ts[2020Q1]
+    @test reindex(2022Q4, 2022Q1 => 1U) === 4U
 end
 
 @testset "pct" begin
