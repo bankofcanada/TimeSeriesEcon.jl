@@ -245,6 +245,8 @@ w1 = reindex(w, 2021Q1 => 1U)
 w2 = reindex(w, 2021Q1 => 1U; copy = true)
 w.a[2020Q1] = 9999
 MVTSeries(; w1_a = w1.a, w2_a = w2.a)
+
+reindex(2022Q4, 2022Q1 => 1U) === 4U
 ```
 With a `UnitRange`
 ```
@@ -253,6 +255,10 @@ reindex(2021Q1:2022Q4, 2022Q1 => 1U)
 """
 function reindex end
 export reindex
+
+function reindex(T::MIT{F}, pair::Pair{<:MIT{F},<:MIT}; copy=false) where F <: Frequency
+    return pair[2] + Int(T - pair[1])
+end
 
 function reindex(rng::UnitRange{<:MIT}, pair::Pair{<:MIT,<:MIT}; copy=false)
     T = pair[2] + Int(rng[1] - pair[1])
