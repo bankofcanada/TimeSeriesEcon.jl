@@ -84,6 +84,44 @@ Base.values(t::TSeries) = values(t.values)
 
 
 """
+    cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+
+    Returns the values of a BDaily TSeries filtered according to the provided optional arguments. By default, all values are returned.
+
+    Optional arguments:
+    * `skip_all_nans` : When `true`, returns all values which are not NaN values. Default is `false`.
+    * `skip_holidays` : When `true`, returns all values which do not fall on a holiday according to the holidays map set in TimeSeriesEcon.getoption(:bdaily_holidays_map). Default: `false`.
+    * `holidays_map`  : Returns all values that do not fall on a holiday according to the provided map which must be a BDaily TSeries of Booleans. Default is `nothing`.
+"""
+function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+    if holidays_map !== nothing
+        return bdvalues(t, holidays_map=holidays_map)
+    elseif skip_all_nans
+        return filter(x -> !isnan(x), t.values)
+    elseif skip_holidays
+        h_map = TimeSeriesEcon.getoption(:bdaily_holidays_map)
+        if !(h_map isa TSeries{BDaily})
+            throw(ArgumentError("The holidays map stored in :bdaily_holidays_map is not a TSeries it is a $(typeof(h_map)). \n You may need to load one with TimeSeriesEcon.set_holidays_map()."))
+        end
+        return bdvalues(t, holidays_map=h_map)
+    end
+    return t.values 
+end
+
+function bdvalues(t::TSeries{BDaily}; holidays_map=nothing)
+    if holidays_map === nothing
+        return t.values
+    end
+    if !(holidays_map isa TSeries{BDaily})
+        throw(ArgumentError("Passed holidays_map must be a TSeries{BDaily}"))
+    end
+    @boundscheck checkbounds(holidays_map, first(rangeof(t)))
+    @boundscheck checkbounds(holidays_map, last(rangeof(t)))
+    slice = holidays_map[rangeof(t)]
+    return t.values[slice.values]
+end
+
+"""
     firstdate(x)
 
 Return the first date of the range of allocated storage for the given
@@ -164,43 +202,43 @@ Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, 
 # -------------------------------------------------------------
 
 # construct undefined from range
-TSeries(T::Type{<:Number}, rng::UnitRange{<:MIT}) = TSeries(first(rng), Vector{T}(undef, length(rng)))
-TSeries(rng::UnitRange{<:MIT}) = TSeries(Float64, rng)
+TSeries(T::Type{<:Number}, rng::AbstractUnitRange{<:MIT}) = TSeries(first(rng), Vector{T}(undef, length(rng)))
+TSeries(rng::AbstractUnitRange{<:MIT}) = TSeries(Float64, rng)
 TSeries(fd::MIT) = TSeries(fd .+ (0:-1))
 TSeries(T::Type{<:Number}, fd::MIT) = TSeries(T, fd .+ (0:-1))
 TSeries(n::Integer) = TSeries(1U:n*U)
 TSeries(T::Type{<:Number}, n::Integer) = TSeries(T, 1U:n*U)
-TSeries(rng::UnitRange{<:Integer}) = TSeries(0U .+ rng)
-TSeries(T::Type{<:Number}, rng::UnitRange{<:Integer}) = TSeries(T, 0U .+ rng)
+TSeries(rng::AbstractUnitRange{<:Integer}) = TSeries(0U .+ rng)
+TSeries(T::Type{<:Number}, rng::AbstractUnitRange{<:Integer}) = TSeries(T, 0U .+ rng)
 TSeries(rng::AbstractRange, ::UndefInitializer) = TSeries(Float64, rng)
 TSeries(T::Type{<:Number}, rng::AbstractRange, ::UndefInitializer) = TSeries(T, rng)
-TSeries(rng::UnitRange{<:MIT}, ini::Function) = TSeries(first(rng), ini(length(rng)))
+TSeries(rng::AbstractUnitRange{<:MIT}, ini::Function) = TSeries(first(rng), ini(length(rng)))
 
-Base.similar(::Type{<:AbstractArray}, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT}}) = TSeries(T, shape[1])
-Base.similar(::Type{<:AbstractArray{T}}, shape::Tuple{UnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
-Base.similar(::AbstractArray, T::Type{<:Number}, shape::Tuple{UnitRange{<:MIT}}) = TSeries(T, shape[1])
-Base.similar(::AbstractArray{T}, shape::Tuple{UnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
+Base.similar(::Type{<:AbstractArray}, T::Type{<:Number}, shape::Tuple{AbstractUnitRange{<:MIT}}) = TSeries(T, shape[1])
+Base.similar(::Type{<:AbstractArray{T}}, shape::Tuple{AbstractUnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
+Base.similar(::AbstractArray, T::Type{<:Number}, shape::Tuple{AbstractUnitRange{<:MIT}}) = TSeries(T, shape[1])
+Base.similar(::AbstractArray{T}, shape::Tuple{AbstractUnitRange{<:MIT}}) where {T<:Number} = TSeries(T, shape[1])
 
 # construct from range and fill with the given constant or array
-Base.fill(v, shape::Tuple{UnitRange{<:MIT}}) = fill(v, shape...)
-Base.fill(v, rng::UnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
-TSeries(rng::UnitRange{<:MIT}, v::Number) = fill(v, rng)
-TSeries(rng::UnitRange{<:MIT}, v::AbstractVector{<:Number}) =
+Base.fill(v, shape::Tuple{AbstractUnitRange{<:MIT}}) = fill(v, shape...)
+Base.fill(v, rng::AbstractUnitRange{<:MIT}) = TSeries(first(rng), fill(v, length(rng)))
+TSeries(rng::AbstractUnitRange{<:MIT}, v::Number) = fill(v, rng)
+TSeries(rng::AbstractUnitRange{<:MIT}, v::AbstractVector{<:Number}) =
     length(rng) == length(v) ? TSeries(first(rng), v) : throw(ArgumentError("Range and data lengths mismatch."))
 
 for (fname, felt) in ((:zeros, :zero), (:ones, :one))
     @eval begin
-        Base.$fname(rng::UnitRange{<:MIT}) = fill($felt(Float64), rng)
-        Base.$fname(::Type{T}, rng::UnitRange{<:MIT}) where {T} = fill($felt(T), rng)
-        Base.$fname(shape::Tuple{UnitRange{<:MIT}}) = fill($felt(Float64), shape)
-        Base.$fname(::Type{T}, shape::Tuple{UnitRange{<:MIT}}) where {T} = fill($felt(T), shape)
+        Base.$fname(rng::AbstractUnitRange{<:MIT}) = fill($felt(Float64), rng)
+        Base.$fname(::Type{T}, rng::AbstractUnitRange{<:MIT}) where {T} = fill($felt(T), rng)
+        Base.$fname(shape::Tuple{AbstractUnitRange{<:MIT}}) = fill($felt(Float64), shape)
+        Base.$fname(::Type{T}, shape::Tuple{AbstractUnitRange{<:MIT}}) where {T} = fill($felt(T), shape)
     end
 end
 
 for (fname, felt) in ((:trues, true), (:falses, false))
     @eval begin
-        Base.$fname(rng::UnitRange{<:MIT}) = TSeries(rng, $fname(length(rng)))
-        Base.$fname(shape::Tuple{UnitRange{<:MIT}}) = TSeries(shape[1], $fname(length(shape[1])))
+        Base.$fname(rng::AbstractUnitRange{<:MIT}) = TSeries(rng, $fname(length(rng)))
+        Base.$fname(shape::Tuple{AbstractUnitRange{<:MIT}}) = TSeries(shape[1], $fname(length(shape[1])))
     end
 end
 
@@ -266,7 +304,7 @@ end
 
 @inline _ind_range_check(x, rng::MIT) = _ind_range_check(x, rng:rng)
 @inline _ind_range_check(x, rng::StepRange{<:MIT}) = _ind_range_check(x, first(rng):last(rng))
-function _ind_range_check(x, rng::UnitRange{<:MIT})
+function _ind_range_check(x, rng::AbstractUnitRange{<:MIT})
     fi = firstindex(x.values, 1)
     fd = firstdate(x)
     stop = oftype(fi, fi + (last(rng) - fd))
@@ -283,7 +321,7 @@ function Base.getindex(t::TSeries{F}, rng::StepRange{MIT{F},Duration{F}}) where 
     step = oftype(stop - start, rng.step)
     return t.values[start:step:stop]
 end
-function Base.getindex(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
+function Base.getindex(t::TSeries{F}, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(t, rng)
     return TSeries(first(rng), getindex(t.values, start:stop))
 end
@@ -379,8 +417,8 @@ Extend or shrink the allocated storage for `t` so that the new range of `t`
 equals the given `rng`. If `t` is extended, new entries are set to `NaN`, or the
 appropriate Not-A-Number value (see [`typenan`](@ref)).
 """
-Base.resize!(t::TSeries, rng::UnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
-function Base.resize!(t::TSeries{F}, rng::UnitRange{MIT{F}}) where {F<:Frequency}
+Base.resize!(t::TSeries, rng::AbstractUnitRange{<:MIT}) = mixed_freq_error(t, eltype(rng))
+function Base.resize!(t::TSeries{F}, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     orng = rangeof(t)  # old range
     if first(rng) == first(orng)
         # if the beginning doesn't change we fallback on resize!(t, n)
@@ -440,11 +478,11 @@ given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
 Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
+Base.diff(x::TSeries{BDaily}, k::Integer=-1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = x - lag(x, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
 end
-
 
 """
     pct(x; islog=false)
@@ -464,6 +502,20 @@ function pct(ts::TSeries, shift_value::Int=-1; islog::Bool=false)
 
     TSeries(result.firstdate, result.values)
 end
+function pct(ts::TSeries{BDaily}, shift_value::Int=-1; islog::Bool=false, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing)
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+    else
+        a = ts
+        b = shift(ts, shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+    end
+
+    result = @. ((a - b) / b) * 100
+
+    TSeries(result.firstdate, result.values)
+end
+
 export pct
 
 """
@@ -476,7 +528,7 @@ Examples
 julia> x = TSeries(qq(2018, 1), Vector(1:8));
 
 julia> apct(x)
-TSeries{Quarterly} of length 7
+TSeries{Quarterly{3}} of length 7
 2018Q2: 1500.0
 2018Q3: 406.25
 2018Q4: 216.04938271604937

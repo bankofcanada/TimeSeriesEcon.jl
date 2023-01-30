@@ -34,19 +34,26 @@ using RecipesBase
 using OrderedCollections
 
 # standard library
+using LinearAlgebra
 using Statistics
 using Serialization
 using Distributed
+using Dates
+using TOML
+
+include("options.jl")
 
 include("momentintime.jl")
 export MIT, Duration
 # export mm, qq, yy
-export Monthly, Quarterly, Yearly, Frequency, YPFrequency, Unit
+export daily, bdaily
+export Daily, BDaily, Weekly, Monthly, Quarterly, HalfYearly, Yearly, Frequency, YPFrequency, Unit, CalendarFrequency
 export year, period, mit2yp, ppy
 export frequencyof
-export U, Y, Q1, Q2, Q3, Q4
+export U, Y, H1, H2, Q1, Q2, Q3, Q4
 export M1, M2, M3, M4, M5, M6
 export M7, M8, M9, M10, M11, M12
+export @d_str, @bd_str, @w_str
 
 include("tseries.jl")
 export TSeries
@@ -62,7 +69,7 @@ export overlay, fconvert
 
 include("mvtseries.jl")
 export MVTSeries
-export rawdata, colnames, columns
+export rawdata, colnames, columns, cleanedvalues
 
 include("recursive.jl")
 export @rec
@@ -75,6 +82,7 @@ include("serialize.jl")
 
 include("various.jl")
 
+include("linalg.jl")
 
 """
     rangeof(s; drop::Integer)
@@ -95,7 +103,7 @@ julia> rangeof(q; drop=-4)
 julia> q[begin:begin+1] .= 1;
 julia> @rec rangeof(q; drop=2) q[t] = q[t-1] + q[t-2];
 julia> q
-8-element TSeries{Quarterly} with range 20Q1:21Q4:
+8-element TSeries{Quarterly{3}} with range 20Q1:21Q4:
     20Q1 : 1.0
     20Q2 : 1.0
     20Q3 : 2.0

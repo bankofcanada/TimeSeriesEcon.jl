@@ -107,13 +107,13 @@
         work5 = Workspace()
         work5.A = TSeries(86Y, zeros(300))
 
-        @test TimeSeriesEcon.compare_equal(work1, work2) == true
-        @test TimeSeriesEcon.compare_equal(work1, work3) == false
-        @test TimeSeriesEcon.compare_equal(work4, work5) == true
-        @test TimeSeriesEcon.compare(work1, work2) == true
-        @test TimeSeriesEcon.compare(work1, work3) == false
-        @test TimeSeriesEcon.compare(work4, work5) == true
-    end
+        @test TimeSeriesEcon.compare_equal(work1, work2; quiet=true) == true
+        @test TimeSeriesEcon.compare_equal(work1, work3; quiet=true) == false
+        @test TimeSeriesEcon.compare_equal(work4, work5; quiet=true) == true
+        @test TimeSeriesEcon.compare(work1, work2; quiet=true) == true
+        @test TimeSeriesEcon.compare(work1, work3; quiet=true) == false
+        @test TimeSeriesEcon.compare(work4, work5; quiet=true) == true
+    end;
 
     # reindexing
     let work1 = Workspace()
@@ -144,4 +144,47 @@
         @test work2.ts2[begin] == work1.ts2[begin]
 
     end
+end
+
+@testset "clean old workspace" begin
+    m1 = reinterpret(MIT{Quarterly}, 8088)
+    m2 = reinterpret(MIT{Quarterly}, 8094)
+    @test frequencyof(m1) == Quarterly
+    # note: these series can't be displayed due to implicit conversion
+    # resulting in mixed frequency errors
+    t1 = TSeries(m1, collect(1:10));
+    t2 = TSeries(m1, collect(11:20));
+    t3 = TSeries(m1, collect(21:30));
+    t4 = TSeries(m1, collect(31:40));
+    t5 = TSeries(m1, collect(41:50));
+    t6 = TSeries(m1, collect(51:60));
+    t7 = TSeries(m1, collect(61:70));
+    t8 = TSeries(m1, collect(71:80));
+    t9 = TSeries(m1, collect(81:90));
+    t10 = TSeries(m1, collect(91:100));
+    @test frequencyof(t1) == Quarterly
+    cleaned_m1 = TimeSeriesEcon.clean_old_frequencies(m1)
+    @test typeof(cleaned_m1) == MIT{Quarterly{3}}
+    cleaned_t1 = TimeSeriesEcon.clean_old_frequencies(t1)
+    @test typeof(cleaned_t1) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+
+    ws = Workspace(:a => t1, :b => t2, :c=> m1, :d => Workspace(:e => t4, :f => t5));
+    cleaned_ws = TimeSeriesEcon.clean_old_frequencies(ws)
+    @test typeof(cleaned_ws.a) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+    @test typeof(cleaned_ws.b) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+    @test typeof(cleaned_ws.c) == MIT{Quarterly{3}}
+    @test typeof(cleaned_ws.d.e) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+    @test typeof(cleaned_ws.d.f) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+
+    ws2 = Workspace(:a => t1, :b => t2, :c=> m1, :d => Workspace(:e => t4, :f => t5));
+    @test typeof(ws2.a) == TSeries{Quarterly, Int64, Vector{Int64}}
+    @test typeof(ws2.c) == MIT{Quarterly}
+    TimeSeriesEcon.clean_old_frequencies!(ws2)
+    @test typeof(ws2.a) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+    @test typeof(ws2.b) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+    @test typeof(ws2.c) == MIT{Quarterly{3}}
+    @test typeof(ws2.d.e) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+    @test typeof(ws2.d.f) == TSeries{Quarterly{3}, Int64, Vector{Int64}}
+
+    # Note: no test for MVTSeries
 end

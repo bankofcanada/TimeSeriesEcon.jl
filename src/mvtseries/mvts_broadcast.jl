@@ -27,8 +27,6 @@ function Base.similar(bc::Broadcast.Broadcasted{<:MVTSeriesStyle}, ::Type{ElType
     end
 end
 
-const _MVTSAxesType = Tuple{<:AbstractUnitRange{<:MIT},NTuple{N,Symbol}} where {N}
-
 @inline Base.Broadcast._eachindex(t::_MVTSAxesType) = CartesianIndices(map(length, t))
 
 #----------------------
@@ -78,7 +76,7 @@ function Base.Broadcast.preprocess(dest::MVTSeries, x::AbstractArray)
     Base.Broadcast.preprocess(_vals(dest), x)
 end
 
-function Base.Broadcast.preprocess(::MVTSeries, x::Number)
+function Base.Broadcast.preprocess(dest::MVTSeries, x::Number)
     # Base.Broadcast.extrude(x)
     Base.Broadcast.preprocess(_vals(dest), x)
 end

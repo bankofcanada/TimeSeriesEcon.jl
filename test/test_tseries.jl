@@ -5,7 +5,7 @@ import TimeSeriesEcon: qq, mm, yy
 @testset "TSeries" begin
     # test constructors
     s = TSeries(20Q1, collect(10.0 .+ (1:12)))
-    @test typeof(s) === TSeries{Quarterly,Float64,Array{Float64,1}}
+    @test typeof(s) === TSeries{Quarterly{3},Float64,Array{Float64,1}}
     @test size(s) == (12,)
     @test axes(s) == (20Q1:22Q4,)
     @test length(s) == 12
@@ -22,7 +22,7 @@ import TimeSeriesEcon: qq, mm, yy
 
     # constructing with similar()
     t = similar(ones(Float64, 5), (2Q1:4Q4))
-    @test typeof(t) === TSeries{Quarterly,Float64,Vector{Float64}} && t.firstdate == 2Q1 && length(t.values) == 12
+    @test typeof(t) === TSeries{Quarterly{3},Float64,Vector{Float64}} && t.firstdate == 2Q1 && length(t.values) == 12
 
     # indexing
     @test s[1] == 11.0
@@ -77,9 +77,9 @@ import TimeSeriesEcon: qq, mm, yy
     # similar with an abstract array
     val = Float32(22.3)
     t2 = similar(typeof([val]), (2Q1:4Q4))
-    @test typeof(t2) === TSeries{Quarterly,Float32,Vector{Float32}} && t2.firstdate == 2Q1 && length(t2.values) == 12
+    @test typeof(t2) === TSeries{Quarterly{3},Float32,Vector{Float32}} && t2.firstdate == 2Q1 && length(t2.values) == 12
     t3 = similar([val], (2Q1:4Q4))
-    @test typeof(t3) === TSeries{Quarterly,Float32,Vector{Float32}} && t3.firstdate == 2Q1 && length(t3.values) == 12
+    @test typeof(t3) === TSeries{Quarterly{3},Float32,Vector{Float32}} && t3.firstdate == 2Q1 && length(t3.values) == 12
 
     # fill
     t4 = fill(2, (20Y:22Y))
@@ -175,6 +175,29 @@ end
 
     #additional tests for code coverage
     @test Base.Broadcast._eachindex((1U:4U,)) == 1:4
+
+    t2 = TSeries(5U:10U, collect(1:6))
+    r2 = t2 .+ 5
+    t3 = t2 .+ r2
+    @test Base.Broadcast.preprocess(t2, r2).x ≈ [6, 7, 8, 9, 10, 11]
+    @test Base.Broadcast.preprocess(t2, r2).keeps == (true, )
+    @test Base.Broadcast.preprocess(t2, r2).defaults == (1, )
+
+    Base.Broadcast.check_broadcast_shape((1U:10U,), (1,)) == nothing
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((10,), (1U:10U,))
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((2U:11U,), (1U:10U,))
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).keeps == (true, )
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).defaults == (1, )
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).x == [1,2,3,4,5,6,7,8,9,10]
+    @test Base.Broadcast.BroadcastStyle(TimeSeriesEcon.TSeriesStyle{Monthly}(), TimeSeriesEcon.TSeriesStyle{Monthly}()) == TimeSeriesEcon.TSeriesStyle{Monthly}()
+    bcStyle = TimeSeriesEcon.TSeriesStyle{Monthly}()
+    bcStyle2 = TimeSeriesEcon.TSeriesStyle{Unit}()
+    
+    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.TSeriesStyle{Monthly}}(Monthly, (1, ))
+    @test_throws DimensionMismatch Base.similar(bcasted, Float64)
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((1U:10U,), (10, ))
+    @test Base.Broadcast.check_broadcast_shape((1U:10U,), ()) === nothing
+    @test Base.Broadcast.preprocess(t2, 10.0) == 10
 
 end
 
@@ -286,8 +309,8 @@ end
     tu = TSeries(11U, copy(tq.values))
 
     tmp = tq .* 5
-    @test 5tq isa TSeries{Quarterly} 
-    @test tq * 5 isa TSeries{Quarterly} 
+    @test 5tq isa TSeries{Quarterly{3}} 
+    @test tq * 5 isa TSeries{Quarterly{3}} 
     @test 5tq == tmp
     @test tq * 5 == tmp
     @test (5tm).values == (5tq).values && 5tm ≠ 5tq
@@ -546,7 +569,7 @@ end
     @test fconvert(Monthly, q, method=:const).values == repeat(1.0:10, inner=3)
 
     yq = fconvert(Yearly, q)
-    @test typeof(yq) === TSeries{Yearly, Float64, Vector{Float64}}
+    @test typeof(yq) === TSeries{Yearly{12}, Float64, Vector{Float64}}
     @test fconvert(Yearly, q, method=:mean).values == [2.5, 6.5]
     @test fconvert(Yearly, q, method=:end).values == [4.0, 8.0]
     @test fconvert(Yearly, q, method=:begin).values == [1.0, 5.0]
@@ -623,6 +646,12 @@ end
     c = TSeries(89Y, ones(7)*1.1)
     @test TimeSeriesEcon.compare_equal(a, c) == false
     @test TimeSeriesEcon.compare_equal(a, c, atol=0.3) == true
+
+    # test with nans
+    d = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
+    e = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
+    @test TimeSeriesEcon.compare(d, e, nans=true, quiet=true) == true
+    
        
     #reindexing
     ts = TSeries(2020Q1,randn(10))
@@ -630,6 +659,7 @@ end
     @test ts2[3U] == ts[2021Q3]
     @test length(ts2) == 10
     @test ts2[-3U] == ts[2020Q1]
+    @test reindex(2022Q4, 2022Q1 => 1U) === 4U
 end
 
 @testset "pct" begin
