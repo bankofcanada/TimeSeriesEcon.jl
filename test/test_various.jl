@@ -39,8 +39,8 @@
     x4.j = collect(2:2)
 
 
-    @test adjoint(s) ≈ reshape(collect(10.0 .+ (1:12)), (1,12))
-    @test adjoint(x) ≈  [a'; b']
+    @test adjoint(s) ≈ reshape(collect(10.0 .+ (1:12)), (1, 12))
+    @test adjoint(x) ≈ [a'; b']
 
     @test x / x2 == TimeSeriesEcon._vals(x) / TimeSeriesEcon._vals(x2)
     @test x / TimeSeriesEcon._vals(x2) == TimeSeriesEcon._vals(x) / TimeSeriesEcon._vals(x2)
@@ -61,7 +61,7 @@ end
     @test findall(tb) isa Vector{Int}
     @test length(findall(tb)) == sum(tb)
     # findall works for MVTSeries
-    tv = MVTSeries(2000Q1, (:a, :b, :c), rand(10,3))
+    tv = MVTSeries(2000Q1, (:a, :b, :c), rand(10, 3))
     tm = tv .> 0.5
     @test findall(tm) isa Vector{CartesianIndex{2}}
     @test length(findall(tm)) == sum(tm)
@@ -69,20 +69,65 @@ end
     # getindex works with TSeries of Bool
     @test tt.values[tb.values] == tt[tb]
     # setindex works with TSeries of Bool
-    @test (tt[tb] = 0.1.+(1:sum(tb)); (tt.>1) == tb)
+    @test (tt[tb] = 0.1 .+ (1:sum(tb)); (tt .> 1) == tb)
     # broadcasting works with TSeries of Bool
     @test (tt[tb] .= -1.0; tb == (tt .< 0.0))
-    
+
     # getindex works with MVTSeries of Bool
     @test tv.values[tm.values] == tv[tm]
     # setindex works with MVTSeries of Bool
-    @test (tv[tm] = 0.1.+(1:sum(tm)); (tv.>1) == tm)
+    @test (tv[tm] = 0.1 .+ (1:sum(tm)); (tv .> 1) == tm)
     # broadcasting works with MVTSeries of Bool
     @test (tv[tm] .= -1.0; tm == (tv .< 0.0))
-    
-    @test (tv[tb] == tv.values[tb.values,:])
-    @test (tv[tb] = -1000*ones(sum(tb), 3); sum(tv[tb]) == -1000*3*sum(tb))
-    @test (tv[tb] .= -1000; sum(tv[tb]) == -1000*3*sum(tb))
+
+    @test (tv[tb] == tv.values[tb.values, :])
+    @test (tv[tb] = -1000 * ones(sum(tb), 3); sum(tv[tb]) == -1000 * 3 * sum(tb))
+    @test (tv[tb] .= -1000; sum(tv[tb]) == -1000 * 3 * sum(tb))
 
 
+end
+
+@testset "overlay2" begin
+    a = MVTSeries(20Q1, (:a, :b, :c), ones(7, 3))
+    b = MVTSeries(21Q1, (:q, :b, :c, :f), 10 .+ 0.1 * ones(10, 4))
+    c = overlay(a, b)
+    @test c isa MVTSeries
+    @test frequencyof(c) == frequencyof(b) == frequencyof(a)
+    @test rangeof(c) == 20Q1:23Q2
+    @test axes(c, 2) == [:a, :b, :c, :q, :f]
+    @test isapprox(c, [
+            1.0 1.0 1.0 NaN NaN
+            1.0 1.0 1.0 NaN NaN
+            1.0 1.0 1.0 NaN NaN
+            1.0 1.0 1.0 NaN NaN
+            1.0 1.0 1.0 10.1 10.1
+            1.0 1.0 1.0 10.1 10.1
+            1.0 1.0 1.0 10.1 10.1
+            NaN 10.1 10.1 10.1 10.1
+            NaN 10.1 10.1 10.1 10.1
+            NaN 10.1 10.1 10.1 10.1
+            NaN 10.1 10.1 10.1 10.1
+            NaN 10.1 10.1 10.1 10.1
+            NaN 10.1 10.1 10.1 10.1
+            NaN 10.1 10.1 10.1 10.1], nans=true)
+    d = overlay(b, a)
+    @test c isa MVTSeries
+    @test frequencyof(d) == frequencyof(b) == frequencyof(a)
+    @test rangeof(d) == 20Q1:23Q2
+    @test axes(d, 2) == [:q, :b, :c, :f, :a]
+    @test isapprox(d, [
+            NaN 1.0 1.0 NaN 1.0
+            NaN 1.0 1.0 NaN 1.0
+            NaN 1.0 1.0 NaN 1.0
+            NaN 1.0 1.0 NaN 1.0
+            10.1 10.1 10.1 10.1 1.0
+            10.1 10.1 10.1 10.1 1.0
+            10.1 10.1 10.1 10.1 1.0
+            10.1 10.1 10.1 10.1 NaN
+            10.1 10.1 10.1 10.1 NaN
+            10.1 10.1 10.1 10.1 NaN
+            10.1 10.1 10.1 10.1 NaN
+            10.1 10.1 10.1 10.1 NaN
+            10.1 10.1 10.1 10.1 NaN
+            10.1 10.1 10.1 10.1 NaN], nans=true)
 end

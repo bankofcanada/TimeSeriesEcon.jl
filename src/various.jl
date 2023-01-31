@@ -86,9 +86,24 @@ function overlay(workspaces::LikeWorkspace...)
     return ret
 end
 
-# overlay(stuff::Vararg{LikeWorkspace}) =
-#     Workspace(mergewith(overlay, (_c(w) for w in stuff)...))
+"""
+    overlay(data::MVTSeries, datan::MVTSeries...)
 
+When all arguments are `MVTSeries` the result is an `MVTSeries` of the overlayed
+range and the ordered union of the columns. Each column is an overlay of the
+corresponding `TSeries`.
+"""
+function overlay(args::MVTSeries...)
+    isempty(args) && return MVTSeries()
+    rng = mapreduce(rangeof, union, args)
+    names = collect(mapfoldl(keys, union, args, init=OrderedSet{Symbol}()))
+    ET = mapreduce(eltype, promote_type, args)
+    ret = MVTSeries(rng, names, typenan(ET))
+    for name in names
+        ret[:, name] .= overlay(rng, (arg[name] for arg in args if name in keys(arg))...)
+    end
+    return ret
+end
 
 #### compare and @compare 
 
@@ -120,7 +135,7 @@ export compare, @compare
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
 @inline compare_equal(x::Number, y::Number; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
 @inline compare_equal(x::AbstractVector{<:Number}, y::AbstractVector{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
-function compare_equal(x::TSeries, y::TSeries; trange=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
+function compare_equal(x::TSeries, y::TSeries; trange::Union{Nothing, AbstractUnitRange{<:MIT}}=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
     if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
         trange = intersect(rangeof(x), rangeof(y))
     end
@@ -230,6 +245,8 @@ w1 = reindex(w, 2021Q1 => 1U)
 w2 = reindex(w, 2021Q1 => 1U; copy = true)
 w.a[2020Q1] = 9999
 MVTSeries(; w1_a = w1.a, w2_a = w2.a)
+
+reindex(2022Q4, 2022Q1 => 1U) === 4U
 ```
 With a `UnitRange`
 ```
@@ -238,6 +255,10 @@ reindex(2021Q1:2022Q4, 2022Q1 => 1U)
 """
 function reindex end
 export reindex
+
+function reindex(T::MIT{F}, pair::Pair{<:MIT{F},<:MIT}; copy=false) where F <: Frequency
+    return pair[2] + Int(T - pair[1])
+end
 
 function reindex(rng::UnitRange{<:MIT}, pair::Pair{<:MIT,<:MIT}; copy=false)
     T = pair[2] + Int(rng[1] - pair[1])
@@ -357,3 +378,13 @@ function clean_old_frequencies!(ws::Workspace)
         end
     end
 end
+
+"""
+    clean_old_frequencies!
+
+Like [`clean_old_frequencies`](@ref), but in place. 
+"""
+clean_old_frequencies!
+
+export clean_old_frequencies
+export clean_old_frequencies!

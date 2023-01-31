@@ -607,7 +607,7 @@ end
     # test with nans
     d = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
     e = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
-    @test TimeSeriesEcon.compare(d, e, nans=true) == true
+    @test TimeSeriesEcon.compare(d, e, nans=true, quiet=true) == true
     
        
     #reindexing
@@ -616,6 +616,7 @@ end
     @test ts2[3U] == ts[2021Q3]
     @test length(ts2) == 10
     @test ts2[-3U] == ts[2020Q1]
+    @test reindex(2022Q4, 2022Q1 => 1U) === 4U
 end
 
 @testset "pct" begin

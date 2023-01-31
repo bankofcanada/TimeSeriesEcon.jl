@@ -57,8 +57,11 @@ Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] 
 
 MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
-MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!, Base.push!, Base.delete!)
+MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
 MacroTools.@forward Workspace._c (Base.eltype,)
+
+Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
+Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
 @inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
 Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
@@ -72,11 +75,26 @@ of all [`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of
 `w`. If there are objects of different frequencies there will be a
 mixed-frequency error.
 """
-rangeof(w::Workspace; method = intersect) = (
+rangeof(w::Workspace; method=intersect) = (
     iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));
     mapreduce(rangeof, method, iterable)
 )
 
+function frequencyof(w::Workspace; check=false)
+    iterable = (v for v in values(w) if hasmethod(frequencyof, (typeof(v),)))
+    freqs = unique!(mapreduce(frequencyof, vcat, iterable))
+    if length(freqs) == 1
+        return freqs[1]
+    elseif check
+        if isempty(freqs)
+            throw(ArgumentError("The given workspace doesn't have a frequency."))
+        else
+            mixed_freq_error(freqs[1], freqs[2])
+        end
+    else
+        return nothing
+    end
+end
 
 function Base.summary(io::IO, w::Workspace)
     if isempty(w)
@@ -162,6 +180,36 @@ function strip!(w::Workspace; recursive=true)
 end
 
 ###########################
-Base.filter(f,w::Workspace) = Workspace(filter(f,_c(w)))
-Base.filter!(f,w::Workspace) = (filter!(f,_c(w)); w)
+Base.filter(f, w::Workspace) = Workspace(filter(f, _c(w)))
+Base.filter!(f, w::Workspace) = (filter!(f, _c(w)); w)
+
+
+###########################
+_weval_impl(W, sym::Symbol) = :(haskey($W, $(Meta.quot(sym))) ? $W.$sym : $sym)
+_weval_impl(_, any::Any) = any
+_weval_impl(W, EXPR::Expr) = begin
+    if MacroTools.@capture(EXPR, func_(args__))
+        return Expr(:call, func, (_weval_impl(W, a) for a in args)...)
+    elseif MacroTools.@capture(EXPR, $W)
+        return EXPR
+    elseif MacroTools.@capture(EXPR, $W.sym_)
+        return EXPR
+    elseif MacroTools.@capture(EXPR, $W[:sym_])
+        return EXPR
+    else
+        return Expr(EXPR.head, MacroTools.postwalk.(x -> _weval_impl(W, x), EXPR.args)...)
+    end
+end
+
+"""
+    @weval W expression
+
+Evaluate an expression using the members of `Workspace` W as if they were
+variables.
+"""
+macro weval(W, EXPR)
+    return esc(_weval_impl(W, EXPR))
+end
+export @weval
+
 
