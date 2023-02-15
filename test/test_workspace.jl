@@ -204,4 +204,9 @@ end
     delete!(w, :d)
     @test frequencyof(w) <: Quarterly
     
+    w.w = Workspace(a=20Y, b=20Y-20Y)
+    w.b1 = @weval w b + a
+    w.α = @weval w  sin(pi) + w[:a] - w.a
+    @test frequencyof(w) isa Nothing
+    
 end
