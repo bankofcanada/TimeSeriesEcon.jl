@@ -80,16 +80,32 @@ rangeof(w::Workspace; method=intersect) = (
     mapreduce(rangeof, method, iterable)
 )
 
+_has_frequencyof(::Type{Workspace}) = true
+_has_frequencyof(::T) where T = _has_frequencyof(T)
+_has_frequencyof(::Type{<:MIT}) = true
+_has_frequencyof(::Type{<:Duration}) = true
+_has_frequencyof(::Type{<:AbstractArray{T}}) where T = _has_frequencyof(T)
+function _has_frequencyof(::Type{T}) where T 
+    try
+        frequencyof(T)
+        return true
+    catch
+        return false
+    end
+end
+
 function frequencyof(w::Workspace; check=false)
-    iterable = (v for v in values(w) if hasmethod(frequencyof, (typeof(v),)))
-    freqs = unique!(mapreduce(frequencyof, vcat, iterable))
+    iterable = (v for v in values(w) if _has_frequencyof(v))
+    freqs = mapreduce(frequencyof, vcat, iterable; init=Frequency[])
+    filter!(!isnothing, freqs)
+    unique!(freqs)
     if length(freqs) == 1
         return freqs[1]
     elseif check
         if isempty(freqs)
             throw(ArgumentError("The given workspace doesn't have a frequency."))
         else
-            mixed_freq_error(freqs[1], freqs[2])
+            throw(ArgumentError("The given workspace has multiple frequencies: $((freqs...,))."))
         end
     else
         return nothing
