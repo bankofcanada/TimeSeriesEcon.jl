@@ -92,11 +92,11 @@ function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; 
     N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t; kwargs...) : _fconvert_lower(F_to, t; kwargs...)
 end
 
-fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, values_base=:end) where {end_day} = _fconvert_higher(F_to, t, method=method, values_base=values_base)
-fconvert(F_to::Type{<:Union{Yearly{N},HalfYearly{N},Quarterly{N},Monthly,Weekly{N}}}, t::TSeries{<:Union{Daily, BDaily, <:Weekly}}; method=:mean, values_base=:end) where {N} = _fconvert_lower(F_to, t, method=method, values_base=values_base)
-fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, values_base=:end) = _fconvert_higher(F_to, t, method=method, values_base=values_base)
-fconvert(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, values_base=:begin) = _fconvert_lower(F_to, t, method=method, values_base=values_base)
-fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, values_base=:end) = _fconvert_higher(F_to, t, method=method, values_base=values_base)
+fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, values_base=:end) where {end_day} = _fconvert_higher(F_to, t; method=method, values_base=values_base)
+fconvert(F_to::Type{<:Union{Yearly{N},HalfYearly{N},Quarterly{N},Monthly,Weekly{N}}}, t::TSeries{<:Union{Daily, BDaily, <:Weekly}}; method=:mean, values_base=:end, kwargs...) where {N} = _fconvert_lower(F_to, t; method=method, values_base=values_base, kwargs...)
+fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, values_base=:end) = _fconvert_higher(F_to, t; method=method, values_base=values_base)
+fconvert(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, values_base=:begin) = _fconvert_lower(F_to, t; method=method, values_base=values_base)
+fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, values_base=:end) = _fconvert_higher(F_to, t; method=method, values_base=values_base)
 function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, values_base=:end, errors=true, args...) where {N1,N2}
     (np, r) = divrem(N1, N2)
     
