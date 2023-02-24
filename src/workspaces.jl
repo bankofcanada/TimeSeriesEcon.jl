@@ -236,3 +236,11 @@ end
 export @weval
 
 
+function Base.copyto!(x::MVTSeries, w::Workspace, range::AbstractUnitRange{<:MIT}=rangeof(x))
+    for (key, value) in pairs(x)
+        copyto!(value, range, w[key])
+    end
+    return x
+end
+
+
