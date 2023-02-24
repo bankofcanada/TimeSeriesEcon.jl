@@ -134,12 +134,24 @@ export compare, @compare
 
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
 @inline compare_equal(x::Number, y::Number; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
-@inline compare_equal(x::AbstractVector{<:Number}, y::AbstractVector{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
+@inline compare_equal(x::AbstractArray{<:Number}, y::AbstractArray{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
 function compare_equal(x::TSeries, y::TSeries; trange::Union{Nothing, AbstractUnitRange{<:MIT}}=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
     if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
         trange = intersect(rangeof(x), rangeof(y))
     end
     isempty(trange) || isapprox(x[trange], y[trange]; atol, rtol, nans)
+end
+
+function compare_equal(x::AbstractArray, y::AbstractArray; kwargs...)
+    equal = true
+    for i in union(eachindex(x), eachindex(y))
+        xval = i ∈ eachindex(x) ? x[i] : missing
+        yval = i ∈ eachindex(y) ? y[i] : missing
+        if !compare(xval, yval, Symbol(i); kwargs...)
+            equal = false
+        end
+    end
+    return equal
 end
 
 function compare_equal(x::LikeWorkspace, y::LikeWorkspace; kwargs...)
