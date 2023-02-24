@@ -45,9 +45,21 @@ end
 # MIT Calendar => YP + Weekly
 function fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, MIT_from::MIT{<:Union{Daily, BDaily, <:Weekly}}; values_base=:end, round_to=:current)
     if values_base == :end
-        return _get_out_indices(F_to, [Dates.Date(MIT_from, :end)])[begin]
+        return _get_out_indices(sanitize_frequency(F_to), [Dates.Date(MIT_from, :end)])[begin]
     elseif values_base == :begin
-        return _get_out_indices(F_to, [Dates.Date(MIT_from, :begin)])[begin]
+        return _get_out_indices(sanitize_frequency(F_to), [Dates.Date(MIT_from, :begin)])[begin]
+    end
+
+    # error checking
+    throw(ArgumentError("values_base argument must be :begin or :end. Received: $(values_base)."))
+end
+
+# MIT YP => Weekly
+function fconvert(F_to::Type{<:Weekly}, MIT_from::MIT{<:YPFrequency}; values_base=:end, round_to=:current)
+    if values_base == :end
+        return _get_out_indices(sanitize_frequency(F_to), [Dates.Date(MIT_from, :end)])[begin]
+    elseif values_base == :begin
+        return _get_out_indices(sanitize_frequency(F_to), [Dates.Date(MIT_from, :begin)])[begin]
     end
 
     # error checking
@@ -75,8 +87,8 @@ function fconvert(F_to::Type{BDaily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequen
 end
 
 # MIT => Daily
-fconvert(F_to::Type{Daily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency}}, values_base=:end, round_to=:current) = daily(Dates.Date(MIT_from, values_base))
-function fconvert(F_to::Type{<:Daily}, MIT_from::MIT{BDaily}, values_base=:end, round_to=:current)
+fconvert(F_to::Type{Daily}, MIT_from::MIT{<:Union{<:Weekly,<:YPFrequency}}; values_base=:end, round_to=:current) = daily(Dates.Date(MIT_from, values_base))
+function fconvert(F_to::Type{<:Daily}, MIT_from::MIT{BDaily}; values_base=:end, round_to=:current)
     mod = Int(MIT_from) % 5
     if mod == 0
         mod = 5
@@ -146,8 +158,8 @@ fconvert(Quarterly, 2022M2:2022M7, trim=:both) => 2022Q2:2022Q2
 """
 # MIT range: YP => YP
 function fconvert(F_to::Type{<:YPFrequency}, range_from::UnitRange{<:MIT{<:YPFrequency}}; trim=:both, parts=false)
-    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, first(range_from), values_base=:begin)
-    li_to_period, li_from_end_month, li_to_end_month = fconvert_parts(F_to, last(range_from), values_base=:end)
+    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(sanitize_frequency(F_to), first(range_from), values_base=:begin)
+    li_to_period, li_from_end_month, li_to_end_month = fconvert_parts(sanitize_frequency(F_to), last(range_from), values_base=:end)
     
     if parts
         return fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month
@@ -163,7 +175,7 @@ end
 
 
 # range: YP + Calendar => YP + Weekly (excl. YP => YP)
-fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{Daily, BDaily, <:Weekly}}}; trim=:both, errors=true) = _fconvert_using_dates(F_to, range_from, trim=trim, errors=errors)
+fconvert(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{Daily, BDaily, <:Weekly}}}; trim=:both, errors=true) = _fconvert_using_dates(sanitize_frequency(F_to), range_from, trim=trim, errors=errors)
 fconvert(F_to::Type{<:Union{<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:YPFrequency}}}; trim=:both, errors=true) = _fconvert_using_dates(F_to, range_from, trim=trim, errors=errors)
 function _fconvert_using_dates(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency}}}; trim=:both, errors=true)
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, range_from, trim=trim, errors=errors)

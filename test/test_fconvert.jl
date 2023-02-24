@@ -1919,21 +1919,30 @@ end
             @test frequencyof(t_to) == TimeSeriesEcon.sanitize_frequency(F_to)
             @test length(t_to.values) > 0
             # println(F_from, ", ", F_to)
-            # if (F_to) <: YPFrequency && F_from <: YPFrequency
-                if F_to <= F_from
-                    for method in (:mean, :sum, :point, :min, :max)
-                        for values_base in (:begin, :end)
-                            # @show method, values_base
-                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                            @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
-                            @test length(t_to_sub.values) > 0
-                            @test maximum(values(t_to_sub)) < 1000000 #check for undefineds
-                            @test minimum(values(t_to_sub)) > -1000000 #check for undefineds
-                        end
+            if F_to <= F_from
+                for method in (:mean, :sum, :point, :min, :max)
+                    for values_base in (:begin, :end)
+                        # @show method, values_base
+                        t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
+                        @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
+                        @test length(t_to_sub.values) > 0
+                        @test maximum(values(t_to_sub)) < 1000000 #check for undefineds
+                        @test minimum(values(t_to_sub)) > -1000000 #check for undefineds
                     end
-                elseif F_to > F_from
-                    for method in (:const, :even)
-                        for values_base in (:begin, :end)
+                end
+            elseif F_to > F_from
+                for method in (:const, :even)
+                    for values_base in (:begin, :end)
+                        t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
+                        @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
+                        @test length(t_to_sub.values) > 0
+                        @test maximum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) < 1000000
+                        @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
+                    end
+                end
+                if F_to ∈ (Daily, BDaily, Monthly)
+                    for method in (:linear, )
+                        for values_base in (:begin, :end, :middle)
                             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
                             @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
                             @test length(t_to_sub.values) > 0
@@ -1941,76 +1950,9 @@ end
                             @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
                         end
                     end
-                    if F_to ∈ (Daily, BDaily, Monthly)
-                        for method in (:linear, )
-                            for values_base in (:begin, :end, :middle)
-                                t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                                @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
-                                @test length(t_to_sub.values) > 0
-                                @test maximum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) < 1000000
-                                @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
-                            end
-                        end
-                    end
-                # elseif ppy(F_to) == ppy(F_from)
-                #     for method in (:mean, :end, :begin)
-                #         t_to_sub = @suppress fconvert(F_to, t_from, method=method)
-                #         @test frequencyof(t_to_sub) == F_to
-                #         @test length(t_to_sub.values) > 0
-                #     end
                 end
-            # end
-            # if F_to <: YPFrequency && F_from ∈ (Daily, BDaily)
-            #     for method in (:mean, :sum, :begin, :end)
-            #         for nans in (nothing, true, false)
-            #             t_to_sub = @suppress fconvert(F_to, t_from, method=method, skip_nans=nans)
-            #             @test frequencyof(t_to_sub) == F_to
-            #             @test length(t_to_sub.values) > 0
-            #         end
-            #     end
-            # end
-            # if (F_to <: YPFrequency || F_to <: Weekly) && F_from <: Weekly
-            #     for method in (:mean, :sum, :begin, :end)
-            #         for interpolation in (:none, :linear)
-            #             t_to_sub = @suppress fconvert(F_to, t_from, method=method, interpolation=interpolation)
-            #             @test frequencyof(t_to_sub) == F_to
-            #             @test length(t_to_sub.values) > 0
-            #         end
-            #     end
-            # end
-            # if F_to <: CalendarFrequency && F_from <: YPFrequency
-            #     for method in (:const, :linear)
-            #         for values_base in (:begin, :end)
-            #             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-            #             @test frequencyof(t_to_sub) == F_to
-            #             @test length(t_to_sub.values) > 0
-            #         end
-            #         if F_to ∈ (Daily, BDaily) && F_from <: Weekly
-            #             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=:middle)
-            #             @test frequencyof(t_to_sub) == F_to
-            #             @test length(t_to_sub.values) > 0
-            #         end
-            #     end
-            # end
-            # if F_to ∈ (Daily, BDaily) && F_from <: Weekly
-            #     for method in (:const, :linear)
-            #         for values_base in (:begin, :end, :middle)
-            #             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-            #             @test frequencyof(t_to_sub) == F_to
-            #             @test length(t_to_sub.values) > 0
-            #         end
-            #     end
-            # end
-            # if F_to <: Daily && F_from <: BDaily
-            #     for method in (:const, :linear)
-            #         for values_base in (:begin, :end, :middle)
-            #             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-            #             @test frequencyof(t_to_sub) == F_to
-            #             @test length(t_to_sub.values) > 0
-            #         end
-            #     end
-            # end
-
+            end
+            
             # unit ranges
             range_to = @suppress fconvert(F_to, rangeof(t_from))
             @test frequencyof(range_to) == TimeSeriesEcon.sanitize_frequency(F_to)
@@ -2025,22 +1967,17 @@ end
             end
 
             # MITs
-            # mit_to = @suppress fconvert(F_to, t_from.firstdate)
-            # @test frequencyof(mit_to) == F_to
-            # if F_to <:Union{<:YPFrequency,<:Weekly, BDaily} && F_from <:Union{<:CalendarFrequency,<:YPFrequency}
-            #     mit_to_current = @suppress fconvert(F_to, t_from.firstdate) # round_to=:current, except for BDaily
-            #     @test frequencyof(mit_to_current) == F_to
-            #     mit_to_next = @suppress fconvert(F_to, t_from.firstdate, round_to=:next)
-            #     @test frequencyof(mit_to_next) == F_to
-            #     mit_to_previous = @suppress fconvert(F_to, t_from.firstdate, round_to=:previous)
-            #     @test frequencyof(mit_to_previous) == F_to
-            #     mit_to_current_begin = @suppress fconvert(F_to, t_from.firstdate, values_base=:begin) #round_to=:current, except for BDaily
-            #     @test frequencyof(mit_to_current_begin) == F_to
-            #     mit_to_next_begin = @suppress fconvert(F_to, t_from.firstdate, round_to=:next, values_base=:begin)
-            #     @test frequencyof(mit_to_next_begin) == F_to
-            #     mit_to_previous_begin = @suppress fconvert(F_to, t_from.firstdate, round_to=:previous, values_base=:begin)
-            #     @test frequencyof(mit_to_previous_begin) == F_to
-            # end
+            if F_to == BDaily
+                mit_to_previous = @suppress fconvert(F_to, t_from.firstdate, round_to=:previous)
+                @test frequencyof(mit_to_previous) == sanitize_frequency(F_to)
+                mit_to_next = @suppress fconvert(F_to, t_from.firstdate, round_to=:next)
+                @test frequencyof(mit_to_next) == sanitize_frequency(F_to)
+            else
+                mit_to_end = @suppress fconvert(F_to, t_from.firstdate, values_base=:end)
+                @test frequencyof(mit_to_end) == sanitize_frequency(F_to)
+                mit_to_begin = @suppress fconvert(F_to, t_from.firstdate, values_base=:begin)
+                @test frequencyof(mit_to_begin) == sanitize_frequency(F_to)
+            end
             counter += 1
         end
     end
