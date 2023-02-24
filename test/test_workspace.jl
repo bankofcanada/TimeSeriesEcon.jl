@@ -188,3 +188,25 @@ end
 
     # Note: no test for MVTSeries
 end
+
+@testset "frequencyof Workspaces" begin
+    
+    w = Workspace()
+    @test frequencyof(w) isa Nothing
+    @test_throws ArgumentError frequencyof(w; check=true)
+
+    push!(w, :a=>5, :b=>2020Q1)
+    push!(w, :c=>TSeries(w.b, rand(5)))
+    @test length(w) == 3
+    @test frequencyof(w) <: Quarterly
+    push!(w, :d => 20M1)
+    @test frequencyof(w) isa Nothing
+    delete!(w, :d)
+    @test frequencyof(w) <: Quarterly
+    
+    w.w = Workspace(a=20Y, b=20Y-20Y)
+    w.b1 = @weval w b + a
+    w.α = @weval w  sin(pi) + w[:a] - w.a
+    @test frequencyof(w) isa Nothing
+    
+end
