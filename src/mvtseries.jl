@@ -441,13 +441,13 @@ Base.setindex!(x::MVTSeries, val, p::MIT) = mixed_freq_error(x, p)
 end
 
 # single argument - MIT range
-Base.getindex(x::MVTSeries, rng::AbstractUnitRange{MIT}) = mixed_freq_error(x, rng)
+Base.getindex(x::MVTSeries, rng::AbstractUnitRange{<:MIT}) = mixed_freq_error(x, rng)
 @inline function Base.getindex(x::MVTSeries{F}, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(x, rng)
     return MVTSeries(first(rng), axes(x, 2), getindex(_vals(x), start:stop, :))
 end
 
-Base.setindex!(x::MVTSeries, val, rng::AbstractUnitRange{MIT}) = mixed_freq_error(x, rng)
+Base.setindex!(x::MVTSeries, val, rng::AbstractUnitRange{<:MIT}) = mixed_freq_error(x, rng)
 @inline function Base.setindex!(x::MVTSeries{F}, val, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(x, rng)
     setindex!(_vals(x), val, start:stop, :)
