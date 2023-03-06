@@ -63,7 +63,7 @@ struct Weekly{end_day} <: CalendarFrequency end
     abstract type YPFrequency{N} <: Frequency end
 
 Represents a calendar frequency defined by a number of periods in a year. The
-type parameter `N` is the number of periods and must be a positive integer. 
+type parameter `N` is the number of periods and must be a positive integer.
 
 See also: [`Frequency`](@ref), [`Yearly`](@ref), [`HalfYearly`](@ref), [`Quarterly`](@ref), [`Monthly`](@ref)
 """
@@ -76,8 +76,8 @@ abstract type YPFrequency{N} <: CalendarFrequency end
 A concrete frequency defined as 1 period per year. The default end_month is 12.
 """
 struct Yearly{end_month} <: YPFrequency{1} end
-abstract type Y{end_month} end; 
-function Base.:*(y::Int, ::Type{Y{end_month}}) where end_month 
+abstract type Y{end_month} end;
+function Base.:*(y::Int, ::Type{Y{end_month}}) where end_month
     if !(typeof(end_month) <: Integer)
         throw(ArgumentError("The end_month for a Yearly frequency must be and integer. Received: $end_month"))
     end
@@ -94,8 +94,8 @@ Base.:*(y::Int, ::Type{Y}) = MIT{Yearly{12}}(y)
 A concrete frequency defined as 2 periods per year.
 """
 struct HalfYearly{end_month} <: YPFrequency{2} end
-abstract type H1{end_month} end; 
-abstract type H2{end_month} end; 
+abstract type H1{end_month} end;
+abstract type H2{end_month} end;
 function validate_halfyearly(end_month)
     if !(typeof(end_month) <: Integer)
         throw(ArgumentError("The end_month for a HalfYearly frequency must be and integer. Received: $end_month"))
@@ -104,27 +104,27 @@ function validate_halfyearly(end_month)
         throw(ArgumentError("The end_month for a HalfYearly frequency must be between 1 and 6. Received: $end_month"))
     end
 end
-function Base.:*(y::Int, ::Type{H1{end_month}}) where end_month 
+function Base.:*(y::Int, ::Type{H1{end_month}}) where end_month
     validate_halfyearly(end_month)
     return MIT{HalfYearly{end_month}}(y, 1)
 end
 Base.:*(y::Int, ::Type{H1}) = MIT{HalfYearly{6}}(y, 1)
-function Base.:*(y::Int, ::Type{H2{end_month}}) where end_month 
+function Base.:*(y::Int, ::Type{H2{end_month}}) where end_month
     validate_halfyearly(end_month)
     return MIT{HalfYearly{end_month}}(y, 2)
 end
 Base.:*(y::Int, ::Type{H2}) = MIT{HalfYearly{6}}(y, 2)
 
 """
-    struct Quarterly{end_month} <: YPFrequency{4} end  
+    struct Quarterly{end_month} <: YPFrequency{4} end
 
 A concrete frequency defined as 4 periods per year. The default end_month is 3.
 """
 struct Quarterly{end_month} <: YPFrequency{4} end
-abstract type Q1{end_month} end; 
-abstract type Q2{end_month} end; 
-abstract type Q3{end_month} end; 
-abstract type Q4{end_month} end; 
+abstract type Q1{end_month} end;
+abstract type Q2{end_month} end;
+abstract type Q3{end_month} end;
+abstract type Q4{end_month} end;
 function validate_quarterly(end_month)
     if !(typeof(end_month) <: Integer)
         throw(ArgumentError("The end_month for a Quarterly frequency must be and integer. Received: $end_month"))
@@ -133,22 +133,22 @@ function validate_quarterly(end_month)
         throw(ArgumentError("The end_month for a Quarterly frequency must be between 1 and 3. Received: $end_month"))
     end
 end
-function Base.:*(y::Int, ::Type{Q1{end_month}}) where end_month 
+function Base.:*(y::Int, ::Type{Q1{end_month}}) where end_month
     validate_quarterly(end_month)
     return MIT{Quarterly{end_month}}(y, 1)
 end
 Base.:*(y::Int, ::Type{Q1}) = MIT{Quarterly{3}}(y, 1)
-function Base.:*(y::Int, ::Type{Q2{end_month}}) where end_month 
+function Base.:*(y::Int, ::Type{Q2{end_month}}) where end_month
     validate_quarterly(end_month)
     return MIT{Quarterly{end_month}}(y, 2)
 end
 Base.:*(y::Int, ::Type{Q2}) = MIT{Quarterly{3}}(y, 2)
-function Base.:*(y::Int, ::Type{Q3{end_month}}) where end_month 
+function Base.:*(y::Int, ::Type{Q3{end_month}}) where end_month
     validate_quarterly(end_month)
     return MIT{Quarterly{end_month}}(y, 3)
 end
 Base.:*(y::Int, ::Type{Q3}) = MIT{Quarterly{3}}(y, 3)
-function Base.:*(y::Int, ::Type{Q4{end_month}}) where end_month 
+function Base.:*(y::Int, ::Type{Q4{end_month}}) where end_month
     validate_quarterly(end_month)
     return MIT{Quarterly{end_month}}(y, 4)
 end
@@ -164,7 +164,7 @@ A concrete frequency defined as 12 periods per year.
 struct Monthly <: YPFrequency{12} end
 
 # ----------------------------------------
-# 2. MIT (moment in time) and Duration 
+# 2. MIT (moment in time) and Duration
 # ----------------------------------------
 
 primitive type MIT{F<:Frequency} <: Signed 64 end
@@ -222,8 +222,8 @@ Return the [`Frequency`](@ref) type of the given value `x` or type `T`.
 function frequencyof end
 
 # throw an error, except for values and types that have a frequency
-# Q: should we return `nothing` instead? 
-# A: No. We assume that `frequencyof` returns a subtype of `Frequency`. 
+# Q: should we return `nothing` instead?
+# A: No. We assume that `frequencyof` returns a subtype of `Frequency`.
 frequencyof(::T) where T = frequencyof(T)
 frequencyof(F::Type{<:Frequency}) = F
 frequencyof(T::Type) = throw(ArgumentError("$(T) does not have a frequency."))
@@ -242,7 +242,7 @@ frequencyof(::Type{<:AbstractArray{Duration{F}}}) where F <: Frequency = F
 
 Construct an [`MIT`](@ref) instance from `year` and `period`. This is valid only
 for frequencies subtyped from [`YPFrequency`](@ref).
-""" 
+"""
 MIT{F}(y::Integer, p::Integer) where F <: YPFrequency{N} where N = MIT{F}(N * Int(y) + Int(p) - 1)
 MIT{Yearly}(y::Integer, p::Integer) = MIT{Yearly{12}}(y, p)
 MIT{Quarterly}(y::Integer, p::Integer) = MIT{Quarterly{3}}(y, p)
@@ -252,14 +252,14 @@ function _weekly_from_yp(F::Type{<:Weekly{end_day}}, y, p) where end_day
     d = first_day_of_year + Day(7*(p - 1))
     return weekly(d, end_day)
 end
-function MIT{F}(y::Integer, p::Integer) where F <: BDaily 
+function MIT{F}(y::Integer, p::Integer) where F <: BDaily
     first_day_of_year = Dates.Date("$y-01-01")
     first_day = dayofweek(first_day_of_year)
     days_diff = first_day > 5 ? 8 - first_day : 0
     d = first_day_of_year + Day(days_diff)
     return bdaily(d) + p - 1
 end
-function MIT{F}(y::Integer, p::Integer) where F <: Daily 
+function MIT{F}(y::Integer, p::Integer) where F <: Daily
     first_day_of_year = Dates.Date("$y-01-01")
     return daily(first_day_of_year) + p - 1
 end
@@ -273,12 +273,12 @@ only for frequencies subtyped from [`YPFrequency`](@ref).
 function mit2yp end
 
 # Careful with values near 0 and negative values
-# the remainder `p` returned by divrem() has the same sign 
+# the remainder `p` returned by divrem() has the same sign
 # as the argument being divided. We need 0 <= p <= N-1, so
-# in this case we add N to p and subtract 1 from y 
+# in this case we add N to p and subtract 1 from y
 # (since 1y = N*p we preserve the property that x = N*y+p)
-@inline function mit2yp(x::MIT{<:YPFrequency{N}}) where {N} 
-    (y, p) = divrem(Int(x), N); 
+@inline function mit2yp(x::MIT{<:YPFrequency{N}}) where {N}
+    (y, p) = divrem(Int(x), N);
     p < 0 ? (y - 1, p + N + 1) : (y, p + 1)
 end
 @inline function mit2yp(x::MIT{Daily})
@@ -342,7 +342,7 @@ Construct an `MIT{Yearly}` from an year and a period.
 yy(y::Integer, p::Integer=1) = MIT{Yearly{12}}(y, p)
 
 
-_d0 = Date("0001-01-01") - Day(1) 
+_d0 = Date("0001-01-01") - Day(1)
 """
     daily(d::Date)
 
@@ -373,20 +373,20 @@ macro d_str(d) ;
         dsplit = split(d, ":");
         return daily(Dates.Date(dsplit[1])):daily(Dates.Date(dsplit[2]));
     end;
-    return daily(d); 
+    return daily(d);
 end
 
 """
-    bdaily(d::Date; bias_previous::Bool=true) 
+    bdaily(d::Date; bias_previous::Bool=true)
 
-Construct an `MIT{BDaily}` from a Date object. 
+Construct an `MIT{BDaily}` from a Date object.
 
 The optional `bias_previous` argument determines which side of a weekend
 to land on when the provided date is Saturday or Sunday. The default
 is `true`, meaning that the preceding Friday is returned.
 
 """
-function bdaily(d::Date; bias::Symbol=getoption(:bdaily_creation_bias)) 
+function bdaily(d::Date; bias::Symbol=getoption(:bdaily_creation_bias))
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
     adjustment = 0
     if rem == 0 # Sunday
@@ -416,7 +416,7 @@ is `true`, meaning that the preceding Friday is returned.
 
 """
 bdaily(d::String; bias::Symbol=getoption(:bdaily_creation_bias)) = bdaily(Dates.Date(d), bias=bias)
-macro bd_str(d); 
+macro bd_str(d);
     if findfirst(":", d) !== nothing;
         dsplit = split(d, ":");
         rng = bdaily(string(dsplit[1]), bias=:next):bdaily(string(dsplit[2]), bias=:previous);
@@ -433,15 +433,15 @@ end;
 
 A macro which converts a string to an MIT{BDaily} or a UnitRange{MIT{BDaily}}.
 
-The optional `bias`` determines which business day is returned when the provided 
-date is on a Saturday or Sunday. Available options are `"n"` or `"next"` for 
+The optional `bias`` determines which business day is returned when the provided
+date is on a Saturday or Sunday. Available options are `"n"` or `"next"` for
 biasing the next business day, and "p", or "previous" for the next business day,
 `"near"` or `"nearest"` for biasing the nearest business day, and `"s"` or `"strict"`
 in which case passing a day on a weekend will return an error.
 
-To return a UnitRange, provide a single string with two dates separated by `:`. 
+To return a UnitRange, provide a single string with two dates separated by `:`.
 In this case the first date will be biased to the following business day and the
-second date will be biased to the previous business day. The `bias` argument cannot 
+second date will be biased to the previous business day. The `bias` argument cannot
 be provided when converting a range of dates.
 
 Example:
@@ -458,7 +458,7 @@ macro bd_str(d, bias);
     if bias == ""
         return bdaily(d);
     elseif bias == "n" || bias == "next"
-        return bdaily(d, bias=:next);    
+        return bdaily(d, bias=:next);
     elseif bias == "p" || bias == "p"
         return bdaily(d, bias=:previous)
     elseif bias == "s" || bias == "strict"
@@ -466,11 +466,11 @@ macro bd_str(d, bias);
     elseif bias == "near" || bias == "nearest"
         return bdaily(d, bias=:nearest)
     end
-   
+
 end;
 
 """
-    weekly(d::Date) 
+    weekly(d::Date)
     weekly(d::String)
     weekly(d::Date, end_day::Integer)
     weekly(d::String, end_day::Integer)
@@ -522,7 +522,7 @@ macro w_str(d) ;
         dsplit = split(d, ":");
         return weekly(Dates.Date(dsplit[1])):weekly(Dates.Date(dsplit[2]));
     end;
-    return weekly(d); 
+    return weekly(d);
 end
 # -------------------------
 # ppy: period per year
@@ -543,19 +543,19 @@ ppy(::Type{<:YPFrequency{N}}) where {N} = N
 ppy(::Type{<:Daily}) = 365 # approximately
 ppy(::Type{<:BDaily}) = 260 # approximately
 ppy(::Type{<:Weekly}) = 52 # approximately
-ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year") 
+ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year")
 
 #-------------------------
 # date conversion
 """
 Dates.Date(m::MIT, values_base::Symbol=:end)
-    
+
 Returns a Date object representing the last day in the provided MIT.
 Returns the first day in the provided MIT when `values_base == true`.
 """
 Dates.Date(m::MIT{Daily}, values_base::Symbol=:end) = _d0 + Day(Int(m))
 Dates.Date(m::MIT{BDaily}, values_base::Symbol=:end) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
-function Dates.Date(m::MIT{Weekly{end_day}}, values_base::Symbol = :end) where end_day 
+function Dates.Date(m::MIT{Weekly{end_day}}, values_base::Symbol = :end) where end_day
     if values_base == :begin
         return _d0 + Day(Int(m)*7 - 6) - Day(7-end_day)
     end
@@ -564,25 +564,25 @@ end
 function Dates.Date(m::MIT{Monthly}, values_base::Symbol=:end)
     year, month = divrem(Int(m), 12)
     if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(month)    
+        return Dates.Date("$year-01-01") + Month(month)
     end
     return Dates.Date("$year-01-01") + Month(month+1) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly{end_month}}, values_base::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{Quarterly{end_month}}, values_base::Symbol=:end) where end_month
     year, quarter = divrem(Int(m), 4)
     if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(quarter*3 - (3-end_month))    
+        return Dates.Date("$year-01-01") + Month(quarter*3 - (3-end_month))
     end
     return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{HalfYearly{end_month}}, values_base::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{HalfYearly{end_month}}, values_base::Symbol=:end) where end_month
     year, half = divrem(Int(m), 2)
     if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(half*6 - (6-end_month))    
+        return Dates.Date("$year-01-01") + Month(half*6 - (6-end_month))
     end
     return Dates.Date("$year-01-01") + Month((half+1) * 6 - (6-end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{Yearly{end_month}}, values_base::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{Yearly{end_month}}, values_base::Symbol=:end) where end_month
     if values_base == :begin
         return Dates.Date("$(Int(m))-01-01") - Month(12-end_month)
     end
@@ -591,11 +591,6 @@ end
 
 #-------------------------
 # pretty printing
-
-Base.show(io::IO, F::Type{Quarterly{3}}) = print(io, "Quarterly")
-Base.show(io::IO, F::Type{HalfYearly{6}}) = print(io, "HalfYearly")
-Base.show(io::IO, F::Type{Yearly{12}}) = print(io, "Yearly")
-Base.show(io::IO, F::Type{Weekly{7}}) = print(io, "Weekly")
 
 Base.show(io::IO, m::MIT{Unit}) = print(io, Int(m), 'U')
 Base.show(io::IO, m::MIT{Daily}) = print(io, Dates.Date(m))
@@ -643,19 +638,19 @@ Base.print(io::IO, d::Duration) = print(io, string(d))
 # -------------------------
 # Arithmetic operations with MIT and Duration
 
-# Arithmetic with MIT and Duration are limited to adding/subtracting and 
-# comparisons and even these are valid only with matching frequencies. 
-# We want to tightly control what works and what doesn't and also 
-# we want to provide meaningful error messages why operations 
+# Arithmetic with MIT and Duration are limited to adding/subtracting and
+# comparisons and even these are valid only with matching frequencies.
+# We want to tightly control what works and what doesn't and also
+# we want to provide meaningful error messages why operations
 # that don't work are disabled.
 
 Base.promote_rule(IT::Type{<:Integer}, MT::Type{<:MIT}) = throw(ArgumentError("Invalid arithmetic operation with $IT and $MT"))
 Base.promote_rule(IT::Type{<:Integer}, DT::Type{<:Duration}) = throw(ArgumentError("Invalid arithmetic operation with $IT and $DT"))
 
 mixed_freq_error(T1::Type, T2::Type) = throw(ArgumentError("Mixing frequencies not allowed: $(frequencyof(T1)) and $(frequencyof(T2))."))
-mixed_freq_error(::T1, ::T2) where {T1,T2} = mixed_freq_error(T1, T2) 
+mixed_freq_error(::T1, ::T2) where {T1,T2} = mixed_freq_error(T1, T2)
 mixed_freq_error(T1::Type, T2::Type, T3::Type) = throw(ArgumentError("Mixing frequencies not allowed: $(frequencyof(T1)), $(frequencyof(T2)) and $(frequencyof(T3))."))
-mixed_freq_error(::T1, ::T2, ::T3) where {T1,T2,T3} = mixed_freq_error(T1, T2, T3) 
+mixed_freq_error(::T1, ::T2, ::T3) where {T1,T2,T3} = mixed_freq_error(T1, T2, T3)
 
 Base.promote_rule(T1::Type{<:MIT}, T2::Type{<:MIT}) = mixed_freq_error(T1, T2)
 Base.promote_rule(T1::Type{MIT{F}}, T2::Type{MIT{F}}) where {F<:Frequency} = T1
@@ -712,7 +707,7 @@ Base.:(<)(l::Duration, r::MIT) = throw(ArgumentError("Illegal comparison of $(ty
 # Base.:(<)(l::Int, r::Duration) = l < Int(r)
 # Base.:(<)(l::Duration, r::Int) = Int(l) < r
 
-# <= is expressed as < or == 
+# <= is expressed as < or ==
 Base.:(<=)(l::Union{MIT,Duration}, r::Union{MIT,Duration}) = (l < r) || (l == r)
 # Base.:(<=)(l::Duration, r::Int) = (l < r) || (l == r)
 # Base.:(<=)(l::Int, r::Duration) = (l < r) || (l == r)
@@ -747,7 +742,7 @@ Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)
 # -------------------
 # Conversion to Float64 - that's needed for plotting
 (T::Type{<:AbstractFloat})(x::MIT) = convert(T, Int(x))
-# In the special case of YPFrequency we want the year to be the whole part and the period to be the fractional part. 
+# In the special case of YPFrequency we want the year to be the whole part and the period to be the fractional part.
 (T::Type{<:AbstractFloat})(x::MIT{<:YPFrequency{N}}) where N = convert(T, ((y, p) = mit2yp(x); y + (p - 1) / N))
 Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
 
@@ -791,7 +786,7 @@ Base.:(*)(y::Integer, ::_FPConst{F,P}) where {F <: Frequency,P} = MIT{F}(y, P)
 Base.show(io::IO, C::_FConst) = print(io, 1C)
 Base.show(io::IO, C::_FPConst) = print(io, 1C)
 
-""" 
+"""
 
 Convenience constants that make MIT literal constants possible. For example, the
 constant `Q1` makes it possible to write `2020Q1` instead of
@@ -826,7 +821,7 @@ Base.:(:)(start::MIT{F}, stop::MIT{F}) where F <: Frequency = UnitRange{MIT{F}}(
 
 Base.:(:)(::Int, ::MIT) = my_range_error()
 Base.:(:)(::MIT, ::Int) = my_range_error()
-my_range_error() = throw(ArgumentError("""Cannot mix Int and MIT in the same range. 
+my_range_error() = throw(ArgumentError("""Cannot mix Int and MIT in the same range.
     If you're using `begin` or `end` to index a TSeries make sure to use them at both ends.
     For example, instead of s[2:end] use s[begin+1:end].
 """))
