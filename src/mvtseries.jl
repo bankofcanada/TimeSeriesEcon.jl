@@ -34,7 +34,7 @@ the `MVTSeries` is determined from the number of rows of `values`. If
 constructed empty with size `(0, 0)`.
 
 The first argument can be a range.
-```MVTSeries(range::AbstractUnitRange{<:MIT}, names, values)``` 
+```MVTSeries(range::AbstractUnitRange{<:MIT}, names, values)```
 In this case the size of the `MVTSeries` is determined by the lengths of
 `range` and `names`; the `values` argument is interpreted as an initializer.
 If it is omitted or set to `undef`, the storage is left uninitialized. If it
@@ -56,22 +56,22 @@ with `Matrix`. The result from slicing with integer ranges or boolean arrays
 is always a `Matrix`, i.e., the `MVTSeries` structure is lost.
 
 Indexing with two indexes works as follows. The first index can be an
-[`MIT`](@ref) or a range of [`MIT`](@ref) and it works the same as for  
+[`MIT`](@ref) or a range of [`MIT`](@ref) and it works the same as for
 [`TSeries`](@ref). The second index can be a `Symbol` or a collection of
 `Symbol`s, such as a tuple or a vector. `begin` and `end` work for the
 first index the same as with [`TSeries`](@ref).
 
-Indexing with one index depends on the type. If it is `MIT` or a 
-range of `MIT`, it is treated as if the second index were `:`, i.e., the 
-entire row or multiple rows is returned. If the index is a `Symbol` or 
-a collection of `Symbol`s, it is treated as if the first index were `:`, 
+Indexing with one index depends on the type. If it is `MIT` or a
+range of `MIT`, it is treated as if the second index were `:`, i.e., the
+entire row or multiple rows is returned. If the index is a `Symbol` or
+a collection of `Symbol`s, it is treated as if the first index were `:`,
 i.e., entire column or multiple columns is returned as [`TSeries`](@ref) or
 `MVTSeries` respectively.
 
 Columns can also be accessed using "dot" notation. For example `x[:a]` is the
 same as `x.a`.
 
-Check out the tutorial at 
+Check out the tutorial at
 [https://bankofcanada.github.io/DocsEcon.jl/dev/Tutorials/TimeSeriesEcon/main/](https://bankofcanada.github.io/DocsEcon.jl/dev/Tutorials/TimeSeriesEcon/main/)
 """
 mutable struct MVTSeries{F<:Frequency,T<:Number,C<:AbstractMatrix{T}} <: AbstractMatrix{T}
@@ -112,7 +112,7 @@ end
 
 # see more constructors below
 
-# easy access to internals. 
+# easy access to internals.
 _vals(x::MVTSeries) = getfield(x, :values)
 _cols(x::MVTSeries) = getfield(x, :columns)
 function _col(x::MVTSeries, col::Symbol)
@@ -127,7 +127,7 @@ end
 """
     cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
 
-    Returns a matrix of values of a BDaily MVTSeries filtered according to the provided optional arguments. 
+    Returns a matrix of values of a BDaily MVTSeries filtered according to the provided optional arguments.
     By default, all values are returned.
 
     Optional arguments:
@@ -151,7 +151,7 @@ function cleanedvalues(mvts::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_
         end
         return bdvalues(mvts, holidays_map=h_map)
     end
-    return mvts.values 
+    return mvts.values
 end
 
 # creates a two-column Boolean Matrix.
@@ -184,7 +184,7 @@ end
 """
     columns(x::MVTSeries)
 
-Return the columns of `x` as a dictionary. 
+Return the columns of `x` as a dictionary.
 """
 columns(x::MVTSeries) = getfield(x, :columns)
 
@@ -214,7 +214,7 @@ Base.get(x::MVTSeries, sym::Symbol, default) = get(_cols(x), sym, default)
 Base.get(f::Function, x::MVTSeries, sym::Symbol) = get(f, _cols(x), sym)
 # no get!() - can't add columns like this!!
 
-# methods related to TSeries 
+# methods related to TSeries
 firstdate(x::MVTSeries) = getfield(x, :firstdate)
 lastdate(x::MVTSeries) = firstdate(x) + size(_vals(x), 1) - one(firstdate(x))
 frequencyof(::Type{<:MVTSeries{F}}) where {F<:Frequency} = F
@@ -253,7 +253,7 @@ MIT range and the second is a list of column names. The element type, `eltype`,
 also can be given optionally; if not given it will be deduced from the first
 argument.
 
-Example: 
+Example:
 ```
 similar(Array{Float64}, (2000Q1:2001Q4, (:a, :b)))
 ```
@@ -320,7 +320,7 @@ MVTSeries(fd::MIT, vars::Union{Symbol,AbstractString}, data::AbstractVector) = M
 MVTSeries(rng::AbstractUnitRange{<:MIT}, vars, data::AbstractVector) = MVTSeries(rng, vars, reshape(data, :, 1))
 MVTSeries(rng::AbstractUnitRange{<:MIT}, vars::Union{Symbol,AbstractString}, data::AbstractVector) = MVTSeries(rng, (vars,), reshape(data, :, 1))
 
-# construct uninitialized by way of calling similar 
+# construct uninitialized by way of calling similar
 Base.similar(::Type{<:AbstractArray}, T::Type{<:Number}, shape::_MVTSAxesType) = MVTSeries(T, shape[1], shape[2])
 Base.similar(::Type{<:AbstractArray{T}}, shape::_MVTSAxesType) where {T<:Number} = MVTSeries(T, shape[1], shape[2])
 Base.similar(::AbstractArray, T::Type{<:Number}, shape::_MVTSAxesType) = MVTSeries(T, shape[1], shape[2])
@@ -404,7 +404,7 @@ function Base.setproperty!(x::MVTSeries, name::Symbol, val)
 end
 
 # -------------------------------------------------------------------------------
-# Indexing other than integers 
+# Indexing other than integers
 
 # some check bounds that plug MVTSeries into the Julia infrastructure for AbstractArrays
 Base.checkbounds(::Type{Bool}, x::MVTSeries, p::MIT) = checkindex(Bool, rangeof(x), p)
@@ -488,7 +488,7 @@ Base.getindex(x::MVTSeries, ::Colon, c::_SymbolOneOrCollection) = getindex(x, c)
 Base.setindex!(x::MVTSeries, val, p::_MITOneOrRange, ::Colon) = setindex!(x, val, p, axes(x, 2))
 Base.setindex!(x::MVTSeries, val, ::Colon, c::_SymbolOneOrCollection) = setindex!(x, val, axes(x, 1), c)
 
-# 
+#
 
 # the index is stored as the second index in the view() object which is the
 # values of the TSeries of the column. See the inner constructor of MVTSeries.
@@ -608,7 +608,7 @@ end
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon=Colon()) = view(x, I, axes(x, 2))
 Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))
-function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection) where {F<:Frequency}
+function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     @boundscheck checkbounds(x, I)
     @boundscheck checkbounds(x, J)
     start, stop = _ind_range_check(x, I)
@@ -750,7 +750,7 @@ The in-place version (`undiff!`) works only with `TSeries`. The other version
 `MVTSeries` the anchor `value` must be a `Vector`, or a `Martix` with 1 row, of
 the same length as the number of columns of `dvar`.
 
-!!! note 
+!!! note
 
     In the case of `undiff!` the meaning of parameter `fromdate` is different
     from the meaning of `date` in the second argument of `undiff`. This only
@@ -758,7 +758,7 @@ the same length as the number of columns of `dvar`.
 
     In the case of `undiff!`, all values of `dvar` at, and prior to, `fromdate`
     are ignored (considered zero). Effectively, values of `var` up to, and
-    including, `fromdate` remain unchanged. 
+    including, `fromdate` remain unchanged.
 
     By contrast, in `undiff` with `date => value` somewhere in the middle of the
     range of `dvar`, the operation is applied over the full range of `dvar`,
@@ -832,7 +832,7 @@ Statistics.mean(f, x::MVTSeries; kwargs...) = mean(f, x.values; kwargs...)
 Statistics.std(x::MVTSeries; kwargs...) = std(x.values; kwargs...)
 Statistics.var(x::MVTSeries; kwargs...) = var(x.values; kwargs...)
 Statistics.median(x::MVTSeries; kwargs...) = median(x.values; kwargs...)
-Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...) 
+Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...)
 Statistics.cov(x::MVTSeries; kwargs...) = cov(x.values; kwargs...)
 
 Statistics.mean(f, x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
@@ -842,4 +842,3 @@ Statistics.var(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::B
 Statistics.median(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = median(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
 Statistics.cor(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = cor(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
 Statistics.cov(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing, kwargs...) = cov(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
-
