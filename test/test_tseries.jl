@@ -261,6 +261,16 @@ end
     end
 end
 
+@testset "Bool indexing" begin
+    tt = TSeries(2020Q1, falses(5))
+    tt[[2,4]] .= true
+    @test tt[tt] == [true, true]
+    @test tt[.!tt] == [false, false, false]
+    @test_throws ArgumentError (1U:5U)[tt]    # mixed frequencies
+    @test_throws BoundsError (1:5)[tt] == [2,4]
+    @test rangeof(tt)[tt] == [2020Q2, 2020Q4]
+end
+
 @testset "Views" begin
     let t = TSeries(2010M1, rand(20))
         @test axes(t) == (2010M1 - 1 .+ (1:20),)
