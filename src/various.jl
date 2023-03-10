@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 
@@ -105,6 +105,16 @@ function overlay(args::MVTSeries...)
     return ret
 end
 
+
+#### merge! and merge
+
+@inline Base.empty!(w::Workspace) = (empty!(w._c); w)
+@inline Base.merge!(w::Workspace, others::Union{Workspace,<:AbstractDict}...) = (
+    merge!(_c(w), map(_c, others)...);
+    w
+)
+@inline Base.merge(w::Workspace, others::Union{Workspace,<:AbstractDict}...) = merge!(Workspace(), w, others...)
+
 #### compare and @compare 
 
 """
@@ -135,7 +145,7 @@ export compare, @compare
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
 @inline compare_equal(x::Number, y::Number; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
 @inline compare_equal(x::AbstractArray{<:Number}, y::AbstractArray{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
-function compare_equal(x::TSeries, y::TSeries; trange::Union{Nothing, AbstractUnitRange{<:MIT}}=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
+function compare_equal(x::TSeries, y::TSeries; trange::Union{Nothing,AbstractUnitRange{<:MIT}}=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
     if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
         trange = intersect(rangeof(x), rangeof(y))
     end
@@ -268,7 +278,7 @@ reindex(2021Q1:2022Q4, 2022Q1 => 1U)
 function reindex end
 export reindex
 
-function reindex(T::MIT{F}, pair::Pair{<:MIT{F},<:MIT}; copy=false) where F <: Frequency
+function reindex(T::MIT{F}, pair::Pair{<:MIT{F},<:MIT}; copy=false) where {F<:Frequency}
     return pair[2] + Int(T - pair[1])
 end
 
@@ -309,8 +319,8 @@ _w(a) = a
 _w(w::Workspace) = w._c
 TOML.print(w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, w._c; sorted, by)
 TOML.print(io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, io, w._c; sorted, by)
-TOML.print(f::TOML.Internals.Printer.MbyFunc, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, io, w._c; sorted, by)
-TOML.print(f::TOML.Internals.Printer.MbyFunc, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f∘_w, w._c; sorted, by)
+TOML.print(f::TOML.Internals.Printer.MbyFunc, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f ∘ _w, io, w._c; sorted, by)
+TOML.print(f::TOML.Internals.Printer.MbyFunc, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f ∘ _w, w._c; sorted, by)
 
 
 ## isyearly, isquarterly, isweekly, ismonthly
@@ -321,13 +331,13 @@ ismonthly(F::Type{<:Frequency}) = F <: Monthly
 isweekly(F::Type{<:Frequency}) = F <: Weekly
 isdaily(F::Type{<:Frequency}) = F <: Daily
 isbdaily(F::Type{<:Frequency}) = F <: BDaily
-isyearly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isyearly(frequencyof(x))
-ishalfyearly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = ishalfyearly(frequencyof(x))
-isquarterly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isquarterly(frequencyof(x))
-ismonthly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = ismonthly(frequencyof(x))
-isweekly(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isweekly(frequencyof(x))
-isdaily(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isdaily(frequencyof(x))
-isbdaily(x::Union{Duration{F}, TSeries{F}, MVTSeries{F}, MIT{F}, UnitRange{MIT{F}}}) where F<:Frequency = isbdaily(frequencyof(x))
+isyearly(x::Union{Duration{F},TSeries{F},MVTSeries{F},MIT{F},UnitRange{MIT{F}}}) where {F<:Frequency} = isyearly(frequencyof(x))
+ishalfyearly(x::Union{Duration{F},TSeries{F},MVTSeries{F},MIT{F},UnitRange{MIT{F}}}) where {F<:Frequency} = ishalfyearly(frequencyof(x))
+isquarterly(x::Union{Duration{F},TSeries{F},MVTSeries{F},MIT{F},UnitRange{MIT{F}}}) where {F<:Frequency} = isquarterly(frequencyof(x))
+ismonthly(x::Union{Duration{F},TSeries{F},MVTSeries{F},MIT{F},UnitRange{MIT{F}}}) where {F<:Frequency} = ismonthly(frequencyof(x))
+isweekly(x::Union{Duration{F},TSeries{F},MVTSeries{F},MIT{F},UnitRange{MIT{F}}}) where {F<:Frequency} = isweekly(frequencyof(x))
+isdaily(x::Union{Duration{F},TSeries{F},MVTSeries{F},MIT{F},UnitRange{MIT{F}}}) where {F<:Frequency} = isdaily(frequencyof(x))
+isbdaily(x::Union{Duration{F},TSeries{F},MVTSeries{F},MIT{F},UnitRange{MIT{F}}}) where {F<:Frequency} = isbdaily(frequencyof(x))
 export isyearly, isquarterly, ismonthly, isweekly, ishalfyearly, isweekly, isdaily, isbdaily
 
 
@@ -359,7 +369,7 @@ end
 function clean_old_frequencies(ts::TSeries)
     new_firstdate = clean_old_frequencies(ts.firstdate)
     if frequencyof(new_firstdate) !== frequencyof(ts.firstdate)
-        new_lastdate = new_firstdate+length(rangeof(ts)) - 1
+        new_lastdate = new_firstdate + length(rangeof(ts)) - 1
         return copyto!(TSeries(eltype(values(ts)), new_firstdate:new_lastdate), values(ts))
     end
     return ts
@@ -384,7 +394,7 @@ end
 function clean_old_frequencies!(ws::Workspace)
     for (key, val) in ws
         if val isa Workspace
-           TimeSeriesEcon.clean_old_frequencies!(val)
+            TimeSeriesEcon.clean_old_frequencies!(val)
         else
             ws[key] = TimeSeriesEcon.clean_old_frequencies(val)
         end
