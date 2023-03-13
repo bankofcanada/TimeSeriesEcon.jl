@@ -267,8 +267,8 @@ end
     @test rangeof(y9_begin_m8) == MIT{Yearly{8}}(2023):MIT{Yearly{8}}(2024)
     @test y9_begin_m8.values == [3,7]
     y9_end_m8 = fconvert(Yearly{8}, q9, method=:point, values_base=:end)
-    @test rangeof(y9_end_m8) == MIT{Yearly{8}}(2022):MIT{Yearly{8}}(2023)
-    @test y9_end_m8.values == [2,6]
+    @test rangeof(y9_end_m8) == MIT{Yearly{8}}(2022):MIT{Yearly{8}}(2024)
+    @test y9_end_m8.values == [2,6, 10]
 
     # @test mit4_start == 3Y
 
@@ -308,6 +308,16 @@ end
     report convert(m1, ANNUAL(SEPTEMBER), CONSTANT, AVERAGED)
     """
 
+end
+
+@testset "fconvert, YPFrequencies, to similar" begin
+    qs1 = TSeries(2022Q2{2}, collect(2.0:4.0))
+    qs2 = fconvert(Quarterly, qs1, method=:point, values_base=:end)
+    @test rangeof(qs2) == 2022Q2:2022Q4
+    @test values(qs2) == [2.0, 3.0, 4.0]
+    qs3 = fconvert(Quarterly, qs1, method=:point, values_base=:begin)
+    @test rangeof(qs3) == 2022Q2:2022Q4
+    @test values(qs3) == [2.0, 3.0, 4.0]
 end
 
 @testset "fconvert, Weekly to lower" begin

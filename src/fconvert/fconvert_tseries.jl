@@ -41,10 +41,13 @@ falls. The corresponding values are then grouped for each output MIT and a value
 * `:max`: the highest value within each group is chosen.
 
 The `values_base` determines the behavior of the `:point` method as well as the range of the output tseries when the 
-methods is `:point`. When `values_base == :end` then the end of the output range will be truncated whenever 
-the last MIT in the input range ends partway through an MIT in the output frequency. When `values_base == :begin` 
-then the start of the output range will be truncated whenever the first MIT of the input range starts partway 
-through an MIT in the output frequency.
+methods is `:point`. When methods is `:point` and `values_base == :end` then the end of the output range will be truncated whenever 
+the last MIT in the input range ends partway through an MIT in the output frequency. The value in each output MIT
+will be taken from the value at the end of whichever input MIT ends on or before the end of the corresponding output MIT.
+
+When methods is `:point` and `values_base == :begin`  the start of the output range will be truncated whenever the first MIT 
+of the input range  starts partway through an MIT in the output frequency. The value in each output MIT will be taken from
+the Input MIT which overlaps with the start-date of output MIT.
 
 When the method is **not** `:point`, both ends of the output range will be truncated when warranted.
 
@@ -392,14 +395,43 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
     mpp_to = div( 12, ppy(F_to))
     (np, r) = divrem(N2, N1)
    
-    trim = method == :point ? values_base : :both
-    fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=trim, parts=true)
-    trunc_start = trim !== :end && fi_to_start_month < fi_from_start_month ? 1 : 0
-    trunc_end = trim !== :begin && li_to_end_month > li_from_end_month ? 1 : 0
+    fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=:both, parts=true)
+    trunc_start = 0
+    trunc_end = 0
+    # for the first period, the code above provides the output period which overlaps the
+    # start-date of the input period. We need to do some additional checking
+    if fi_to_start_month < fi_from_start_month
+        # For most cases, we want to simply remove any output period 
+        # which starts before the first input period
+        if method !== :point || values_base == :begin
+            trunc_start = 1
+        else # method is :point and values_base = :end
+            # Trim the start if the first input period overlaps with the second output period
+            if fi_from_start_month + mpp_from > fi_to_start_month + mpp_to
+                trunc_start = 1
+            end 
+        end
+    end
+    if li_to_end_month > li_from_end_month
+        # For most cases, we want to simply remove any output period 
+        # which ends after the last input period
+        if method !== :point
+            trunc_end = 1
+        else # method is :point
+            if values_base == :end && li_from_end_month + (mpp_from -1) < li_to_end_month
+                # trim the end if there is a full input-period missing before the end of the last output period
+                trunc_end = 1
+            elseif values_base == :begin && li_to_end_month - (mpp_to - 1) > li_from_end_month
+                # trim the end if the start of last output period is after end of last input period
+                trunc_end = 1
+            end
+        end
+    end
+
     fi = MIT{F_to}(fi_to_period+trunc_start)
     li = MIT{F_to}(li_to_period-trunc_end)
     out_range = fi:li
-    
+ 
     fi_truncation_adjustment = trunc_start == 1 ? mpp_to : 0
     if method == :point
         # for the point method we just need to specify the indices in the input
