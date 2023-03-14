@@ -100,8 +100,8 @@ import Dates: Date
     @test_throws ArgumentError rem(d2,d3)
 
     #hash
-    @test hash(1Q1, UInt(8)) == hash(("Quarterly", 4), UInt(8))
-    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly", 2), UInt(8))
+    @test hash(1Q1, UInt(8)) == hash(("Quarterly{3}", 4), UInt(8))
+    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly{3}", 2), UInt(8))
 end
 
 @testset "Range" begin
@@ -221,7 +221,7 @@ end
         println(io, frequencyof(2022Y))
         println(io, frequencyof(weekly("2022-01-01")))
         foo = readlines(seek(io, 0))
-        @test foo == ["Quarterly", "HalfYearly","Yearly", "Weekly"]
+        @test foo == ["Quarterly{3}", "HalfYearly{6}","Yearly{12}", "Weekly{7}"]
     end
     let io = IOBuffer()
         println(io, 2022Q1)
