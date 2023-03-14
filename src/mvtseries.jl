@@ -608,7 +608,7 @@ end
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon=Colon()) = view(x, I, axes(x, 2))
 Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))
-function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection) where {F<:Frequency}
+function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     @boundscheck checkbounds(x, I)
     @boundscheck checkbounds(x, J)
     start, stop = _ind_range_check(x, I)
