@@ -253,7 +253,7 @@ end
 function Base.summary(io::IO, t::TSeries)
     et = eltype(t) === Float64 ? "" : ",$(eltype(t))"
     ct = "" # ct = typeof(t.values) === Array{eltype(t),1} ? "" : ",$(typeof(t.values))"
-    typestr = "TSeries{$(frequencyof(t))$(et)$(ct)}"
+    typestr = "TSeries{$(prettyprint_frequency(frequencyof(t)))$(et)$(ct)}"
     if isempty(t)
         print(io, "Empty ", typestr, " starting ", t.firstdate)
     else
