@@ -59,6 +59,19 @@
         @test rangeof(x.hex) == 2020Q1:2021Q1
         @test x.hex.values == collect(5.0:9.0)
     end
+
+    # construct from a TSeries - init all columns from given TSeries
+    init = TSeries(2020Q1, randn(16))
+    @test (MVTSeries(2021Q1:2022Q4, (:a, :b, :c), init); true)
+    a = MVTSeries(2021Q1:2022Q4, (:a, :b, :c), init)
+    @test axes(a) == (2021Q1:2022Q4, [:a, :b, :c])
+    for (_, col) in columns(a)
+        @test col ≈ init
+    end
+    @test (fill(init, colnames(a)) ≈ a)
+    b = fill(init, colnames(a))
+    @test axes(b) == (rangeof(init), axes(a,2))
+
 end
 
 @testset "MV Int Ind" begin

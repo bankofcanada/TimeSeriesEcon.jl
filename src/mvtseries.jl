@@ -301,6 +301,19 @@ MVTSeries(rng::AbstractUnitRange{<:MIT}, vars, init::Function) = MVTSeries(first
 # initialize with a constant
 MVTSeries(rng::AbstractUnitRange{<:MIT}, vars, v::Number) = MVTSeries(first(rng), vars, fill(v, length(rng), length(vars)))
 
+# initialize all columns with a given TSeries
+function MVTSeries(rng::AbstractUnitRange{<:MIT}, vars, v::TSeries)
+    ret = MVTSeries(rng, vars)
+    for (_, col) in pairs(ret)
+        copyto!(col, rng, v)
+    end
+    return ret
+end
+
+function Base.fill(v::TSeries, vars)
+    return MVTSeries(rangeof(v), vars, v)
+end
+
 # construct with a given range (rather than only the first date). We must check the range length matches the data size 1
 function MVTSeries(rng::AbstractUnitRange{<:MIT}, vars, vals::AbstractMatrix{<:Number})
     lrng = length(rng)
