@@ -834,7 +834,12 @@ the same length as the number of columns of `dvar`.
 function undiff end, function undiff! end
 export undiff, undiff!
 
-undiff(dvar::TSeries) = undiff(dvar, firstdate(dvar) - 1 => zero(eltype(dvar)))
+"If second argument is `anchor_value::Number`, assume the anchor date is `firstdate(dvar)-1`"
+undiff(dvar::TSeries, anchor_value::Number=zero(eltype(dvar))) = undiff(dvar, firstdate(dvar) - 1 => anchor_value)
+"If second argument is `anchor::TSeries`, assume anchor date is `firstdate(dvar)-1` and take value form `anchor`"
+undiff(dvar::TSeries, anchor_value::TSeries) = (ad = firstdate(dvar) - 1; undiff(dvar, ad => anchor_value[ad]))
+"If second argument is a pair `ad::MIT => av::TSeries`, take the anchor value to be `av[ad]`"
+undiff(dvar::TSeries, anchor::Pair{<:MIT,<:TSeries}) = (ad = anchor[1]; undiff(dvar, ad => anchor[2][ad]))
 function undiff(dvar::TSeries, anchor::Pair{<:MIT,<:Number})
     fromdate, value = anchor
     ET = Base.promote_eltype(dvar, value)
@@ -863,7 +868,15 @@ function undiff!(var::TSeries, dvar::TSeries; fromdate=firstdate(dvar) - 1)
 end
 
 # undiff(dvar::MVTSeries) = undiff(dvar, firstdate(dvar) - 1 => zeros(eltype(dvar), size(dvar, 2)))
-undiff(dvar::MVTSeries, anchor_value::Number=0) = undiff(dvar, firstdate(dvar) - 1 => fill(anchor_value, size(dvar, 2)))
+"If second argument is `anchor_value::Number`, assume the anchor date is `firstdate(dvar)-1`"
+@inline undiff(dvar::MVTSeries, anchor_value::Number=zero(eltype(dvar))) = undiff(dvar, firstdate(dvar) - 1 => anchor_value)
+"If second argument is `anchor_value::Vector`, assume the anchor date is `firstdate(dvar)-1`"
+@inline undiff(dvar::MVTSeries, anchor_value::AbstractVecOrMat) = undiff(dvar, firstdate(dvar) - 1 => anchor_value)
+@inline undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:Number}) = undiff(dvar, anchor[1] => fill(anchor[2], size(dvar, 2)))
+@inline undiff(dvar::MVTSeries, anchor::MVTSeries) = (ad = firstdate(dvar) - 1; undiff(dvar, ad => anchor[ad]))
+@inline undiff(dvar::MVTSeries, anchor::TSeries) = (ad = firstdate(dvar) - 1; undiff(dvar, ad => anchor[ad]))
+@inline undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:MVTSeries}) = undiff(dvar, anchor[1] => anchor[2][anchor[1]])
+@inline undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:TSeries}) = undiff(dvar, anchor[1] => anchor[2][anchor[1]])
 function undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:AbstractVecOrMat})
     fromdate, value = anchor
     ET = Base.promote_eltype(dvar, value)
