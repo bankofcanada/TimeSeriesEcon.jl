@@ -684,13 +684,16 @@ end
 
 ####  sum(x::MVTSeries; dims=2) -> TSeries
 
-for func in (:sum, :prod, :minimum, :maximum)
-    @eval @inline Base.$func(x::MVTSeries; dims=:) =
-        dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims=dims)[:]) : $func(rawdata(x); dims=dims)
+for (mod, funcs) in ((Base, (:sum, :prod, :minimum, :maximum, :any, :all)), (Statistics, (:median, :mean)))
+    for func in funcs
 
-    @eval @inline Base.$func(f, x::MVTSeries; dims=:) =
-        dims == 2 ? TSeries(firstdate(x), $func(f, rawdata(x); dims=dims)[:]) : $func(f, rawdata(x); dims=dims)
+        @eval @inline $mod.$func(x::MVTSeries; dims=:) =
+            dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims=dims)[:]) : $func(rawdata(x); dims=dims)
 
+        @eval @inline $mod.$func(f, x::MVTSeries; dims=:) =
+            dims == 2 ? TSeries(firstdate(x), $func(f, rawdata(x); dims=dims)[:]) : $func(f, rawdata(x); dims=dims)
+
+    end
 end
 
 ####  reshape
@@ -889,11 +892,11 @@ Base.setindex!(sd::MVTSeries, ::Any, ::TSeries{F,Bool}) where {F<:Frequency} = m
 Base.setindex!(sd::MVTSeries{F}, val, ind::TSeries{F,Bool}) where {F<:Frequency} = setindex!(_vals(sd), val, _vals(ind), :)
 
 # Statistics
-Statistics.mean(x::MVTSeries; kwargs...) = mean(x.values; kwargs...)
-Statistics.mean(f, x::MVTSeries; kwargs...) = mean(f, x.values; kwargs...)
+# Statistics.mean(x::MVTSeries; kwargs...) = mean(x.values; kwargs...)
+# Statistics.mean(f, x::MVTSeries; kwargs...) = mean(f, x.values; kwargs...)
 Statistics.std(x::MVTSeries; kwargs...) = std(x.values; kwargs...)
 Statistics.var(x::MVTSeries; kwargs...) = var(x.values; kwargs...)
-Statistics.median(x::MVTSeries; kwargs...) = median(x.values; kwargs...)
+# Statistics.median(x::MVTSeries; kwargs...) = median(x.values; kwargs...)
 Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...)
 Statistics.cov(x::MVTSeries; kwargs...) = cov(x.values; kwargs...)
 
