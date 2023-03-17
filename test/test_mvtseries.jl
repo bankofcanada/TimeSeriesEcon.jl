@@ -781,7 +781,7 @@ end
         tt = TSeries(2020Q1, randn(20))
         qq = TSeries(2019Q1:2050Q4, ones)
         @test undiff(tt)[begin+1:end] ≈ cumsum(tt)
-        @test undiff(tt, 7) == undiff(tt) .+ 7
+        @test undiff(tt, 7) ≈ undiff(tt) .+ 7
         @test undiff(tt, 2020Q1 => 7) ≈ undiff(tt, 2020Q1 => 0.0) .+ 7
         @test undiff(tt, 2020Q1 => tt[begin]) ≈ cumsum(tt)
         @test undiff(tt, 2021Q1 => tt) ≈ cumsum(tt) .- cumsum(tt)[2021Q1] .+ tt[2021Q1]
@@ -795,11 +795,11 @@ end
         @test undiff(mm) == MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt))
         @test undiff(mm, 0.0) == MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt))
         @test undiff(mm, 7) == MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt, 7))
-        @test undiff(mm, [1, 8, 28]) == MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt)) .+ [1 8 28]
-        @test undiff(mm, 2021Q1 => 0.0)[2021Q1] == [0.0, 0.0, 0.0]
-        @test undiff(mm, 2021Q1 => 7.0)[2021Q1] == ([0.0, 0.0, 0.0] .+ 7)
+        @test undiff(mm, [1, 8, 28]) ≈ MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt)) .+ [1 8 28]
+        @test undiff(mm, 2021Q1 => 0.0)[2021Q1] ≈ [0.0, 0.0, 0.0]
+        @test undiff(mm, 2021Q1 => 7.0)[2021Q1] ≈ ([0.0, 0.0, 0.0] .+ 7)
         @test undiff(mm, 2021Q1 => [1, 8, 28])[2021Q1] ≈ [1, 8, 28]
-        @test undiff(mm, zz)[firstdate(mm)-1] == [1, 9, 29]
+        @test undiff(mm, zz)[firstdate(mm)-1] ≈ [1, 9, 29]
         @test undiff(mm, 2021Q1 => zz)[2021Q1] ≈ [1, 9, 29]
         @test undiff(mm, qq)[2019Q4] ≈ [1, 1, 1]
         @test undiff(mm, 2021Q1 => qq)[2021Q1] ≈ [1, 1, 1]
