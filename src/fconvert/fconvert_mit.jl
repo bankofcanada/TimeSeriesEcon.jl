@@ -171,10 +171,10 @@ function fconvert(F_to::Type{<:YPFrequency}, range_from::UnitRange{<:MIT{<:YPFre
 
     trunc_start = 0
     trunc_end = 0
-    if mpp_from > mpp_to
+    if mpp_from > mpp_to # to higher frequency
         trunc_start = trim !== :end && fi_to_start_month < fi_from_start_month ? 1 : 0
         trunc_end = trim !== :begin && li_to_end_month > li_from_end_month ? 1 : 0
-    else
+    else # to lower frequency
         if trim == :begin || trim == :both
             if fi_to_start_month < fi_from_start_month && fi_to_start_month <= fi_from_start_month - (mpp_from - 1)
                 trunc_start = 1
@@ -218,7 +218,7 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
         throw(ArgumentError("trim argument must be :both, :begin, or :end. Received: $(trim)."))
     end
     F_from = frequencyof(range_from)
-    if F_to > F_from
+    if F_to > F_from # to higher frequency
         if F_from <: BDaily
             dates = [Dates.Date(range_from[begin]), Dates.Date(range_from[end])]
             if holidays_map !== nothing
@@ -245,7 +245,7 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
             trunc_end = 1
         end
         return fi, li, trunc_start, trunc_end
-    else # F_to <= F_from
+    else # F_to <= F_from, to lower frequency
         if F_from <: BDaily
             if skip_holidays == true || holidays_map !== nothing
                 if holidays_map === nothing
@@ -267,9 +267,18 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
             end
         else
             if F_to > F_from
-                padded_dates = [Dates.Date(range_from[begin] - 1, :begin), Dates.Date(range_from[begin], :begin), Dates.Date(range_from[end]), Dates.Date(range_from[end] + 1)]
-            else
-                padded_dates = [Dates.Date(range_from[begin] - 1), Dates.Date(range_from[begin]), Dates.Date(range_from[end]), Dates.Date(range_from[end] + 1)]
+                padded_dates = [
+                    Dates.Date(range_from[begin] - 1, :begin),
+                    Dates.Date(range_from[begin], :begin), 
+                    Dates.Date(range_from[end]), 
+                    Dates.Date(range_from[end] + 1)
+                ]
+            else #F_to == F_from
+                padded_dates = [
+                    Dates.Date(range_from[begin] - 1), 
+                    Dates.Date(range_from[begin]), 
+                    Dates.Date(range_from[end]), 
+                    Dates.Date(range_from[end] + 1)]
             end
         end
         out_index = _get_out_indices(F_to, padded_dates)
