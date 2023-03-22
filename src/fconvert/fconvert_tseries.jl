@@ -378,6 +378,14 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
     mpp_from = div( 12, ppy(F_from))
     mpp_to = div( 12, ppy(F_to))
     (np, r) = divrem(N2, N1)
+
+    if method == :end
+        method = :point
+        values_base = :end
+    elseif method == :begin
+        method=:point
+        values_base = :begin
+    end
    
     fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=:both, parts=true)
     trunc_start = 0
@@ -458,6 +466,14 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
     
     F_from = frequencyof(t)
     rng_from = rangeof(t)
+
+    if method == :end
+        method = :point
+        values_base = :end
+    elseif method == :begin
+        method=:point
+        values_base = :begin
+    end
     
     if F_from == Daily
         dates = collect(Dates.Date(first(rng_from)):Day(1):Dates.Date(last(rng_from)))
@@ -504,6 +520,14 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
     
     F_from = frequencyof(t)
     rng_from = rangeof(t)
+
+    if method == :end
+        method = :point
+        values_base = :end
+    elseif method == :begin
+        method=:point
+        values_base = :begin
+    end
     
    
     dates = [Dates.Date(val) for val in rng_from]
