@@ -182,10 +182,10 @@ function dayofhalfyear(d::Date)
     if q == 1 || q == 3
         return Dates.dayofquarter(d)
     elseif q == 2
-        first_quarter = Dates.dayofyear(Dates.Date("$(year(d))-03-31"))
+        first_quarter = Dates.dayofyear(Dates.Date("$(Dates.year(d))-03-31"))
         return first_quarter + Dates.dayofquarter(d)
     elseif q == 4
-        first_three_quarters = Dates.dayofyear(Dates.Date("$(year(d))-08-31"))
+        first_three_quarters = Dates.dayofyear(Dates.Date("$(Dates.year(d))-08-31"))
         return first_three_quarters + Dates.dayofquarter(d)
     end
 end
@@ -423,6 +423,108 @@ function _validate_fconvert_yp(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPF
         end
         if F_from.parameters[1] ∉ tuple(collect(1:months_in_period)...)
             throw(ArgumentError("Source yearly frequency has an unsupported end month: $(F_from.parameters[1]). Must be 1-$months_in_period."))
+        end
+    end
+end
+
+function get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to; require=:single, values_base=:end)
+    if values_base == :end
+        if require == :single
+            # we just need the first data point in the input series to feed 
+            # into the first MIT in the output series
+            if fi_from_start_month + (mpp_from - 1) <= fi_to_start_month + (mpp_to - 1) 
+                return 0 # don't trim
+            else
+                return 1 #trim
+            end
+        elseif require == :all
+            # we need the first data point in the input series to either
+            # a) start at the same month as the output MIT
+            # b) have it's first month outside of the first output MIT and last month 
+            # inside
+            if fi_from_start_month == fi_to_start_month
+                return 0 # don't trim
+            elseif fi_from_start_month < fi_to_start_month && fi_from_start_month + (mpp_from - 1) >= fi_to_start_month
+                return 0 # don't trim
+            else
+                return 1 # trim
+            end
+        end
+    end
+    if values_base == :begin
+        if require == :single
+            # we need the first data point in the input series to either
+            # a) start at the same month as the output MIT
+            # b) have it's first month outside of the first output MIT and last month 
+            # inside
+            if fi_from_start_month == fi_to_start_month
+                return 0 # don't trim
+            elseif fi_from_start_month < fi_to_start_month && fi_from_start_month + (mpp_from - 1) >= fi_to_start_month
+                return 0 # don't trim
+            else
+                return 1 #trim
+            end
+        elseif require == :all
+            # we need the first data point in the input series to either 
+            # a) start at the same month as th eoutput MIT
+            # b) start within the output MIT but not a full input period from the start
+            if fi_from_start_month == fi_to_start_month
+                return 0 # don't trim
+            elseif fi_from_start_month > fi_to_start_month && fi_from_start_month - (mpp_from - 1) <= fi_to_start_month
+                return 0 # don't trim
+            else
+                return 1 # trim
+            end
+        end
+    end
+end
+
+function get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to; require=:single, values_base=:end)
+    if values_base == :end
+        if require == :single
+            # todo: maybe rewrite this
+            # we need the last data point to either
+            # a) land on the last month of the output range
+            # b) land before the last month, but not an entire period before
+            if li_from_end_month == li_to_end_month
+                return 0 # don't trim
+            elseif li_from_end_month < li_to_end_month && li_from_end_month + (mpp_from-1) >= li_to_end_month
+                return 0 # don't trim
+            else
+                return 1 # trim
+            end
+        elseif require == :all
+            # we need the last data point to either
+            # a) land on the last month of the output range
+            # b) land before the last month, but not an entire period before
+            if li_from_end_month == li_to_end_month
+                return 0 # don't trim
+            elseif li_from_end_month < li_to_end_month && li_from_end_month + (mpp_from-1) >= li_to_end_month
+                return 0 # don't trim
+            else
+                return 1 # trim
+            end
+        end
+    end
+    if values_base == :begin
+        if require == :single
+           # we need the last data point to either
+           # a) land after the first month of the output period
+           # b) land before the first month but not an entire period before
+           if li_from_end_month - (mpp_from - 1) >= li_to_end_month - (mpp_to - 1)
+                return 0 # don't trim
+           elseif li_from_end_month - (mpp_from - 1) < li_to_end_month - (mpp_to - 1) && li_from_end_month  >= li_to_end_month - (mpp_to - 1) 
+                return 0 # don't trim
+           else
+                return 1 # trim
+           end
+        elseif require == :all
+           # we need the last input period to start on or before the end of the last output period
+           if li_from_end_month > li_to_end_month && li_from_end_month - (mpp_from - 1) <= li_to_end_month
+                return 0 # don't trim
+           else
+                return 1 # trim
+           end
         end
     end
 end

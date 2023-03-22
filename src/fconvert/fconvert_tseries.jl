@@ -398,40 +398,18 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
     fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=:both, parts=true)
     trunc_start = 0
     trunc_end = 0
-    # for the first period, the code above provides the output period which overlaps the
-    # start-date of the input period. We need to do some additional checking
-    if fi_to_start_month < fi_from_start_month
-        # For most cases, we want to simply remove any output period 
-        # which starts before the first input period
-        if method !== :point || values_base == :begin
-            trunc_start = 1
-        else # method is :point and values_base = :end
-            # Trim the start if the first input period overlaps with the second output period
-            if fi_from_start_month + mpp_from > fi_to_start_month + mpp_to
-                trunc_start = 1
-            end 
-        end
-    end
-    if li_to_end_month > li_from_end_month
-        # For most cases, we want to simply remove any output period 
-        # which ends after the last input period
-        if method !== :point
-            trunc_end = 1
-        else # method is :point
-            if values_base == :end && li_from_end_month + (mpp_from -1) < li_to_end_month
-                # trim the end if there is a full input-period missing before the end of the last output period
-                trunc_end = 1
-            elseif values_base == :begin && li_to_end_month - (mpp_to - 1) > li_from_end_month
-                # trim the end if the start of last output period is after end of last input period
-                trunc_end = 1
-            end
-        end
+    if method == :point
+        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, values_base=values_base, require=:single)
+        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, values_base=values_base, require=:single)
+    else
+        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, values_base=values_base, require=:all)
+        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, values_base=values_base, require=:all)
     end
 
     fi = MIT{F_to}(fi_to_period+trunc_start)
     li = MIT{F_to}(li_to_period-trunc_end)
     out_range = fi:li
- 
+    
     fi_truncation_adjustment = trunc_start == 1 ? mpp_to : 0
     if method == :point
         # for the point method we just need to specify the indices in the input
@@ -449,8 +427,15 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
         
         ret = t.values[indices]
     else # mean/sum/min/max
-        months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month    
+        months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month 
+        if values_base == :begin 
+            months_of_missalignment += (mpp_from - 1)
+        end
+        if values_base == :begin && trunc_start == 0 && fi_from_start_month > fi_to_start_month
+            months_of_missalignment = 0
+        end
         periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
+        # start index needs to be smarter, it's assuming too much
         start_index = 1 + periods_of_missalignment
         end_index = start_index + np*length(out_range) - 1
         if start_index < 1
@@ -458,6 +443,9 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
             (d,r) = divrem(start_index, np)
             d = r !== 0 ? d + 1 : d
             start_index += d * np
+            if start_index == 0
+                start_index += np
+            end
         end
         if end_index > length(t.values)
             # same as while end_index > length(t.values) : end_index -= np
@@ -489,13 +477,25 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
     
     if F_from == Daily
         dates = collect(Dates.Date(first(rng_from)):Day(1):Dates.Date(last(rng_from)))
+    elseif method != :point
+        # for most methods we want to know which actual output period 
+        # corresponds to the start/end of each input period
+        dates = [Dates.Date(val, values_base) for val in rng_from]
     else
+        # for method = :point and values_base = :begin we want the value for an input period
+        # which overlaps an output period to correspond to that output period, so all dates
+        # are based on the end of the period
         dates = [Dates.Date(val) for val in rng_from]
     end
 
     trim = method == :point ? values_base : :both
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rng_from, trim=trim)
     out_index = _get_out_indices(F_to, dates)
+    if F_from <: Weekly
+        # adjust fi, and li based on the decision about the dates above.
+        fi = out_index[begin]
+        li = out_index[end]
+    end
     
     if method == :mean
         ret = [mean(values(t)[out_index.==target]) for target in unique(out_index)]
@@ -561,7 +561,7 @@ end
 # Daily to BDaily (method means nothing)
 function _fconvert_lower(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, values_base=:end)
     # options have no effect here
-    fi = fconvert(F_to, firstdate(t))
+    fi = fconvert(F_to, firstdate(t), round_to=:next)
 
     out_map_week = repeat([true], 7)
     first_day = dayofweek(Dates.Date(firstdate(t)))

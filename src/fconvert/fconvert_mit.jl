@@ -165,8 +165,29 @@ function fconvert(F_to::Type{<:YPFrequency}, range_from::UnitRange{<:MIT{<:YPFre
         return fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month
     end
 
-    trunc_start = trim !== :end && fi_to_start_month < fi_from_start_month ? 1 : 0
-    trunc_end = trim !== :begin && li_to_end_month > li_from_end_month ? 1 : 0
+    F_from = frequencyof(range_from)
+    mpp_from = div( 12, ppy(F_from))
+    mpp_to = div( 12, ppy(F_to))
+
+    trunc_start = 0
+    trunc_end = 0
+    if mpp_from > mpp_to
+        trunc_start = trim !== :end && fi_to_start_month < fi_from_start_month ? 1 : 0
+        trunc_end = trim !== :begin && li_to_end_month > li_from_end_month ? 1 : 0
+    else
+        if trim == :begin || trim == :both
+            if fi_to_start_month < fi_from_start_month && fi_to_start_month <= fi_from_start_month - (mpp_from - 1)
+                trunc_start = 1
+            end
+        end
+        if trim == :end || trim == :both
+            if li_to_end_month > li_from_end_month && li_to_end_month >= li_from_end_month + mpp_from - 1
+                trunc_end = 1
+            end
+        end
+    end
+   
+
     fi = MIT{sanitize_frequency(F_to)}(fi_to_period+trunc_start)
     li = MIT{sanitize_frequency(F_to)}(li_to_period-trunc_end)
     

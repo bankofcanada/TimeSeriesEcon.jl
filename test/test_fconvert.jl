@@ -203,10 +203,10 @@ end
 
     q4 = TSeries(MIT{Quarterly{2}}(9), [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8])
     y4 = fconvert(Yearly, q4, method=:mean)
-    @test rangeof(y4) == 3Y:4Y
-    @test y4.values == [3, 5]
+    @test rangeof(y4) == 3Y:5Y
+    @test y4.values == [3, 5, 7]
     r4 = fconvert(Yearly, rangeof(q4))
-    @test r4 == 3Y:4Y
+    @test r4 == 3Y:5Y
     y4m = fconvert(Yearly, fconvert(Monthly, q4), method=:mean)
     @test y4m.values == [3 + 1 / 6, 5 + 1 / 6]
     # mit4_start = fconvert(Yearly, q4.firstdate, values_base=:begin, round_to=:next)
@@ -269,6 +269,14 @@ end
     y9_end_m8 = fconvert(Yearly{8}, q9, method=:point, values_base=:end)
     @test rangeof(y9_end_m8) == MIT{Yearly{8}}(2022):MIT{Yearly{8}}(2024)
     @test y9_end_m8.values == [2,6, 10]
+
+    q10 = TSeries(2022Q2, collect(2:11))
+    y10_end = fconvert(Yearly{11}, q10, method=:mean, values_base=:end)
+    @test rangeof(y10_end) == 2023Y{11}:2024Y{11}
+    @test values(y10_end) == [5.5, 9.5]
+    y10_begin = fconvert(Yearly{11}, q10, method=:mean, values_base=:begin)
+    @test rangeof(y10_begin) == 2023Y{11}:2023Y{11}
+    @test values(y10_begin) == [6.5]
 
     # @test mit4_start == 3Y
 
@@ -1273,7 +1281,7 @@ end
     linears_r5 = collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
     mask_r5 = repeat([false, true, true, true, true, true, false], 20)
     @test r5_alt.values ≈ linears_r5[mask_r5]
-    @test rangeof(r5_alt) == 5:104
+    @test rangeof(r5_alt) == 6:105
 end
 
 @testset "fconvert, Daily to Weekly" begin
@@ -1915,8 +1923,8 @@ end
     counter = 1
     t_from = nothing
     last_F_from = nothing
-    # @showprogress "combinations" for (F_from, F_to) in combinations
-    for (F_from, F_to) in combinations
+    @showprogress "combinations" for (F_from, F_to) in combinations
+    # for (F_from, F_to) in combinations
         if F_from != last_F_from
             last_F_from = F_from
             t_from = TSeries(MIT{F_from}(100), collect(1:800))
@@ -1926,6 +1934,7 @@ end
 
             # TSeries
             t_to = @suppress fconvert(F_to, t_from)
+            # t_to = fconvert(F_to, t_from)
             @test frequencyof(t_to) == TimeSeriesEcon.sanitize_frequency(F_to)
             @test length(t_to.values) > 0
             # println(F_from, ", ", F_to)

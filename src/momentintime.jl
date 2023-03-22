@@ -592,10 +592,10 @@ end
 #-------------------------
 # pretty printing
 
-Base.show(io::IO, F::Type{Quarterly{3}}) = print(io, "Quarterly")
-Base.show(io::IO, F::Type{HalfYearly{6}}) = print(io, "HalfYearly")
-Base.show(io::IO, F::Type{Yearly{12}}) = print(io, "Yearly")
-Base.show(io::IO, F::Type{Weekly{7}}) = print(io, "Weekly")
+# Base.show(io::IO, F::Type{Quarterly{3}}) = print(io, "Quarterly")
+# Base.show(io::IO, F::Type{HalfYearly{6}}) = print(io, "HalfYearly")
+# Base.show(io::IO, F::Type{Yearly{12}}) = print(io, "Yearly")
+# Base.show(io::IO, F::Type{Weekly{7}}) = print(io, "Weekly")
 
 Base.show(io::IO, m::MIT{Unit}) = print(io, Int(m), 'U')
 Base.show(io::IO, m::MIT{Daily}) = print(io, Dates.Date(m))
