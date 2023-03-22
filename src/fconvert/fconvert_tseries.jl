@@ -31,25 +31,27 @@ fconvert(Monthly, x)
 
 ### Converting to Lower or similar frequency
 There are five methods available: `:point`, `:mean`, `:sum`, `:min`, and `:max`. The default is `:mean`.
-Each MIT in the input frequency will be mapped to the output MIT within which the end date of the input MIT
-falls. The corresponding values are then grouped for each output MIT and a value is determined based on the method.
+Each MIT in the input frequency will be mapped to the output MIT within which the start/end date of the input MIT
+falls - depending on the whether values_base is `:begin` or `:end`. The corresponding values are then grouped for each 
+output MIT and a value is determined based on the method.
 
-* `:point`: the first or last value in each group is chosen based on the values_base argument.
 * `:mean`: the values within each group are averaged.
 * `:sum`: the values within each group are summed.
 * `:min`: the lowest value within each group is chosen.
 * `:max`: the highest value within each group is chosen.
+* `:point`: see below.
 
-The `values_base` determines the behavior of the `:point` method as well as the range of the output tseries when the 
-methods is `:point`. When methods is `:point` and `values_base == :end` then the end of the output range will be truncated whenever 
-the last MIT in the input range ends partway through an MIT in the output frequency. The value in each output MIT
-will be taken from the value at the end of whichever input MIT ends on or before the end of the corresponding output MIT.
+Output ranges are truncated such that each output MIT contains a full complement of input values. For example, when `values_base` is
+`:end`, an output MIT will be included if all MITs in the input frequency with end dates covered by the output frequency have values.
+Similarly, when `values_base` is `:begin` an output MIT will be included if all input MITs with start dates covered by the output MIT
+have values.
 
-When methods is `:point` and `values_base == :begin`  the start of the output range will be truncated whenever the first MIT 
-of the input range  starts partway through an MIT in the output frequency. The value in each output MIT will be taken from
-the Input MIT which overlaps with the start-date of output MIT.
-
-When the method is **not** `:point`, both ends of the output range will be truncated when warranted.
+The approach is different when method is `:point`. The output MIT will contain the value from the input MIT whose first/last
+day falls *on or before* the first/last day of the output MIT, depending on the `values_base` argument. Truncation is more generous 
+than with the other methods. When `values_base` is `:begin` an output MIT will be included whenever an input MIT with a value
+overlaps the start_day of the output MIT. WHen `values_base` is `:end` an output MIT will be included whenever there is a value
+from the input MIT whose end date is either on the last day of the output MIT, or whose end date is the closest to, but not after the 
+last day of the output MIT.
 
 Both method and values_base are ignored when converting from Daily to BDaily.
 
@@ -70,13 +72,7 @@ When method is :linear values are interpolated in a linear fashion across days/b
 frequency periods. The specifics depends on values_base. When values_base is `:end` the values will be interpolated 
 between the end-dates of adjacent periods. When values_base = `:begin` the values will be interpolated between start-dates 
 of adjacent periods. Tail-end periods will have values interpolated based on the progression in the adjacent non-tail-end period.
-When values_base = `:middle`, the values are interpolated between mid-points in adjacent MITs in the input period.
-When converting to Daily or Business Daily, this mid-point is rounded up, so the input value will fall 
-on the 16th of most months when interpolating linearly from monthly to Daily, for example. When converting to Monthly,
-the mid-point is not rounded so some output series will not have the input series values present
-in any of the output periods. This is the case when converting from HalfYearly to monthly, for example.
 
-`values_base` has no effect when method is `:const` or `:even`.
 
 ```
 x = TSeries(2000M1:2000M7, collect(Float64, 1:7))
@@ -302,7 +298,7 @@ function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{
     fi = date_function(Dates.Date(t.firstdate, :begin), bias=:next)
     li = date_function(Dates.Date(rangeof(t)[end]), bias=:previous)
     ts = TSeries(fi:li)
-    if values_base ∉ (:end, :begin, :middle)
+    if values_base ∉ (:end, :begin) #, :middle)
         throw(ArgumentError("values_base argument must be :begin or :end. Received: $(values_base)."))
     end
     if method == :const
@@ -347,18 +343,6 @@ function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{
                     li_loop = date_function(_date_plus_half(m+1, :begin), bias=:previous)
                 end
                 n_days = length(fi_loop:li_loop)
-                """
-                Mid-january: January 16th
-                Mid-february February 14.5th
-                Mid-March: March 16th
-                Mid April: April 15.5th
-                Mid May: May 16th
-
-                January to february:
-                    inclusive: 29.5 days
-                February to March
-
-                """
                 interpolated = collect(LinRange(start_val, end_val, n_days))
                 ts[fi_loop:li_loop] = interpolated[1:end]
                 # additional fix for start

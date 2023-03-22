@@ -130,9 +130,9 @@ end
     m6_end = fconvert(Monthly, y6, method=:linear, values_base=:end)
     @test rangeof(m6_end) == 2022M1:2025M12
     @test values(m6_end) == [0.08333333333333333, 0.16666666666666666, 0.25, 0.3333333333333333, 0.4166666666666667, 0.5, 0.5833333333333334, 0.6666666666666666, 0.75, 0.8333333333333334, 0.9166666666666666, 1.0, 1.0833333333333333, 1.1666666666666667, 1.25, 1.3333333333333335, 1.4166666666666665, 1.5, 1.5833333333333335, 1.6666666666666665, 1.75, 1.8333333333333335, 1.9166666666666665, 2.0, 2.083333333333333, 2.166666666666667, 2.25, 2.3333333333333335, 2.4166666666666665, 2.5, 2.583333333333333, 2.666666666666667, 2.75, 2.833333333333333, 2.916666666666667, 3.0, 3.0833333333333335, 3.1666666666666665, 3.25, 3.333333333333333, 3.4166666666666665, 3.5, 3.5833333333333335, 3.6666666666666665, 3.75, 3.8333333333333335, 3.9166666666666665, 4.0]
-    m6_middle = fconvert(Monthly, y6, method=:linear, values_base=:middle)
-    @test rangeof(m6_middle) == 2022M1:2025M12
-    @test values(m6_middle) == [0.541666666666667, 0.625, 0.7083333333333335, 0.791666666666667, 0.8750000000000002, 0.9583333333333335, 1.0416666666666667, 1.125, 1.2083333333333333, 1.2916666666666665, 1.375, 1.4583333333333335, 1.5416666666666665, 1.625, 1.7083333333333335, 1.7916666666666665, 1.875, 1.9583333333333335, 2.041666666666667, 2.125, 2.208333333333333, 2.2916666666666665, 2.375, 2.4583333333333335, 2.541666666666667, 2.625, 2.708333333333333, 2.791666666666667, 2.875, 2.958333333333333, 3.0416666666666665, 3.125, 3.2083333333333335, 3.291666666666667, 3.375, 3.4583333333333335, 3.5416666666666665, 3.625, 3.7083333333333335, 3.7916666666666665, 3.875, 3.9583333333333335, 4.041666666666667, 4.125, 4.208333333333334, 4.291666666666667, 4.375, 4.458333333333334]
+    # m6_middle = fconvert(Monthly, y6, method=:linear, values_base=:middle)
+    # @test rangeof(m6_middle) == 2022M1:2025M12
+    # @test values(m6_middle) == [0.541666666666667, 0.625, 0.7083333333333335, 0.791666666666667, 0.8750000000000002, 0.9583333333333335, 1.0416666666666667, 1.125, 1.2083333333333333, 1.2916666666666665, 1.375, 1.4583333333333335, 1.5416666666666665, 1.625, 1.7083333333333335, 1.7916666666666665, 1.875, 1.9583333333333335, 2.041666666666667, 2.125, 2.208333333333333, 2.2916666666666665, 2.375, 2.4583333333333335, 2.541666666666667, 2.625, 2.708333333333333, 2.791666666666667, 2.875, 2.958333333333333, 3.0416666666666665, 3.125, 3.2083333333333335, 3.291666666666667, 3.375, 3.4583333333333335, 3.5416666666666665, 3.625, 3.7083333333333335, 3.7916666666666665, 3.875, 3.9583333333333335, 4.041666666666667, 4.125, 4.208333333333334, 4.291666666666667, 4.375, 4.458333333333334]
 
     q7 = TSeries(2022Q1, collect(1:12))
     m7_begin = fconvert(Monthly, q7, method=:linear, values_base=:begin)
@@ -141,9 +141,9 @@ end
     m7_end = fconvert(Monthly, q7, method=:linear, values_base=:end)
     @test rangeof(m7_end) == 2022M1:2024M12
     @test values(m7_end) == [0.3333333333333333, 0.6666666666666666, 1.0, 1.3333333333333335, 1.6666666666666665, 2.0, 2.3333333333333335, 2.666666666666667, 3.0, 3.333333333333333, 3.6666666666666665, 4.0, 4.333333333333334, 4.666666666666666, 5.0, 5.333333333333334, 5.666666666666667, 6.0, 6.333333333333333, 6.666666666666666, 7.0, 7.333333333333334, 7.666666666666666, 8.0, 8.333333333333334, 8.666666666666668, 9.0, 9.333333333333334, 9.666666666666666, 10.0, 10.333333333333334, 10.666666666666668, 11.0, 11.333333333333334, 11.666666666666668, 12.0]
-    m7_middle = fconvert(Monthly, q7, method=:linear, values_base=:middle)
-    @test rangeof(m7_middle) == 2022M1:2024M12
-    @test values(m7_middle) == [0.6666666666666665, 1.0, 1.3333333333333335, 1.6666666666666665, 2.0, 2.3333333333333335, 2.666666666666667, 3.0, 3.333333333333333, 3.6666666666666665, 4.0, 4.333333333333334, 4.666666666666666, 5.0, 5.333333333333334, 5.666666666666667, 6.0, 6.333333333333333, 6.666666666666666, 7.0, 7.333333333333334, 7.666666666666666, 8.0, 8.333333333333334, 8.666666666666668, 9.0, 9.333333333333334, 9.666666666666666, 10.0, 10.333333333333334, 10.666666666666668, 11.0, 11.333333333333334, 11.666666666666668, 12.0, 12.333333333333332]
+    # m7_middle = fconvert(Monthly, q7, method=:linear, values_base=:middle)
+    # @test rangeof(m7_middle) == 2022M1:2024M12
+    # @test values(m7_middle) == [0.6666666666666665, 1.0, 1.3333333333333335, 1.6666666666666665, 2.0, 2.3333333333333335, 2.666666666666667, 3.0, 3.333333333333333, 3.6666666666666665, 4.0, 4.333333333333334, 4.666666666666666, 5.0, 5.333333333333334, 5.666666666666667, 6.0, 6.333333333333333, 6.666666666666666, 7.0, 7.333333333333334, 7.666666666666666, 8.0, 8.333333333333334, 8.666666666666668, 9.0, 9.333333333333334, 9.666666666666666, 10.0, 10.333333333333334, 10.666666666666668, 11.0, 11.333333333333334, 11.666666666666668, 12.0, 12.333333333333332]
 
     h8 = TSeries(2022H1, collect(1:5))
     m8 = fconvert(Monthly, h8)
@@ -155,9 +155,9 @@ end
     m8_end = fconvert(Monthly, h8, method=:linear, values_base=:end)
     @test rangeof(m8_end) == 2022M1:2024M6
     @test values(m8_end)[1:13] ≈ [0+1/6,0+2/6,0+3/6,0+4/6,0+5/6,1,1+1/6,1+2/6,1+3/6,1+4/6,1+5/6,2,2+1/6]
-    m8_middle = fconvert(Monthly, h8, method=:linear, values_base=:middle)
-    @test rangeof(m8_middle) == 2022M1:2024M6
-    @test values(m8_middle)[1:13] ≈ [.75-1/6, .75, .75+1/6,1.25-1/6, 1.25, 1.25+1/6, 1.75-1/6, 1.75, 1.75+1/6, 2.25-1/6, 2.25,2.25+1/6,2.75-1/6]
+    # m8_middle = fconvert(Monthly, h8, method=:linear, values_base=:middle)
+    # @test rangeof(m8_middle) == 2022M1:2024M6
+    # @test values(m8_middle)[1:13] ≈ [.75-1/6, .75, .75+1/6,1.25-1/6, 1.25, 1.25+1/6, 1.75-1/6, 1.75, 1.75+1/6, 2.25-1/6, 2.25,2.25+1/6,2.75-1/6]
     m8_even = fconvert(Monthly, h8, method=:even)
     @test rangeof(m8_even) == 2022M1:2024M6
     @test values(m8_even) == [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5] ./ 6
@@ -343,9 +343,9 @@ end
 
     """repo CONVERT(WS1, MONTHLY, LINEAR, AVERAGED)"""
     r1 = fconvert(Monthly, fconvert(Daily, t1, method=:linear), method=:mean)
-    r1_mid = fconvert(Monthly, fconvert(Daily, t1, method=:linear, values_base=:middle), method=:mean)
+    # r1_mid = fconvert(Monthly, fconvert(Daily, t1, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r1.values, [2.286, 6.5, 10.714, 15.071], atol=1e-2)
-    @test isapprox(r1_mid.values, [2.71, 6.93, 11.14, 15.50], atol=1e-2)
+    # @test isapprox(r1_mid.values, [2.71, 6.93, 11.14, 15.50], atol=1e-2)
     @test rangeof(r1) == 1M1:1M4
     r1_range = fconvert(Monthly, rangeof(t1), trim=:both)
     @test r1_range == 1M1:1M4
@@ -403,9 +403,9 @@ end
 
     """repo CONVERT(WS2, MONTHLY, LINEAR, AVERAGED)"""
     r9 = fconvert(Monthly, fconvert(Daily, t2, method=:linear), method=:mean)
-    r9_mid = fconvert(Monthly, fconvert(Daily, t2, method=:linear, values_base=:middle), method=:mean)
+    # r9_mid = fconvert(Monthly, fconvert(Daily, t2, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r9.values, [5.929, 10.143, 14.5], atol=1e-2)
-    @test isapprox(r9_mid.values, [6.36, 10.57, 14.93], atol=1e-2)
+    # @test isapprox(r9_mid.values, [6.36, 10.57, 14.93], atol=1e-2)
     @test rangeof(r9) == 1M2:1M4
     r9_range = fconvert(Monthly, rangeof(t2), trim=:both)
     @test r9_range == 1M2:1M4
@@ -514,9 +514,9 @@ end
 
     """repo CONVERT(WS3, QUARTERLY, LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly, fconvert(Daily, t3, method=:linear), method=:mean)
-    r5_mid = fconvert(Quarterly, fconvert(Daily, t3, method=:linear, values_base=:middle), method=:mean)
+    # r5_mid = fconvert(Quarterly, fconvert(Daily, t3, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r5.values, [6.5, 19.43, 32.5, 45.64], atol=1e-1)
-    @test isapprox(r5_mid.values, [6.93, 19.86, 32.85, 46.07], atol=1e-1)
+    # @test isapprox(r5_mid.values, [6.93, 19.86, 32.85, 46.07], atol=1e-1)
     @test rangeof(r5) == 1Q1:1Q4
 
     """repo CONVERT(WS3, QUARTERLY, LINEAR, END)"""
@@ -573,9 +573,9 @@ end
 
     """repo CONVERT(WS4, QUARTERLY, LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly, fconvert(Daily, t4, method=:linear), method=:mean)
-    r13_mid = fconvert(Quarterly, fconvert(Daily, t4, method=:linear, values_base=:middle), method=:mean)
+    # r13_mid = fconvert(Quarterly, fconvert(Daily, t4, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r13.values, [18.86, 31.93, 45.07], atol=1e-1)
-    @test isapprox(r13_mid.values, [19.29, 32.28, 45.50], atol=1e-1)
+    # @test isapprox(r13_mid.values, [19.29, 32.28, 45.50], atol=1e-1)
     @test rangeof(r13) == 1Q2:1Q4
 
     """repo CONVERT(WS4, QUARTERLY, LINEAR, END)"""
@@ -645,9 +645,9 @@ end
 
     """repo CONVERT(WS5, ANNUAL, LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly, fconvert(Daily, t5, method=:linear), method=:mean)
-    r5_mid = fconvert(Yearly, fconvert(Daily, t5, method=:linear, values_base=:middle), method=:mean)
+    # r5_mid = fconvert(Yearly, fconvert(Daily, t5, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r5.values, [26.14, 78.29, 130.43], atol=1e-2)
-    @test isapprox(r5_mid.values, [26.57, 78.71, 130.86], atol=1e-2)
+    # @test isapprox(r5_mid.values, [26.57, 78.71, 130.86], atol=1e-2)
     @test rangeof(r5) == 1Y:3Y
 
     """repo CONVERT(WS5, ANNUAL, LINEAR, END)"""
@@ -664,7 +664,6 @@ end
     # r8 = fconvert(Yearly, t5, method=:sum, interpolation=:linear)
     # @test isapprox(r8.values, [1385.51, 4104.39, 6823.27], atol=1e-1)
     # @test rangeof(r8) == 1Y:3Y
-
     """repo CONVERT(WS6, ANNUAL, DISCRETE, AVERAGED)"""
     r9 = fconvert(Yearly, t6, method=:mean)
     @test isapprox(r9.values, [77.50, 129.50], atol=1e-2)
@@ -704,9 +703,9 @@ end
 
     """repo CONVERT(WS6, ANNUAL, LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly, fconvert(Daily, t6, method=:linear), method=:mean)
-    r13_mid = fconvert(Yearly, fconvert(Daily, t6, method=:linear, values_base=:middle), method=:mean)
+    # r13_mid = fconvert(Yearly, fconvert(Daily, t6, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r13.values, [77.71, 129.86], atol=1e-2)
-    @test isapprox(r13_mid.values, [78.14, 130.29], atol=1e-2)
+    # @test isapprox(r13_mid.values, [78.14, 130.29], atol=1e-2)
     @test rangeof(r13) == 2Y:3Y
 
     """repo CONVERT(WS6, ANNUAL, LINEAR, END)"""
@@ -767,9 +766,9 @@ end
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly{1}, fconvert(Daily, t3, method=:linear), method=:mean)
-    r5_mid = fconvert(Quarterly{1}, fconvert(Daily, t3, method=:linear, values_base=:middle), method=:mean)
+    # r5_mid = fconvert(Quarterly{1}, fconvert(Daily, t3, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r5.values, [10.86, 23.79, 36.93, 50.07], atol=1e-1)
-    @test isapprox(r5_mid.values, [11.29, 24.21, 37.28, 50.50], atol=1e-1)
+    # @test isapprox(r5_mid.values, [11.29, 24.21, 37.28, 50.50], atol=1e-1)
     @test rangeof(r5) == MIT{Quarterly{1}}(5):MIT{Quarterly{1}}(8)
 
     """repo CONVERT(WS3, QUARTERLY(JANUARY), LINEAR, END)"""
@@ -826,9 +825,9 @@ end
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly{1}, fconvert(Daily, t4, method=:linear), method=:mean)
-    r13_mid = fconvert(Quarterly{1}, fconvert(Daily, t4, method=:linear, values_base=:middle), method=:mean)
+    # r13_mid = fconvert(Quarterly{1}, fconvert(Daily, t4, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r13.values, [10.29, 23.21, 36.36, 49.5], atol=1e-1)
-    @test isapprox(r13_mid.values, [10.71, 23.64, 36.71, 49.93], atol=1e-1)
+    # @test isapprox(r13_mid.values, [10.71, 23.64, 36.71, 49.93], atol=1e-1)
     @test rangeof(r13) == MIT{Quarterly{1}}(5):MIT{Quarterly{1}}(8)
 
     """repo CONVERT(WS4, QUARTERLY(JANUARY), LINEAR, END)"""
@@ -887,9 +886,9 @@ end
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), LINEAR, AVERAGED)"""
     r5 = fconvert(Quarterly{2}, fconvert(Daily, t3, method=:linear), method=:mean)
-    r5_mid = fconvert(Quarterly{2}, fconvert(Daily, t3, method=:linear, values_base=:middle), method=:mean)
+    # r5_mid = fconvert(Quarterly{2}, fconvert(Daily, t3, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r5.values, [15.07, 28.21, 41.29], atol=1e-1)
-    @test isapprox(r5_mid.values, [15.50, 28.64, 41.64], atol=1e-1)
+    # @test isapprox(r5_mid.values, [15.50, 28.64, 41.64], atol=1e-1)
     @test rangeof(r5) == MIT{Quarterly{2}}(5):MIT{Quarterly{2}}(7)
 
     """repo CONVERT(WS3, QUARTERLY(FEBRUARY), LINEAR, END)"""
@@ -946,9 +945,9 @@ end
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), LINEAR, AVERAGED)"""
     r13 = fconvert(Quarterly{2}, fconvert(Daily, t4, method=:linear), method=:mean)
-    r13_mid = fconvert(Quarterly{2}, fconvert(Daily, t4, method=:linear, values_base=:middle), method=:mean)
+    # r13_mid = fconvert(Quarterly{2}, fconvert(Daily, t4, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r13.values, [14.5, 27.64, 40.71, 53.64], atol=1e-1)
-    @test isapprox(r13_mid.values, [14.93, 28.07, 41.14, 54.07], atol=1e-1) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
+    # @test isapprox(r13_mid.values, [14.93, 28.07, 41.14, 54.07], atol=1e-1) # NOTE: FAME output a value for 2Q1 even though the last observation is Feb 24
     @test rangeof(r13) == MIT{Quarterly{2}}(5):MIT{Quarterly{2}}(8)
 
     """repo CONVERT(WS4, QUARTERLY(FEBRUARY), LINEAR, END)"""
@@ -1007,9 +1006,9 @@ end
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly{8}, fconvert(Daily, t5, method=:linear), method=:mean)
-    r5_mid = fconvert(Yearly{8}, fconvert(Daily, t5, method=:linear, values_base=:middle), method=:mean)
+    # r5_mid = fconvert(Yearly{8}, fconvert(Daily, t5, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r5.values, [60.86, 113, 165.21], atol=1e-2)
-    @test isapprox(r5_mid.values, [61.29, 113.43, 165.64], atol=1e-2)
+    # @test isapprox(r5_mid.values, [61.29, 113.43, 165.64], atol=1e-2)
     @test rangeof(r5) == MIT{Yearly{8}}(2):MIT{Yearly{8}}(4)
 
     """repo CONVERT(WS5, ANNUAL(AUGUST), LINEAR, END)"""
@@ -1066,9 +1065,9 @@ end
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly{8}, fconvert(Daily, t6, method=:linear), method=:mean)
-    r13_mid = fconvert(Yearly{8}, fconvert(Daily, t6, method=:linear, values_base=:middle), method=:mean)
+    # r13_mid = fconvert(Yearly{8}, fconvert(Daily, t6, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r13.values, [60.29, 112.43, 164.64], atol=1e-2)
-    @test isapprox(r13_mid.values, [60.71, 112.86, 165.07], atol=1e-2)
+    # @test isapprox(r13_mid.values, [60.71, 112.86, 165.07], atol=1e-2)
     @test rangeof(r13) == MIT{Yearly{8}}(2):MIT{Yearly{8}}(4)
 
     """repo CONVERT(WS6, ANNUAL(AUGUST), LINEAR, END)"""
@@ -1128,9 +1127,9 @@ end
 
     """repo CONVERT(WS5, ANNUAL(MARCH), LINEAR, AVERAGED)"""
     r5 = fconvert(Yearly{3}, fconvert(Daily, t5, method=:linear), method=:mean)
-    r5_mid = fconvert(Yearly{3}, fconvert(Daily, t5, method=:linear, values_base=:middle), method=:mean)
+    # r5_mid = fconvert(Yearly{3}, fconvert(Daily, t5, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r5.values, [39.0, 91.14, 143.36], atol=1e-2)
-    @test isapprox(r5_mid.values, [39.43, 91.57, 143.79], atol=1e-2)
+    # @test isapprox(r5_mid.values, [39.43, 91.57, 143.79], atol=1e-2)
     @test rangeof(r5) == MIT{Yearly{3}}(2):MIT{Yearly{3}}(4)
 
     """repo CONVERT(WS5, ANNUAL(MARCH), LINEAR, END)"""
@@ -1187,9 +1186,9 @@ end
 
     """repo CONVERT(WS6, ANNUAL(MARCH), LINEAR, AVERAGED)"""
     r13 = fconvert(Yearly{3}, fconvert(Daily, t6, method=:linear), method=:mean)
-    r13_mid = fconvert(Yearly{3}, fconvert(Daily, t6, method=:linear, values_base=:middle), method=:mean)
+    # r13_mid = fconvert(Yearly{3}, fconvert(Daily, t6, method=:linear, values_base=:middle), method=:mean)
     @test isapprox(r13.values, [38.43, 90.57, 142.79], atol=1e-2)
-    @test isapprox(r13_mid.values, [38.86, 91.00, 143.21], atol=1e-2)
+    # @test isapprox(r13_mid.values, [38.86, 91.00, 143.21], atol=1e-2)
     @test rangeof(r13) == MIT{Yearly{3}}(2):MIT{Yearly{3}}(4)
 
     """repo CONVERT(WS6, ANNUAL(MARCH), LINEAR, END)"""
@@ -1228,17 +1227,17 @@ end
     @test r1.values == reduce(vcat, collect([repeat([x], 7) for x in 1:20]))
     @test rangeof(r1) == 1:140
 
-    r2 = fconvert(Daily, t1, method=:linear, values_base=:middle)
-    @test r2.values ≈ collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
-    @test rangeof(r2) == 1:140
+    # r2 = fconvert(Daily, t1, method=:linear, values_base=:middle)
+    # @test r2.values ≈ collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
+    # @test rangeof(r2) == 1:140
 
     r3 = fconvert(Daily, t2, method=:const)
     @test r3.values == reduce(vcat, collect([repeat([x], 7) for x in 1:20]))
     @test rangeof(r3) == 5:144
 
-    r4 = fconvert(Daily, t2, method=:linear, values_base=:middle)
-    @test r4.values ≈ collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
-    @test rangeof(r4) == 5:144
+    # r4 = fconvert(Daily, t2, method=:linear, values_base=:middle)
+    # @test r4.values ≈ collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
+    # @test rangeof(r4) == 5:144
 
 end
 
@@ -1253,35 +1252,35 @@ end
     @test r1.values == reduce(vcat, collect([repeat([x], 5) for x in 1:20]))
     @test rangeof(r1) == 1:100
 
-    r2 = fconvert(BDaily, t1, method=:linear, values_base=:middle)
-    @test r2.values ≈ collect(LinRange(0.4, 20.2, 100))
-    @test rangeof(r2) == 1:100
+    # r2 = fconvert(BDaily, t1, method=:linear, values_base=:middle)
+    # @test r2.values ≈ collect(LinRange(0.4, 20.2, 100))
+    # @test rangeof(r2) == 1:100
 
-    r2_alt = fconvert(BDaily, fconvert(Daily, t1, method=:linear, values_base=:middle))
-    linears_r2 = collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
-    mask_r2 = repeat([true, true, true, true, true, false, false], 20)
-    @test r2_alt.values ≈ linears_r2[mask_r2]
-    @test rangeof(r2_alt) == 1:100
+    # r2_alt = fconvert(BDaily, fconvert(Daily, t1, method=:linear, values_base=:middle))
+    # linears_r2 = collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
+    # mask_r2 = repeat([true, true, true, true, true, false, false], 20)
+    # @test r2_alt.values ≈ linears_r2[mask_r2]
+    # @test rangeof(r2_alt) == 1:100
 
     r3 = fconvert(BDaily, t2)
     @test r3.values == reduce(vcat, collect([repeat([x], 5) for x in 1:20]))
     @test rangeof(r3) == 5:104
 
-    r4 = fconvert(BDaily, t2, method=:linear, values_base=:middle)
-    @test r4.values ≈ collect(LinRange(0.8, 20.6, 100))
-    @test rangeof(r4) == 5:104
+    # r4 = fconvert(BDaily, t2, method=:linear, values_base=:middle)
+    # @test r4.values ≈ collect(LinRange(0.8, 20.6, 100))
+    # @test rangeof(r4) == 5:104
 
-    r4_alt = fconvert(BDaily, fconvert(Daily, t2, method=:linear, values_base=:middle))
-    linears_r4 = collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
-    mask_r4 = repeat([true, false, false, true, true, true, true], 20)
-    @test r4_alt.values ≈ linears_r4[mask_r4]
-    @test rangeof(r4_alt) == 5:104
+    # r4_alt = fconvert(BDaily, fconvert(Daily, t2, method=:linear, values_base=:middle))
+    # linears_r4 = collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
+    # mask_r4 = repeat([true, false, false, true, true, true, true], 20)
+    # @test r4_alt.values ≈ linears_r4[mask_r4]
+    # @test rangeof(r4_alt) == 5:104
 
-    r5_alt = fconvert(BDaily, fconvert(Daily, t3, method=:linear, values_base=:middle))
-    linears_r5 = collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
-    mask_r5 = repeat([false, true, true, true, true, true, false], 20)
-    @test r5_alt.values ≈ linears_r5[mask_r5]
-    @test rangeof(r5_alt) == 6:105
+    # r5_alt = fconvert(BDaily, fconvert(Daily, t3, method=:linear, values_base=:middle))
+    # linears_r5 = collect(LinRange(0.5714285714285716, 20.428571428571427, 140))
+    # mask_r5 = repeat([false, true, true, true, true, true, false], 20)
+    # @test r5_alt.values ≈ linears_r5[mask_r5]
+    # @test rangeof(r5_alt) == 6:105
 end
 
 @testset "fconvert, Daily to Weekly" begin
@@ -1726,11 +1725,11 @@ end
     @test d1_lin2[daily("2022-04-01"):daily("2022-04-30")].values == collect(LinRange(4, 5, 31))[1:30]
     @test length(d1_lin2) == 365
 
-    d1_lin3 = fconvert(Daily, t1, method=:linear, values_base=:middle)
-    @test d1_lin2[daily("2022-01-01"):daily("2022-01-31")].values == collect(LinRange(1, 2, 32))[1:31]
-    @test d1_lin2[daily("2022-02-01"):daily("2022-02-28")].values == collect(LinRange(2, 3, 29))[1:28]
-    @test d1_lin2[daily("2022-04-01"):daily("2022-04-30")].values == collect(LinRange(4, 5, 31))[1:30]
-    @test length(d1_lin2) == 365
+    # d1_lin3 = fconvert(Daily, t1, method=:linear, values_base=:middle)
+    # @test d1_lin3[daily("2022-01-01"):daily("2022-01-31")].values == collect(LinRange(1, 2, 32))[1:31]
+    # @test d1_lin3[daily("2022-02-01"):daily("2022-02-28")].values == collect(LinRange(2, 3, 29))[1:28]
+    # @test d1_lin3[daily("2022-04-01"):daily("2022-04-30")].values == collect(LinRange(4, 5, 31))[1:30]
+    # @test length(d1_lin3) == 365
 
     d2_lin = fconvert(Daily, t2, method=:linear)
     @test d2_lin[daily("2022-01-01"):daily("2022-03-31")].values == collect(LinRange(0, 1, 31 + 28 + 31 + 1))[2:31+28+31+1]
@@ -1961,7 +1960,7 @@ end
                 end
                 if F_to ∈ (Daily, BDaily, Monthly)
                     for method in (:linear, )
-                        for values_base in (:begin, :end, :middle)
+                        for values_base in (:begin, :end)#, :middle)
                             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
                             @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
                             @test length(t_to_sub.values) > 0

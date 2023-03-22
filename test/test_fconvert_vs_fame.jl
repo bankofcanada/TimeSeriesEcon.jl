@@ -82,6 +82,9 @@ function get_fame_conversion_string(F_to, F_from, method, values_base)
         if values_base == :begin
             s = s*"beginning"
         end
+        # if values_base == :middle
+        #     s = s*"averaged"
+        # end
     end
     # println(s)
     return s
@@ -95,7 +98,7 @@ function get_fame_convert(F_to, ts; method=:mean, values_base=:end)
     # FAME.init_chli()
     writefame(FAME.workdb(),Workspace(:ts => ts))
     fame_string = """work'ts_fame = convert(work'ts, $(get_fame_conversion_string(F_to, F_from, method, values_base)))"""
-    if values_base == :begin && method ∉ (:point, :const, :even)
+    if values_base == :begin && method ∉ (:point, :const, :even, :linear)
         fame_string = """
             ignore on
             work'ts_intermediate = convert(work'ts, daily, discrete, beginning)
@@ -225,23 +228,26 @@ end
                         @test values(t_to_sub) ≈ values(t_to_sub_fame[rangeof(t_to_sub)]) nans=true
                     end
                 end
-                # if F_to ∈ (Daily, BDaily) #Daily,BDaily, Monthly)
-                #     for method in (:linear, )
-                #         for values_base in (:end, ) # :begin, :middle)
-                #             t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                #             t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, values_base=values_base)
-                #             # adjust fame range
-                #             fame_range = fconvert(F_to, firstdate(t_from), values_base=:end):rangeof(t_to_sub)[end]
-                           
-                #             @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
-                #             @test length(t_to_sub.values) > 0
-                #             @test maximum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) < 1000000
-                #             @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
-                #             @test rangeof(t_to_sub[fame_range]) == rangeof(t_to_sub_fame)
-                #             @test values(t_to_sub[fame_range]) ≈ values(t_to_sub_fame) nans=true
-                #         end
-                #     end
-                # end
+                if F_to ∈ (Daily, BDaily, Monthly) #Daily,BDaily, Monthly)
+                    for method in (:linear, )
+                        for values_base in (:end, :begin) # :begin, :middle)
+                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
+                            t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, values_base=values_base)
+                            if values_base == :end
+                                fame_range = fconvert(F_to, firstdate(t_from), values_base=:end):rangeof(t_to_sub)[end]
+                            elseif values_base ==:begin
+                                fame_range = rangeof(t_to_sub)[begin]:fconvert(F_to, rangeof(t_from)[end], values_base=:begin, round_to=:next)
+                            end
+                            @test fame_range == rangeof(t_to_sub_fame)
+                            if F_from == BDaily && F_to == Daily && method == :linear 
+                                days = [fconvert(Daily, mit) for mit in collect(rangeof(t_from))]
+                                @test t_to_sub[days] ≈ t_to_sub_fame[days] nans=true rtol=1e-3
+                                continue
+                            end
+                            @test values(t_to_sub[fame_range]) ≈ values(t_to_sub_fame) nans=true rtol=1e-3
+                        end
+                    end
+                end
             end
             
             counter += 1
