@@ -1923,8 +1923,8 @@ end
     counter = 1
     t_from = nothing
     last_F_from = nothing
-    @showprogress "combinations" for (F_from, F_to) in combinations
-    # for (F_from, F_to) in combinations
+    # @showprogress "combinations" for (F_from, F_to) in combinations
+    for (F_from, F_to) in combinations
         if F_from != last_F_from
             last_F_from = F_from
             t_from = TSeries(MIT{F_from}(100), collect(1:800))
