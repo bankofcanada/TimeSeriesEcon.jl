@@ -59,6 +59,19 @@
         @test rangeof(x.hex) == 2020Q1:2021Q1
         @test x.hex.values == collect(5.0:9.0)
     end
+
+    # construct from a TSeries - init all columns from given TSeries
+    init = TSeries(2020Q1, randn(16))
+    @test (MVTSeries(2021Q1:2022Q4, (:a, :b, :c), init); true)
+    a = MVTSeries(2021Q1:2022Q4, (:a, :b, :c), init)
+    @test axes(a) == (2021Q1:2022Q4, [:a, :b, :c])
+    for (_, col) in columns(a)
+        @test col ≈ init
+    end
+    @test (fill(init, colnames(a)) ≈ a)
+    b = fill(init, colnames(a))
+    @test axes(b) == (rangeof(init), axes(a, 2))
+
 end
 
 @testset "MV Int Ind" begin
@@ -428,11 +441,11 @@ end
     @test (x2 .+ t2.values).values == x2.values .+ t2.values
     @test (t2 .+ x2).values == x2.values .+ t2.values
     @test (t2.values .+ x2).values == x2.values .+ t2.values
-    @test (t2 .+ x2.values).values == (t2.values .+ x2.values)[:,1]
+    @test (t2 .+ x2.values).values == (t2.values.+x2.values)[:, 1]
     @test (x2 .+ x3).values == x2.values .+ x3.values
     @test_throws ArgumentError x2 .+ t_monthly
     @test_throws ArgumentError x2 .+ x2_monthly
-    
+
     # when no columns overlap we get an MVTSeries with no variables
     @test x2 .+ MVTSeries(20Q1, (:c, :d), [collect(1:10) collect(11:20)]) isa MVTSeries
     @test collect(keys(x2 .+ MVTSeries(20Q1, (:c, :d), [collect(1:10) collect(11:20)]))) == Symbol[]
@@ -448,23 +461,23 @@ end
     # when ranges don't overlap we get a tseries with a broken range
     @test rangeof(x2 .+ MVTSeries(30Q1, (:a, :b), [collect(1:10) collect(11:20)])) == 30Q1:29Q4
 
-    
+
 
     bcStyle = TimeSeriesEcon.MVTSeriesStyle{Quarterly{3}}()
     @test Base.Broadcast.BroadcastStyle(bcStyle, TimeSeriesEcon.MVTSeriesStyle{Quarterly{3}}()) == bcStyle
 
-    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.MVTSeriesStyle{Monthly}}(Monthly, (1, ))
+    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.MVTSeriesStyle{Monthly}}(Monthly, (1,))
     @test_throws DimensionMismatch Base.similar(bcasted, Float64)
-    
+
     @test 1U:4U isa TimeSeriesEcon._MVTSAxes1
-    @test (:a, ) isa TimeSeriesEcon._MVTSAxes2
-    @test (1U:4U, (:a, )) isa TimeSeriesEcon._MVTSAxesType
-    @test Base.Broadcast._eachindex((1U:4U, (:a, ))) == CartesianIndices((4, 1))
+    @test (:a,) isa TimeSeriesEcon._MVTSAxes2
+    @test (1U:4U, (:a,)) isa TimeSeriesEcon._MVTSAxesType
+    @test Base.Broadcast._eachindex((1U:4U, (:a,))) == CartesianIndices((4, 1))
 
     # check broadcast shape (this seems a little broken)
-    axes1 = (1U:4U, (:a, ))
-    axes2 = (5U:8U, (:b, ))
-    axes3 = (1U:8U, (:b, ))
+    axes1 = (1U:4U, (:a,))
+    axes2 = (5U:8U, (:b,))
+    axes3 = (1U:8U, (:b,))
     x_axes1 = MVTSeries(1U:4U; a=collect(1:4))
     x_axes2 = MVTSeries(5U:8U; a=collect(1:4))
     x_axes3 = MVTSeries(1U:8U; a=collect(1:8))
@@ -475,14 +488,14 @@ end
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes1, axes2)
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes2, axes3)
     @test Base.Broadcast.check_broadcast_shape(axes3, axes2) === nothing
-    
+
     @test Base.Broadcast.check_broadcast_shape(axes(x_axes1), axes(TSeries(2U:3U))) === nothing
     @test x_axes1 .+ TSeries(2U:3U, collect(1:2)) isa MVTSeries
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(x_axes1), axes(TSeries(2U:5U)))
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(TSeries(2U:5U)), axes(x_axes1))
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(x_axes4), axes(TSeries(2U:5U, collect(1:4))))
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape(axes(x_axes1), (1U:4U, 1U:4U)) # TSeriesAxesType should have length 1
-    @test Base.Broadcast.check_broadcast_shape((1:4, ), axes(x_axes1)) === nothing
+    @test Base.Broadcast.check_broadcast_shape((1:4,), axes(x_axes1)) === nothing
     # TODO: should these throw errors?
     @test x_axes1 .+ TSeries(2U:5U, collect(1:4)) isa MVTSeries #should maybe throw an error?
     @test TSeries(2U:5U, collect(1:4)) .+ x_axes1 isa MVTSeries #should maybe throw an error?
@@ -490,22 +503,22 @@ end
     @test Base.Broadcast.check_broadcast_shape(axes1, ()) == nothing # should maybe throw an error
 
     # preprocess
-    extruded = [21  31
-    22  32
-    23  33
-    24  34
-    25  35
-    26  36
-    27  37
-    28  38
-    29  39
-    30  40]
-    Base.Broadcast.preprocess(x2,x3).x == extruded
-    Base.Broadcast.preprocess(x2,x3).keeps == (true, true)
-    Base.Broadcast.preprocess(x2,x3).defaults == (1, 1)
+    extruded = [21 31
+        22 32
+        23 33
+        24 34
+        25 35
+        26 36
+        27 37
+        28 38
+        29 39
+        30 40]
+    Base.Broadcast.preprocess(x2, x3).x == extruded
+    Base.Broadcast.preprocess(x2, x3).keeps == (true, true)
+    Base.Broadcast.preprocess(x2, x3).defaults == (1, 1)
     @test Base.Broadcast.preprocess(x2, x3.values).x == extruded
-    Base.Broadcast.preprocess(x2,x3.values).keeps == (true, true)
-    Base.Broadcast.preprocess(x2,x3.values).defaults == (1, 1)
+    Base.Broadcast.preprocess(x2, x3.values).keeps == (true, true)
+    Base.Broadcast.preprocess(x2, x3.values).defaults == (1, 1)
     @test Base.Broadcast.preprocess(x2, t2).x == ones(10)
     @test Base.Broadcast.preprocess(x2, t2).keeps == (true,)
     @test Base.Broadcast.preprocess(x2, t2).defaults == (1,)
@@ -728,7 +741,12 @@ end
         x_m2_forward = moving(x, -2)
         @test rangeof(x_m2_forward) == 1U:9U
         @test x_m2_forward.a.values == collect(1:9) .+ 0.5
+        @test moving(x.a, -2) == collect(1:9) .+ 0.5
         @test x_m2_forward.b.values == collect(11:19) .+ 0.5
+        @test moving(x.b, -2) == collect(11:19) .+ 0.5
+
+        @test moving(x, -4) == moving_average(x, -4)
+        @test 4moving(x, -4) == moving_sum(x, -4)
     end
 
     #undiff
@@ -759,6 +777,32 @@ end
         # adding the same growth rate to a later date leads the series unchanged
         undiff!(ts1, ts2, fromdate=8U)
         @test ts1.values == [1, 2, 3, 4, 7, 10, 13, 16, 19, 22]
+
+        tt = TSeries(2020Q1, randn(20))
+        qq = TSeries(2019Q1:2050Q4, ones)
+        @test undiff(tt)[begin+1:end] ≈ cumsum(tt)
+        @test undiff(tt, 7) ≈ undiff(tt) .+ 7
+        @test undiff(tt, 2020Q1 => 7) ≈ undiff(tt, 2020Q1 => 0.0) .+ 7
+        @test undiff(tt, 2020Q1 => tt[begin]) ≈ cumsum(tt)
+        @test undiff(tt, 2021Q1 => tt) ≈ cumsum(tt) .- cumsum(tt)[2021Q1] .+ tt[2021Q1]
+        @test undiff(tt, 2021Q1 => qq) ≈ cumsum(tt) .- cumsum(tt)[2021Q1] .+ 1
+
+        mm = MVTSeries(rangeof(tt), (:a, :b, :c), tt)
+        zz = MVTSeries(rangeof(qq), colnames(mm), qq)
+        zz.b .+= 8
+        zz.c .+= 28
+
+        @test undiff(mm) == MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt))
+        @test undiff(mm, 0.0) == MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt))
+        @test undiff(mm, 7) == MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt, 7))
+        @test undiff(mm, [1, 8, 28]) ≈ MVTSeries(firstdate(mm)-1:lastdate(mm), colnames(mm), undiff(tt)) .+ [1 8 28]
+        @test undiff(mm, 2021Q1 => 0.0)[2021Q1] ≈ [0.0, 0.0, 0.0]
+        @test undiff(mm, 2021Q1 => 7.0)[2021Q1] ≈ ([0.0, 0.0, 0.0] .+ 7)
+        @test undiff(mm, 2021Q1 => [1, 8, 28])[2021Q1] ≈ [1, 8, 28]
+        @test undiff(mm, zz)[firstdate(mm)-1] ≈ [1, 9, 29]
+        @test undiff(mm, 2021Q1 => zz)[2021Q1] ≈ [1, 9, 29]
+        @test undiff(mm, qq)[2019Q4] ≈ [1, 1, 1]
+        @test undiff(mm, 2021Q1 => qq)[2021Q1] ≈ [1, 1, 1]
     end
 end
 
@@ -780,6 +824,14 @@ using OrderedCollections
     @test length(ts2.y2) == 10
     @test ts2.y1[-3U] == ts.y1[2020Q1]
 
+
+    # make sure copyto! works correctly for MVTSeries 
+    a = MVTSeries(firstdate(x)-3:lastdate(x), colnames(x))
+    a[begin:begin+2, :] .= TSeries(firstdate(a), Float64[1:3;])
+    @test (copyto!(a, x); true)
+    for c in colnames(a)
+        @test a[c].values == [1, 2, 3, x[c]...]
+    end
 end
 
 @testset "hcat" begin
@@ -802,15 +854,15 @@ end
 
 @testset "Statistics" begin
     # Test MVTS Daily
-    bonds_data = [NaN, 0.68, 0.7, 0.75, 0.79, 0.81, 0.83, 0.84, 0.81, 0.86, 0.81, 0.8, 0.8, 0.83, 0.87, 0.84, 0.81, 0.82, 0.8, 0.82, 0.84, 0.88, 0.91, 0.94, 0.96, 1, 1.01, 0.99, 0.99, 0.99, 1.03, NaN, 1.12, 1.11, 1.14, 1.21, 1.23, 1.26, 1.31, 1.46, 1.35, 1.35, 1.33, 1.4, 1.49, 1.5, 1.53, 1.45, 1.41, 1.43, 1.58, 1.54, 1.56, 1.58, 1.61, 1.59, 1.55, 1.49, 1.47, 1.46, 1.49, 1.53, 1.53, 1.55, 1.51, NaN, 1.56, 1.49, 1.5, 1.46, 1.5, 1.51, 1.5, 1.53, 1.45, 1.53, 1.53, 1.5, 1.52, 1.52, 1.51, 1.53, 1.56, 1.53, 1.56, 1.54, 1.52, 1.53, 1.51, 1.51, 1.49, 1.51, 1.54, 1.59, 1.56, 1.55, 1.57, 1.56, 1.58, 1.54, 1.54, NaN, 1.46, 1.45, 1.49, 1.49, 1.49, 1.5, 1.49, 1.52, 1.46, 1.47, 1.45, 1.41, 1.38, 1.38, 1.39, 1.38, 1.44, 1.4, 1.37, 1.41, 1.4, 1.42, 1.41, 1.45, 1.41, 1.42, 1.39, NaN, 1.37, 1.4, 1.32, 1.29, 1.26, 1.32, 1.32, 1.34, 1.29, 1.26, 1.24, 1.14, 1.17, 1.22, 1.19, 1.21, 1.22, 1.16, 1.17, 1.19, 1.2, NaN, 1.12, 1.13, 1.16, 1.24, 1.25, 1.27, 1.26, 1.25, 1.19, 1.16, 1.15, 1.16, 1.13, 1.14, 1.16, 1.18, 1.25, 1.23, 1.2, 1.18, 1.22, 1.18, 1.15, 1.19, NaN, 1.23, 1.2, 1.17, 1.23, 1.22, 1.17, 1.22, 1.23, 1.29, 1.22, 1.22, 1.21, 1.33, 1.38, 1.41, 1.5, 1.51, NaN, 1.47, 1.49, 1.53, 1.5, 1.56, 1.62, NaN, 1.62, 1.61, 1.53, 1.58, 1.58, 1.63, 1.63, 1.68, 1.65, 1.65, 1.63, 1.6, 1.66, 1.72, 1.74, 1.72, 1.71, 1.64, 1.59, 1.63, 1.59, 1.68, NaN, 1.67, 1.72, 1.77, 1.7, 1.69, 1.66, 1.76, 1.81, 1.77, 1.77, 1.59, 1.61, 1.58, 1.5, 1.49, 1.45, 1.51, 1.58, 1.56, 1.5, 1.47, 1.4, 1.43, 1.41, 1.35, 1.32, 1.38, 1.44, 1.42, 1.44, 1.46, NaN, NaN, 1.47, 1.45, 1.42,];
-    
+    bonds_data = [NaN, 0.68, 0.7, 0.75, 0.79, 0.81, 0.83, 0.84, 0.81, 0.86, 0.81, 0.8, 0.8, 0.83, 0.87, 0.84, 0.81, 0.82, 0.8, 0.82, 0.84, 0.88, 0.91, 0.94, 0.96, 1, 1.01, 0.99, 0.99, 0.99, 1.03, NaN, 1.12, 1.11, 1.14, 1.21, 1.23, 1.26, 1.31, 1.46, 1.35, 1.35, 1.33, 1.4, 1.49, 1.5, 1.53, 1.45, 1.41, 1.43, 1.58, 1.54, 1.56, 1.58, 1.61, 1.59, 1.55, 1.49, 1.47, 1.46, 1.49, 1.53, 1.53, 1.55, 1.51, NaN, 1.56, 1.49, 1.5, 1.46, 1.5, 1.51, 1.5, 1.53, 1.45, 1.53, 1.53, 1.5, 1.52, 1.52, 1.51, 1.53, 1.56, 1.53, 1.56, 1.54, 1.52, 1.53, 1.51, 1.51, 1.49, 1.51, 1.54, 1.59, 1.56, 1.55, 1.57, 1.56, 1.58, 1.54, 1.54, NaN, 1.46, 1.45, 1.49, 1.49, 1.49, 1.5, 1.49, 1.52, 1.46, 1.47, 1.45, 1.41, 1.38, 1.38, 1.39, 1.38, 1.44, 1.4, 1.37, 1.41, 1.4, 1.42, 1.41, 1.45, 1.41, 1.42, 1.39, NaN, 1.37, 1.4, 1.32, 1.29, 1.26, 1.32, 1.32, 1.34, 1.29, 1.26, 1.24, 1.14, 1.17, 1.22, 1.19, 1.21, 1.22, 1.16, 1.17, 1.19, 1.2, NaN, 1.12, 1.13, 1.16, 1.24, 1.25, 1.27, 1.26, 1.25, 1.19, 1.16, 1.15, 1.16, 1.13, 1.14, 1.16, 1.18, 1.25, 1.23, 1.2, 1.18, 1.22, 1.18, 1.15, 1.19, NaN, 1.23, 1.2, 1.17, 1.23, 1.22, 1.17, 1.22, 1.23, 1.29, 1.22, 1.22, 1.21, 1.33, 1.38, 1.41, 1.5, 1.51, NaN, 1.47, 1.49, 1.53, 1.5, 1.56, 1.62, NaN, 1.62, 1.61, 1.53, 1.58, 1.58, 1.63, 1.63, 1.68, 1.65, 1.65, 1.63, 1.6, 1.66, 1.72, 1.74, 1.72, 1.71, 1.64, 1.59, 1.63, 1.59, 1.68, NaN, 1.67, 1.72, 1.77, 1.7, 1.69, 1.66, 1.76, 1.81, 1.77, 1.77, 1.59, 1.61, 1.58, 1.5, 1.49, 1.45, 1.51, 1.58, 1.56, 1.5, 1.47, 1.4, 1.43, 1.41, 1.35, 1.32, 1.38, 1.44, 1.42, 1.44, 1.46, NaN, NaN, 1.47, 1.45, 1.42,]
+
     tsd = TSeries(d"2021-01-01", filter(x -> !isnan(x), bonds_data))
     noisy_tsd = copy(tsd)
     noisy_tsd .+= rand(length(tsd))
     mvtsd = MVTSeries(; clean=tsd, noisy=noisy_tsd)
-    mvtsdcorr = cor(tsd, noisy_tsd) 
-    mvtsdcov = cov(tsd, noisy_tsd) 
-    @test isapprox(mean(mvtsd, dims=1), [1.3632530120481 mean(noisy_tsd)], nans=true)    
+    mvtsdcorr = cor(tsd, noisy_tsd)
+    mvtsdcov = cov(tsd, noisy_tsd)
+    @test isapprox(mean(mvtsd, dims=1), [1.3632530120481 mean(noisy_tsd)], nans=true)
     res_mean_long = [
         mean([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         mean([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -818,8 +870,8 @@ end
         mean([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
         mean([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
-    @test isapprox(mean(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long, nans=true)    
-    @test isapprox(mean(√, mvtsd, dims=1), [1.1623302063259 mean(√, noisy_tsd)], nans=true)    
+    @test isapprox(mean(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long, nans=true)
+    @test isapprox(mean(√, mvtsd, dims=1), [1.1623302063259 mean(√, noisy_tsd)], nans=true)
     res_mean_long2 = [
         mean(√, [tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         mean(√, [tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -827,9 +879,9 @@ end
         mean(√, [tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
         mean(√, [tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
-    @test isapprox(mean(√, mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long2, nans=true)    
-    
-    @test isapprox(std(mvtsd, dims=1), [0.24532947776869 std(noisy_tsd)], nans=true) 
+    @test isapprox(mean(√, mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_mean_long2, nans=true)
+
+    @test isapprox(std(mvtsd, dims=1), [0.24532947776869 std(noisy_tsd)], nans=true)
     res_std_long = [
         std([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         std([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -837,8 +889,8 @@ end
         std([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
         std([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
-    @test isapprox(std(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_std_long, nans=true)    
-    @test isapprox(var(mvtsd, dims=1), [0.0601865526622619 var(noisy_tsd)], nans=true) 
+    @test isapprox(std(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_std_long, nans=true)
+    @test isapprox(var(mvtsd, dims=1), [0.0601865526622619 var(noisy_tsd)], nans=true)
     res_var_long = [
         var([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         var([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -846,8 +898,8 @@ end
         var([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
         var([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
-    @test isapprox(var(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_var_long, nans=true)    
-    @test isapprox(median(mvtsd, dims=1), [1.43 median(noisy_tsd)], nans=true) 
+    @test isapprox(var(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_var_long, nans=true)
+    @test isapprox(median(mvtsd, dims=1), [1.43 median(noisy_tsd)], nans=true)
     res_median_long = [
         median([tsd[d"2021-06-29"], noisy_tsd[d"2021-06-29"]]),
         median([tsd[d"2021-06-30"], noisy_tsd[d"2021-06-30"]]),
@@ -855,7 +907,7 @@ end
         median([tsd[d"2021-07-02"], noisy_tsd[d"2021-07-02"]]),
         median([tsd[d"2021-07-03"], noisy_tsd[d"2021-07-03"]]),
     ]
-    @test isapprox(median(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_median_long, nans=true)    
+    @test isapprox(median(mvtsd[d"2021-06-29:2021-07-03"], dims=2), res_median_long, nans=true)
 
     @test isapprox(cor(mvtsd), [1.0 mvtsdcorr; mvtsdcorr 1.0])
     @test isapprox(cov(mvtsd), [var(tsd) mvtsdcov; mvtsdcov var(noisy_tsd)])

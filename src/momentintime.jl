@@ -592,10 +592,15 @@ end
 #-------------------------
 # pretty printing
 
-# Base.show(io::IO, F::Type{Quarterly{3}}) = print(io, "Quarterly")
-# Base.show(io::IO, F::Type{HalfYearly{6}}) = print(io, "HalfYearly")
-# Base.show(io::IO, F::Type{Yearly{12}}) = print(io, "Yearly")
-# Base.show(io::IO, F::Type{Weekly{7}}) = print(io, "Weekly")
+# Note: We previously overloaded Base.show for the types Quarterly{3},
+# HalYearly{6}, Yearly{12}, and Weekly{7}. However, this leads to many
+# invalidations which makes code run/compile slowly. We use these
+# prettyprint functions instead.
+prettyprint_frequency(F::Type{<:Frequency}) = "$F"
+prettyprint_frequency(F::Type{Quarterly{3}}) = "Quarterly"
+prettyprint_frequency(F::Type{Yearly{12}}) = "Yearly"
+prettyprint_frequency(F::Type{HalfYearly{6}}) = "HalfYearly"
+prettyprint_frequency(F::Type{Weekly{7}}) = "Weekly"
 
 Base.show(io::IO, m::MIT{Unit}) = print(io, Int(m), 'U')
 Base.show(io::IO, m::MIT{Daily}) = print(io, Dates.Date(m))
@@ -631,7 +636,7 @@ Base.print(io::IO, m::MIT{<:Frequency}) = print(io, string(m))
 
 function Base.show(io::IO, r::UnitRange{MIT{F}}, args...) where F <: Union{<:Weekly, <:Daily, <:BDaily}
     if !get(io, :compact, false)
-        print(io, "$F ")
+        print(io, "$(prettyprint_frequency(F)) ")
     end
     print(io, "$(first(r)):$(last(r))")
 end
@@ -802,6 +807,7 @@ to `Q4` for `MIT{Quarterly}` and `M1` to `M12` for `MIT{Monthly}`
 Y, U, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 export Y, U, H1, H2, Q1, Q2, Q3, Q4, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12
 
+
 global const U = _FConst{Unit}()
 global const M1 = _FPConst{Monthly,1}()
 global const M2 = _FPConst{Monthly,2}()
@@ -871,4 +877,4 @@ sanitize_frequency(F::Type{Weekly}) = Weekly{7}
 sanitize_frequency(F::Type{Quarterly}) = Quarterly{3}
 sanitize_frequency(F::Type{HalfYearly}) = HalfYearly{6}
 sanitize_frequency(F::Type{Yearly}) = Yearly{12}
-export sanitize_frequency
+export sanitize_frequency, prettyprint_frequency

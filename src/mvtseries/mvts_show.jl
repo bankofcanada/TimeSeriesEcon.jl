@@ -5,7 +5,7 @@
 
 function Base.summary(io::IO, x::MVTSeries)
     et = eltype(x) === Float64 ? "" : ",$(eltype(x))"
-    typestr = "MVTSeries{$(frequencyof(x))$(et)}"
+    typestr = "MVTSeries{$(prettyprint_frequency(frequencyof(x)))$(et)}"
 
     cols = axes(x,2)
     ncols = length(cols)
