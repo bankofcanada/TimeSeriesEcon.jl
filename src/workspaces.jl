@@ -243,4 +243,11 @@ function Base.copyto!(x::MVTSeries, w::Workspace, range::AbstractUnitRange{<:MIT
     return x
 end
 
+function Base.map(f::Function, w::Workspace)
+    ret = Workspace()
+    for (k, v) in w
+        ret[k] = f(v)
+    end
+    return ret
+end
 
