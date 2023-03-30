@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 import TimeSeriesEcon: qq, mm, yy, ppy, endperiod, sanitize_frequency
@@ -79,10 +79,10 @@ import Dates: Date
     @test 1.2 + 5U == 6.2
     @test 5U + 1.2 == 6.2
     # promotions
-    @test_throws ArgumentError promote(1, 1Q1) 
-    @test_throws ArgumentError promote(1Q1, 1) 
-    @test_throws ArgumentError promote(1Q1 - 1Q1, 1) 
-    @test_throws ArgumentError promote(1, 1Q1 - 1Q1) 
+    @test_throws ArgumentError promote(1, 1Q1)
+    @test_throws ArgumentError promote(1Q1, 1)
+    @test_throws ArgumentError promote(1Q1 - 1Q1, 1)
+    @test_throws ArgumentError promote(1, 1Q1 - 1Q1)
     @test promote(1.1, 1Q1) === (1.1, 1.0)
     @test promote(1Q1, 1.2) === (1.0, 1.2)
 
@@ -93,15 +93,28 @@ import Dates: Date
     d2 = Duration{customFreq}(4)
     d3 = Duration{customFreq2}(4)
     @test d1 - d2 == 6
-    @test div(d1,d2) == 2
-    @test rem(d1,d2) == 2
-    @test div(d2,d1) == 0
-    @test_throws ArgumentError div(d2,d3)
-    @test_throws ArgumentError rem(d2,d3)
+    @test div(d1, d2) == 2
+    @test rem(d1, d2) == 2
+    @test div(d2, d1) == 0
+    @test_throws ArgumentError div(d2, d3)
+    @test_throws ArgumentError rem(d2, d3)
 
-    #hash
-    @test hash(1Q1, UInt(8)) == hash(("Quarterly{3}", 4), UInt(8))
-    @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly{3}", 2), UInt(8))
+    #hash - make sure we can use MIT as dictionary keys
+    zq = zero(1Q1)
+    zm = zero(1M1)
+    zy = zero(1Y)
+    @test isquarterly(zq) && iszero(zq) && (Int(zq) == 0)
+    @test ismonthly(zm) && iszero(zm) && (Int(zm) == 0)
+    @test isyearly(zy) && iszero(zy) && (Int(zy) == 0)
+    @test Int(zq) == Int(zm) == Int(zy)
+    d = Dict(zq => 4, zm => 12, zy => 1)
+    @test length(d) == 3
+    @test d[zq] == 4
+    @test d[zy] == 1
+    @test d[zm] == 12
+
+    # @test hash(1Q1, UInt(8)) == hash(("Quarterly{3}", 4), UInt(8))
+    # @test hash(1Q3 - 1Q1, UInt(8)) == hash(("Quarterly{3}", 2), UInt(8))
 end
 
 @testset "Range" begin
@@ -119,7 +132,7 @@ end
     end
     @test_throws ArgumentError 2020Q1:2020M12
     @test union(3U:5U, 4U:6U) === 3U:6U
-    @test_throws ArgumentError union(3U:5U, 4Q1:6Q1) 
+    @test_throws ArgumentError union(3U:5U, 4Q1:6Q1)
 
     # step ranges
     sr1 = 1Q1:1Q3-1Q1:4Q4
@@ -128,7 +141,7 @@ end
     @test first(sr1) == 1Q1
     @test last(sr1) == 4Q3
     @test collect(sr1) == [1Q1, 1Q3, 2Q1, 2Q3, 3Q1, 3Q3, 4Q1, 4Q3]
-    
+
     sr2 = 1Q1:2:4Q4
     @test length(sr2) == 8
     @test step(sr2) == 2
@@ -138,8 +151,8 @@ end
 
     @test_throws ArgumentError 1Q2:2:5U
     @test_throws ArgumentError 1Q2:1Q1-1Q2:5U
-    
-    
+
+
 end
 
 @testset "FPConst" begin
@@ -221,7 +234,7 @@ end
         println(io, frequencyof(2022Y))
         println(io, frequencyof(weekly("2022-01-01")))
         foo = readlines(seek(io, 0))
-        @test foo == ["Quarterly{3}", "HalfYearly{6}","Yearly{12}", "Weekly{7}"]
+        @test foo == ["Quarterly{3}", "HalfYearly{6}", "Yearly{12}", "Weekly{7}"]
     end
     let io = IOBuffer()
         println(io, 2022Q1)
@@ -234,7 +247,7 @@ end
         println(io, 2022H1{2})
         println(io, 2022Y{2})
         foo = readlines(seek(io, 0))
-        @test foo == ["2022Q1","2022H1","2022Y","2022Q1","2022H1","2022Y","2022Q1{2}", "2022H1{2}","2022Y{2}"]
+        @test foo == ["2022Q1", "2022H1", "2022Y", "2022Q1", "2022H1", "2022Y", "2022Q1{2}", "2022H1{2}", "2022Y{2}"]
     end
 
     let io = IOBuffer()
@@ -244,7 +257,7 @@ end
         foo = readlines(seek(io, 0))
         @test foo == ["2022-01-03", "2022-01-03", "2022-01-09"]
     end
-    
+
 end
 
 @testset "frequencyof" begin
@@ -323,8 +336,8 @@ end
     @test MIT{HalfYearly{2}}(2022, 2) == 2022H2{2}
     @test MIT{Yearly}(2022, 1) == 2022Y
     @test MIT{Yearly{2}}(2022, 1) == 2022Y{2}
-    
-    
+
+
     @test frequencyof(MIT{YPFrequency{4}}(2022, 1)) == Quarterly{3}
     @test frequencyof(MIT{Yearly}(22)) == Yearly{12}
     @test frequencyof(MIT{YPFrequency{1}}(22)) == Yearly{12}
@@ -368,11 +381,11 @@ end
     @test isbdaily(BDaily) == true
     @test isbdaily(Daily) == false
     @test isbdaily(bdaily("2022-01-03")) == true
-    
+
     @test isdaily(Daily) == true
     @test isdaily(BDaily) == false
     @test isdaily(daily("2022-01-01")) == true
-    
+
 end
 
 @testset "mm, qq, yy" begin
@@ -438,7 +451,7 @@ end
     @test bd"2022-01-02"near == bd"2022-01-03"
     @test bd"2022-01-02"nearest == bd"2022-01-03"
     @test bdaily("2022-01-02", bias=:nearest) == bd"2022-01-03"
-    
+
     bd_weekend1 = bdaily("2022-01-02", bias=:previous)
     @test Date(bd_weekend1) == Date("2021-12-31")
     bd_weekend2 = bdaily("2022-01-02", bias=:next)
@@ -472,24 +485,24 @@ end
     w2 = MIT{Weekly{6}}(105451)
     @test weekly("2022-01-01", 6) == w2
     @test TimeSeriesEcon._weekly_from_yp(Weekly{6}, 2022, 1) == w2
-    
+
     # year, period
     @test TimeSeriesEcon._mit2yp(w1) == (2022, 1)
 
     # weekly from iso
-    w_iso1 = weekly_from_iso(2021,52)
+    w_iso1 = weekly_from_iso(2021, 52)
     @test Date(w_iso1) == Date("2022-01-02")
-    w_iso2 = weekly_from_iso(2022,1)
+    w_iso2 = weekly_from_iso(2022, 1)
     @test Date(w_iso2) == Date("2022-01-09")
-    w_iso3 = weekly_from_iso(2022,2)
+    w_iso3 = weekly_from_iso(2022, 2)
     @test Date(w_iso3) == Date("2022-01-16")
     # no week 53 in 2021
     @test_throws ArgumentError weekly_from_iso(2021, 53)
 
     # there is a week 53 in 2020
-    w_iso4 = weekly_from_iso(2020,53)
+    w_iso4 = weekly_from_iso(2020, 53)
     @test Date(w_iso4) == Date("2021-01-03")
-    
+
 end
 
 @testset "Dates" begin
