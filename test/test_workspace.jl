@@ -219,3 +219,48 @@ end
     a = Workspace(a=6, b=7, q=8)
     @test (b = merge(a, Workspace(z=12)); Set(keys(a)) == Set((:a, :b, :q)) && Set(keys(b)) == Set((:a, :b, :q, :z)))
 end
+
+@testset "copyto!W2MV" begin
+    src = Workspace(;
+        a=TSeries(2020Q1, 1.5 .+ randn(20)),
+        b=TSeries(2020Q1, 1.5 .+ randn(20)),
+        c=TSeries(2020Q1, 1.5 .+ randn(20))
+    )
+    # dest axes match exactly the data in src
+    dest = MVTSeries(2020Q1 .+ (0:19), (:a, :b, :c))
+    @test (copyto!(dest, src); compare(src, dest, quiet=true))
+    # dest has shorter range
+    dest = MVTSeries(2020Q1 .+ (0:11), (:a, :b, :c))
+    @test (copyto!(dest, src); compare(src, dest, quiet=true))
+    # dest has longer range (not that compare uses the common range)
+    dest = MVTSeries(2020Q1 .+ (0:40), (:a, :b, :c))
+    @test (copyto!(dest, src; range=2020Q1:2020Q1+19); compare(src, dest, quiet=true))
+    # dest is missing some variables 
+    dest = MVTSeries(2020Q1 .+ (0:19), (:a, :c))
+    @test (copyto!(dest, src); !compare(src, dest, quiet=true))
+    @test compare(src, dest, quiet=true, ignoremissing=true)
+    # dest is missing some variables, we initialize with NaN and we copy only a shorter range
+    dest = MVTSeries(2020Q1 .+ (0:19), (:a, :c), NaN)
+    @test (copyto!(dest, src; range=2020Q1:2020Q1+10); true)
+    # not equal over the full range
+    @test !compare(src, dest; quiet=true, ignoremissing=true)
+    # not equal on the missing variable
+    @test !compare(src, dest; quiet=true, trange=2020Q1:2020Q1+10)
+    # equal over the common variables and over the range we copied
+    @test compare(src, dest, quiet=true, ignoremissing=true, trange=2020Q1:2020Q1+10)
+end
+
+@testset "map Workspace" begin
+    w = Workspace(;
+        a=TSeries(2020Q1, 1.5 .+ randn(20)),
+        b=TSeries(2020Q1, 1.5 .+ randn(20)),
+        c=TSeries(2020Q1, 1.5 .+ randn(20))
+    )
+    @test (map(identity, w) isa Workspace)
+    w1 = map(rangeof, w)
+    @test w1 isa Workspace
+    @test keys(w1) == keys(w)
+    @test all(==(rangeof(w.a)), values(w1))
+
+    @test compare(map(sum, w), Workspace(keys(w) .=> map(sum, values(w))), quiet=true)
+end

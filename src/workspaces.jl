@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 # 
@@ -81,11 +81,11 @@ rangeof(w::Workspace; method=intersect) = (
 )
 
 _has_frequencyof(::Type{Workspace}) = true
-_has_frequencyof(::T) where T = _has_frequencyof(T)
+_has_frequencyof(::T) where {T} = _has_frequencyof(T)
 _has_frequencyof(::Type{<:MIT}) = true
 _has_frequencyof(::Type{<:Duration}) = true
-_has_frequencyof(::Type{<:AbstractArray{T}}) where T = _has_frequencyof(T)
-function _has_frequencyof(::Type{T}) where T 
+_has_frequencyof(::Type{<:AbstractArray{T}}) where {T} = _has_frequencyof(T)
+function _has_frequencyof(::Type{T}) where {T}
     try
         frequencyof(T)
         return true
@@ -236,7 +236,7 @@ end
 export @weval
 
 
-function Base.copyto!(x::MVTSeries, w::Workspace, range::AbstractUnitRange{<:MIT}=rangeof(x))
+function Base.copyto!(x::MVTSeries, w::Workspace; range::AbstractUnitRange{<:MIT}=rangeof(x))
     for (key, value) in pairs(x)
         copyto!(value, range, w[key])
     end

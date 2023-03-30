@@ -230,8 +230,7 @@ frequencyof(T::Type) = throw(ArgumentError("$(T) does not have a frequency."))
 frequencyof(::Type{MIT{F}}) where {F<:Frequency} = F
 frequencyof(::Type{Duration{F}}) where {F<:Frequency} = F
 # AbstractArray{<:MIT} cover MIT-ranges and vectors of MIT
-frequencyof(::Type{<:AbstractArray{MIT{F}}}) where {F<:Frequency} = F
-frequencyof(::Type{<:AbstractArray{Duration{F}}}) where {F<:Frequency} = F
+frequencyof(AT::Type{<:AbstractArray{<:Union{MIT,Duration}}}) = frequencyof(eltype(AT))
 
 # -------------------------
 # YP-specific stuff
@@ -663,7 +662,7 @@ mixed_freq_error(T1::Type, T2::Type, T3::Type) = throw(ArgumentError("Mixing fre
 mixed_freq_error(::T1, ::T2, ::T3) where {T1,T2,T3} = mixed_freq_error(T1, T2, T3)
 
 Base.promote_rule(T1::Type{<:MIT}, T2::Type{<:MIT}) = mixed_freq_error(T1, T2)
-Base.promote_rule(T1::Type{MIT{F}}, T2::Type{MIT{F}}) where {F<:Frequency} = T1
+Base.promote_rule(T1::Type{MIT{F}}, ::Type{MIT{F}}) where {F<:Frequency} = T1
 
 # -------------------
 # subtraction
@@ -856,10 +855,10 @@ Base.sort!(a::AbstractVector{<:MIT}, args...; kwargs...) = (sort!(reinterpret(In
 
 ## endperiod
 endperiod(F::Type{<:Frequency}) = 1
-endperiod(F::Type{Weekly{end_day}}) where {end_day} = end_day
-endperiod(F::Type{Quarterly{end_month}}) where {end_month} = end_month
-endperiod(F::Type{HalfYearly{end_month}}) where {end_month} = end_month
-endperiod(F::Type{Yearly{end_month}}) where {end_month} = end_month
+endperiod(::Type{Weekly{end_day}}) where {end_day} = end_day
+endperiod(::Type{Quarterly{end_month}}) where {end_month} = end_month
+endperiod(::Type{HalfYearly{end_month}}) where {end_month} = end_month
+endperiod(::Type{Yearly{end_month}}) where {end_month} = end_month
 
 ## default_frequency
 """
@@ -872,8 +871,8 @@ if a default concrete frequency exists for the given abstract type, return that.
 For example, the default `Quarterly` frequency is `Quarterly{3}`.
 """
 sanitize_frequency(F::Type{<:Frequency}) = F
-sanitize_frequency(F::Type{Weekly}) = Weekly{7}
-sanitize_frequency(F::Type{Quarterly}) = Quarterly{3}
-sanitize_frequency(F::Type{HalfYearly}) = HalfYearly{6}
-sanitize_frequency(F::Type{Yearly}) = Yearly{12}
+sanitize_frequency(::Type{Weekly}) = Weekly{7}
+sanitize_frequency(::Type{Quarterly}) = Quarterly{3}
+sanitize_frequency(::Type{HalfYearly}) = HalfYearly{6}
+sanitize_frequency(::Type{Yearly}) = Yearly{12}
 export sanitize_frequency, prettyprint_frequency
