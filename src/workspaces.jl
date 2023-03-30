@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 # 
@@ -80,16 +80,39 @@ rangeof(w::Workspace; method=intersect) = (
     mapreduce(rangeof, method, iterable)
 )
 
+_has_frequencyof(::Type{Workspace}) = true
+_has_frequencyof(::T) where {T} = _has_frequencyof(T)
+_has_frequencyof(::Type{<:MIT}) = true
+_has_frequencyof(::Type{<:Duration}) = true
+_has_frequencyof(::Type{<:AbstractArray{T}}) where {T} = _has_frequencyof(T)
+function _has_frequencyof(::Type{T}) where {T}
+    try
+        frequencyof(T)
+        return true
+    catch
+        return false
+    end
+end
+
 function frequencyof(w::Workspace; check=false)
-    iterable = (v for v in values(w) if hasmethod(frequencyof, (typeof(v),)))
-    freqs = unique!(mapreduce(frequencyof, vcat, iterable))
+    # recursively collect all frequencies in w.
+    freqs = []
+    for v in values(w)
+        if _has_frequencyof(v)
+            fr = frequencyof(v)
+            if !isnothing(fr)
+                push!(freqs, fr)
+            end
+        end
+    end
+    # return something or throw error based of number f frequencies found.
     if length(freqs) == 1
         return freqs[1]
     elseif check
         if isempty(freqs)
             throw(ArgumentError("The given workspace doesn't have a frequency."))
         else
-            mixed_freq_error(freqs[1], freqs[2])
+            throw(ArgumentError("The given workspace has multiple frequencies: $((freqs...,))."))
         end
     else
         return nothing
@@ -212,4 +235,19 @@ macro weval(W, EXPR)
 end
 export @weval
 
+
+function Base.copyto!(x::MVTSeries, w::Workspace; range::AbstractUnitRange{<:MIT}=rangeof(x))
+    for (key, value) in pairs(x)
+        copyto!(value, range, w[key])
+    end
+    return x
+end
+
+function Base.map(f::Function, w::Workspace)
+    ret = Workspace()
+    for (k, v) in w
+        ret[k] = f(v)
+    end
+    return ret
+end
 

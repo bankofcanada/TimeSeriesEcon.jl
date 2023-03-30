@@ -93,7 +93,7 @@ Base.values(t::TSeries) = values(t.values)
     * `skip_holidays` : When `true`, returns all values which do not fall on a holiday according to the holidays map set in TimeSeriesEcon.getoption(:bdaily_holidays_map). Default: `false`.
     * `holidays_map`  : Returns all values that do not fall on a holiday according to the provided map which must be a BDaily TSeries of Booleans. Default is `nothing`.
 """
-function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
+function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing)
     if holidays_map !== nothing
         return bdvalues(t, holidays_map=holidays_map)
     elseif skip_all_nans
@@ -105,7 +105,7 @@ function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holid
         end
         return bdvalues(t, holidays_map=h_map)
     end
-    return t.values 
+    return t.values
 end
 
 function bdvalues(t::TSeries{BDaily}; holidays_map=nothing)
@@ -196,6 +196,10 @@ Base.setindex!(t::TSeries, v, i::AbstractRange{Int}) = (setindex!(t.values, v, i
 Base.setindex!(t::TSeries, v, i::AbstractArray{Int}) = (setindex!(t.values, v, values(i)); t)
 Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, values(i)); t)
 
+Base.getindex(x::AbstractVector{MIT{F1}}, i::TSeries{F2,Bool}) where {F1,F2} = mixed_freq_error(x, i)
+Base.getindex(x::AbstractVector{MIT{F}}, i::TSeries{F,Bool}) where {F} = getindex(x, values(i))
+Base.setindex!(x::AbstractVector{MIT{F1}}, v, i::TSeries{F2,Bool}) where {F1,F2} = mixed_freq_error(x, i)
+Base.setindex!(x::AbstractVector{MIT{F}}, v, i::TSeries{F,Bool}) where {F} = setindex!(x, v, values(i))
 
 # -------------------------------------------------------------
 # Some constructors
@@ -249,7 +253,7 @@ end
 function Base.summary(io::IO, t::TSeries)
     et = eltype(t) === Float64 ? "" : ",$(eltype(t))"
     ct = "" # ct = typeof(t.values) === Array{eltype(t),1} ? "" : ",$(typeof(t.values))"
-    typestr = "TSeries{$(frequencyof(t))$(et)$(ct)}"
+    typestr = "TSeries{$(prettyprint_frequency(frequencyof(t)))$(et)$(ct)}"
     if isempty(t)
         print(io, "Empty ", typestr, " starting ", t.firstdate)
     else
@@ -478,7 +482,7 @@ given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
 Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
-Base.diff(x::TSeries{BDaily}, k::Integer=-1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) = x - lag(x, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+Base.diff(x::TSeries{BDaily}, k::Integer=-1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing) = x - lag(x, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
@@ -502,7 +506,7 @@ function pct(ts::TSeries, shift_value::Int=-1; islog::Bool=false)
 
     TSeries(result.firstdate, result.values)
 end
-function pct(ts::TSeries{BDaily}, shift_value::Int=-1; islog::Bool=false, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing)
+function pct(ts::TSeries{BDaily}, shift_value::Int=-1; islog::Bool=false, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing)
     if islog
         a = exp.(ts)
         b = shift(exp.(ts), shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
