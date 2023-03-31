@@ -58,7 +58,11 @@ Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] 
 MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
-MacroTools.@forward Workspace._c (Base.eltype,)
+
+function Base.eltype(w::Workspace)
+    ET = isempty(w) ? Any : Base.promote_typeof(values(w)...)
+    return Pair{Symbol, ET}
+end
 
 Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
 Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
