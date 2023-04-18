@@ -97,7 +97,7 @@ end
 
 ### Linear interpolation helper
 """
-_get_interpolation_values(t::TSeries{F}, m::MIT{F}; values_base::Symbol=:end) where {F}
+_get_interpolation_values(t::TSeries{F}, m::MIT{F}; ref::Symbol=:end) where {F}
 
     # TODO
     This helper function takes a TSeries and a MIT within that TSeries and provides the start and end
@@ -105,44 +105,44 @@ _get_interpolation_values(t::TSeries{F}, m::MIT{F}; values_base::Symbol=:end) wh
     on the direction of the interpolation. The function simplifies logic related to the handling of 
     the ends of the TSeries as well as interpolating between middle points in the MITs.
 """
-function _get_interpolation_values(t::TSeries{F}, m::MIT{F}; values_base::Symbol=:end) where {F}
+function _get_interpolation_values(t::TSeries{F}, m::MIT{F}; ref::Symbol=:end) where {F}
     start_val = nothing
     end_val = nothing
     if length(t) == 1
         start_val = t[m]
         end_val = t[m]
     elseif (m == t.firstdate)
-        if values_base == :end
+        if ref == :end
             start_val = t[m] - (t[m+1] - t[m])
             end_val = t[m]
-        elseif values_base == :begin
+        elseif ref == :begin
             start_val = t[m]
             end_val = t[m+1]
-        elseif values_base == :middle
+        elseif ref == :middle
             start_val = t[m]
             end_val =  t[m+1] 
             # start_val = t[m] - (t[m+1]-t[m]) / 2
             # end_val = t[m+1]
         end
     elseif m == last(rangeof(t))
-        if values_base == :end
+        if ref == :end
             end_val = t[m]
             start_val = t[m-1]
-        elseif values_base == :begin
+        elseif ref == :begin
             start_val = t[m]
             end_val = t[m] + (t[m] - t[m-1])
-        elseif values_base == :middle
+        elseif ref == :middle
             start_val = t[m]
             end_val =  t[m] + (t[m] - t[m-1]) / 2
         end
     else # middle of series
-        if values_base == :end
+        if ref == :end
             end_val = t[m]
             start_val = t[m-1]
-        elseif values_base == :begin 
+        elseif ref == :begin 
             start_val = t[m]
             end_val = t[m+1]
-        elseif values_base == :middle
+        elseif ref == :middle
             start_val = t[m]
             end_val =  t[m+1] 
         end
@@ -151,16 +151,16 @@ function _get_interpolation_values(t::TSeries{F}, m::MIT{F}; values_base::Symbol
 end
 
 """
-    _date_plus_half(m::MIT{F}, values_base::Symbol=:end; round=:down) where {F}
+    _date_plus_half(m::MIT{F}, ref::Symbol=:end; round=:down) where {F}
 
     This helper function receives an MIT and returns a date.
     
     When value_base == :end, the date will be halfway into the MIT following the provided MIT.
-    When values_base == :begin the date will be half way into the provided MIT.
+    When ref == :begin the date will be half way into the provided MIT.
 """
-function _date_plus_half(m::MIT{F}, values_base::Symbol=:end; round=:down) where {F}
+function _date_plus_half(m::MIT{F}, ref::Symbol=:end; round=:down) where {F}
     rounder = round == :up ? ceil : floor
-    base_date = Dates.Date(m, values_base)
+    base_date = Dates.Date(m, ref)
     if F == Monthly
         n_days = Dates.value(base_date + Month(1) - base_date)
     elseif F <: Quarterly
@@ -427,8 +427,8 @@ function _validate_fconvert_yp(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPF
     end
 end
 
-function get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to; require=:single, values_base=:end)
-    if values_base == :end
+function get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to; require=:single, ref=:end)
+    if ref == :end
         if require == :single
             # we just need the first data point in the input series to feed 
             # into the first MIT in the output series
@@ -451,7 +451,7 @@ function get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_fro
             end
         end
     end
-    if values_base == :begin
+    if ref == :begin
         if require == :single
             # we need the first data point in the input series to either
             # a) start at the same month as the output MIT
@@ -479,8 +479,8 @@ function get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_fro
     end
 end
 
-function get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to; require=:single, values_base=:end)
-    if values_base == :end
+function get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to; require=:single, ref=:end)
+    if ref == :end
         if require == :single
             # todo: maybe rewrite this
             # we need the last data point to either
@@ -506,7 +506,7 @@ function get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp
             end
         end
     end
-    if values_base == :begin
+    if ref == :begin
         if require == :single
            # we need the last data point to either
            # a) land after the first month of the output period

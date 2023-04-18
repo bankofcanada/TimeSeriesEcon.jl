@@ -548,42 +548,42 @@ ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year
 #-------------------------
 # date conversion
 """
-Dates.Date(m::MIT, values_base::Symbol=:end)
+Dates.Date(m::MIT, ref::Symbol=:end)
     
 Returns a Date object representing the last day in the provided MIT.
-Returns the first day in the provided MIT when `values_base == true`.
+Returns the first day in the provided MIT when `ref == true`.
 """
-Dates.Date(m::MIT{Daily}, values_base::Symbol=:end) = _d0 + Day(Int(m))
-Dates.Date(m::MIT{BDaily}, values_base::Symbol=:end) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
-function Dates.Date(m::MIT{Weekly{end_day}}, values_base::Symbol = :end) where end_day 
-    if values_base == :begin
+Dates.Date(m::MIT{Daily}, ref::Symbol=:end) = _d0 + Day(Int(m))
+Dates.Date(m::MIT{BDaily}, ref::Symbol=:end) =  _d0 + Day(Int(m) + 2*floor((Int(m)-1)/5))
+function Dates.Date(m::MIT{Weekly{end_day}}, ref::Symbol = :end) where end_day 
+    if ref == :begin
         return _d0 + Day(Int(m)*7 - 6) - Day(7-end_day)
     end
     return _d0 + Day(Int(m)*7) - Day(7-end_day)
 end
-function Dates.Date(m::MIT{Monthly}, values_base::Symbol=:end)
+function Dates.Date(m::MIT{Monthly}, ref::Symbol=:end)
     year, month = divrem(Int(m), 12)
-    if values_base == :begin
+    if ref == :begin
         return Dates.Date("$year-01-01") + Month(month)    
     end
     return Dates.Date("$year-01-01") + Month(month+1) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly{end_month}}, values_base::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{Quarterly{end_month}}, ref::Symbol=:end) where end_month 
     year, quarter = divrem(Int(m), 4)
-    if values_base == :begin
+    if ref == :begin
         return Dates.Date("$year-01-01") + Month(quarter*3 - (3-end_month))    
     end
     return Dates.Date("$year-01-01") + Month((quarter+1) * 3 - (3-end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{HalfYearly{end_month}}, values_base::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{HalfYearly{end_month}}, ref::Symbol=:end) where end_month 
     year, half = divrem(Int(m), 2)
-    if values_base == :begin
+    if ref == :begin
         return Dates.Date("$year-01-01") + Month(half*6 - (6-end_month))    
     end
     return Dates.Date("$year-01-01") + Month((half+1) * 6 - (6-end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{Yearly{end_month}}, values_base::Symbol=:end) where end_month 
-    if values_base == :begin
+function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where end_month 
+    if ref == :begin
         return Dates.Date("$(Int(m))-01-01") - Month(12-end_month)
     end
     return Dates.Date("$(Int(m) + 1)-01-01") - Month(12-end_month) - Day(1)

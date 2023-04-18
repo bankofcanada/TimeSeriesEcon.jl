@@ -47,16 +47,16 @@ to_fame_frequencies_map = Dict{Type, String}(
     BDaily          => "business",
 )
 
-function get_fame_conversion_string(F_to, F_from, method, values_base)
+function get_fame_conversion_string(F_to, F_from, method, ref)
     # q, disc, ave
     s = "$(to_fame_frequencies_map[F_to]), "
     if method == :mean
         s = s*"discrete, averaged"
     elseif method == :point
-        if values_base == :end
+        if ref == :end
             s = s*"discrete, end"
         end
-        if values_base == :begin
+        if ref == :begin
             s = s*"discrete, beginning"
         end
     elseif method == :max
@@ -66,23 +66,23 @@ function get_fame_conversion_string(F_to, F_from, method, values_base)
     elseif method == :sum
         s = s*"discrete, summed"
     elseif method == :const 
-        if values_base == :end
+        if ref == :end
             s = s*"constant, end"
         end
-        if values_base == :begin
+        if ref == :begin
             s = s*"discrete, beginning"
         end
     elseif method == :even 
         s = s*"discrete, summed"
     elseif method == :linear
         s = s*"linear,"
-        if values_base == :end
+        if ref == :end
             s = s*"end"
         end
-        if values_base == :begin
+        if ref == :begin
             s = s*"beginning"
         end
-        # if values_base == :middle
+        # if ref == :middle
         #     s = s*"averaged"
         # end
     end
@@ -90,26 +90,26 @@ function get_fame_conversion_string(F_to, F_from, method, values_base)
     return s
 end
 
-function get_fame_convert(F_to, ts; method=:mean, values_base=:end)
+function get_fame_convert(F_to, ts; method=:mean, ref=:end)
     F_from = frequencyof(ts)
     if ppy(F_from) < ppy(F_to) && method == :mean
         method = :const
     end
     # FAME.init_chli()
     writefame(FAME.workdb(),Workspace(:ts => ts))
-    fame_string = """work'ts_fame = convert(work'ts, $(get_fame_conversion_string(F_to, F_from, method, values_base)))"""
-    if values_base == :begin && method ∉ (:point, :const, :even, :linear)
+    fame_string = """work'ts_fame = convert(work'ts, $(get_fame_conversion_string(F_to, F_from, method, ref)))"""
+    if ref == :begin && method ∉ (:point, :const, :even, :linear)
         fame_string = """
             ignore on
             work'ts_intermediate = convert(work'ts, daily, discrete, beginning)
-            work'ts_fame = convert(work'ts_intermediate, $(get_fame_conversion_string(F_to, F_from, method, values_base)))
+            work'ts_fame = convert(work'ts_intermediate, $(get_fame_conversion_string(F_to, F_from, method, ref)))
             ignore off
         """
-    elseif values_base == :begin && method ∈ (:const,)
+    elseif ref == :begin && method ∈ (:const,)
         fame_string = """
             ignore on
             work'ts_intermediate = convert(work'ts, daily, const, beginning)
-            work'ts_fame = convert(work'ts_intermediate, $(get_fame_conversion_string(F_to, F_from, method, values_base)))
+            work'ts_fame = convert(work'ts_intermediate, $(get_fame_conversion_string(F_to, F_from, method, ref)))
             ignore off
         """
     end
@@ -189,18 +189,18 @@ end
             # println(F_from, ", ", F_to)
             if F_to <= F_from
                 for method in (:mean, :point, :min, :max, :sum) # :sum, :point, :min, :max)
-                    for values_base in (:end, :begin) #:begin)
+                    for ref in (:end, :begin) #:begin)
                         # println(rangeof(t_from))
-                        # println(F_from, ", ", F_to, ", ", method, ", ", values_base)
+                        # println(F_from, ", ", F_to, ", ", method, ", ", ref)
                         if method == :point
-                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                            t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, values_base=values_base)
+                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, ref=ref)
+                            t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, ref=ref)
                             @test rangeof(t_to_sub) == rangeof(t_to_sub_fame)
                             @test values(t_to_sub) ≈ values(t_to_sub_fame) nans=true
                         else
-                            # values_base = :end
-                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                            t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, values_base=values_base)
+                            # ref = :end
+                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, ref=ref)
+                            t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, ref=ref)
                             @test rangeof(t_to_sub) ⊆ rangeof(t_to_sub_fame)
                             @test values(t_to_sub) ≈ values(t_to_sub_fame[rangeof(t_to_sub)]) nans=true
                         end
@@ -209,15 +209,15 @@ end
                 end
             elseif F_to > F_from
                 for method in (:const, :even)
-                    for values_base in (:end, :begin)
-                        if values_base == :begin && method == :even
+                    for ref in (:end, :begin)
+                        if ref == :begin && method == :even
                             # no FAME equivalent for this combination
                             continue
                         end
                         # println(rangeof(t_from), ", ", F_to)
-                        # println(method, ", ", values_base)
-                        t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                        t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, values_base=values_base)
+                        # println(method, ", ", ref)
+                        t_to_sub = @suppress fconvert(F_to, t_from, method=method, ref=ref)
+                        t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, ref=ref)
                         @test rangeof(t_to_sub) ⊆ rangeof(t_to_sub_fame)
                         if F_from == BDaily && F_to == Daily && method == :const 
                             # in this conversion TimeSeriesEcon provides values on weekdays but FAME does not
@@ -230,13 +230,13 @@ end
                 end
                 if F_to ∈ (Daily, BDaily, Monthly) #Daily,BDaily, Monthly)
                     for method in (:linear, )
-                        for values_base in (:end, :begin) # :begin, :middle)
-                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, values_base=values_base)
-                            t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, values_base=values_base)
-                            if values_base == :end
-                                fame_range = fconvert(F_to, firstdate(t_from), values_base=:end):rangeof(t_to_sub)[end]
-                            elseif values_base ==:begin
-                                fame_range = rangeof(t_to_sub)[begin]:fconvert(F_to, rangeof(t_from)[end], values_base=:begin, round_to=:next)
+                        for ref in (:end, :begin) # :begin, :middle)
+                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, ref=ref)
+                            t_to_sub_fame = get_fame_convert(F_to, t_from, method=method, ref=ref)
+                            if ref == :end
+                                fame_range = fconvert(F_to, firstdate(t_from), ref=:end):rangeof(t_to_sub)[end]
+                            elseif ref ==:begin
+                                fame_range = rangeof(t_to_sub)[begin]:fconvert(F_to, rangeof(t_from)[end], ref=:begin, round_to=:next)
                             end
                             @test fame_range == rangeof(t_to_sub_fame)
                             if F_from == BDaily && F_to == Daily && method == :linear 

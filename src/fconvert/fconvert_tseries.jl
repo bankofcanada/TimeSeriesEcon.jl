@@ -16,7 +16,7 @@ Conversion of TSeries from $(frequencyof(t)) to $F_to not implemented.
 fconvert(F_to::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
 
 """
-fconvert(F_to::Type{<:Union{<YPFrequency,<:CalendarFrequency}}, t::TSeries{<:Union{<YPFrequency,<:CalendarFrequency}}; method = :const, values_base = :end)
+fconvert(F_to::Type{<:Union{<YPFrequency,<:CalendarFrequency}}, t::TSeries{<:Union{<YPFrequency,<:CalendarFrequency}}; method = :const, ref = :end)
 
 Convert the time series `t` to the frequency `F_to`.
 
@@ -32,7 +32,7 @@ fconvert(Monthly, x)
 ### Converting to Lower or similar frequency
 There are five methods available: `:point`, `:mean`, `:sum`, `:min`, and `:max`. The default is `:mean`.
 Each MIT in the input frequency will be mapped to the output MIT within which the start/end date of the input MIT
-falls - depending on the whether values_base is `:begin` or `:end`. The corresponding values are then grouped for each 
+falls - depending on the whether ref is `:begin` or `:end`. The corresponding values are then grouped for each 
 output MIT and a value is determined based on the method.
 
 * `:mean`: the values within each group are averaged.
@@ -41,19 +41,19 @@ output MIT and a value is determined based on the method.
 * `:max`: the highest value within each group is chosen.
 * `:point`: see below.
 
-Output ranges are truncated such that each output MIT contains a full complement of input values. For example, when `values_base` is
+Output ranges are truncated such that each output MIT contains a full complement of input values. For example, when `ref` is
 `:end`, an output MIT will be included if all MITs in the input frequency with end dates covered by the output frequency have values.
-Similarly, when `values_base` is `:begin` an output MIT will be included if all input MITs with start dates covered by the output MIT
+Similarly, when `ref` is `:begin` an output MIT will be included if all input MITs with start dates covered by the output MIT
 have values.
 
 The approach is different when method is `:point`. The output MIT will contain the value from the input MIT whose first/last
-day falls *on or before* the first/last day of the output MIT, depending on the `values_base` argument. Truncation is more generous 
-than with the other methods. When `values_base` is `:begin` an output MIT will be included whenever an input MIT with a value
-overlaps the start_day of the output MIT. WHen `values_base` is `:end` an output MIT will be included whenever there is a value
+day falls *on or before* the first/last day of the output MIT, depending on the `ref` argument. Truncation is more generous 
+than with the other methods. When `ref` is `:begin` an output MIT will be included whenever an input MIT with a value
+overlaps the start_day of the output MIT. WHen `ref` is `:end` an output MIT will be included whenever there is a value
 from the input MIT whose end date is either on the last day of the output MIT, or whose end date is the closest to, but not after the 
 last day of the output MIT.
 
-Both method and values_base are ignored when converting from Daily to BDaily.
+Both method and ref are ignored when converting from Daily to BDaily.
 
 Note that the approach taken here is not always precise. Because the values in the input trange are grouped by MITs in the 
 output frequency, without any further accounting for transitions and relative sizes of input and output frequencies
@@ -69,8 +69,8 @@ Each MIT in the input range is mapped to one or more MITs in the output frequenc
 
 The `:linear` method is additionally available when converting a lower frequency to Daily, BDaily, or Monthly.
 When method is :linear values are interpolated in a linear fashion across days/business days/months between input 
-frequency periods. The specifics depends on values_base. When values_base is `:end` the values will be interpolated 
-between the end-dates of adjacent periods. When values_base = `:begin` the values will be interpolated between start-dates 
+frequency periods. The specifics depends on ref. When ref is `:end` the values will be interpolated 
+between the end-dates of adjacent periods. When ref = `:begin` the values will be interpolated between start-dates 
 of adjacent periods. Tail-end periods will have values interpolated based on the progression in the adjacent non-tail-end period.
 
 
@@ -91,23 +91,23 @@ function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; 
     N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t; kwargs...) : _fconvert_lower(F_to, t; kwargs...)
 end
 
-fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, values_base=:end) where {end_day} = _fconvert_higher(F_to, t; method=method, values_base=values_base)
-fconvert(F_to::Type{<:Union{Yearly{N},HalfYearly{N},Quarterly{N},Monthly,Weekly{N}}}, t::TSeries{<:Union{Daily, BDaily, <:Weekly}}; method=:mean, values_base=:end, kwargs...) where {N} = _fconvert_lower(F_to, t; method=method, values_base=values_base, kwargs...)
-fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, values_base=:end) = _fconvert_higher(F_to, t; method=method, values_base=values_base)
-fconvert(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, values_base=:begin) = _fconvert_lower(F_to, t; method=method, values_base=values_base)
-fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, values_base=:end) = _fconvert_higher(F_to, t; method=method, values_base=values_base)
-function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, values_base=:end, errors=true, args...) where {N1,N2}
+fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, ref=:end) where {end_day} = _fconvert_higher(F_to, t; method=method, ref=ref)
+fconvert(F_to::Type{<:Union{Yearly{N},HalfYearly{N},Quarterly{N},Monthly,Weekly{N}}}, t::TSeries{<:Union{Daily, BDaily, <:Weekly}}; method=:mean, ref=:end, kwargs...) where {N} = _fconvert_lower(F_to, t; method=method, ref=ref, kwargs...)
+fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
+fconvert(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, ref=:begin) = _fconvert_lower(F_to, t; method=method, ref=ref)
+fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
+function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, ref=:end, errors=true, args...) where {N1,N2}
     (np, r) = divrem(N1, N2)
     
-    # trim = method == :point ? values_base : :both
+    # trim = method == :point ? ref : :both
     # fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=trim, parts=true)
     
-    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, t.firstdate, values_base=:begin)
-    if values_base == :end
+    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, t.firstdate, ref=:begin)
+    if ref == :end
         mpp_to = div( 12, ppy(F_to))        
         fi_to_end_month = fi_to_start_month + mpp_to - 1
         trunc_start = fi_to_end_month < fi_from_start_month ? 1 : 0
-    elseif values_base == :begin
+    elseif ref == :begin
         trunc_start = fi_to_start_month < fi_from_start_month ? 1 : 0
     end
     fi = MIT{F_to}(fi_to_period+trunc_start)
@@ -122,16 +122,16 @@ function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequenc
 end
 
 # YP to Monthly (incl. linearization)
-function _fconvert_higher_monthly(F_to::Type{<:Monthly}, t::TSeries{<:YPFrequency{N}}; method=:const, values_base=:end) where {N}
+function _fconvert_higher_monthly(F_to::Type{<:Monthly}, t::TSeries{<:YPFrequency{N}}; method=:const, ref=:end) where {N}
     np = Int(12 / N)
     
-    trim = method == :point ? values_base : :both
+    trim = method == :point ? ref : :both
     fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=trim, parts=true)
-    if values_base == :end
+    if ref == :end
         mpp_to = div( 12, ppy(F_to))        
         fi_to_end_month = fi_to_start_month + mpp_to - 1
         trunc_start = fi_to_end_month < fi_from_start_month ? 1 : 0
-    elseif values_base == :begin
+    elseif ref == :begin
         trunc_start = fi_to_start_month < fi_from_start_month ? 1 : 0
     end
     fi = MIT{F_to}(fi_to_period)
@@ -144,20 +144,20 @@ function _fconvert_higher_monthly(F_to::Type{<:Monthly}, t::TSeries{<:YPFrequenc
     elseif method == :linear
         # interpolate across months between input series values
         for m in reverse(rangeof(t))
-            if values_base != :middle
+            if ref != :middle
                 fi_loop = fconvert(Monthly, m) - (np - 1)
                 li_loop = fconvert(Monthly, m)
                 n_months = length(fi_loop:li_loop)
-                start_val, end_val = _get_interpolation_values(t, m; values_base=values_base)
+                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
                 interpolated = collect(LinRange(start_val, end_val, n_months + 1))
-                if values_base == :end
+                if ref == :end
                     ts[fi_loop:li_loop] = interpolated[2:end]
-                elseif values_base == :begin
+                elseif ref == :begin
                     ts[fi_loop:li_loop] = interpolated[1:end-1]
                 end
-            elseif values_base == :middle
+            elseif ref == :middle
                 even = (np/2) % 1 == 0 ? 1 : 0
-                start_val, end_val = _get_interpolation_values(t, m; values_base=values_base)
+                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
                 
                 if m == last(rangeof(t))
                     li_loop = fconvert(Monthly, m)
@@ -199,17 +199,17 @@ function _fconvert_higher_monthly(F_to::Type{<:Monthly}, t::TSeries{<:YPFrequenc
 end
 
 # YP + Weekly to Weekly
-function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}; method=:const, values_base=:end) where {N}
+function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}; method=:const, ref=:end) where {N}
     dates = [Dates.Date(val) for val in rangeof(t)]
     first_date = Dates.Date(t.firstdate, :begin)
-    fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rangeof(t), trim=values_base)
+    fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rangeof(t), trim=ref)
     # @show fi, li, trunc_start, trunc_end
     # @show fi, li, trunc_start, trunc_end
     # The out_indices command provides the week within which falls each of the provided dates.
     # we need to know how many weeks fall within each input period.
-    # so for values_base = :end we need to know when a week ends in the following output period
+    # so for ref = :end we need to know when a week ends in the following output period
     # this happens whenever the first day in the next period falls within that week.
-    if values_base == :end
+    if ref == :end
         # we want the first day of the following months, but we also don't want to spill over the end of the series
         dates[1:end-1] = dates[1:end-1] .+ Day(1) 
         N_effective = @isdefined(N) ? N : 7
@@ -217,8 +217,8 @@ function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequenc
             dates[end] += Day(1)
         end
         insert!(dates, 1, first_date) # also get the first week
-    elseif values_base == :begin
-        # for values_base == :begin the week of the last day of the month will always be followed by a transition
+    elseif ref == :begin
+        # for ref == :begin the week of the last day of the month will always be followed by a transition
         # however, we want to make sure that the number of weeks with the first value is based off of 
         insert!(dates, 1, first_date - Day(7))
     end
@@ -236,7 +236,7 @@ function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequenc
 end
 
 # BDaily to Daily (including linearization)
-function _fconvert_higher(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, values_base=:end)
+function _fconvert_higher(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, ref=:end)
     fi = fconvert(F_to, firstdate(t))
     li = fconvert(F_to, lastdate(t))
 
@@ -251,7 +251,7 @@ function _fconvert_higher(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const
     if method == :even
         return ts
     elseif method == :const 
-        if values_base == :end
+        if ref == :end
             monday_indices = out_dates[daysofweeks .== 1]
             # @show monday_indices
             # remove early mondays
@@ -260,7 +260,7 @@ function _fconvert_higher(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const
             end
             ts[monday_indices .- 2] = ts[monday_indices]
             ts[monday_indices .- 1]= ts[monday_indices]
-        elseif values_base == :begin
+        elseif ref == :begin
             friday_indices = out_dates[daysofweeks .== 5]
             # remove friday at end
             if friday_indices[end] == li
@@ -281,7 +281,7 @@ function _fconvert_higher(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const
             friday_indices = friday_indices[1:end-1]
         end
         @assert(length(monday_indices) == length(friday_indices))
-        if values_base ∈ (:begin, :end, :middle) # all are treated the same
+        if ref ∈ (:begin, :end, :middle) # all are treated the same
             differences = ts[monday_indices] .- ts[friday_indices]
             ts[friday_indices .+ 1] = ts[friday_indices] + 1/3*differences
             ts[friday_indices .+ 2] = ts[friday_indices] + 2/3*differences
@@ -293,13 +293,13 @@ end
 
 # YP + Weekly to Daily + BDaily (incl. linearization)
 """Middle of the month will generally fall on the 16th"""
-function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, values_base=:end)
+function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end)
     date_function = F_to == BDaily ? bdaily : daily
     fi = date_function(Dates.Date(t.firstdate, :begin), bias=:next)
     li = date_function(Dates.Date(rangeof(t)[end]), bias=:previous)
     ts = TSeries(fi:li)
-    if values_base ∉ (:end, :begin) #, :middle)
-        throw(ArgumentError("values_base argument must be :begin or :end. Received: $(values_base)."))
+    if ref ∉ (:end, :begin) #, :middle)
+        throw(ArgumentError("ref argument must be :begin or :end. Received: $(ref)."))
     end
     if method == :const
         for m in rangeof(t)
@@ -321,19 +321,19 @@ function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{
         return ts
     elseif method == :linear
         for m in reverse(rangeof(t))
-            if values_base != :middle
+            if ref != :middle
                 fi_loop = date_function(Dates.Date(m, :begin), bias=:next)
                 li_loop = date_function(Dates.Date(m), bias=:previous)
                 n_days = length(fi_loop:li_loop)
-                start_val, end_val = _get_interpolation_values(t, m; values_base=values_base)
+                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
                 interpolated = collect(LinRange(start_val, end_val, n_days + 1))
-                if values_base == :end
+                if ref == :end
                     ts[fi_loop:li_loop] = interpolated[2:end]
-                elseif values_base == :begin
+                elseif ref == :begin
                     ts[fi_loop:li_loop] = interpolated[1:end-1]
                 end
-            elseif values_base == :middle
-                start_val, end_val = _get_interpolation_values(t, m; values_base=values_base)
+            elseif ref == :middle
+                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
                 # @show start_val, end_val
                 if m == last(rangeof(t))
                     fi_loop = date_function(_date_plus_half(m, :begin), bias=:next)
@@ -372,7 +372,7 @@ _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method =
     Convert a TSeries to a lower frequency. 
 """
 # YP to YP
-function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:mean, values_base=:end, errors=true) where {N1,N2}
+function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:mean, ref=:end, errors=true) where {N1,N2}
     
     F_from = frequencyof(t)
     mpp_from = div( 12, ppy(F_from))
@@ -381,21 +381,21 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
 
     if method == :end
         method = :point
-        values_base = :end
+        ref = :end
     elseif method == :begin
         method=:point
-        values_base = :begin
+        ref = :begin
     end
    
     fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=:both, parts=true)
     trunc_start = 0
     trunc_end = 0
     if method == :point
-        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, values_base=values_base, require=:single)
-        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, values_base=values_base, require=:single)
+        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, ref=ref, require=:single)
+        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, ref=ref, require=:single)
     else
-        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, values_base=values_base, require=:all)
-        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, values_base=values_base, require=:all)
+        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, ref=ref, require=:all)
+        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, ref=ref, require=:all)
     end
 
     fi = MIT{F_to}(fi_to_period+trunc_start)
@@ -406,11 +406,11 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
     if method == :point
         # for the point method we just need to specify the indices in the input
         # which correspond to the MITs in the output. These will all be np apart.
-        if values_base == :end
+        if ref == :end
             fi_from_end_month = fi_from_start_month + mpp_from -1
             fi_to_end_month = fi_to_start_month + mpp_to -1
             months_of_missalignment = fi_to_end_month + fi_truncation_adjustment - fi_from_end_month
-        elseif values_base == :begin
+        elseif ref == :begin
             months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month    
         end
         periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
@@ -420,10 +420,10 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
         ret = t.values[indices]
     else # mean/sum/min/max
         months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month 
-        if values_base == :begin 
+        if ref == :begin 
             months_of_missalignment += (mpp_from - 1)
         end
-        if values_base == :begin && trunc_start == 0 && fi_from_start_month > fi_to_start_month
+        if ref == :begin && trunc_start == 0 && fi_from_start_month > fi_to_start_month
             months_of_missalignment = 0
         end
         periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
@@ -462,17 +462,17 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
 end
 
 # Calendar to YP + Weekly
-function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{Daily,<:Weekly}}; method=:mean, values_base=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
+function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{Daily,<:Weekly}}; method=:mean, ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
     
     F_from = frequencyof(t)
     rng_from = rangeof(t)
 
     if method == :end
         method = :point
-        values_base = :end
+        ref = :end
     elseif method == :begin
         method=:point
-        values_base = :begin
+        ref = :begin
     end
     
     if F_from == Daily
@@ -480,15 +480,15 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
     elseif method != :point
         # for most methods we want to know which actual output period 
         # corresponds to the start/end of each input period
-        dates = [Dates.Date(val, values_base) for val in rng_from]
+        dates = [Dates.Date(val, ref) for val in rng_from]
     else
-        # for method = :point and values_base = :begin we want the value for an input period
+        # for method = :point and ref = :begin we want the value for an input period
         # which overlaps an output period to correspond to that output period, so all dates
         # are based on the end of the period
         dates = [Dates.Date(val) for val in rng_from]
     end
 
-    trim = method == :point ? values_base : :both
+    trim = method == :point ? ref : :both
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rng_from, trim=trim)
     out_index = _get_out_indices(F_to, dates)
     if F_from <: Weekly
@@ -501,9 +501,9 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
         ret = [mean(values(t)[out_index.==target]) for target in unique(out_index)]
     elseif method == :sum
         ret = [sum(values(t)[out_index.==target]) for target in unique(out_index)]
-    elseif method == :point && values_base == :begin
+    elseif method == :point && ref == :begin
         ret = [values(t)[out_index.==target][begin] for target in unique(out_index)]
-    elseif method == :point && values_base == :end
+    elseif method == :point && ref == :end
         ret = [values(t)[out_index.==target][end] for target in unique(out_index)]
     elseif method == :min 
         ret = [minimum(values(t)[out_index.==target]) for target in unique(out_index)]
@@ -516,17 +516,17 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
 end
 
-function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{BDaily}; method=:mean, values_base=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
+function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{BDaily}; method=:mean, ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
     
     F_from = frequencyof(t)
     rng_from = rangeof(t)
 
     if method == :end
         method = :point
-        values_base = :end
+        ref = :end
     elseif method == :begin
         method=:point
-        values_base = :begin
+        ref = :begin
     end
     
    
@@ -538,7 +538,7 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
         dates = dates[holidays_map[rng_from].values]
     end
    
-    trim = method == :point ? values_base : :both
+    trim = method == :point ? ref : :both
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rng_from, trim=trim, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
     out_index = _get_out_indices(F_to, dates)
     
@@ -550,9 +550,9 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
             push!(ret, mean(vals))
         elseif method == :sum
             push!(ret, sum(vals))
-        elseif method == :point && values_base == :begin
+        elseif method == :point && ref == :begin
             push!(ret, vals[begin])
-        elseif method == :point && values_base == :end
+        elseif method == :point && ref == :end
             push!(ret, vals[end])
         elseif method == :min 
             push!(ret, minimum(vals))
@@ -567,7 +567,7 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
 end
 
 # Daily to BDaily (method means nothing)
-function _fconvert_lower(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, values_base=:end)
+function _fconvert_lower(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, ref=:end)
     # options have no effect here
     fi = fconvert(F_to, firstdate(t), round_to=:next)
 
