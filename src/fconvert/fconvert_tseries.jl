@@ -99,18 +99,7 @@ fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:
 function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, ref=:end, errors=true, args...) where {N1,N2}
     (np, r) = divrem(N1, N2)
     
-    # trim = method == :point ? ref : :both
-    # fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=trim, parts=true)
-    
-    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, t.firstdate, ref=:begin)
-    if ref == :end
-        mpp_to = div( 12, ppy(F_to))        
-        fi_to_end_month = fi_to_start_month + mpp_to - 1
-        trunc_start = fi_to_end_month < fi_from_start_month ? 1 : 0
-    elseif ref == :begin
-        trunc_start = fi_to_start_month < fi_from_start_month ? 1 : 0
-    end
-    fi = MIT{F_to}(fi_to_period+trunc_start)
+    fi = _fconvert_higher_get_fi(F_to, t.firstdate, Val(ref))
     
     if method == :const
         return TSeries(fi, repeat(t.values, inner=np))
@@ -120,20 +109,24 @@ function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequenc
         throw(ArgumentError("Conversion method not available: $(method)."))
     end
 end
+function _fconvert_higher_get_fi(F_to::Type{<:YPFrequency{N1}}, first_mit::MIT{<:YPFrequency{N2}}, ref::Val{:end}) where {N1,N2}
+    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, first_mit, ref=:begin)
+    mpp_to = div( 12, ppy(F_to))        
+    fi_to_end_month = fi_to_start_month + mpp_to - 1
+    trunc_start = fi_to_end_month < fi_from_start_month ? 1 : 0
+    return MIT{F_to}(fi_to_period+trunc_start)
+end
+function _fconvert_higher_get_fi(F_to::Type{<:YPFrequency{N1}}, first_mit::MIT{<:YPFrequency{N2}}, ref::Val{:begin}) where {N1,N2}
+    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, first_mit, ref=:begin)
+    trunc_start = fi_to_start_month < fi_from_start_month ? 1 : 0
+    return MIT{F_to}(fi_to_period+trunc_start)
+end
 
-# YP to Monthly (incl. linearization)
+
 function _fconvert_higher_monthly(F_to::Type{<:Monthly}, t::TSeries{<:YPFrequency{N}}; method=:const, ref=:end) where {N}
     np = Int(12 / N)
     
-    trim = method == :point ? ref : :both
-    fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=trim, parts=true)
-    if ref == :end
-        mpp_to = div( 12, ppy(F_to))        
-        fi_to_end_month = fi_to_start_month + mpp_to - 1
-        trunc_start = fi_to_end_month < fi_from_start_month ? 1 : 0
-    elseif ref == :begin
-        trunc_start = fi_to_start_month < fi_from_start_month ? 1 : 0
-    end
+    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(sanitize_frequency(F_to), t.firstdate, ref=:begin)
     fi = MIT{F_to}(fi_to_period)
     ts = TSeries(fi:fi+np*length(t) - 1)
     
@@ -200,28 +193,9 @@ end
 
 # YP + Weekly to Weekly
 function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}; method=:const, ref=:end) where {N}
-    dates = [Dates.Date(val) for val in rangeof(t)]
-    first_date = Dates.Date(t.firstdate, :begin)
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rangeof(t), trim=ref)
-    # @show fi, li, trunc_start, trunc_end
-    # @show fi, li, trunc_start, trunc_end
-    # The out_indices command provides the week within which falls each of the provided dates.
-    # we need to know how many weeks fall within each input period.
-    # so for ref = :end we need to know when a week ends in the following output period
-    # this happens whenever the first day in the next period falls within that week.
-    if ref == :end
-        # we want the first day of the following months, but we also don't want to spill over the end of the series
-        dates[1:end-1] = dates[1:end-1] .+ Day(1) 
-        N_effective = @isdefined(N) ? N : 7
-        if dayofweek(dates[end]) == N_effective
-            dates[end] += Day(1)
-        end
-        insert!(dates, 1, first_date) # also get the first week
-    elseif ref == :begin
-        # for ref == :begin the week of the last day of the month will always be followed by a transition
-        # however, we want to make sure that the number of weeks with the first value is based off of 
-        insert!(dates, 1, first_date - Day(7))
-    end
+    dates = _fconvert_higher_get_dates(F_to, t, Val(ref))
+    
     out_indices = _get_out_indices(F_to, dates)
     output_periods_per_input_period = Int.(out_indices[2:end] .-  out_indices[1:end-1])
 
@@ -233,6 +207,36 @@ function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequenc
         throw(ArgumentError("Conversion method not available: $(method)."))
     end
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end])
+end
+function _fconvert_higher_get_dates(F_to::Type{Weekly{end_day}}, t::TSeries{<:Union{<:YPFrequency}}, ref::Val{:end}) where {end_day}
+    # The out_indices command provides the week within which falls each of the provided dates.
+    # we need to know how many weeks fall within each input period.
+    # so for ref = :end we need to know when a week ends in the following output period
+    # this happens whenever the first day in the next period falls within that week.
+
+    # Get the last day of each month/quarter etc.
+    dates = [Dates.Date(val) for val in rangeof(t)]
+    # Convert to first day of each month/quarter (except for the last one)
+    dates[1:end-1] = dates[1:end-1] .+ Day(1) 
+    if dayofweek(dates[end]) == end_day
+        dates[end] += Day(1) # add one day to the end, this will be trimmed if needed
+    end
+    # insert the first day of the first month/quarter at the start
+    insert!(dates, 1, Dates.Date(t.firstdate, :begin) )
+
+    return dates
+end
+function _fconvert_higher_get_dates(F_to::Type{Weekly{end_day}}, t::TSeries{<:Union{<:YPFrequency}}, ref::Val{:begin}) where {end_day}
+    # for ref == :begin the week of the last day of the month will always be followed by a transition
+    # however, we want to make sure to include the first value if warranted
+       
+    # get the last day of each month/quarter
+    dates = [Dates.Date(val) for val in rangeof(t)]
+    # get the first day of the first month/quarter
+    first_date = Dates.Date(t.firstdate, :begin)
+    # add it at the start
+    insert!(dates, 1, first_date - Day(7)) # add the previous week, this will be trimmed if needed
+    return dates
 end
 
 # BDaily to Daily (including linearization)
