@@ -46,7 +46,7 @@ using Statistics
 
     #wrong method for conversion direction
     @test_throws ArgumentError fconvert(Monthly, q, method=:mean)
-    @test_throws ArgumentError fconvert(Yearly, q, method=:const)
+    @test_throws MethodError fconvert(Yearly, q, method=:const)
 
 
 end

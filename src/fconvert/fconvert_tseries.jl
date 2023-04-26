@@ -367,112 +367,100 @@ _to_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method =
     Convert a TSeries to a lower frequency. 
 """
 # YP to YP
-function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:mean, ref=:end, errors=true) where {N1,N2}
+_fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:mean, ref=:end) where {N1,N2} = _fconvert_lower(F_to, t, Val(method); ref=ref)
+_fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, f::Val{:mean}; ref=:end) where {N1,N2} = _fconvert_lower(F_to, t, mean; ref=ref)
+_fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, f::Val{:sum}; ref=:end) where {N1,N2} = _fconvert_lower(F_to, t, sum; ref=ref)
+_fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, f::Val{:min}; ref=:end) where {N1,N2} = _fconvert_lower(F_to, t, minimum; ref=ref)
+_fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, f::Val{:max}; ref=:end) where {N1,N2} = _fconvert_lower(F_to, t, maximum; ref=ref)
+_fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, f::Val{:end}; ref=:end) where {N1,N2} = _fconvert_lower(F_to, t, Val{:point}; ref=:end)
+_fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, f::Val{:begin}; ref=:end) where {N1,N2} = _fconvert_lower(F_to, t, Val{:point}; ref=:begin)
+function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, aggregator::Function; method=:mean, ref=:end) where {N1,N2}    
+    # necessary values
+    F_from = frequencyof(t)
+    mpp_from = div( 12, ppy(F_from))
+    mpp_to = div( 12, ppy(F_to))
+    (np, r) = divrem(N2, N1)
+   
+    # get out_range
+    fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=:both, parts=true)
+    trunc_start = get_start_truncation_yp(Val(ref), Val(:all), fi_from_start_month, fi_to_start_month, mpp_from, mpp_to)
+    trunc_end = get_end_truncation_yp(Val(ref), Val(:all), li_from_end_month, li_to_end_month, mpp_from, mpp_to)
+    fi = MIT{F_to}(fi_to_period+trunc_start)
+    li = MIT{F_to}(li_to_period-trunc_end)
+    out_range = fi:li
     
+    # get corresponding value indices
+    # if the first index is truncated, add the necessary months to the calculation
+    fi_truncation_adjustment = trunc_start == 1 ? mpp_to : 0
+    # if the reference point is :begin, the end of an input period may span the start
+    # of an output period, so we need to adjust for that eventuality
+    begin_adjustment = ref == :begin ? mpp_from - 1 : 0
+    months_of_missalignment = fi_to_start_month - fi_from_start_month + fi_truncation_adjustment + begin_adjustment
+    periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
+    start_index = 1 + periods_of_missalignment
+    end_index = start_index + np*length(out_range) - 1
+    
+    # convert values
+    vals = t.values[start_index:end_index]
+    ret = aggregator(reshape(vals, np, :); dims=1)
+   
+    return copyto!(TSeries(eltype(ret), out_range), ret[1:length(out_range)])
+end
+function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, method::Val{:point}; ref=:end) where {N1,N2}
+    # necessary values
     F_from = frequencyof(t)
     mpp_from = div( 12, ppy(F_from))
     mpp_to = div( 12, ppy(F_to))
     (np, r) = divrem(N2, N1)
 
-    if method == :end
-        method = :point
-        ref = :end
-    elseif method == :begin
-        method=:point
-        ref = :begin
-    end
-   
+    # get out_range
     fi_to_period, fi_from_start_month, fi_to_start_month, li_to_period, li_from_end_month, li_to_end_month = fconvert(F_to, rangeof(t), trim=:both, parts=true)
-    trunc_start = 0
-    trunc_end = 0
-    if method == :point
-        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, ref=ref, require=:single)
-        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, ref=ref, require=:single)
-    else
-        trunc_start = get_start_truncation_yp(fi_from_start_month, fi_to_start_month, mpp_from, mpp_to, ref=ref, require=:all)
-        trunc_end = get_end_truncation_yp(li_from_end_month, li_to_end_month, mpp_from, mpp_to, ref=ref, require=:all)
-    end
+    trunc_start = get_start_truncation_yp(Val(ref), Val(:single), fi_from_start_month, fi_to_start_month, mpp_from, mpp_to)
+    trunc_end = get_end_truncation_yp(Val(ref), Val(:single), li_from_end_month, li_to_end_month, mpp_from, mpp_to)
 
     fi = MIT{F_to}(fi_to_period+trunc_start)
     li = MIT{F_to}(li_to_period-trunc_end)
     out_range = fi:li
-    
+        
+    # for the point method we just need to specify the indices in the input
+    # which correspond to the MITs in the output. These will all be np apart.
     fi_truncation_adjustment = trunc_start == 1 ? mpp_to : 0
-    if method == :point
-        # for the point method we just need to specify the indices in the input
-        # which correspond to the MITs in the output. These will all be np apart.
-        if ref == :end
-            fi_from_end_month = fi_from_start_month + mpp_from -1
-            fi_to_end_month = fi_to_start_month + mpp_to -1
-            months_of_missalignment = fi_to_end_month + fi_truncation_adjustment - fi_from_end_month
-        elseif ref == :begin
-            months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month    
-        end
-        periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
-        
-        indices = filter(x-> x > 0, 1+periods_of_missalignment:np:length(t.values))[1:length(out_range)]
-        
-        ret = t.values[indices]
-    else # mean/sum/min/max
-        months_of_missalignment = fi_to_start_month + fi_truncation_adjustment - fi_from_start_month 
-        if ref == :begin 
-            months_of_missalignment += (mpp_from - 1)
-        end
-        if ref == :begin && trunc_start == 0 && fi_from_start_month > fi_to_start_month
-            months_of_missalignment = 0
-        end
-        periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
-        # start index needs to be smarter, it's assuming too much
-        start_index = 1 + periods_of_missalignment
-        end_index = start_index + np*length(out_range) - 1
-        if start_index < 1
-            # same as while start_index < 1 : start_index += np
-            (d,r) = divrem(start_index, np)
-            d = r !== 0 ? d + 1 : d
-            start_index += d * np
-            if start_index == 0
-                start_index += np
-            end
-        end
-        if end_index > length(t.values)
-            # same as while end_index > length(t.values) : end_index -= np
-            (d, r) = divrem(end_index - length(t.values), np)
-            d = r !== 0 ? d + 1 : d
-            end_index -= d * np
-        end
-        vals = t.values[start_index:end_index]
-        if method == :mean
-            ret = mean(reshape(vals, np, :); dims=1)
-        elseif method == :sum
-            ret = sum(reshape(vals, np, :); dims=1)
-        elseif method == :max
-            ret = maximum(reshape(vals, np, :); dims=1)
-        elseif method == :min
-            ret = minimum(reshape(vals, np, :); dims=1)
-        else
-            throw(ArgumentError("Conversion method not available: $(method)."))
-        end
+    if ref == :end
+        fi_from_end_month = fi_from_start_month + mpp_from -1
+        fi_to_end_month = fi_to_start_month + mpp_to -1
+        months_of_missalignment = fi_to_end_month - fi_from_end_month + fi_truncation_adjustment 
+    elseif ref == :begin
+        months_of_missalignment = fi_to_start_month - fi_from_start_month + fi_truncation_adjustment     
     end
+    periods_of_missalignment = floor(Int, months_of_missalignment / mpp_from)
+    
+    indices = filter(x-> x > 0, 1+periods_of_missalignment:np:length(t.values))[1:length(out_range)]
+    
+    ret = t.values[indices]
     return copyto!(TSeries(eltype(ret), out_range), ret[1:length(out_range)])
 end
 
+
 # Calendar to YP + Weekly
-function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{Daily,<:Weekly}}; method=:mean, ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}; method=:mean, ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, Val(method); ref=ref, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:mean}; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, mean; ref=ref, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:sum}; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, sum; ref=ref, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:min}; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, minimum; ref=ref, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:max}; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, maximum; ref=ref, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:point}; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, method, Val(ref), skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:begin}; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, Val(:point), Val(ref), skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:end}; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, Val(:point), Val(ref), skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:point}, ref::Val{:end}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, last; ref=:end, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+_fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{BDaily,Daily,<:Weekly}}, method::Val{:point}, ref::Val{:begin}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N} = _fconvert_lower(F_to, t, first; ref=:begin, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+
+function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{<:Union{Daily,<:Weekly}}, aggregator::Function; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
     
     F_from = frequencyof(t)
     rng_from = rangeof(t)
-
-    if method == :end
-        method = :point
-        ref = :end
-    elseif method == :begin
-        method=:point
-        ref = :begin
-    end
     
     if F_from == Daily
         dates = collect(Dates.Date(first(rng_from)):Day(1):Dates.Date(last(rng_from)))
-    elseif method != :point
+    elseif aggregator ∉ (first, last)
         # for most methods we want to know which actual output period 
         # corresponds to the start/end of each input period
         dates = [Dates.Date(val, ref) for val in rng_from]
@@ -483,7 +471,7 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
         dates = [Dates.Date(val) for val in rng_from]
     end
 
-    trim = method == :point ? ref : :both
+    trim = aggregator ∈ (first, last) ? ref : :both
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rng_from, trim=trim)
     out_index = _get_out_indices(F_to, dates)
     if F_from <: Weekly
@@ -492,39 +480,13 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
         li = out_index[end]
     end
     
-    if method == :mean
-        ret = [mean(values(t)[out_index.==target]) for target in unique(out_index)]
-    elseif method == :sum
-        ret = [sum(values(t)[out_index.==target]) for target in unique(out_index)]
-    elseif method == :point && ref == :begin
-        ret = [values(t)[out_index.==target][begin] for target in unique(out_index)]
-    elseif method == :point && ref == :end
-        ret = [values(t)[out_index.==target][end] for target in unique(out_index)]
-    elseif method == :min 
-        ret = [minimum(values(t)[out_index.==target]) for target in unique(out_index)]
-    elseif method == :max 
-        ret = [maximum(values(t)[out_index.==target]) for target in unique(out_index)]
-    else
-        throw(ArgumentError("Conversion method not available: $(method)."))
-    end
-
+    ret = [aggregator(values(t)[out_index.==target]) for target in unique(out_index)]
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
 end
 
-function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{BDaily}; method=:mean, ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
-    
-    F_from = frequencyof(t)
+function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfYearly,HalfYearly{N},Yearly,Yearly{N},Weekly,Weekly{N}}}, t::TSeries{BDaily}, aggregator::Function; ref=:end, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}}=nothing) where {N}
     rng_from = rangeof(t)
-
-    if method == :end
-        method = :point
-        ref = :end
-    elseif method == :begin
-        method=:point
-        ref = :begin
-    end
-    
-   
+       
     dates = [Dates.Date(val) for val in rng_from]
     if holidays_map !== nothing
         dates = dates[holidays_map[rng_from].values]
@@ -533,29 +495,16 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
         dates = dates[holidays_map[rng_from].values]
     end
    
-    trim = method == :point ? ref : :both
+    trim = aggregator ∈ (first, last) ? ref : :both
     fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rng_from, trim=trim, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
     out_index = _get_out_indices(F_to, dates)
     
-    ret = method == :mean ? Vector{Float64}() : Vector{eltype(t)}()
+    ret = aggregator == mean ? Vector{Float64}() : Vector{eltype(t)}()
+
     for target in unique(out_index)
         target_range = collect(rng_from)[out_index .== target]
         vals = cleanedvalues(t[target_range[begin]:target_range[end]]; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
-        if method == :mean
-            push!(ret, mean(vals))
-        elseif method == :sum
-            push!(ret, sum(vals))
-        elseif method == :point && ref == :begin
-            push!(ret, vals[begin])
-        elseif method == :point && ref == :end
-            push!(ret, vals[end])
-        elseif method == :min 
-            push!(ret, minimum(vals))
-        elseif method == :max 
-            push!(ret, maximum(vals))
-        else
-            throw(ArgumentError("Conversion method not available: $(method)."))
-        end
+        push!(ret, aggregator(vals))
     end
 
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end-trunc_end])
