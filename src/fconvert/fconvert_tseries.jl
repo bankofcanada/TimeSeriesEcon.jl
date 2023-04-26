@@ -301,29 +301,20 @@ function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{
     date_function = F_to == BDaily ? bdaily : daily
     fi = date_function(Dates.Date(t.firstdate, :begin), bias=:next)
     li = date_function(Dates.Date(rangeof(t)[end]), bias=:previous)
-    ts = TSeries(fi:li)
     if ref ∉ (:end, :begin) #, :middle)
         throw(ArgumentError("ref argument must be :begin or :end. Received: $(ref)."))
     end
+
+    output_periods_per_input_period = map(m -> Int(date_function(Dates.Date(m, :end), bias=:previous) - date_function(Dates.Date(m, :begin), bias=:next)) + 1, rangeof(t))
+
     if method == :const
-        for m in rangeof(t)
-            fi_loop = date_function(Dates.Date(m, :begin), bias=:next)
-            li_loop = date_function(Dates.Date(m), bias=:previous)
-            # ts[fi_loop:li_loop] = repeat([t[m]], inner=length(fi_loop:li_loop))
-            ts[fi_loop:li_loop] .= t[m]
-        end
-        return ts
+        ret =  repeat_uneven(t.values, output_periods_per_input_period)
+        return copyto!(TSeries(eltype(ret), fi:li), ret)
     elseif method == :even
-        for m in rangeof(t)
-            fi_loop = date_function(Dates.Date(m, :begin), bias=:next)
-            li_loop = date_function(Dates.Date(m), bias=:previous)
-            rng_loop = fi_loop:li_loop
-            rng_loop_length = length(rng_loop)
-            ts[rng_loop] .= t[m] / rng_loop_length
-            # ts[fi_loop:li_loop] .= t[m] / (Int(li_loop) - Int(fi_loop))
-        end
-        return ts
+        ret =  divide_uneven(t.values, output_periods_per_input_period)
+        return copyto!(TSeries(eltype(ret), fi:li), ret)
     elseif method == :linear
+        ts = TSeries(fi:li)
         for m in reverse(rangeof(t))
             if ref != :middle
                 fi_loop = date_function(Dates.Date(m, :begin), bias=:next)
