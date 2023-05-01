@@ -1,6 +1,60 @@
 using Suppressor
 using Statistics
+using Dates
 
+all_frequencies = [
+    Daily,
+    BDaily,
+    Weekly,
+    Weekly{1},
+    Weekly{2},
+    Weekly{3},
+    Weekly{4},
+    Weekly{5},
+    Weekly{6},
+    Weekly{7},
+    Monthly,
+    Quarterly,
+    Quarterly{1},
+    Quarterly{2},
+    Quarterly{3},
+    HalfYearly,
+    HalfYearly{1},
+    HalfYearly{2},
+    HalfYearly{3},
+    HalfYearly{4},
+    HalfYearly{5},
+    HalfYearly{6},
+    Yearly,
+    Yearly{1},
+    Yearly{2},
+    Yearly{3},
+    Yearly{4},
+    Yearly{5},
+    Yearly{6},
+    Yearly{7},
+    Yearly{8},
+    Yearly{9},
+    Yearly{10},
+    Yearly{11},
+    Yearly{12}
+]
+
+function get_random_frequency(frequencies::Vector{Type}=all_frequencies)
+    return frequencies[rand(1:length(frequencies))]
+end
+
+function get_random_date()
+    Dates.Date("2022-01-01") + Day(floor(365*rand(1)[1]))
+end
+
+function get_random_tseries(frequencies::Vector{Type}=all_frequencies)
+    F = get_random_frequency(frequencies)
+    l = 4 * ppy(F)
+    start_mit = fconvert(F, daily(get_random_date()))
+    ts = TSeries(start_mit, collect(1:l))
+    ts .* rand(l)
+end
 
 @testset "fconvert, general" begin
     t = TSeries(5U, collect(1:10))
@@ -1877,6 +1931,29 @@ end
     #     collect(LinRange(1, 2, 53))[1:20]...
     # ]
     # @test length(w3_lin2) == 105
+end
+
+@testset "fconvert, pass function" begin
+    for i in 1:100
+        # F_to = nothing
+        ts = get_random_tseries(filter(x -> x > Yearly, all_frequencies))
+        F_to = get_random_frequency(filter(x -> x < frequencyof(ts), all_frequencies))
+        @test fconvert(mean, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:mean, ref=:begin)
+        @test fconvert(mean, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:mean, ref=:end)
+        @test fconvert(sum, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:sum, ref=:begin)
+        @test fconvert(sum, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:sum, ref=:end)
+        @test fconvert(minimum, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:min, ref=:begin)
+        @test fconvert(minimum, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:min, ref=:end)
+        @test fconvert(maximum, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:max, ref=:begin)
+        @test fconvert(maximum, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:max, ref=:end)
+    end
+end
+
+@testset "fconvert, pass custom function" begin
+    second_highest(x::Matrix; dims=1) = map(i -> sort(x[:,i])[end-1], 1:size(x)[2])
+    ts = TSeries(2022M1, collect(1:12))
+    ts_q = fconvert(second_highest, Quarterly, ts)
+    @test ts_q.values == [2,5,8,11]
 end
 
 @testset "fconvert, all combinations" begin

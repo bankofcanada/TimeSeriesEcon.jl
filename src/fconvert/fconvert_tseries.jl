@@ -2,6 +2,7 @@
 # All rights reserved.
 
 import Statistics: mean
+# https://stackoverflow.com/questions/46321515/get-function-signatures
 
 """
     fconvert(F_to, t::TSeries)
@@ -11,9 +12,13 @@ Convert the time series `t` to the desired frequency `F_to`.
 fconvert(F_to::Type{<:Frequency}, t::TSeries; args...) = error("""
 Conversion of TSeries from $(frequencyof(t)) to $F_to not implemented.
 """)
+fconvert(f::Function, F_to::Type{<:Frequency}, t::TSeries; args...) = error("""
+Conversion of TSeries from $(frequencyof(t)) to $F_to not implemented.
+""")
 
 # do nothing when the source and target frequencies are the same.
 fconvert(F_to::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
+fconvert(f::Function, F_to::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
 
 """
 fconvert(F_to::Type{<:Union{<YPFrequency,<:CalendarFrequency}}, t::TSeries{<:Union{<YPFrequency,<:CalendarFrequency}}; method = :const, ref = :end)
@@ -91,11 +96,30 @@ function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; 
     N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t; kwargs...) : _fconvert_lower(F_to, t; kwargs...)
 end
 
+fconvert(f::Function, F_to::Type{Weekly}, t::TSeries; kwargs...) = fconvert(f, Weekly{7}, t; kwargs...)
+fconvert(f::Function, F_to::Type{Quarterly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(f, Quarterly{3}, t; kwargs...)
+fconvert(f::Function, F_to::Type{HalfYearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(f, HalfYearly{6}, t; kwargs...)
+fconvert(f::Function, F_to::Type{Yearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(f, Yearly{12}, t; kwargs...)
+function fconvert(f::Function, F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; kwargs...) where {N1, N2}
+    if F_to == Monthly
+        return _fconvert_higher_monthly(F_to, t, f; kwargs...)
+    end
+    N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t, f; kwargs...) : _fconvert_lower(F_to, t, f; kwargs...)
+end
+
 fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, ref=:end) where {end_day} = _fconvert_higher(F_to, t; method=method, ref=ref)
 fconvert(F_to::Type{<:Union{Yearly{N},HalfYearly{N},Quarterly{N},Monthly,Weekly{N}}}, t::TSeries{<:Union{Daily, BDaily, <:Weekly}}; method=:mean, ref=:end, kwargs...) where {N} = _fconvert_lower(F_to, t; method=method, ref=ref, kwargs...)
 fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
 fconvert(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, ref=:begin) = _fconvert_lower(F_to, t; method=method, ref=ref)
 fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
+
+# fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, ref=:end) where {end_day} = _fconvert_higher(F_to, t; method=method, ref=ref)
+fconvert(f::Function, F_to::Type{<:Union{Yearly{N},HalfYearly{N},Quarterly{N},Monthly,Weekly{N}}}, t::TSeries{<:Union{Daily, BDaily, <:Weekly}}; ref=:end, kwargs...) where {N} = _fconvert_lower(F_to, t, f; ref=ref, kwargs...)
+# fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
+fconvert(f::Function, F_to::Type{<:BDaily}, t::TSeries{Daily}; ref=:begin) = _fconvert_lower(F_to, t, f; ref=ref)
+# fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
+
+
 function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, ref=:end, errors=true, args...) where {N1,N2}
     (np, r) = divrem(N1, N2)
     
@@ -511,6 +535,7 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
 end
 
 # Daily to BDaily (method means nothing)
+_fconvert_lower(F_to::Type{<:BDaily}, t::TSeries{Daily}, aggregator::Function; kwargs...) = _fconvert_lower(F_to, t; kwargs...)
 function _fconvert_lower(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, ref=:end)
     # options have no effect here
     fi = fconvert(F_to, firstdate(t), round_to=:next)
