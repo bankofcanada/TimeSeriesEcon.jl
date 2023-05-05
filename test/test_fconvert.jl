@@ -1950,7 +1950,7 @@ end
 end
 
 @testset "fconvert, pass custom function" begin
-    second_highest(x::Matrix; dims=1) = map(i -> sort(x[:,i])[end-1], 1:size(x)[2])
+    second_highest(x) = length(x) == 1 ? x[1] : sort(x)[end-1]
     ts = TSeries(2022M1, collect(1:12))
     ts_q = fconvert(second_highest, Quarterly, ts)
     @test ts_q.values == [2,5,8,11]

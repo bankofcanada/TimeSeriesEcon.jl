@@ -425,9 +425,9 @@ function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency
     end_index = start_index + np*length(out_range) - 1
     
     # convert values
-    vals = t.values[start_index:end_index]
-    ret = aggregator(reshape(vals, np, :); dims=1)
-   
+    reshaped_vals = reshape(t.values[start_index:end_index], np, :)
+    ret = [aggregator(col) for col in eachcol(reshaped_vals)]
+    
     return copyto!(TSeries(eltype(ret), out_range), ret[1:length(out_range)])
 end
 function _fconvert_lower(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, method::Val{:point}; ref=:end) where {N1,N2}
