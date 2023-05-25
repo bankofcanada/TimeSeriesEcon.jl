@@ -2055,24 +2055,13 @@ end
                     end
                 end
             elseif F_to > F_from
-                for method in (:const, :even)
+                for method in (:const, :even, :linear)
                     for ref in (:begin, :end)
                         t_to_sub = @suppress fconvert(F_to, t_from, method=method, ref=ref)
                         @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
                         @test length(t_to_sub.values) > 0
                         @test maximum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) < 1000000
                         @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
-                    end
-                end
-                if F_to ∈ (Daily, BDaily, Monthly)
-                    for method in (:linear, )
-                        for ref in (:begin, :end)#, :middle)
-                            t_to_sub = @suppress fconvert(F_to, t_from, method=method, ref=ref)
-                            @test frequencyof(t_to_sub) == TimeSeriesEcon.sanitize_frequency(F_to)
-                            @test length(t_to_sub.values) > 0
-                            @test maximum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) < 1000000
-                            @test minimum(TimeSeriesEcon.skip_if_warranted(values(t_to_sub), F_from == BDaily && F_to == Daily)) > -1000000
-                        end
                     end
                 end
             end
