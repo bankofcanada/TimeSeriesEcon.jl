@@ -9,16 +9,22 @@ import Statistics: mean
 
 Convert the time series `t` to the desired frequency `F_to`.
 """
-fconvert(F_to::Type{<:Frequency}, t::TSeries; args...) = error("""
+fconvert(F_to::Type{Unit}, t::TSeries{F}; args...) where {F<:CalendarFrequency} = error("""
 Conversion of TSeries from $(frequencyof(t)) to $F_to not implemented.
 """)
-fconvert(f::Function, F_to::Type{<:Frequency}, t::TSeries; args...) = error("""
+fconvert(f::Function, F_to::Type{Unit}, t::TSeries{F}; args...)  where {F<:CalendarFrequency} = error("""
 Conversion of TSeries from $(frequencyof(t)) to $F_to not implemented.
+""")
+fconvert(F_to::Type{<:CalendarFrequency}, t::TSeries{F}; args...) where {F<:Unit} = error("""
+Conversion of TSeries from $(F) to $F_to not implemented.
+""")
+fconvert(f::Function, F_to::Type{<:CalendarFrequency}, t::TSeries{F}; args...) where {F<:Unit} = error("""
+Conversion of TSeries from $(F) to $F_to not implemented.
 """)
 
 # do nothing when the source and target frequencies are the same.
-fconvert(F_to::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
-fconvert(f::Function, F_to::Type{F}, t::TSeries{F}) where {F<:Frequency} = t
+fconvert(F_to::Type{F}, t::TSeries{F}; kwargs...) where {F<:Frequency} = t
+fconvert(f::Function, F_to::Type{F}, t::TSeries{F}; kwargs...) where {F<:Frequency} = t
 
 """
 fconvert(F_to::Type{<:Union{<YPFrequency,<:CalendarFrequency}}, t::TSeries{<:Union{<YPFrequency,<:CalendarFrequency}}; method = :const, ref = :end)
@@ -78,6 +84,19 @@ frequency periods. The specifics depends on ref. When ref is `:end` the values w
 between the end-dates of adjacent periods. When ref = `:begin` the values will be interpolated between start-dates 
 of adjacent periods. Tail-end periods will have values interpolated based on the progression in the adjacent non-tail-end period.
 
+### Passing a custom conversion function
+One can also pass a custom function as the first argument of the fconvert command. These must have a particular input and output:
+
+Converting to a lower frequency:
+    The function must accept a single argument, a vector of values, and return a single value.
+
+Converting to a higher frequency:
+    The function must accept two positional arguments and any number of keyword arguments. 
+    Currently only the `ref` keyword argument is passed on.
+    The first positional argument will receive the vector of values from the input TSeries.
+    The second positional argument is a vector of integers listing the number of output periods,
+    which correspond to each input value.
+
 
 ```
 x = TSeries(2000M1:2000M7, collect(Float64, 1:7))
@@ -90,9 +109,6 @@ fconvert(F_to::Type{Quarterly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwar
 fconvert(F_to::Type{HalfYearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(HalfYearly{6}, t; kwargs...)
 fconvert(F_to::Type{Yearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(Yearly{12}, t; kwargs...)
 function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; kwargs...) where {N1, N2}
-    if F_to == Monthly
-        return _fconvert_higher_monthly(F_to, t; kwargs...)
-    end
     N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t; kwargs...) : _fconvert_lower(F_to, t; kwargs...)
 end
 
@@ -101,9 +117,6 @@ fconvert(f::Function, F_to::Type{Quarterly}, t::TSeries{<:Union{Daily,BDaily,<:W
 fconvert(f::Function, F_to::Type{HalfYearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(f, HalfYearly{6}, t; kwargs...)
 fconvert(f::Function, F_to::Type{Yearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(f, Yearly{12}, t; kwargs...)
 function fconvert(f::Function, F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; kwargs...) where {N1, N2}
-    if F_to == Monthly
-        return _fconvert_higher_monthly(F_to, t, f; kwargs...)
-    end
     N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t, f; kwargs...) : _fconvert_lower(F_to, t, f; kwargs...)
 end
 
@@ -113,14 +126,13 @@ fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, ref=:end) = _fc
 fconvert(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, ref=:begin) = _fconvert_lower(F_to, t; method=method, ref=ref)
 fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
 
-# fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, ref=:end) where {end_day} = _fconvert_higher(F_to, t; method=method, ref=ref)
 fconvert(f::Function, F_to::Type{<:Union{Yearly{N},HalfYearly{N},Quarterly{N},Monthly,Weekly{N}}}, t::TSeries{<:Union{Daily, BDaily, <:Weekly}}; ref=:end, kwargs...) where {N} = _fconvert_lower(F_to, t, f; ref=ref, kwargs...)
-# fconvert(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
-fconvert(f::Function, F_to::Type{<:BDaily}, t::TSeries{Daily}; ref=:begin) = _fconvert_lower(F_to, t, f; ref=ref)
-# fconvert(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end) = _fconvert_higher(F_to, t; method=method, ref=ref)
+fconvert(f::Function, F_to::Type{<:BDaily}, t::TSeries{Daily}; ref=:end, kwargs...) = _fconvert_lower(F_to, t, f; ref=ref, kwargs...)
+fconvert(f::Function, F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; kwargs...) = _fconvert_higher(F_to, t, f; kwargs...)
+fconvert(f::Function, F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}; kwargs...) where {N} = _fconvert_higher(F_to, t, f; kwargs...)
 
 
-function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, ref=:end, errors=true, args...) where {N1,N2}
+function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; method=:const, ref=:end, kwargs...) where {N1,N2}
     (np, r) = divrem(N1, N2)
     
     fi = _fconvert_higher_get_fi(F_to, t.firstdate, Val(ref))
@@ -129,9 +141,19 @@ function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequenc
         return TSeries(fi, repeat(t.values, inner=np))
     elseif method == :even
         return TSeries(fi, repeat(t.values ./ np, inner=np))
+    elseif method == :linear
+        return TSeries(fi, linear_uneven(t.values, repeat([np], length(t)); ref=ref, kwargs...))
     else
         throw(ArgumentError("Conversion method not available: $(method)."))
     end
+end
+function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}, f::Function; ref=:end, kwargs...) where {N1,N2}
+    (np, r) = divrem(N1, N2)
+    
+    fi = _fconvert_higher_get_fi(F_to, t.firstdate, Val(ref))
+    
+    ret = f(t.values, repeat([np], length(t)); ref=ref, kwargs...)
+    return TSeries(fi, ret)
 end
 function _fconvert_higher_get_fi(F_to::Type{<:YPFrequency{N1}}, first_mit::MIT{<:YPFrequency{N2}}, ref::Val{:end}) where {N1,N2}
     fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(F_to, first_mit, ref=:begin)
@@ -146,90 +168,19 @@ function _fconvert_higher_get_fi(F_to::Type{<:YPFrequency{N1}}, first_mit::MIT{<
     return MIT{F_to}(fi_to_period+trunc_start)
 end
 
-
-function _fconvert_higher_monthly(F_to::Type{<:Monthly}, t::TSeries{<:YPFrequency{N}}; method=:const, ref=:end) where {N}
-    np = Int(12 / N)
-    
-    fi_to_period, fi_from_start_month, fi_to_start_month = fconvert_parts(sanitize_frequency(F_to), t.firstdate, ref=:begin)
-    fi = MIT{F_to}(fi_to_period)
-    ts = TSeries(fi:fi+np*length(t) - 1)
-    
-    if method == :const
-        return TSeries(fi, repeat(t.values, inner=np))
-    elseif method == :even
-        return TSeries(fi, repeat(t.values ./ np, inner=np))
-    elseif method == :linear
-        # interpolate across months between input series values
-        for m in reverse(rangeof(t))
-            if ref != :middle
-                fi_loop = fconvert(Monthly, m) - (np - 1)
-                li_loop = fconvert(Monthly, m)
-                n_months = length(fi_loop:li_loop)
-                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
-                interpolated = collect(LinRange(start_val, end_val, n_months + 1))
-                if ref == :end
-                    ts[fi_loop:li_loop] = interpolated[2:end]
-                elseif ref == :begin
-                    ts[fi_loop:li_loop] = interpolated[1:end-1]
-                end
-            elseif ref == :middle
-                even = (np/2) % 1 == 0 ? 1 : 0
-                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
-                
-                if m == last(rangeof(t))
-                    li_loop = fconvert(Monthly, m)
-                    fi_loop = li_loop - floor(Int, np/2) + even
-                else
-                    li_loop = fconvert(Monthly, m) + ceil(Int, np/2)
-                    fi_loop = li_loop - np + even
-                end
-                
-                n_months = length(fi_loop:li_loop)
-                if even == 1
-                    #     ts[fi_loop:li_loop] = interpolated[2:end-1]
-                    interpolated = collect(LinRange(start_val, end_val, (n_months+1)*2 - 1))[2:2:end]
-                    ts[fi_loop:li_loop] = interpolated[1:n_months]
-                else
-                    interpolated = collect(LinRange(start_val, end_val, n_months+2*even))
-                    ts[fi_loop:li_loop] = interpolated[1+even:end-even]
-                end
-                
-                if m == first(rangeof(t))
-                    fi_loop = fi
-                    li_loop = fi + floor(Int, np/2)
-                    n_months = length(fi_loop:li_loop)
-                    diffs = interpolated[1:n_months] .- interpolated[1]
-                    ts[fi_loop:li_loop] =  interpolated[1] .- reverse(diffs)
-                elseif m == last(rangeof(t)) - 1
-                    fi_loop = fconvert(Monthly,m) + ceil(Int, np/2) + even
-                    li_loop = last(rangeof(ts))
-                    n_months = length(fi_loop:li_loop)
-                    diffs =   interpolated[end-n_months+1-even:end-even] .- interpolated[end]
-                    ts[fi_loop:li_loop] =  interpolated[end] .- reverse(diffs)
-                end 
-            end
-        end
-        return ts
-    else
-        throw(ArgumentError("Conversion method not available: $(method)."))
-    end
-end
-
 # YP + Weekly to Weekly
-function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}; method=:const, ref=:end) where {N}
-    fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rangeof(t), trim=ref)
-    dates = _fconvert_higher_get_dates(F_to, t, Val(ref))
+_fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}; method=:const, ref=:end) where {N} = _fconvert_higher(F_to, t, Val(method); ref=ref)
+_fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}, method::Val{:const}; ref=:end) where {N} = _fconvert_higher(F_to, t, repeat_uneven; ref=ref)
+_fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}, method::Val{:even}; ref=:end) where {N} = _fconvert_higher(F_to, t, divide_uneven; ref=ref)
+_fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}, method::Val{:linear}; ref=:end) where {N} = _fconvert_higher(F_to, t, linear_uneven; ref=ref)
+function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequency}}, f::Function; kwargs...) where {N}
+    fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rangeof(t), trim=kwargs[:ref])
+    dates = _fconvert_higher_get_dates(F_to, t, Val(kwargs[:ref]))
     
     out_indices = _get_out_indices(F_to, dates)
     output_periods_per_input_period = Int.(out_indices[2:end] .-  out_indices[1:end-1])
+    ret =  f(t.values, output_periods_per_input_period; kwargs...)
 
-    if method == :const 
-        ret =  repeat_uneven(t.values, output_periods_per_input_period)
-    elseif method == :even 
-        ret =  divide_uneven(t.values, output_periods_per_input_period)
-    else
-        throw(ArgumentError("Conversion method not available: $(method)."))
-    end
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end])
 end
 function _fconvert_higher_get_dates(F_to::Type{Weekly{end_day}}, t::TSeries{<:Union{<:YPFrequency}}, ref::Val{:end}) where {end_day}
@@ -320,70 +271,22 @@ function _fconvert_higher(F_to::Type{<:Daily}, t::TSeries{BDaily}; method=:const
 end
 
 # YP + Weekly to Daily + BDaily (incl. linearization)
-"""Middle of the month will generally fall on the 16th"""
-function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end)
+_fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}; method=:const, ref=:end) = _fconvert_higher(F_to, t, Val(method); ref=ref)
+_fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}, method::Val{:const}; ref=:end) = _fconvert_higher(F_to, t, repeat_uneven; ref=ref)
+_fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}, method::Val{:even}; ref=:end) = _fconvert_higher(F_to, t, divide_uneven; ref=ref)
+_fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}, method::Val{:linear}; ref=:end) = _fconvert_higher(F_to, t, linear_uneven; ref=ref)
+function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{<:YPFrequency, <:Weekly}}, f::Function; kwargs...)
     date_function = F_to == BDaily ? bdaily : daily
     fi = date_function(Dates.Date(t.firstdate, :begin), bias=:next)
     li = date_function(Dates.Date(rangeof(t)[end]), bias=:previous)
-    if ref ∉ (:end, :begin) #, :middle)
+    if kwargs[:ref] ∉ (:end, :begin) #, :middle)
         throw(ArgumentError("ref argument must be :begin or :end. Received: $(ref)."))
     end
 
     output_periods_per_input_period = map(m -> Int(date_function(Dates.Date(m, :end), bias=:previous) - date_function(Dates.Date(m, :begin), bias=:next)) + 1, rangeof(t))
 
-    if method == :const
-        ret =  repeat_uneven(t.values, output_periods_per_input_period)
-        return copyto!(TSeries(eltype(ret), fi:li), ret)
-    elseif method == :even
-        ret =  divide_uneven(t.values, output_periods_per_input_period)
-        return copyto!(TSeries(eltype(ret), fi:li), ret)
-    elseif method == :linear
-        ts = TSeries(fi:li)
-        for m in reverse(rangeof(t))
-            if ref != :middle
-                fi_loop = date_function(Dates.Date(m, :begin), bias=:next)
-                li_loop = date_function(Dates.Date(m), bias=:previous)
-                n_days = length(fi_loop:li_loop)
-                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
-                interpolated = collect(LinRange(start_val, end_val, n_days + 1))
-                if ref == :end
-                    ts[fi_loop:li_loop] = interpolated[2:end]
-                elseif ref == :begin
-                    ts[fi_loop:li_loop] = interpolated[1:end-1]
-                end
-            elseif ref == :middle
-                start_val, end_val = _get_interpolation_values(t, m; ref=ref)
-                # @show start_val, end_val
-                if m == last(rangeof(t))
-                    fi_loop = date_function(_date_plus_half(m, :begin), bias=:next)
-                    li_loop = date_function(Dates.Date(m), bias=:previous)
-                else
-                    fi_loop = date_function(_date_plus_half(m, :begin), bias=:next)
-                    li_loop = date_function(_date_plus_half(m+1, :begin), bias=:previous)
-                end
-                n_days = length(fi_loop:li_loop)
-                interpolated = collect(LinRange(start_val, end_val, n_days))
-                ts[fi_loop:li_loop] = interpolated[1:end]
-                # additional fix for start
-                if m == first(rangeof(t))
-                    fi_loop = date_function(Dates.Date(m, :begin), bias=:next)
-                    li_loop = date_function(_date_plus_half(m, :begin), bias=:previous) 
-                    n_days = length(fi_loop:li_loop)
-                    diffs = interpolated[1:n_days] .- interpolated[1]
-                    ts[fi_loop:li_loop] =  interpolated[1] .- reverse(diffs)
-                elseif m == last(rangeof(t)) - 1
-                    fi_loop = date_function(_date_plus_half(m+1, :begin), bias=:next)
-                    li_loop = date_function(Dates.Date(m+1), bias=:previous)
-                    n_days = length(fi_loop:li_loop)
-                    diffs =   interpolated[end-n_days+1:end] .- interpolated[end]
-                    ts[fi_loop:li_loop] =  interpolated[end] .- reverse(diffs)
-                end 
-            end
-        end
-        return ts
-    else
-        throw(ArgumentError("Conversion method not available: $(method)."))
-    end
+    ret =  f(t.values, output_periods_per_input_period; kwargs...)
+    return copyto!(TSeries(eltype(ret), fi:li), ret)
 end
 
 """
@@ -549,3 +452,5 @@ function _fconvert_lower(F_to::Type{<:BDaily}, t::TSeries{Daily}; method=:mean, 
 
     return TSeries(fi, t.values[out_map])
 end
+
+

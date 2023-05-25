@@ -11,7 +11,7 @@ is repeated a number of times equal to the same-index position in the vector
 `> repeat_uneven([1,2,4], [2,1,4])`
 [1, 1, 2, 4, 4, 4, 4]
 """
-function repeat_uneven(x::AbstractArray{<:Number}, inner::Vector{<:Integer})
+function repeat_uneven(x::AbstractArray{<:Number}, inner::Vector{<:Integer}; kwargs...)
     out = typeof(x)(undef, sum(inner))
     pos = 1
     for i in 1:length(x)
@@ -33,7 +33,7 @@ Example:
 `> divide_uneven([1,2,4], [2,1,4])`
 [0.5, 0.5, 2.0, 1, 1, 1, 1]
 """
-function divide_uneven(x::AbstractArray{<:Number}, inner::Vector{<:Integer})
+function divide_uneven(x::AbstractArray{<:Number}, inner::Vector{<:Integer}; kwargs...)
     out = typeof(x/1.0)(undef, sum(inner))
     pos = 1
     for i in 1:length(x)
@@ -43,6 +43,50 @@ function divide_uneven(x::AbstractArray{<:Number}, inner::Vector{<:Integer})
     return out
 end
 export(divide_uneven)
+
+linear_uneven(x::AbstractArray{<:Number}, output_lengths::Vector{<:Integer}; ref=:end, kwargs...) = linear_uneven(x, output_lengths, Val(ref); kwargs...)
+function linear_uneven(x::AbstractArray{<:Number}, output_lengths::Vector{<:Integer}, ref::Val{:end}; kwargs...)
+    out_vals = Vector{Float64}(undef, sum(output_lengths))
+    current_index = 1
+    for (i,len) in enumerate(output_lengths)
+        if i == 1
+            step_size = (x[i+1] - x[i]) / output_lengths[i+1]
+            vals = collect(LinRange(
+                x[i] - output_lengths[i]*step_size,
+                x[i],
+                output_lengths[i]+1
+            ))
+            out_vals[current_index:current_index+output_lengths[i]-1] = vals[2:end]
+            current_index += output_lengths[i]
+        else
+            vals = collect(LinRange(x[i-1], x[i], output_lengths[i]+1))
+            out_vals[current_index:current_index+output_lengths[i]-1] = vals[2:end]
+            current_index += output_lengths[i]
+        end
+    end
+    return out_vals
+end
+function linear_uneven(x::AbstractArray{<:Number}, output_lengths::Vector{<:Integer}, ref::Val{:begin}; kwargs...)
+    out_vals = Vector{Float64}(undef, sum(output_lengths))
+    current_index = 1
+    for (i,len) in enumerate(output_lengths)
+        if i == length(x)
+            step_size = (x[i] - x[i-1]) / output_lengths[i-1]
+            vals = collect(LinRange(
+                x[i],
+                x[i] + output_lengths[i]*step_size,
+                output_lengths[i]+1
+            ))
+            out_vals[current_index:current_index+output_lengths[i]-1] = vals[1:end-1]
+            current_index += output_lengths[i]
+        else
+            vals = collect(LinRange(x[i], x[i+1], output_lengths[i]+1))
+            out_vals[current_index:current_index+output_lengths[i]-1] = vals[1:end-1]
+            current_index += output_lengths[i]
+        end
+    end
+    return out_vals
+end
 
 
 # no docstring needed
@@ -521,3 +565,74 @@ function get_end_truncation_yp(ref::Val{:begin}, require::Val{:all}, li_from_end
     end
 end
 
+extend_series(F_to::Type{<:Frequency}, ts::TSeries; direction=:both, method=:mean) = extend_series!(F_to, copy(ts), Val(direction); method=method)
+extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:end}; method=:mean) = extend_series!(F_to, ts, direction, Val(method))
+extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:begin}; method=:mean) = extend_series!(F_to, ts, direction, Val(method))
+function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:both}; method=:mean) 
+    extend_series!(F_to, ts, Val(:begin), Val(method))
+    extend_series!(F_to, ts, Val(:end), Val(method))
+    ts
+end
+function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:begin}, method::Val{:end}) 
+    println("START END")
+    F_from = frequencyof(ts)
+    first_mit_in_output_freq = fconvert(F_to, first(rangeof(ts)))
+    desired_first_mit = fconvert(F_from, first_mit_in_output_freq, ref=:begin)
+    affected_range = desired_first_mit:first(rangeof(ts))-1
+    if length(affected_range) >= 1
+        if frequencyof(ts) == BDaily
+            ts[affected_range] .= cleanedvalues(ts; skip_all_nans=true)[begin]
+        else
+            ts[affected_range] .= ts[first(affected_range)+1]
+        end
+    end
+    ts
+end
+function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:begin}, method::Val{:mean}) 
+    println("START MEAN")
+    F_from = frequencyof(ts)
+    first_mit_in_output_freq = fconvert(F_to, first(rangeof(ts)))
+    desired_first_mit = fconvert(F_from, first_mit_in_output_freq, ref=:begin)
+    affected_range = desired_first_mit:first(rangeof(ts))-1
+    if length(affected_range) >= 1
+        data_basis = fconvert(F_from, first_mit_in_output_freq:first_mit_in_output_freq)
+        data_basis = intersect(data_basis, rangeof(ts))
+        if F_from == BDaily
+            ts[affected_range] .= mean(cleanedvalues(ts[data_basis]; skip_all_nans = true))    
+        else
+            ts[affected_range] .= mean(ts[data_basis])    
+        end
+    end
+    ts
+end
+function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:end}, method::Val{:end}) 
+    F_from = frequencyof(ts)
+    last_mit_in_output_freq = fconvert(F_to, last(rangeof(ts)))
+    desired_last_mit = fconvert(F_from, last_mit_in_output_freq, ref=:end)
+    affected_range = (last(rangeof(ts))+1):desired_last_mit
+    if length(affected_range) >= 1
+        if frequencyof(ts) == BDaily
+            ts[affected_range] .= cleanedvalues(ts; skip_all_nans=true)[end]
+        else
+            ts[affected_range] .= ts[first(affected_range)-1]
+        end
+    end
+    ts
+end
+function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:end}, method::Val{:mean}) 
+    F_from = frequencyof(ts)
+    last_mit_in_output_freq = fconvert(F_to, last(rangeof(ts)))
+    desired_last_mit = fconvert(F_from, last_mit_in_output_freq, ref=:end)
+    affected_range = (last(rangeof(ts))+1):desired_last_mit
+    if length(affected_range) >= 1
+        data_basis = fconvert(F_from, last_mit_in_output_freq:last_mit_in_output_freq)
+        data_basis = intersect(data_basis, rangeof(ts))
+        if F_from == BDaily
+            ts[affected_range] .= mean(cleanedvalues(ts[data_basis]; skip_all_nans = true))    
+        else
+            ts[affected_range] .= mean(ts[data_basis])    
+        end
+    end
+    ts
+end
+export extend_series

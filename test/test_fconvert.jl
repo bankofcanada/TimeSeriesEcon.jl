@@ -40,7 +40,7 @@ all_frequencies = [
     Yearly{12}
 ]
 
-function get_random_frequency(frequencies::Vector{Type}=all_frequencies)
+function get_random_frequency(frequencies::Vector=all_frequencies)
     return frequencies[rand(1:length(frequencies))]
 end
 
@@ -1768,7 +1768,7 @@ end
     @test bd3.values == [ones(260)..., (2 * ones(260))...]
 
     d1_lin = fconvert(Daily, t1, method=:linear)
-    @test d1_lin[daily("2022-01-01"):daily("2022-01-31")].values == collect(LinRange(0, 1, 32))[2:32]
+    @test d1_lin[daily("2022-01-01"):daily("2022-01-31")].values ≈ collect(LinRange(1 - (1/28)*31, 1, 32))[2:32]
     @test d1_lin[daily("2022-02-01"):daily("2022-02-28")].values == collect(LinRange(1, 2, 29))[2:29]
     @test d1_lin[daily("2022-04-01"):daily("2022-04-30")].values == collect(LinRange(3, 4, 31))[2:31]
     @test length(d1_lin) == 365
@@ -1777,6 +1777,7 @@ end
     @test d1_lin2[daily("2022-01-01"):daily("2022-01-31")].values == collect(LinRange(1, 2, 32))[1:31]
     @test d1_lin2[daily("2022-02-01"):daily("2022-02-28")].values == collect(LinRange(2, 3, 29))[1:28]
     @test d1_lin2[daily("2022-04-01"):daily("2022-04-30")].values == collect(LinRange(4, 5, 31))[1:30]
+    @test d1_lin2[daily("2022-12-01"):daily("2022-12-31")].values == collect(LinRange(12, 12+(1/30)*31, 32))[1:31]
     @test length(d1_lin2) == 365
 
     # d1_lin3 = fconvert(Daily, t1, method=:linear, ref=:middle)
@@ -1786,7 +1787,7 @@ end
     # @test length(d1_lin3) == 365
 
     d2_lin = fconvert(Daily, t2, method=:linear)
-    @test d2_lin[daily("2022-01-01"):daily("2022-03-31")].values == collect(LinRange(0, 1, 31 + 28 + 31 + 1))[2:31+28+31+1]
+    @test d2_lin[daily("2022-01-01"):daily("2022-03-31")].values == collect(LinRange(1 - 1/(30 + 31+ 30)*(31 + 28 + 31), 1, 31 + 28 + 31 + 1))[2:31+28+31+1]
     @test d2_lin[daily("2022-04-01"):daily("2022-06-30")].values == collect(LinRange(1, 2, 30 + 31 + 30 + 1))[2:30+31+30+1]
     @test d2_lin[daily("2022-07-01"):daily("2022-09-30")].values == collect(LinRange(2, 3, 31 + 31 + 30 + 1))[2:31+31+30+1]
     @test length(d2_lin) == 365
@@ -1795,6 +1796,7 @@ end
     @test d2_lin2[daily("2022-01-01"):daily("2022-03-31")].values == collect(LinRange(1, 2, 31 + 28 + 31 + 1))[1:31+28+31]
     @test d2_lin2[daily("2022-04-01"):daily("2022-06-30")].values == collect(LinRange(2, 3, 30 + 31 + 30 + 1))[1:30+31+30]
     @test d2_lin2[daily("2022-07-01"):daily("2022-09-30")].values == collect(LinRange(3, 4, 31 + 31 + 30 + 1))[1:31+31+30]
+    @test d2_lin2[daily("2022-10-01"):daily("2022-12-31")].values == collect(LinRange(4, 4 + 1/(31 + 31 + 30)*(31+30+31), 31 + 30 + 31 + 1))[1:31+30+31]
     @test length(d2_lin2) == 365
 
     d3_lin = fconvert(Daily, t3, method=:linear)
@@ -1806,7 +1808,7 @@ end
     @test length(d3_lin2) == 365 * 2
 
     bd1_lin = fconvert(BDaily, t1, method=:linear)
-    @test bd1_lin[bdaily("2022-01-01", bias=:next):bdaily("2022-01-31", bias=:previous)].values == collect(LinRange(0, 1, 22))[2:22]
+    @test bd1_lin[bdaily("2022-01-01", bias=:next):bdaily("2022-01-31", bias=:previous)].values == collect(LinRange(1 - 1/20*21, 1, 22))[2:22]
     @test bd1_lin[bdaily("2022-02-01", bias=:next):bdaily("2022-02-28", bias=:previous)].values == collect(LinRange(1, 2, 21))[2:21]
     @test bd1_lin[bdaily("2022-04-01", bias=:next):bdaily("2022-04-30", bias=:previous)].values == collect(LinRange(3, 4, 22))[2:22]
     @test length(bd1_lin) == 260
@@ -1818,7 +1820,7 @@ end
     @test length(bd1_lin2) == 260
 
     bd2_lin = fconvert(BDaily, t2, method=:linear)
-    @test bd2_lin[bdaily("2022-01-01", bias=:next):bdaily("2022-03-31", bias=:previous)].values == collect(LinRange(0, 1, 65))[2:65]
+    @test bd2_lin[bdaily("2022-01-01", bias=:next):bdaily("2022-03-31", bias=:previous)].values == collect(LinRange(1 - 1/(65)*64, 1, 64+1))[2:65]
     @test length(bd2_lin) == 260
 
     bd2_lin2 = fconvert(BDaily, t2, method=:linear, ref=:begin)
@@ -1947,13 +1949,40 @@ end
         @test fconvert(maximum, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:max, ref=:begin)
         @test fconvert(maximum, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:max, ref=:end)
     end
+    for i in 1:100
+        # F_to = nothing
+        ts = get_random_tseries(filter(x -> x < BDaily, all_frequencies))
+        F_to = get_random_frequency(filter(x -> x > frequencyof(ts), all_frequencies))
+        @test fconvert(TimeSeriesEcon.divide_uneven, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:even, ref=:begin)
+        @test fconvert(TimeSeriesEcon.divide_uneven, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:even, ref=:end)
+        @test fconvert(TimeSeriesEcon.repeat_uneven, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:const, ref=:begin)
+        @test fconvert(TimeSeriesEcon.repeat_uneven, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:const, ref=:end)
+        @test fconvert(TimeSeriesEcon.linear_uneven, F_to, ts; ref=:begin) == fconvert(F_to, ts; method=:linear, ref=:begin)
+        @test fconvert(TimeSeriesEcon.linear_uneven, F_to, ts; ref=:end) == fconvert(F_to, ts; method=:linear, ref=:end)
+    end
 end
 
 @testset "fconvert, pass custom function" begin
+    # to lower frequency
     second_highest(x) = length(x) == 1 ? x[1] : sort(x)[end-1]
     ts = TSeries(2022M1, collect(1:12))
     ts_q = fconvert(second_highest, Quarterly, ts)
     @test ts_q.values == [2,5,8,11]
+
+    # to higher frequency
+    function half_value(x, inner_lengths; kwargs...)
+        retvals = Vector{Float64}(undef, sum(inner_lengths))
+        current_index = 1
+        for i in 1:length(x)
+            retvals[current_index:current_index+inner_lengths[i]-1] .= x[i] / 2
+            current_index += inner_lengths[i]
+        end
+        return retvals
+    end
+    ts2 = TSeries(2022Q1, collect(1:4))
+    ts_m = fconvert(half_value, Monthly, ts2)
+    @test ts_m.values == [0.5, 0.5, 0.5, 1,1,1,1.5,1.5,1.5,2,2,2]
+
 end
 
 @testset "fconvert, all combinations" begin
