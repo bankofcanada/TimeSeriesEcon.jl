@@ -37,12 +37,16 @@ function Base.show(io::IO, x::MVTSeries)
     limit = get(io, :limit, true)
     nval, nsym = size(x)
 
+    mitpad = 2 + maximum(rangeof(x)) do mit
+        length(string(mit))
+    end
+
     from = firstdate(x)
     dheight, dwidth = displaysize(io)
     if get(io, :compact, nothing) === nothing
         io = IOContext(io, :compact => true)
     end
-    dwidth -= 11
+    dwidth -= (mitpad + 3)
 
     names = collect(colnames(x))
     vals = _vals(x)
@@ -100,7 +104,7 @@ function Base.show(io::IO, x::MVTSeries)
         local nRcols = length(Rcols)
         for row in rows
             mit = from + (row - 1)
-            print(io, '\n', lpad(mit, 8), " : ")
+            print(io, '\n', lpad(mit, mitpad), " : ")
             for (i, (val, align)) in enumerate(zip(vals[row, Lcols], LAligns))
                 print_aligned_val(io, val, align, i < nLcols)
             end
@@ -113,7 +117,7 @@ function Base.show(io::IO, x::MVTSeries)
     end
 
     print_vdots(io, Lcols, LAligns, Rcols=[], RAligns=[]) = begin
-        print(io, '\n', repeat(" ", 11))
+        print(io, '\n', repeat(" ", mitpad + 3))
         local nLcols = length(Lcols)
         local nRcols = length(Rcols)
         for (i, (col, align)) in enumerate(zip(Lcols, LAligns))
@@ -127,13 +131,13 @@ function Base.show(io::IO, x::MVTSeries)
     end
 
     if !limit
-        print(io, "\n", repeat(" ", 11))
+        print(io, "\n", repeat(" ", mitpad + 3))
         print_colnames(io, 1:nsym, A)
         print_rows(io, 1:nval, 1:nsym, A)
     elseif nval > dheight - 6 # all rows don't fit
                 # unable to show all rows
         if all_cols
-            print(io, "\n", repeat(" ", 11))
+            print(io, "\n", repeat(" ", mitpad + 3))
             print_colnames(io, 1:nsym, A)
             top = div(dheight - 6, 2)
             print_rows(io, 1:top, 1:nsym, A)
@@ -141,7 +145,7 @@ function Base.show(io::IO, x::MVTSeries)
             bot = nval - dheight + 7 + top
             print_rows(io, bot:nval, 1:nsym, A)
         else # not all_cols
-            print(io, "\n", repeat(" ", 11))
+            print(io, "\n", repeat(" ", mitpad + 3))
             print_colnames(io, Linds, AL, Rinds, AR)
             top = div(dheight - 6, 2)
             print_rows(io, 1:top, Linds, AL, Rinds, AR)
@@ -151,11 +155,11 @@ function Base.show(io::IO, x::MVTSeries)
         end # all_cols
     else # all rows fit
         if all_cols
-            print(io, '\n', repeat(" ", 11))
+            print(io, '\n', repeat(" ", mitpad + 3))
             print_colnames(io, 1:nsym, A)
             print_rows(io, 1:nval, 1:nsym, A)
         else
-            print(io, '\n', repeat(" ", 11))
+            print(io, '\n', repeat(" ", mitpad + 3))
             print_colnames(io, Linds, AL, Rinds, AR)
             print_rows(io, 1:nval, Linds, AL, Rinds, AR)
         end

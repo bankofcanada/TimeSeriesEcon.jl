@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 # 
@@ -58,7 +58,11 @@ Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] 
 MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
-MacroTools.@forward Workspace._c (Base.eltype,)
+
+function Base.eltype(w::Workspace)
+    ET = isempty(w) ? Any : Base.promote_typeof(values(w)...)
+    return Pair{Symbol, ET}
+end
 
 Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
 Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
@@ -81,11 +85,11 @@ rangeof(w::Workspace; method=intersect) = (
 )
 
 _has_frequencyof(::Type{Workspace}) = true
-_has_frequencyof(::T) where T = _has_frequencyof(T)
+_has_frequencyof(::T) where {T} = _has_frequencyof(T)
 _has_frequencyof(::Type{<:MIT}) = true
 _has_frequencyof(::Type{<:Duration}) = true
-_has_frequencyof(::Type{<:AbstractArray{T}}) where T = _has_frequencyof(T)
-function _has_frequencyof(::Type{T}) where T 
+_has_frequencyof(::Type{<:AbstractArray{T}}) where {T} = _has_frequencyof(T)
+function _has_frequencyof(::Type{T}) where {T}
     try
         frequencyof(T)
         return true
@@ -236,11 +240,18 @@ end
 export @weval
 
 
-function Base.copyto!(x::MVTSeries, w::Workspace, range::AbstractUnitRange{<:MIT}=rangeof(x))
+function Base.copyto!(x::MVTSeries, w::Workspace; range::AbstractUnitRange{<:MIT}=rangeof(x))
     for (key, value) in pairs(x)
         copyto!(value, range, w[key])
     end
     return x
 end
 
+function Base.map(f::Function, w::Workspace)
+    ret = Workspace()
+    for (k, v) in w
+        ret[k] = f(v)
+    end
+    return ret
+end
 
