@@ -213,7 +213,6 @@ fconvert(F_to::Type{BDaily}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequ
 
 # MIT range: YP + Calendar => YP + Weekly
 function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}, range_from::UnitRange{<:MIT{<:Union{<:CalendarFrequency}}}; trim=:both, errors=true, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing, TSeries{BDaily}} = nothing)
-    errors && _validate_fconvert_yp(F_to, frequencyof(first(range_from)))
     if errors && trim ∉ (:both, :begin, :end)
         throw(ArgumentError("trim argument must be :both, :begin, or :end. Received: $(trim)."))
     end

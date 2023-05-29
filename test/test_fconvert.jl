@@ -1,6 +1,6 @@
 using Suppressor
 using Statistics
-using Dates
+import Dates
 
 all_frequencies = [
     Daily,
@@ -45,7 +45,7 @@ function get_random_frequency(frequencies::Vector=all_frequencies)
 end
 
 function get_random_date()
-    Dates.Date("2022-01-01") + Day(floor(365*rand(1)[1]))
+    Dates.Date("2022-01-01") + Dates.Day(floor(365*rand(1)[1]))
 end
 
 function get_random_tseries(frequencies::Vector{Type}=all_frequencies)

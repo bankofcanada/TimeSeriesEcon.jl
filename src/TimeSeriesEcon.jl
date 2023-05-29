@@ -38,7 +38,8 @@ using LinearAlgebra
 using Statistics
 using Serialization
 using Distributed
-using Dates
+import Dates
+import Dates: Date, Month, Quarter, Year, Week, Day, dayofweek, dayofmonth, dayofyear, dayofquarter, dayname, week
 using TOML
 
 include("options.jl")
