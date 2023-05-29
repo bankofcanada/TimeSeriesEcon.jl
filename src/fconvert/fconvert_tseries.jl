@@ -92,10 +92,10 @@ Converting to a lower frequency:
 
 Converting to a higher frequency:
     The function must accept two positional arguments and any number of keyword arguments. 
-    Currently only the `ref` keyword argument is passed on.
     The first positional argument will receive the vector of values from the input TSeries.
     The second positional argument is a vector of integers listing the number of output periods,
     which correspond to each input value.
+    All keyword arguments are passed on to this conversion.
 
 
 ```
