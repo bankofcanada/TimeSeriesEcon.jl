@@ -417,59 +417,6 @@ function _get_out_indices_actual(F_to::Type{<:Union{Monthly,Quarterly{NtQ},Quart
     return out_index
 end
 
-
-
-
-
-
-
-
-
-
-
-#### Conversion checks
-# TODO: expand these
-
-_validate_fconvert_yp(F_to::Type{<:Frequency}, F_from::Type{<:Frequency}) = nothing
-
-"""
-    _validate_fconvert_yp(F_to, F_from; method) where {F_to <: YPFrequency, F_from <: YPFrequency}
-
-    This helper function throws errors when conversions are attempted between unsupported YPFrequencies
-    or from/to a YPFrequency with an unsupported reference month.
-"""
-function _validate_fconvert_yp(F_to::Type{<:YPFrequency{N1}}, F_from::Type{<:YPFrequency{N2}}) where {N1,N2}
-    if N1 > N2
-        (np, r) = divrem(N1, N2)
-        if r != 0
-            throw(ArgumentError("Cannot convert to higher frequency with $N1 ppy from $N2 ppy - not an exact multiple."))
-        end
-    elseif N2 > N1
-        (np, r) = divrem(N2, N1)
-        if r != 0
-            throw(ArgumentError("Cannot convert to lower frequency with $N1 ppy from $N2 ppy - not an exact multiple."))
-        end
-    end
-
-    if hasproperty(F_to, :parameters) && length(F_to.parameters) > 0
-        months_in_period, remainder = divrem(12, N1)
-        if remainder != 0
-            throw(ArgumentError("Cannot convert to frequency with $N1 yearly periods and a non-default end month $(F_to.parameters[1]). 12 must be divisible by The number of yearly periods for custom end months."))
-        end
-        if F_to.parameters[1] ∉ tuple(collect(1:months_in_period)...)
-            throw(ArgumentError("Target yearly frequency has an unsupported end month: $(F_to.parameters[1]). Must be 1-$months_in_period."))
-        end
-    end
-    if hasproperty(F_from, :parameters) && length(F_from.parameters) > 0
-        months_in_period, remainder = divrem(12, N2)
-        if remainder != 0
-            throw(ArgumentError("Cannot convert from frequency with $N2 yearly periods and a non-default end month $(F_from.parameters[1]). 12 must be divisible by The number of yearly periods for custom end months."))
-        end
-        if F_from.parameters[1] ∉ tuple(collect(1:months_in_period)...)
-            throw(ArgumentError("Source yearly frequency has an unsupported end month: $(F_from.parameters[1]). Must be 1-$months_in_period."))
-        end
-    end
-end
 function get_start_truncation_yp(ref::Val{:end}, require::Val{:single}, fi_from_start_month::Int64, fi_to_start_month::Int64, mpp_from::Int64, mpp_to::Int64)
      # we just need the first data point in the input series to feed 
     # into the first MIT in the output series
