@@ -109,7 +109,7 @@ fconvert(F_to::Type{Quarterly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwar
 fconvert(F_to::Type{HalfYearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(HalfYearly{6}, t; kwargs...)
 fconvert(F_to::Type{Yearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(Yearly{12}, t; kwargs...)
 function fconvert(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; kwargs...) where {N1, N2}
-    N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t; kwargs...) : _fconvert_lower(F_to, t; kwargs...)
+    N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t; kwargs...) : _fconvert_lower(sanitize_frequency(F_to), t; kwargs...)
 end
 
 fconvert(f::Function, F_to::Type{Weekly}, t::TSeries; kwargs...) = fconvert(f, Weekly{7}, t; kwargs...)
@@ -117,7 +117,7 @@ fconvert(f::Function, F_to::Type{Quarterly}, t::TSeries{<:Union{Daily,BDaily,<:W
 fconvert(f::Function, F_to::Type{HalfYearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(f, HalfYearly{6}, t; kwargs...)
 fconvert(f::Function, F_to::Type{Yearly}, t::TSeries{<:Union{Daily,BDaily,<:Weekly}}; kwargs...) = fconvert(f, Yearly{12}, t; kwargs...)
 function fconvert(f::Function, F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequency{N2}}; kwargs...) where {N1, N2}
-    N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t, f; kwargs...) : _fconvert_lower(F_to, t, f; kwargs...)
+    N1 > N2 ? _fconvert_higher(sanitize_frequency(F_to), t, f; kwargs...) : _fconvert_lower(sanitize_frequency(F_to), t, f; kwargs...)
 end
 
 fconvert(F_to::Type{<:Weekly{end_day}}, t::TSeries{<:YPFrequency}; method=:const, ref=:end) where {end_day} = _fconvert_higher(F_to, t; method=method, ref=ref)
