@@ -531,7 +531,6 @@ function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:bo
     ts
 end
 function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:begin}, method::Val{:end}) 
-    println("START END")
     F_from = frequencyof(ts)
     first_mit_in_output_freq = fconvert(F_to, first(rangeof(ts)))
     desired_first_mit = fconvert(F_from, first_mit_in_output_freq, ref=:begin)
@@ -546,7 +545,6 @@ function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:be
     ts
 end
 function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:begin}, method::Val{:mean}) 
-    println("START MEAN")
     F_from = frequencyof(ts)
     first_mit_in_output_freq = fconvert(F_to, first(rangeof(ts)))
     desired_first_mit = fconvert(F_from, first_mit_in_output_freq, ref=:begin)
