@@ -60,7 +60,7 @@ MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.val
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
 
 function Base.eltype(w::Workspace)
-    ET = isempty(w) ? Any : Base.promote_typeof(values(w)...)
+    ET = isempty(w) ? Any : try Base.promote_typeof(values(w)...) catch; Any; end
     return Pair{Symbol, ET}
 end
 
