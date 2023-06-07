@@ -516,12 +516,12 @@ Example:
     week_of_christmas = w"2022-12-25"
     week_overlapping_with_february = w"2022-02-01:2022-02-28"
 """
-macro w_str(d)
+macro w_str(d::String, ed::Integer=7)
     if findfirst(":", d) !== nothing
         dsplit = split(d, ":")
-        return weekly(Dates.Date(dsplit[1])):weekly(Dates.Date(dsplit[2]))
+        return weekly(Dates.Date(dsplit[1]), ed):weekly(Dates.Date(dsplit[2]), ed)
     end
-    return weekly(d)
+    return weekly(d, ed)
 end
 # -------------------------
 # ppy: period per year
@@ -727,6 +727,7 @@ Base.:(<=)(l::Union{MIT,Duration}, r::Union{MIT,Duration}) = (l < r) || (l == r)
 
 # addition of two MIT is not allowed
 Base.:(+)(::MIT, ::MIT) = throw(ArgumentError("Illegal addition of two `MIT` values."))
+Base.:(+)(::Duration, ::MIT) = throw(ArgumentError("Illegal addition of `Duration` and `MIT`. Try `MIT` + `Duration`"))
 # addition of two Duration is valid only if they are of the same frequency
 Base.:(+)(l::Duration, r::Duration) = mixed_freq_error(l, r)
 Base.:(+)(l::Duration{F}, r::Duration{F}) where {F<:Frequency} = Duration{F}(Int(l) + Int(r))
