@@ -163,7 +163,7 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         if v isa Union{AbstractString,Symbol,AbstractRange}
             # It's a string or a Symbol
             sv = sprint(show, v, context=io, sizehint=0)
-        elseif typeof(v) == eltype(v)
+        elseif typeof(v) == eltype(v) || typeof(v) isa DataType
             #  it's a scalar value
             sv = sprint(print, v, context=io, sizehint=0)
         else
