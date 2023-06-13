@@ -145,11 +145,28 @@ export compare, @compare
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
 @inline compare_equal(x::Number, y::Number; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
 @inline compare_equal(x::AbstractArray{<:Number}, y::AbstractArray{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
-function compare_equal(x::TSeries, y::TSeries; trange::Union{Nothing,AbstractUnitRange{<:MIT}}=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
-    if trange === nothing || !(frequencyof(x) == frequencyof(y) == frequencyof(trange))
-        trange = intersect(rangeof(x), rangeof(y))
+function compare_equal(x::TSeries, y::TSeries; ignoremissing=false, trange::Union{Nothing,AbstractUnitRange{<:MIT}}=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
+    if frequencyof(x) != frequencyof(y)
+        return false
     end
-    isempty(trange) || isapprox(x[trange], y[trange]; atol, rtol, nans)
+    if trange === nothing || frequencyof(trange) != frequencyof(x)
+        # the given trange is useless
+        rngx = rangeof(x)
+        rngy = rangeof(y)
+    else
+        rngx = intersect(trange, rangeof(x))
+        rngy = intersect(trange, rangeof(y))
+    end
+    if ignoremissing
+        trng = intersect(rngx, rngy)
+    else
+        if rngx == rngy
+            trng = rngx
+        else
+            return false
+        end
+    end
+    return isempty(trng) || isapprox(x[trng], y[trng]; atol, rtol, nans)
 end
 
 function compare_equal(x::AbstractArray, y::AbstractArray; kwargs...)

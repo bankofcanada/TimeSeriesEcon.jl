@@ -253,10 +253,12 @@ end
     @test (copyto!(dest, src); compare(src, dest, quiet=true))
     # dest has shorter range
     dest = MVTSeries(2020Q1 .+ (0:11), (:a, :b, :c))
-    @test (copyto!(dest, src); compare(src, dest, quiet=true))
+    @test (copyto!(dest, src); !compare(src, dest, quiet=true))
+    @test compare(src, dest, quiet=true, ignoremissing=true)
     # dest has longer range (not that compare uses the common range)
     dest = MVTSeries(2020Q1 .+ (0:40), (:a, :b, :c))
-    @test (copyto!(dest, src; range=2020Q1:2020Q1+19); compare(src, dest, quiet=true))
+    @test (copyto!(dest, src; range=2020Q1:2020Q1+19); compare(src, dest, quiet=true, ignoremissing=true))
+    @test !compare(src, dest, quiet=true)
     # dest is missing some variables 
     dest = MVTSeries(2020Q1 .+ (0:19), (:a, :c))
     @test (copyto!(dest, src); !compare(src, dest, quiet=true))
