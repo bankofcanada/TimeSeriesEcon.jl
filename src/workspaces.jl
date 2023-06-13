@@ -127,7 +127,8 @@ function Base.summary(io::IO, w::Workspace)
     if isempty(w)
         return print(io, "Empty Workspace")
     end
-    return print(io, "Workspace with ", length(w), "-variables")
+    nvar = length(w)
+    return print(io, "Workspace with ", nvar, " variable", nvar == 1 ? "" : "s")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
@@ -163,7 +164,7 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         if v isa Union{AbstractString,Symbol,AbstractRange}
             # It's a string or a Symbol
             sv = sprint(show, v, context=io, sizehint=0)
-        elseif typeof(v) == eltype(v) || typeof(v) isa DataType
+        elseif typeof(v) == eltype(v) || typeof(v) isa Type{<:DataType}
             #  it's a scalar value
             sv = sprint(print, v, context=io, sizehint=0)
         else

@@ -62,7 +62,7 @@
 
     # test show of scalars and data types - should show actual values, instead of summary
     let io = IOBuffer()
-        w = Workspace(; a=1, b="hello")
+        w = Workspace(; a=1, b="hello", c = Workspace(), d=Workspace(; t = 4.5), e = Workspace(;a=0.5, b=0.6))
         w1 = map(typeof, w)
         show(io, MIME("text/plain"), w)
         println(io)
@@ -70,10 +70,16 @@
         println(io)
         seekstart(io)
         text = read(io, String)
-        @test occursin("a ⇒ 1", text)
-        @test occursin("b ⇒ \"hello\"", text)
+        @test occursin("a ⇒ 1\n", text)
+        @test occursin("b ⇒ \"hello\"\n", text)
+        @test occursin("c ⇒ Empty Workspace\n", text)
+        @test occursin("d ⇒ Workspace with 1 variable\n", text)
+        @test occursin("e ⇒ Workspace with 2 variables\n", text)
         @test occursin("a ⇒ Int64", text)
         @test occursin("b ⇒ String", text)
+        @test occursin("c ⇒ Workspace", text)
+        @test occursin("d ⇒ Workspace", text)
+        @test occursin("e ⇒ Workspace", text)
     end
 
     # stripping workspaces
