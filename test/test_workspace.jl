@@ -60,6 +60,22 @@
         @test length(work1) == 1
     end
 
+    # test show of scalars and data types - should show actual values, instead of summary
+    let io = IOBuffer()
+        w = Workspace(; a=1, b="hello")
+        w1 = map(typeof, w)
+        show(io, MIME("text/plain"), w)
+        println(io)
+        show(io, MIME("text/plain"), w1)
+        println(io)
+        seekstart(io)
+        text = read(io, String)
+        @test occursin("a ⇒ 1", text)
+        @test occursin("b ⇒ \"hello\"", text)
+        @test occursin("a ⇒ Int64", text)
+        @test occursin("b ⇒ String", text)
+    end
+
     # stripping workspaces
     let work1 = Workspace()
         work1.a = 1
