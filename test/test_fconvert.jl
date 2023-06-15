@@ -1983,6 +1983,14 @@ end
     ts_m = fconvert(half_value, Monthly, ts2)
     @test ts_m.values == [0.5, 0.5, 0.5, 1,1,1,1.5,1.5,1.5,2,2,2]
 
+    function replace_with_kwarg(x, inner_lengths; kwargs...)
+        return kwargs[:replacement].values
+    end
+    ts1 = TSeries(2022Q1, collect(1:4))
+    ts2 = TSeries(2022M1, collect(13:24))
+    ts_m = fconvert(replace_with_kwarg, Monthly, ts1; replacement=ts2)
+    @test ts_m.values == ts2.values
+
 end
 
 @testset "fconvert, all combinations" begin
