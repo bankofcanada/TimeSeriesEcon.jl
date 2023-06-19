@@ -95,7 +95,9 @@ Converting to a higher frequency:
     The first positional argument will receive the vector of values from the input TSeries.
     The second positional argument is a vector of integers listing the number of output periods,
     which correspond to each input value.
-    All keyword arguments are passed on to this conversion.
+    All keyword arguments are passed on to this conversion. In addition, the keyword argument `outrange`
+    will be passed to the function. This argument provides the range of the resulting TSeries and can be
+    useful if the function requires that one or more indicator series of the output frequency are passed.
 
 
 ```
@@ -152,7 +154,7 @@ function _fconvert_higher(F_to::Type{<:YPFrequency{N1}}, t::TSeries{<:YPFrequenc
     
     fi = _fconvert_higher_get_fi(F_to, t.firstdate, Val(ref))
     
-    ret = f(t.values, repeat([np], length(t)); ref=ref, kwargs...)
+    ret = f(t.values, repeat([np], length(t)); ref=ref, outrange=fi:fi+np*length(t), kwargs...)
     return TSeries(fi, ret)
 end
 function _fconvert_higher_get_fi(F_to::Type{<:YPFrequency{N1}}, first_mit::MIT{<:YPFrequency{N2}}, ref::Val{:end}) where {N1,N2}
@@ -179,7 +181,7 @@ function _fconvert_higher(F_to::Type{Weekly{N}}, t::TSeries{<:Union{<:YPFrequenc
     
     out_indices = _get_out_indices(F_to, dates)
     output_periods_per_input_period = Int.(out_indices[2:end] .-  out_indices[1:end-1])
-    ret =  f(t.values, output_periods_per_input_period; kwargs...)
+    ret =  f(t.values, output_periods_per_input_period; outrange=fi+trunc_start:li-trunc_end, kwargs...)
 
     return copyto!(TSeries(eltype(ret), fi+trunc_start:li-trunc_end), ret[begin+trunc_start:end])
 end
@@ -285,7 +287,7 @@ function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{
 
     output_periods_per_input_period = map(m -> Int(date_function(Dates.Date(m, :end), bias=:previous) - date_function(Dates.Date(m, :begin), bias=:next)) + 1, rangeof(t))
 
-    ret =  f(t.values, output_periods_per_input_period; kwargs...)
+    ret =  f(t.values, output_periods_per_input_period; outrange=fi+trunc_start:li-trunc_end, kwargs...)
     return copyto!(TSeries(eltype(ret), fi:li), ret)
 end
 
