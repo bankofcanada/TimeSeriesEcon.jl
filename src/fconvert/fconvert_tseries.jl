@@ -287,7 +287,7 @@ function _fconvert_higher(F_to::Type{<:Union{Daily,BDaily}}, t::TSeries{<:Union{
 
     output_periods_per_input_period = map(m -> Int(date_function(Dates.Date(m, :end), bias=:previous) - date_function(Dates.Date(m, :begin), bias=:next)) + 1, rangeof(t))
 
-    ret =  f(t.values, output_periods_per_input_period; outrange=fi+trunc_start:li-trunc_end, kwargs...)
+    ret =  f(t.values, output_periods_per_input_period; outrange=fi:li, kwargs...)
     return copyto!(TSeries(eltype(ret), fi:li), ret)
 end
 
