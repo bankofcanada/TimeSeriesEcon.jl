@@ -369,7 +369,7 @@ end
 function clean_old_frequencies(ts::TSeries)
     new_firstdate = clean_old_frequencies(ts.firstdate)
     if frequencyof(new_firstdate) !== frequencyof(ts.firstdate)
-        new_lastdate = new_firstdate + length(rangeof(ts)) - 1
+        new_lastdate = new_firstdate + length(ts) - 1
         return copyto!(TSeries(eltype(values(ts)), new_firstdate:new_lastdate), values(ts))
     end
     return ts

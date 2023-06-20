@@ -95,7 +95,7 @@ end
     @test frequencyof(c) == frequencyof(b) == frequencyof(a)
     @test rangeof(c) == 20Q1:23Q2
     @test axes(c, 2) == [:a, :b, :c, :q, :f]
-    @test isapprox(c, [
+    @test isapprox(c.values, [
             1.0 1.0 1.0 NaN NaN
             1.0 1.0 1.0 NaN NaN
             1.0 1.0 1.0 NaN NaN
@@ -115,7 +115,7 @@ end
     @test frequencyof(d) == frequencyof(b) == frequencyof(a)
     @test rangeof(d) == 20Q1:23Q2
     @test axes(d, 2) == [:q, :b, :c, :f, :a]
-    @test isapprox(d, [
+    @test isapprox(d.values, [
             NaN 1.0 1.0 NaN 1.0
             NaN 1.0 1.0 NaN 1.0
             NaN 1.0 1.0 NaN 1.0

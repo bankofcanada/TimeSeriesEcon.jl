@@ -366,6 +366,10 @@ end
 Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) where {F1<:Frequency,F2<:Frequency,F3<:Frequency} = mixed_freq_error(t, src, rng)
 Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency} = copyto!(t, rng, src)
 
+# findall and index iteration
+Base.nextind(A::TSeries{F}, i::MIT{F}) where F<:Frequency = i + 1
+Base.nextind(A::TSeries{F}, i::Integer) where F<:Frequency = i + 1
+
 """
     typenan(x)
     typenan(T)
