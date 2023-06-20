@@ -366,6 +366,13 @@ function clean_old_frequencies(m::MIT)
     end
     return m
 end
+function clean_old_frequencies(r::UnitRange{<:MIT})
+    sanitized_frequency = sanitize_frequency(frequencyof(r))
+    if sanitized_frequency !== frequencyof(r)
+        return MIT{sanitized_frequency}(Int(first(r))):MIT{sanitized_frequency}(Int(last(r)))
+    end
+    return r
+end
 function clean_old_frequencies(ts::TSeries)
     new_firstdate = clean_old_frequencies(ts.firstdate)
     if frequencyof(new_firstdate) !== frequencyof(ts.firstdate)

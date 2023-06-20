@@ -168,13 +168,14 @@ end
     cleaned_t1 = TimeSeriesEcon.clean_old_frequencies(t1)
     @test typeof(cleaned_t1) == TSeries{Quarterly{3},Int64,Vector{Int64}}
 
-    ws = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5))
+    ws = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5), :g => m1:m2)
     cleaned_ws = TimeSeriesEcon.clean_old_frequencies(ws)
     @test typeof(cleaned_ws.a) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.b) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.c) == MIT{Quarterly{3}}
     @test typeof(cleaned_ws.d.e) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.d.f) == TSeries{Quarterly{3},Int64,Vector{Int64}}
+    @test typeof(cleaned_ws.g) == UnitRange{MIT{Quarterly{3}}}
 
     ws2 = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5))
     @test typeof(ws2.a) == TSeries{Quarterly,Int64,Vector{Int64}}
