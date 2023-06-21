@@ -139,236 +139,6 @@ function skip_if_warranted(x::AbstractArray{<:Number}, nans::Union{Bool,Nothing}
     return x
 end
 
-### Linear interpolation helper
-"""
-_get_interpolation_values(t::TSeries{F}, m::MIT{F}; ref::Symbol=:end) where {F}
-
-    # TODO
-    This helper function takes a TSeries and a MIT within that TSeries and provides the start and end
-    values used for a linear interpolation between the provided MIT and the adjacent MIT, depending
-    on the direction of the interpolation. The function simplifies logic related to the handling of 
-    the ends of the TSeries as well as interpolating between middle points in the MITs.
-"""
-function _get_interpolation_values(t::TSeries{F}, m::MIT{F}; ref::Symbol=:end) where {F}
-    start_val = nothing
-    end_val = nothing
-    if length(t) == 1
-        start_val = t[m]
-        end_val = t[m]
-    elseif (m == t.firstdate)
-        if ref == :end
-            start_val = t[m] - (t[m+1] - t[m])
-            end_val = t[m]
-        elseif ref == :begin
-            start_val = t[m]
-            end_val = t[m+1]
-        elseif ref == :middle
-            start_val = t[m]
-            end_val =  t[m+1] 
-            # start_val = t[m] - (t[m+1]-t[m]) / 2
-            # end_val = t[m+1]
-        end
-    elseif m == last(rangeof(t))
-        if ref == :end
-            end_val = t[m]
-            start_val = t[m-1]
-        elseif ref == :begin
-            start_val = t[m]
-            end_val = t[m] + (t[m] - t[m-1])
-        elseif ref == :middle
-            start_val = t[m]
-            end_val =  t[m] + (t[m] - t[m-1]) / 2
-        end
-    else # middle of series
-        if ref == :end
-            end_val = t[m]
-            start_val = t[m-1]
-        elseif ref == :begin 
-            start_val = t[m]
-            end_val = t[m+1]
-        elseif ref == :middle
-            start_val = t[m]
-            end_val =  t[m+1] 
-        end
-    end
-    return (start_val, end_val)
-end
-
-"""
-    _date_plus_half(m::MIT{F}, ref::Symbol=:end; round=:down) where {F}
-
-    This helper function receives an MIT and returns a date.
-    
-    When value_base == :end, the date will be halfway into the MIT following the provided MIT.
-    When ref == :begin the date will be half way into the provided MIT.
-"""
-function _date_plus_half(m::MIT{F}, ref::Symbol=:end; round=:down) where {F}
-    rounder = round == :up ? ceil : floor
-    base_date = Dates.Date(m, ref)
-    if F == Monthly
-        n_days = Dates.value(base_date + Month(1) - base_date)
-    elseif F <: Quarterly
-        n_days = Dates.value(base_date + Quarter(1) - base_date)
-    elseif F <: HalfYearly
-        n_days = Dates.value(base_date + Month(6) - base_date)
-    elseif F <: Yearly
-        n_days = Dates.value(base_date + Year(1) - base_date)
-    elseif F <: Weekly
-        n_days = Dates.value(base_date + Week(1) - base_date)
-    end
-    n_days = rounder(n_days / 2)
-    base_date += Day(n_days)
-    return base_date
-end
-
-function dayofhalfyear(d::Date)
-    q = Dates.quarterofyear(d)
-    if q == 1 || q == 3
-        return Dates.dayofquarter(d)
-    elseif q == 2
-        first_quarter = Dates.dayofyear(Dates.Date("$(Dates.year(d))-03-31"))
-        return first_quarter + Dates.dayofquarter(d)
-    elseif q == 4
-        first_three_quarters = Dates.dayofyear(Dates.Date("$(Dates.year(d))-08-31"))
-        return first_three_quarters + Dates.dayofquarter(d)
-    end
-end
-
-"""
-    _get_fconvert_truncations(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, F_from::Type{<:Union{Weekly{N3}, Weekly, Daily}}, dates::Vector{Dates.Date}, method::Symbol, include_weekends::Bool=false)
-
-This function determines whether the output periods should be truncated when converting from Weekly or Daily to a lower frequency.
-
-It returns a pair of integers which are 1 if the start or end, respectively, of the output needs to be truncated.
-Both ends are truncated when using methods :mean or :sum. IN this case, only output periods entirely covered by the input TSeries dates
-will be included in the output. 
-
-When the method is :begin, the start is truncated if the first date in the first output period is not covered by the input TSeries dates.
-When the method is :end, the end is truncated if the last date in the last output period is not covered by the input TSeries dates.
-"""
-function _get_fconvert_truncations(F_to::Type{<:Union{Weekly{NtW},Weekly,Monthly,Quarterly{NtQ},Quarterly,HalfYearly,HalfYearly{NtH},Yearly{NtY},Yearly}}, F_from::Type{<:Union{Weekly{NfW},Weekly,Daily,BDaily,Quarterly,Quarterly{NfQ},Monthly,HalfYearly,HalfYearly{NfH},Yearly,Yearly{NfY}}}, dates::Vector{Dates.Date}, method::Symbol; include_weekends=false, shift_input=true, pad_input=true) where {NtW,NtQ,NtY,NfW,NfQ,NfY,NtH,NfH}
-    trunc_start = 0
-    trunc_end = 0
-
-    overlap_function = nothing
-    if F_to <: Weekly
-        overlap_function = Dates.dayofweek
-    elseif F_to <: Monthly
-        overlap_function = Dates.dayofmonth
-    elseif F_to <: Quarterly
-        overlap_function = Dates.dayofquarter
-    elseif F_to <: HalfYearly
-        overlap_function = dayofhalfyear
-    elseif F_to <: Yearly
-        overlap_function = Dates.dayofyear
-    end
-
-    # Account for input frequency
-    input_shift = Day(0)
-    if F_from <: Weekly
-        if pad_input
-            input_shift -= Day(7) - Day(1)
-        end
-        if shift_input && @isdefined NfW
-            input_shift -= Day(7 - NfW)
-        end
-    elseif F_from <: Quarterly
-        if pad_input
-            input_shift -= Month(3) - Day(1)
-        end
-        if shift_input && @isdefined NfQ
-            input_shift -= Month(3 - NfQ)
-        end
-    elseif F_from <: Monthly
-        if (pad_input)
-            input_shift -= Month(1) - Day(1)
-        end
-    elseif F_from <: HalfYearly
-        if (pad_input)
-            input_shift -= Month(6) - Day(1)
-        end
-        if shift_input && @isdefined NfH
-            input_shift -= Month(6 - NfH)
-        end
-    elseif F_from <: Yearly
-        if pad_input
-            input_shift -= Year(1) - Day(1)
-        end
-        if shift_input && @isdefined NfY
-            input_shift -= Month(12 - NfY)
-        end
-    end
-
-    # Account for output frequency
-    target_shift = Day(0)
-    if F_to <: Weekly && @isdefined NtW
-        target_shift -= Day(7 - NtW)
-    end
-    if F_to <: Quarterly && @isdefined NtQ
-        target_shift -= Month(3 - NtQ)
-    end
-    if F_to <: HalfYearly && @isdefined NtH
-        target_shift -= Month(6 - NtH)
-    end
-    if F_to <: Yearly && @isdefined NtY
-        target_shift -= Month(12 - NtY)
-    end
-
-    # Account for weekends when going from BDaily to a lower frequency
-    weekend_adjustment_start = Day(0)
-    weekend_adjustment_end = Day(0)
-    if include_weekends == true
-        start_weekday = dayofweek(dates[begin])
-        end_weekday = dayofweek(dates[end])
-        if start_weekday == 1 # First date is a Monday
-            if F_to == Weekly
-                # don't do anything
-            elseif !(F_to <: Weekly) && Dates.dayofmonth(dates[begin]) <= 3
-                weekend_adjustment_start = Day(Dates.dayofmonth(dates[begin]) - 1)
-            end
-            # _dates[begin] = _dates[begin] - Day(2)
-        end
-        if end_weekday == 5 # last date is a Friday
-            if F_to == Weekly
-                weekend_adjustment_end = Day(2)
-            elseif !(F_to <: Weekly) && Dates.dayofmonth(dates[end] + Day(2)) <= 2
-                weekend_adjustment_end = Day(2 - Dates.dayofmonth(dates[end] + Day(2)))
-            end
-        end
-        # Accounting for odd weekly frequencies
-        if F_to <: Weekly && @isdefined NtW
-            if NtW == 6 && end_weekday == 5
-                weekend_adjustment_end = Day(1)
-            elseif NtW == 7 && end_weekday == 5
-                weekend_adjustment_end = Day(2)
-            end
-            if NtW == 6 && start_weekday == 1
-                weekend_adjustment_start = Day(1)
-            elseif NtW == 5 && start_weekday == 1
-                weekend_adjustment_start = Day(2)
-            end
-        end
-    end
-
-    # println(dates[begin], ", i: ", input_shift, ", t: ", target_shift, ", w: ", weekend_adjustment_start)
-    # println(dates[begin] + input_shift - target_shift - weekend_adjustment_start)
-    # println(dates[end], ", i: ", input_shift, ", t: ", target_shift, ", w: ", weekend_adjustment_end)
-    # println(dates[end] + input_shift - target_shift + + weekend_adjustment_end + Day(1))
-    whole_first_period = overlap_function(dates[begin] + input_shift - target_shift - weekend_adjustment_start) == 1
-    whole_last_period = overlap_function(dates[end] + input_shift - target_shift + weekend_adjustment_end + Day(1)) == 1
-
-    if method ∈ (:mean, :sum, :both)
-        trunc_start = whole_first_period ? 0 : 1
-        trunc_end = whole_last_period ? 0 : 1
-    elseif method == :begin
-        trunc_start = whole_first_period ? 0 : 1
-    elseif method == :end
-        trunc_end = whole_last_period ? 0 : 1
-    end
-
-    return trunc_start, trunc_end
-end
-
 
 """
     _get_out_indices(F_to::Type{<:Union{Monthly, Quarterly{N1}, Quarterly, Yearly{N2}, Yearly, Weekly, Weekly{N3}}}, dates::Vector{Dates.Date})
@@ -380,7 +150,7 @@ _get_out_indices(F_to::Type{<:Union{Monthly,Quarterly,HalfYearly,Yearly,Weekly}}
 function _get_out_indices_actual(F_to::Type{<:Union{Monthly,Quarterly{NtQ},Quarterly,HalfYearly{NtH},HalfYearly,Yearly{NtY},Yearly,Weekly,Weekly{NtW}}}, dates::Vector{Dates.Date}; check_parameter_to=false) where {NtQ,NtH,NtY,NtW}
     months = Dates.month.(dates)
     years = Dates.year.(dates)
-
+    
     if F_to <: Weekly
         end_day = endperiod(sanitize_frequency(F_to))
         out_index = [weekly(date, end_day) for date in dates]
@@ -591,3 +361,15 @@ function extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:en
     ts
 end
 export extend_series
+
+
+# trim_series(F_to::Type{<:Frequency}, ts::TSeries; direction=:both) = extend_series!(F_to, copy(ts), Val(direction))
+trim_series(F_to::Type{<:Frequency}, ts::TSeries; direction=:both) = ts[fconvert(frequencyof(ts), fconvert(F_to, rangeof(ts), trim=direction))]
+export trim_series
+
+# trim_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:end})
+
+# trim_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:begin})
+
+# function trim_series(F_to::Type{<:Frequency}, ts::TSeries; direction=:both)
+# end

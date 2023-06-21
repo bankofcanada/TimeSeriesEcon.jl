@@ -218,17 +218,7 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
     end
     F_from = frequencyof(range_from)
     if F_to > F_from # to higher frequency
-        if F_from <: BDaily
-            dates = [Dates.Date(range_from[begin]), Dates.Date(range_from[end])]
-            if holidays_map !== nothing
-                dates = dates[holidays_map[rng_from].values]
-            elseif skip_holidays
-                holidays_map = get_option(:bdaily_holidays_map)
-                dates = dates[holidays_map[rng_from].values]
-            end
-        else
-            dates = [Dates.Date(range_from[begin] - 1) + Day(1), Dates.Date(range_from[end])]
-        end
+        dates = [Dates.Date(range_from[begin] - 1) + Day(1), Dates.Date(range_from[end])]
         out_index = _get_out_indices(F_to, dates)
         fi = out_index[1]
         trunc_start = 0
