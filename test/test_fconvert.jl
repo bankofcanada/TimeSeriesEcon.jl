@@ -102,7 +102,18 @@ end
     @test_throws ArgumentError fconvert(Monthly, q, method=:mean)
     @test_throws MethodError fconvert(Yearly, q, method=:const)
 
+    # return the same when no conversion is needed
+    @test fconvert(Monthly, 1M1:1M5) == 1M1:1M5
+    @test fconvert(Monthly, 1M1) == 1M1
+    @test fconvert(Monthly, TSeries(1M1, collect(1:4))) == TSeries(1M1, collect(1:4))
 
+    # don't allow conversion to or from Unit
+    @test_throws ErrorException fconvert(Unit, 1M1)
+    @test_throws MethodError fconvert(Unit, 1M1:1M5)
+    @test_throws ErrorException fconvert(Unit, TSeries(1M1, collect(1:4)))
+    @test_throws ErrorException fconvert(Monthly, 1U)
+    @test_throws MethodError fconvert(Monthly, 1U:5U)
+    @test_throws ErrorException fconvert(Monthly, TSeries(1U, collect(1:4)))
 end
 
 @testset "fconvert, YPFrequencies, to higher" begin
@@ -1835,6 +1846,10 @@ end
     @test bd3_lin2[bdaily("2022-01-01", bias=:next):bdaily("2022-12-31", bias=:previous)].values == collect(LinRange(1, 2, 261))[1:260]
     @test length(bd3_lin2) == 260 * 2
 
+    # MITs
+    @test fconvert(BDaily, d"2022-01-03", round_to=:current) == bd"2022-01-03"
+    @test_throws ArgumentError fconvert(BDaily, d"2022-01-01", round_to=:somethingelse)
+    @test_throws ArgumentError fconvert(BDaily, d"2022-01-01", round_to=:current)
 
 end
 
@@ -2103,3 +2118,32 @@ end
         end
     end
 end
+
+@testset "extend series" begin
+   tm = TSeries(2022M2, collect(1.0:7.0))
+   
+   ex1 = extend_series(Quarterly, tm)
+   @test rangeof(ex1) == 2022M1:2022M9
+   @test ex1.values == [1.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 6.5]
+
+   ex2 = extend_series(Quarterly, tm; method=:end)
+   @test rangeof(ex2) == 2022M1:2022M9
+   @test ex2.values == [1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 7.0]
+
+   ex3 = extend_series(Quarterly, tm; direction=:end)
+   @test rangeof(ex3) == 2022M2:2022M9
+   @test ex3.values == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 6.5]
+
+   ex4 = extend_series(Quarterly, tm; direction=:begin)
+   @test rangeof(ex4) == 2022M1:2022M8
+   @test ex4.values == [1.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+
+   ex5 = extend_series(Yearly, tm; direction=:both)
+   @test rangeof(ex5) == 2022M1:2022M12
+   @test ex5.values == [4.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 4.0, 4.0, 4.0, 4.0]
+
+   ex5 = extend_series(Yearly, tm; method=:end)
+   @test rangeof(ex5) == 2022M1:2022M12
+   @test ex5.values == [1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+end
+
