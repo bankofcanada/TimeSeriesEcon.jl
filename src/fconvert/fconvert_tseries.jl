@@ -425,7 +425,17 @@ function _fconvert_lower(F_to::Type{<:Union{Monthly,Quarterly{N},Quarterly,HalfY
     end
    
     trim = aggregator ∈ (first, last) ? ref : :both
-    fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rng_from, trim=trim, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+    if skip_all_nans == true
+        nanmap = .!isnan.(t)
+        if holidays_map == nothing
+            holidays_map = getoption(:bdaily_holidays_map)
+        end
+        if holidays_map === nothing
+            holidays_map = TSeries(first(rng_from)-600, trues(length(rng_from)+1200))
+        end
+        holidays_map[rng_from] .= holidays_map[rng_from] .& nanmap
+    end
+    fi, li, trunc_start, trunc_end = _fconvert_using_dates_parts(F_to, rng_from, trim=trim, holidays_map=holidays_map)
     out_index = _get_out_indices(F_to, dates)
     
     ret = aggregator == mean ? Vector{Float64}() : Vector{eltype(t)}()
