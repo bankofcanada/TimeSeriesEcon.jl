@@ -169,17 +169,17 @@ end
     @test typeof(cleaned_t1) == TSeries{Quarterly{3},Int64,Vector{Int64}}
 
     ws = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5))
-    if VERSION >= v"1.8"
-        ws = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5), :g => m1:m2)
-    end
     cleaned_ws = TimeSeriesEcon.clean_old_frequencies(ws)
     @test typeof(cleaned_ws.a) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.b) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.c) == MIT{Quarterly{3}}
     @test typeof(cleaned_ws.d.e) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.d.f) == TSeries{Quarterly{3},Int64,Vector{Int64}}
+
     if VERSION >= v"1.8"
-        @test typeof(cleaned_ws.g) == UnitRange{MIT{Quarterly{3}}}
+        ws_unitrange = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5), :g => m1:m2)
+        cleaned_ws_unitrange = TimeSeriesEcon.clean_old_frequencies(ws_unitrange)
+        @test typeof(cleaned_ws_unitrange.g) == UnitRange{MIT{Quarterly{3}}}
     end
 
     ws2 = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5))
