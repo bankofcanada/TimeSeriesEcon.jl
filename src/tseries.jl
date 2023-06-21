@@ -370,6 +370,10 @@ Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where
 Base.nextind(A::TSeries{F}, i::MIT{F}) where F<:Frequency = i + 1
 Base.nextind(A::TSeries{F}, i::Integer) where F<:Frequency = i + 1
 
+# fix axis promotion for isapprox with vector
+Base.promote_shape(x::Tuple{UnitRange{<:MIT}}, y::Tuple{Base.OneTo{Int64}}) = (Base.OneTo(length(x[1])),)
+Base.promote_shape(x::Tuple{Base.OneTo{Int64}}, y::Tuple{UnitRange{<:MIT}}) = x
+
 """
     typenan(x)
     typenan(T)

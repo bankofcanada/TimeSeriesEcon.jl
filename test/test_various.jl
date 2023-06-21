@@ -95,27 +95,31 @@ end
     @test frequencyof(c) == frequencyof(b) == frequencyof(a)
     @test rangeof(c) == 20Q1:23Q2
     @test axes(c, 2) == [:a, :b, :c, :q, :f]
-    @test isapprox(c.values, [
-            1.0 1.0 1.0 NaN NaN
-            1.0 1.0 1.0 NaN NaN
-            1.0 1.0 1.0 NaN NaN
-            1.0 1.0 1.0 NaN NaN
-            1.0 1.0 1.0 10.1 10.1
-            1.0 1.0 1.0 10.1 10.1
-            1.0 1.0 1.0 10.1 10.1
-            NaN 10.1 10.1 10.1 10.1
-            NaN 10.1 10.1 10.1 10.1
-            NaN 10.1 10.1 10.1 10.1
-            NaN 10.1 10.1 10.1 10.1
-            NaN 10.1 10.1 10.1 10.1
-            NaN 10.1 10.1 10.1 10.1
-            NaN 10.1 10.1 10.1 10.1], nans=true)
+    mat1 = [
+        1.0 1.0 1.0 NaN NaN
+        1.0 1.0 1.0 NaN NaN
+        1.0 1.0 1.0 NaN NaN
+        1.0 1.0 1.0 NaN NaN
+        1.0 1.0 1.0 10.1 10.1
+        1.0 1.0 1.0 10.1 10.1
+        1.0 1.0 1.0 10.1 10.1
+        NaN 10.1 10.1 10.1 10.1
+        NaN 10.1 10.1 10.1 10.1
+        NaN 10.1 10.1 10.1 10.1
+        NaN 10.1 10.1 10.1 10.1
+        NaN 10.1 10.1 10.1 10.1
+        NaN 10.1 10.1 10.1 10.1
+        NaN 10.1 10.1 10.1 10.1]
+    @test isapprox(c, mat1, nans=true)
+    @test isapprox(mat1, c, nans=true)
+    @test isapprox(c.a, mat1[:,1], nans=true)
+    @test isapprox(mat1[:,1], c.a, nans=true)
     d = overlay(b, a)
     @test c isa MVTSeries
     @test frequencyof(d) == frequencyof(b) == frequencyof(a)
     @test rangeof(d) == 20Q1:23Q2
     @test axes(d, 2) == [:q, :b, :c, :f, :a]
-    @test isapprox(d.values, [
+    @test isapprox(d, [
             NaN 1.0 1.0 NaN 1.0
             NaN 1.0 1.0 NaN 1.0
             NaN 1.0 1.0 NaN 1.0
