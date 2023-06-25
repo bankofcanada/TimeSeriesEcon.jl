@@ -9,5 +9,6 @@
     d2 = deepcopy(d1)
     d2.a = d1.a[2001Q1:2001Q1]
     d1.a = TSeries(1960Q1,randn(10))
-    @test compare(d1,d2; atol = 1e-8, quiet=true) 
+    @test !compare(d1,d2; atol = 1e-8, quiet=true)
+    @test compare(d1,d2; atol = 1e-8, quiet=true, ignoremissing=true)
 end

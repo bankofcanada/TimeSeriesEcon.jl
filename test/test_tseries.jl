@@ -662,6 +662,15 @@ end
     e = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
     @test TimeSeriesEcon.compare(d, e, nans=true, quiet=true) == true
     
+    # compare with different ranges
+    A = TSeries(2020Q1, rand(20))
+    B = A[begin+4:end-4]
+    @test false == @compare A B quiet
+    @test true  == @compare A B quiet ignoremissing
+    @test false == @compare A B quiet trange=2019Q1:2025Q4
+    @test true  == @compare A B quiet trange=2019Q1:2025Q4 ignoremissing
+    @test true  == @compare A B quiet trange=2000Q1:2000Q4
+    @test true  == @compare A B quiet trange=2000Q1:2000Q4 ignoremissing
        
     #reindexing
     ts = TSeries(2020Q1,randn(10))
