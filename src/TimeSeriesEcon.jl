@@ -119,6 +119,6 @@ julia> q
     return drop > 0 ? (first(rng)+drop:last(rng)) : (first(rng):last(rng)+drop)
 end
 
-include( "DataEcon.jl")
+include("dataecon/DataEcon.jl")
 
 end
