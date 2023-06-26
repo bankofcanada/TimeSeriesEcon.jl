@@ -6,6 +6,9 @@ module DataEcon
 include("C.jl")
 using .C
 
+#############################################################################
+# error handling
+
 global debug_libdaec = :debug
 
 export DEError
@@ -30,6 +33,73 @@ _check(::Type{Bool}, rc::Cint) = rc == 0
 # return true or throw an exception
 _check(rc::Cint) = rc == 0 || throw(DEError())
 
+#############################################################################
+# open and close daec files 
 
+export DEFile, opendaec, closedaec!
+
+"""
+    struct DEFile ... end
+
+An instance of a *.daec file. Usually there's no need to create instances
+directly. Use [`opendaec`](@ref) and [`closedaec!`](@ref).
+"""
+struct DEFile
+    handle::Ref{C.de_file}
+    fname::String
+end
+
+Base.isopen(de::DEFile) = de.handle[] != C_NULL
+function Base.show(io::IO, de::DEFile)
+    summary(io, de)
+    print(io, ": \"", de.fname, isopen(de) ? "\"" : "\" (closed)")
+end 
+
+"""
+    de = opendaec(fname)
+    opendaec(fname) do de
+        ...
+    end
+
+Open the .daec file named in the given `fname` string and return an instance of
+`DEFile`. The version with the do-block automatically closes the file.
+"""
+function opendaec end
+
+function opendaec(fname::AbstractString)
+    handle = Ref{C.de_file}()
+    fname = string(fname)
+    _check(C.de_open(fname, handle))
+    return DEFile(handle, fname)
+end
+
+function opendaec(f::Function, fname::AbstractString)
+    de = opendaec(fname)
+    try
+        f(de)
+    finally
+        closedaec!(de)
+    end
+end
+
+export closedaec!
+"""
+    closedaec!(de)
+
+Close a .daec file that was previously opened with [`opendaec`](@ref).
+The given instance of `DEFile` is modified in place to mark it as closed.
+"""
+function closedaec! end
+
+function closedaec!(de::DEFile)
+    if isopen(de)
+        _check(C.de_close(de.handle[]))
+        de.handle[] = C_NULL
+    end
+    return de
+end
+
+#############################################################################
+# open and close daec files 
 
 end
