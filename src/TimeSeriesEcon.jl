@@ -120,5 +120,7 @@ julia> q
 end
 
 include("dataecon/DataEcon.jl")
+using .DataEcon
+export DEError
 
 end
