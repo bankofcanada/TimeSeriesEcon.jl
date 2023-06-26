@@ -120,8 +120,5 @@ julia> q
 end
 
 include("dataecon/DataEcon.jl")
-using .DataEcon
-export DEError
-export DEFile, opendaec, closedaec!
 
 end
