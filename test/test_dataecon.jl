@@ -4,6 +4,7 @@
 DE = TimeSeriesEcon.DataEcon
 test_file = "test.daec"
 rm(test_file, force=true)
+rm(test_file*"-journal", force=true)
 
 @testset "DE file" begin
     de = DE.opendaec(test_file)
@@ -13,6 +14,13 @@ rm(test_file, force=true)
 end
 
 de = DE.opendaec(test_file)
+
+@testset "DE catalog" begin
+    @test begin
+        id = DE.new_catalog(de, "scalars")
+        id == DE.find_fullpath(de, "/scalars")
+    end
+end
 
 @testset "DE scalar" begin
     db = Workspace(
@@ -56,15 +64,37 @@ de = DE.opendaec(test_file)
         c3=8.0 + 3im,
     )
 
-    # we can write them 
-    for (name, value) in pairs(db)
-        @test (DE.new_scalar(de, name, value); true)
+    pid = DE.find_fullpath(de, "/scalars", false)
+    if ismissing(pid)
+        pid = DE.new_catalog(de, "scalars")
     end
 
+    # we can write them 
+    for (name, value) in pairs(db)
+        @test begin
+            id = DE.store_scalar(de, pid, name, value)
+            id == DE.find_fullpath(de, "/scalars/$name")
+        end
+    end
+
+
+    pid1 = DE.find_fullpath(de, "/scalars1", false)
+    if ismissing(pid1)
+        pid1 = DE.new_catalog(de, "scalars1")
+    end
+
+    # we can write them 
+    for (name, value) in pairs(db)
+        @test begin
+            id = DE.store_scalar(de, "/scalars1/$name", value)
+            id == DE.find_object(de, pid1, name)
+        end
+    end
+    
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_scalar(de, name)); true)
+        @test (push!(ldb, name => DE.load_scalar(de, pid, name)); true)
     end
 
     # they are equal
@@ -72,6 +102,22 @@ de = DE.opendaec(test_file)
 
     # their types are the same
     @test @compare map(typeof, db) map(typeof, ldb) quiet
+
+    ldb = Workspace()
+    # we can read them 
+    for name in keys(db)
+        @test (push!(ldb, name => DE.load_scalar(de, "/scalars/$name")); true)
+    end
+
+    # they are equal
+    @test @compare db ldb quiet
+
+    # their types are the same
+    @test @compare map(typeof, db) map(typeof, ldb) quiet
+
+    # delete + recursive delete 
+    @test (DE.delete_object(de, "scalars1"); true)
+    @test ismissing(DE.find_fullpath(de, "scalars1", false))
 
 end
 
@@ -86,11 +132,14 @@ end
         nv2=rand(Int8, 7),
         nv3=rand(Complex{Float32}, 7),
         nv4=MIT{Quarterly{3}}[rand(Int64, 12);],
+        nv5=UInt8[],
+        nv6=Float16[],
+        nv7=ComplexF16[],
     )
 
     # we can write them 
     for (name, value) in pairs(db)
-        @test (DE.new_tseries(de, name, value); true)
+        @test (DE.store_tseries(de, name, value); true)
     end
 
     ldb = Workspace()

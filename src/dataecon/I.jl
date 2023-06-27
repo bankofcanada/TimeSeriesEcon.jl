@@ -5,8 +5,8 @@
 module I
 
 using ..C
-
 using ..TimeSeriesEcon
+import ..DEFile
 
 #############################################################################
 # error handling
@@ -146,28 +146,28 @@ _apply_jtype(::Type{T}, value) where {T} = convert(T, value)
 #############################################################################
 # axes
 
-function _make_axis(de::C.de_file, rng::AbstractUnitRange{<:Integer})
+function _make_axis(de::DEFile, rng::AbstractUnitRange{<:Integer})
     ax_id = Ref{C.axis_id_t}()
     _check(C.de_axis_plain(de, length(rng), ax_id))
     return ax_id[]
 end
 
-function _make_axis(de::C.de_file, rng::AbstractUnitRange{<:MIT})
+function _make_axis(de::DEFile, rng::AbstractUnitRange{<:MIT})
     ax_id = Ref{C.axis_id_t}()
     _check(C.de_axis_range(de, length(rng), _to_de_scalar_freq(rng), first(rng), ax_id))
     return ax_id[]
 end
 
-function _make_axis(de::C.de_file, rng::AbstractVector{<:Union{Symbol,AbstractString}})
+function _make_axis(de::DEFile, rng::AbstractVector{<:Union{Symbol,AbstractString}})
     ax_id = Ref{C.axis_id_t}()
     names = string(join(rng, "\n"))
     _check(C.de_axis_names(de, length(rng), names, ax_id))
     return ax_id[]
 end
 
-_get_axis_of(de::C.de_file, vec::AbstractVector, dim=1) = _make_axis(de, Base.axes1(vec))
-_get_axis_of(de::C.de_file, vec::AbstractUnitRange, dim=1) = _make_axis(de, vec)
-_get_axis_of(de::C.de_file, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(vec, dim))
+_get_axis_of(de::DEFile, vec::AbstractVector, dim=1) = _make_axis(de, Base.axes1(vec))
+_get_axis_of(de::DEFile, vec::AbstractUnitRange, dim=1) = _make_axis(de, vec)
+_get_axis_of(de::DEFile, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(vec, dim))
 
 #############################################################################
 # write tseries
@@ -255,5 +255,74 @@ function _my_copyto!(dest::Vector{<:StrOrSym}, src::C.tseries_t)
     end
     return dest
 end
+
+
+#############################################################################
+# helpers for writedb
+
+import ..new_catalog
+import ..store_scalar
+import ..store_tseries
+import ..writedb
+
+const StoreAsScalarType = Union{Symbol,AbstractString,Number}
+const StoreAsTSeriesType = Union{AbstractVector}
+const StoreAsCatalogType = Union{Workspace,AbstractDict{<:StrOrSym}}
+
+_write_data(::DEFile, ::C.obj_id_t, name::StrOrSym, value) = error("Cannot determine the storage class of $name::$(typeof(value))")
+_write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::StoreAsScalarType) = store_scalar(de, pid, string(name), value)
+_write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::StoreAsTSeriesType) = store_tseries(de, pid, string(name), value)
+function _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, data::StoreAsCatalogType)
+    pid = new_catalog(de, pid, string(name))
+    return writedb(de, pid, data)
+end
+
+
+#############################################################################
+# helpers for readdb
+
+import ..load_scalar
+import ..load_tseries
+import ..readdb
+
+function _read_data(de::DEFile, id::C.obj_id_t)
+    obj = Ref{C.object_t}()
+    _check(C.de_load_object(de, id, obj))
+    return _read_data(de, id, Val(obj[].class))
+end
+_read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_scalar}) = load_scalar(de, id)
+_read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_tseries}) = load_tseries(de, id)
+function _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_catalog})
+    search = Ref{C.de_search}()
+    I._check(C.de_list_catalog(de, id, search))
+    data = Workspace()
+    obj = Ref{C.object_t}()
+    rc = C.de_next_object(search[], obj)
+    while rc == C.DE_SUCCESS
+        name = Symbol(unsafe_string(obj[].name))
+        try
+            if obj[].id != obj[].pid # skip recursing on self (only root would do this)
+                value = _read_data(de, obj[].id, Val(obj[].class))
+                push!(data, name => value)
+            end
+        catch err
+            @error "Failed to load $name" err
+            C.de_clear_error()
+        end
+        rc = C.de_next_object(search[], obj)
+    end
+    if rc == C.DE_NO_OBJ
+        C.de_finalize_search(search[])
+        return data
+    end
+    try
+        _check(rc)
+    catch err
+        C.de_finalize_search(search[])
+        rethrow(err)
+    end
+    return nothing
+end
+
 
 end
