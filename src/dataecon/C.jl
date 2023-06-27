@@ -166,24 +166,16 @@ function de_get_all_attributes(de, id, delim, nattr, names, values)
     ccall((:de_get_all_attributes, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, Ptr{Int64}, Ptr{Ptr{Cchar}}, Ptr{Ptr{Cchar}}), de, id, delim, nattr, names, values)
 end
 
-function de_get_object_info(arg1, id, fullpath, depth, created)
-    ccall((:de_get_object_info, libdaec), Cint, (de_file, obj_id_t, Ptr{Ptr{Cchar}}, Ptr{Int64}, Ptr{Int64}), arg1, id, fullpath, depth, created)
+function de_get_object_info(de, id, fullpath, depth, created)
+    ccall((:de_get_object_info, libdaec), Cint, (de_file, obj_id_t, Ptr{Ptr{Cchar}}, Ptr{Int64}, Ptr{Int64}), de, id, fullpath, depth, created)
 end
 
 function de_find_fullpath(de, fullpath, id)
     ccall((:de_find_fullpath, libdaec), Cint, (de_file, Ptr{Cchar}, Ptr{obj_id_t}), de, fullpath, id)
 end
 
-struct catalog_t
-    object::object_t
-end
-
 function de_new_catalog(de, pid, name, id)
     ccall((:de_new_catalog, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, Ptr{obj_id_t}), de, pid, name, id)
-end
-
-function de_load_catalog(de, id, catalog)
-    ccall((:de_load_catalog, libdaec), Cint, (de_file, obj_id_t, Ptr{catalog_t}), de, id, catalog)
 end
 
 struct scalar_t
@@ -193,8 +185,8 @@ struct scalar_t
     value::Ptr{Cvoid}
 end
 
-function de_new_scalar(de, pid, name, type, freq, nbytes, value, id)
-    ccall((:de_new_scalar, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, frequency_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, freq, nbytes, value, id)
+function de_store_scalar(de, pid, name, type, freq, nbytes, value, id)
+    ccall((:de_store_scalar, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, frequency_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, freq, nbytes, value, id)
 end
 
 function de_load_scalar(de, id, scalar)
@@ -244,8 +236,8 @@ end
 
 const vector_t = tseries_t
 
-function de_new_tseries(de, pid, name, type, eltype, axis_id, nbytes, value, id)
-    ccall((:de_new_tseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, axis_id, nbytes, value, id)
+function de_store_tseries(de, pid, name, type, eltype, axis_id, nbytes, value, id)
+    ccall((:de_store_tseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, axis_id, nbytes, value, id)
 end
 
 function de_load_tseries(de, id, tseries)

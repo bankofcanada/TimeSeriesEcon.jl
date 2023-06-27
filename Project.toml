@@ -19,7 +19,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
 CEnum = "0.4"
-DataEcon_jll = "0.1"
+DataEcon_jll = "0.2"
 MacroTools = "0.5"
 OrderedCollections = "1.4"
 RecipesBase = "1.0"

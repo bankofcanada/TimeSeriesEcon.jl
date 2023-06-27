@@ -150,7 +150,7 @@ function store_scalar(de::DEFile, pid::C.obj_id_t, name::String, value)
     val_nbytes = I._to_de_scalar_nbytes(val)
     val_ptr = I._to_de_scalar_prt(val)
     id = Ref{C.obj_id_t}()
-    I._check(C.de_new_scalar(de, pid, name, val_type, val_freq, val_nbytes, val_ptr, id))
+    I._check(C.de_store_scalar(de, pid, name, val_type, val_freq, val_nbytes, val_ptr, id))
     if typeof(val) != typeof(value)
         # write the actual type as an attribute, so we can recover it
         set_attribute(de, id[], "jtype", string(typeof(value)))
@@ -183,7 +183,7 @@ function store_tseries(de::DEFile, pid::C.obj_id_t, name::String, value)
     ts = I._to_de_tseries(value)
     id = Ref{C.obj_id_t}()
     ptr = isnothing(ts.val) ? C_NULL : pointer(ts.val)
-    I._check(C.de_new_tseries(de, pid, name, ts.type, ts.eltype, ax_id, ts.nbytes, ptr, id))
+    I._check(C.de_store_tseries(de, pid, name, ts.type, ts.eltype, ax_id, ts.nbytes, ptr, id))
     # if eltype doesn't match, save it in attribute "jeltype"
     while true
         ET = eltype(value)

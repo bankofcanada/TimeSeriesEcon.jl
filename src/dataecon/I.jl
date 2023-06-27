@@ -1,7 +1,7 @@
 # Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
-# This module contains functions that are internal 
+# This module contains functions that are internal
 module I
 
 using ..C
@@ -301,10 +301,8 @@ function _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_catalog})
     while rc == C.DE_SUCCESS
         name = Symbol(unsafe_string(obj[].name))
         try
-            if obj[].id != obj[].pid # skip recursing on self (only root would do this)
-                value = _read_data(de, obj[].id, Val(obj[].class))
-                push!(data, name => value)
-            end
+            value = _read_data(de, obj[].id, Val(obj[].class))
+            push!(data, name => value)
         catch err
             @error "Failed to load $name" err
             C.de_clear_error()
