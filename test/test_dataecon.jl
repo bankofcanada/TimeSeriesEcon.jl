@@ -75,6 +75,38 @@ de = DE.opendaec(test_file)
 
 end
 
+@testset "DE 1d arrays" begin
+    db = Workspace(
+        r1=1:5,
+        r2=1U:5U,
+        r3=2020Q1:2025Q4,
+        vs1=["What", "is", "this"],
+        vs2=[:this, :is, :What],
+        nv1=Int32[],
+        nv2=rand(Int8, 7),
+        nv3=rand(Complex{Float32}, 7),
+        nv4=MIT{Quarterly{3}}[rand(Int64, 12);],
+    )
+
+    # we can write them 
+    for (name, value) in pairs(db)
+        @test (DE.new_tseries(de, name, value); true)
+    end
+
+    ldb = Workspace()
+    # we can read them 
+    for name in keys(db)
+        @test (push!(ldb, name => DE.load_tseries(de, name)); true)
+    end
+
+    # they are equal
+    @test @compare db ldb quiet
+
+    # their types are the same
+    @test @compare map(typeof, db) map(typeof, ldb) quiet
+
+end
+
 # clean up after ourselves
 DE.closedaec!(de)
 rm(test_file, force=true)
