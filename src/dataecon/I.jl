@@ -22,7 +22,7 @@ Base.showerror(io::IO, err::DEError) = print(io, err.msg)
 function DEError()
     global debug_libdaec
     _msg = Vector{Cchar}(undef, 512)
-    rc = I._de_error!(_msg, Val(debug_libdaec))
+    rc = _de_error!(_msg, Val(debug_libdaec))
     msg = GC.@preserve _msg unsafe_string(pointer(_msg))
     return DEError(rc, msg)
 end
@@ -75,8 +75,8 @@ _to_de_scalar_freq(::Type{Yearly{end_month}}) where {end_month} = C.frequency_t(
 _to_de_scalar_nbytes(val) = sizeof(val)
 _to_de_scalar_nbytes(val::String) = sizeof(val) + 1 # Julia's sizeof() does not count the '\0' at the end
 
-_to_de_scalar_prt(val) = Ref(val)
-_to_de_scalar_prt(val::String) = pointer(val)
+_to_de_scalar_ptr_unsafe(val) = Ref(val)
+_to_de_scalar_ptr_unsafe(val::String) = pointer(val)
 
 #############################################################################
 # scalars read
@@ -123,6 +123,7 @@ _to_julia_scalar_type(::Val{C.type_complex}, ::Val{8}) = ComplexF32
 _to_julia_scalar_type(::Val{C.type_complex}, ::Val{16}) = ComplexF64
 _to_julia_scalar_type(::Val{C.type_string}, ::Val) = String
 _to_julia_scalar_type(::Val{C.type_date}, ::Val{8}) = Int64
+# _to_julia_scalar_type(::Val{C.type_other_scalar}, ::Val) = Any
 
 _to_julia_frequency(f::C.frequency_t) = _to_julia_frequency(Val(f))
 _to_julia_frequency(::Val{C.freq_unit}) = Unit
@@ -174,34 +175,33 @@ _get_axis_of(de::DEFile, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(v
 
 _to_de_tseries(value) = throw(ArgumentError("Unable to write value of type $(typeof(value))."))
 
+# handle range
 _to_de_tseries(value::AbstractUnitRange) =
-    (; eltype=_to_de_scalar_type(eltype(value)), type=C.type_range, nbytes=0, val=nothing)
+    (; eltype=_to_de_scalar_type(eltype(value)), type=C.type_range, nbytes=0, val=C_NULL)
 
-function _to_de_tseries(value::AbstractVector{<:Number})
-    ET = eltype(value)
-    if isempty(value)
-        nbytes = 0
-        val = nothing
-    else
-        nbytes = length(value) * _to_de_scalar_nbytes(ET)
-        if isa(value, Vector{ET})
-            val = value
-        else
-            val = copyto!(Vector{ET}(undef, length(value)), value)
-        end
-    end
+# handle vector
+_to_de_tseries(value::AbstractVector) = _to_de_tseries(Val(isempty(value)), value)
+
+# empty vector
+_to_de_tseries(::Val{true}, value::AbstractVector{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), type=C.type_vector, nbytes=0, val=C_NULL)
+
+# vector of numbers
+function _to_de_tseries(::Val{false}, value::AbstractVector{ET}) where {ET<:Number}
+    val = value
+    nbytes = length(value) * _to_de_scalar_nbytes(ET)
     return (; eltype=_to_de_scalar_type(ET), type=C.type_vector, nbytes, val)
 end
 
-function _to_de_tseries(value::AbstractVector{<:StrOrSym})
-    if isempty(value)
-        nbytes = 0
-        val = nothing
-    else
-        val = join(value, '\0') * '\0'
-        nbytes = sizeof(val)
-    end
+function _to_de_tseries(::Val{false}, value::AbstractVector{ET}) where {ET<:StrOrSym}
+    val = join(value, '\0') * '\0'
+    nbytes = sizeof(val)
     return (; eltype=C.type_string, type=C.type_vector, nbytes, val)
+end
+
+# handle tseries
+function _to_de_tseries(value::TSeries)
+    (; eltype, nbytes, val) = _to_de_tseries(value.values)
+    return (; eltype, type=C.type_tseries, nbytes, val)
 end
 
 #############################################################################
@@ -223,14 +223,20 @@ _from_de_tseries(::Val{C.type_range}, ::Val{Z}, tseries::C.tseries_t) where {Z} 
 _from_de_tseries(::Val{C.type_vector}, ::Val{Z}, tseries::C.tseries_t) where {Z} = error("Cannot load a vector with range of type $Z. Expected $(C.axis_plain)")
 function _from_de_tseries(::Val{C.type_vector}, ::Val{C.axis_plain}, tseries::C.tseries_t)
     vlen = tseries.axis.length
-    if vlen == 0
-        ET = _to_julia_scalar_type(Val(tseries.eltype), Val(0))
-        return ET[]
-    else
-        ET = _to_julia_scalar_type(Val(tseries.eltype), Val(tseries.nbytes ÷ vlen))
-        vec = Vector{ET}(undef, vlen)
-        return _my_copyto!(vec, tseries)
-    end
+    return _do_load_vector_data(Val(vlen), tseries)
+end
+
+function _do_load_vector_data(::Val{0}, tseries::C.tseries_t)
+    ET = _to_julia_scalar_type(Val(tseries.eltype), Val(0))
+    return ET[]
+end
+
+function _do_load_vector_data(v::Val{N}, tseries::C.tseries_t) where {N}
+    @nospecialize v
+    vlen = N::Int64
+    ET = _to_julia_scalar_type(Val(tseries.eltype), Val(tseries.nbytes ÷ vlen))
+    vec = Vector{ET}(undef, vlen)
+    return _my_copyto!(vec, tseries)
 end
 
 # the case of other than string
@@ -254,6 +260,15 @@ function _my_copyto!(dest::Vector{<:StrOrSym}, src::C.tseries_t)
         dest[i] = string(strvec[i])
     end
     return dest
+end
+
+# handle type_tseries
+_from_de_tseries(::Val{C.type_tseries}, ::Val{Z}, tseries::C.tseries_t) where {Z} = error("Cannot load a tseries with range of type $Z. Expected $(C.axis_range)")
+function _from_de_tseries(::Val{C.type_tseries}, ::Val{C.axis_range}, tseries::C.tseries_t)
+    vlen = tseries.axis.length
+    FR = _to_julia_frequency(tseries.axis.frequency)
+    fd = reinterpret(MIT{FR}, tseries.axis.first)
+    return TSeries(fd, _do_load_vector_data(Val(vlen), tseries))
 end
 
 
@@ -294,7 +309,7 @@ _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_scalar}) = load_scalar(de, 
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_tseries}) = load_tseries(de, id)
 function _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_catalog})
     search = Ref{C.de_search}()
-    I._check(C.de_list_catalog(de, id, search))
+    _check(C.de_list_catalog(de, id, search))
     data = Workspace()
     obj = Ref{C.object_t}()
     rc = C.de_next_object(search[], obj)

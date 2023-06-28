@@ -135,6 +135,9 @@ end
         nv5=UInt8[],
         nv6=Float16[],
         nv7=ComplexF16[],
+        z1 = TSeries(2020Q1, rand(16)),
+        z2 = TSeries(2020M7, rand(Int, 27)),
+        z3 = TSeries(w"2020-01-01"3, [1.0im .+ (1:11);])
     )
 
     # we can write them 
@@ -153,6 +156,32 @@ end
 
     # their types are the same
     @test @compare map(typeof, db) map(typeof, ldb) quiet
+
+end
+
+@testset "DE speed" begin
+    id = DE.new_catalog(de, "speedtest")
+
+    ts = TSeries(2000Y{4}, rand(400))
+    a = Workspace()
+    for i = 1:100_000
+        name = Symbol(:x, i)
+        ts[mod1(i,length(ts))] = i
+        push!(a, name => copy(ts))
+    end
+    tm = time()
+    DE.writedb(de, id, a)
+    tm = time() - tm
+    @info "write time: $tm"
+    @test tm < 15
+    
+    tm = time()
+    b = DE.readdb(de, id)
+    tm = time() - tm
+    @info "read time: $tm"
+    @test tm < 10
+
+    @test @compare(a, b, ignoremissing, nans=true, quiet)
 
 end
 

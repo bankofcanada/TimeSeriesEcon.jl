@@ -148,9 +148,11 @@ function store_scalar(de::DEFile, pid::C.obj_id_t, name::String, value)
     val_type = I._to_de_scalar_type(val)
     val_freq = I._to_de_scalar_freq(val)
     val_nbytes = I._to_de_scalar_nbytes(val)
-    val_ptr = I._to_de_scalar_prt(val)
     id = Ref{C.obj_id_t}()
-    I._check(C.de_store_scalar(de, pid, name, val_type, val_freq, val_nbytes, val_ptr, id))
+    GC.@preserve val begin
+        val_ptr = I._to_de_scalar_ptr_unsafe(val)
+        I._check(C.de_store_scalar(de, pid, name, val_type, val_freq, val_nbytes, val_ptr, id))
+    end
     if typeof(val) != typeof(value)
         # write the actual type as an attribute, so we can recover it
         set_attribute(de, id[], "jtype", string(typeof(value)))
@@ -180,16 +182,20 @@ end
 
 function store_tseries(de::DEFile, pid::C.obj_id_t, name::String, value)
     ax_id = I._get_axis_of(de, value, 1)
-    ts = I._to_de_tseries(value)
     id = Ref{C.obj_id_t}()
-    ptr = isnothing(ts.val) ? C_NULL : pointer(ts.val)
-    I._check(C.de_store_tseries(de, pid, name, ts.type, ts.eltype, ax_id, ts.nbytes, ptr, id))
+    ts = I._to_de_tseries(value)
+    GC.@preserve ts begin
+        ptr = ts.nbytes == 0 ? C_NULL : pointer(ts.val)
+        I._check(C.de_store_tseries(de, pid, name, ts.type, ts.eltype, ax_id, ts.nbytes, ptr, id))
+    end
     # if eltype doesn't match, save it in attribute "jeltype"
     while true
         ET = eltype(value)
         ts.type == C.type_range && break
-        ts.eltype == C.type_string && ET == String && break
-        ts.eltype != C.type_string && ET == I._to_julia_scalar_type(Val(ts.eltype), Val(sizeof(ET))) && !isempty(value) && break
+        if ts.eltype != C.type_other_scalar
+            ts.eltype == C.type_string && ET == String && break
+            ts.eltype != C.type_string && ET == I._to_julia_scalar_type(Val(ts.eltype), Val(sizeof(ET))) && !isempty(value) && break
+        end
         set_attribute(de, id[], "jeltype", string(ET))
         break
     end
@@ -198,7 +204,7 @@ function store_tseries(de::DEFile, pid::C.obj_id_t, name::String, value)
         ts.type == C.type_range && isa(value, UnitRange) && break
         ts.type == C.type_vector && isa(value, Vector) && break
         ts.type == C.type_tseries && isa(value, TSeries) && break
-        set_attribute(de, id, "jtype", string(typeof(value)))
+        set_attribute(de, id[], "jtype", string(typeof(value)))
         break
     end
     return id[]
@@ -249,6 +255,11 @@ end
 # variations
 writedb(de::DEFile, data::Workspace) = writedb(de, root, data)
 writedb(de::DEFile, parent::AbstractString, data::Workspace) = writedb(de, find_fullpath(de, string(parent)), data)
+function writedb(file::AbstractString, args...)
+    opendaec(file) do de
+        writedb(de, args...)
+    end
+end
 
 function write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value)
     try
@@ -265,8 +276,14 @@ end
 # recursive high-level read
 
 readdb(de::DEFile) = read_data(de, root)
+readdb(de::DEFile, id::C.obj_id_t) = read_data(de, id)
 readdb(de::DEFile, name::Symbol) = read_data(de, find_object(de, root, string(name)))
 readdb(de::DEFile, catalog::AbstractString) = read_data(de, find_fullpath(de, string(catalog)))
+function readdb(file::AbstractString, args...)
+    opendaec(file) do de
+        readdb(de, args...)
+    end
+end
 
 read_data(de::DEFile, id::C.obj_id_t) = I._read_data(de, id)
 
