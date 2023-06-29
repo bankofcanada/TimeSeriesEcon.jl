@@ -26,9 +26,13 @@ function new_catalog end
 function store_scalar end
 function load_scalar end
 function store_tseries end
+function store_mvtseries end
 function load_tseries end
+function load_mvtseries end
 function writedb end
 function readdb end
+function set_attribute end
+function get_attribute end
 
 include("I.jl")
 using .I
@@ -178,58 +182,29 @@ end
 #############################################################################
 # read and write tseries
 
-# ###############   write tseries
-
 function store_tseries(de::DEFile, pid::C.obj_id_t, name::String, value)
     ax_id = I._get_axis_of(de, value, 1)
-    id = Ref{C.obj_id_t}()
-    ts = I._to_de_tseries(value)
-    GC.@preserve ts begin
-        ptr = ts.nbytes == 0 ? C_NULL : pointer(ts.val)
-        I._check(C.de_store_tseries(de, pid, name, ts.type, ts.eltype, ax_id, ts.nbytes, ptr, id))
-    end
-    # if eltype doesn't match, save it in attribute "jeltype"
-    while true
-        ET = eltype(value)
-        ts.type == C.type_range && break
-        if ts.eltype != C.type_other_scalar
-            ts.eltype == C.type_string && ET == String && break
-            ts.eltype != C.type_string && ET == I._to_julia_scalar_type(Val(ts.eltype), Val(sizeof(ET))) && !isempty(value) && break
-        end
-        set_attribute(de, id[], "jeltype", string(ET))
-        break
-    end
-    # if container isn't standard save it in attribute "jtype"
-    while true
-        ts.type == C.type_range && isa(value, UnitRange) && break
-        ts.type == C.type_vector && isa(value, Vector) && break
-        ts.type == C.type_tseries && isa(value, TSeries) && break
-        set_attribute(de, id[], "jtype", string(typeof(value)))
-        break
-    end
-    return id[]
+    return I._store_array(de, pid, name, (ax_id,), value)
+end
+
+function store_mvtseries(de::DEFile, pid::C.obj_id_t, name::String, value)
+    ax1_id = I._get_axis_of(de, value, 1)
+    ax2_id = I._get_axis_of(de, value, 2)
+    return I._store_array(de, pid, name, (ax1_id, ax2_id), value)
 end
 
 # ###############   read tseries
 
 function load_tseries(de::DEFile, id::C.obj_id_t)
-    tseries = Ref{C.tseries_t}()
-    I._check(C.de_load_tseries(de, id, tseries))
-    value = I._from_de_tseries(tseries[])
-    jtype = get_attribute(de, id, "jtype")
-    if !ismissing(jtype)
-        return convert(jtype, value)
-    end
-    jeltype = get_attribute(de, id, "jeltype")
-    if !ismissing(jeltype)
-        JT = Core.eval(Main, Meta.parse(jeltype))
-        if isempty(value)
-            return JT[]
-        else
-            return map(v -> I._apply_jtype(JT, v), value)
-        end
-    end
-    return value
+    arr = Ref{C.tseries_t}()
+    I._check(C.de_load_tseries(de, id, arr))
+    return I._to_julia_array(de, id, arr[])
+end
+
+function load_mvtseries(de::DEFile, id::C.obj_id_t)
+    arr = Ref{C.mvtseries_t}()
+    I._check(C.de_load_mvtseries(de, id, arr))
+    return I._to_julia_array(de, id, arr[])
 end
 
 #############################################################################
@@ -290,14 +265,13 @@ read_data(de::DEFile, id::C.obj_id_t) = I._read_data(de, id)
 #############################################################################
 # closing remarks :)
 
-for func in (:load_scalar, :load_tseries, :delete_object, :read_data)
-    @eval begin
-        $func(de::DEFile, pid::C.obj_id_t, name::String) = $func(de, find_object(de, pid, name))
-        $func(de::DEFile, pid::C.obj_id_t, name::Symbol) = $func(de, find_object(de, pid, string(name)))
+for func in (:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data, :new_catalog)
+    if func != :new_catalog
+        @eval begin
+            $func(de::DEFile, pid::C.obj_id_t, name::String) = $func(de, find_object(de, pid, name))
+            $func(de::DEFile, pid::C.obj_id_t, name::Symbol) = $func(de, find_object(de, pid, string(name)))
+        end
     end
-end
-
-for func in (:load_scalar, :load_tseries, :delete_object, :read_data, :new_catalog)
     @eval begin
         $func(de::DEFile, name::Symbol) = $func(de, root, string(name))
         $func(de::DEFile, name::AbstractString) = $func(de, splitdir(name)...)
@@ -305,7 +279,7 @@ for func in (:load_scalar, :load_tseries, :delete_object, :read_data, :new_catal
     end
 end
 
-for func in (:store_scalar, :store_tseries, :write_data)
+for func in (:store_scalar, :store_tseries, :store_mvtseries, :write_data)
     @eval begin
         $func(de::DEFile, pid::C.obj_id_t, name::Symbol, value) = $func(de, pid, string(name), value)
         $func(de::DEFile, name::Symbol, value) = $func(de, root, string(name), value)

@@ -52,6 +52,7 @@ _to_de_scalar_type(val) = _to_de_scalar_type(typeof(val))
 _to_de_scalar_type(::Type{T}) where {T} = error("Can't handle type $T")
 _to_de_scalar_type(::Type{T}) where {T<:MIT} = C.type_date
 _to_de_scalar_type(::Type{T}) where {T<:Duration} = C.type_signed
+_to_de_scalar_type(::Type{T}) where {T<:Bool} = C.type_signed
 _to_de_scalar_type(::Type{T}) where {T<:Base.BitSigned} = C.type_signed
 _to_de_scalar_type(::Type{T}) where {T<:Base.BitUnsigned} = C.type_unsigned
 _to_de_scalar_type(::Type{T}) where {T<:Base.IEEEFloat} = C.type_float
@@ -161,7 +162,7 @@ end
 
 function _make_axis(de::DEFile, rng::AbstractVector{<:Union{Symbol,AbstractString}})
     ax_id = Ref{C.axis_id_t}()
-    names = string(join(rng, "\n"))
+    names = join(rng, "\n")
     _check(C.de_axis_names(de, length(rng), names, ax_id))
     return ax_id[]
 end
@@ -171,76 +172,157 @@ _get_axis_of(de::DEFile, vec::AbstractUnitRange, dim=1) = _make_axis(de, vec)
 _get_axis_of(de::DEFile, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(vec, dim))
 
 #############################################################################
-# write tseries
+# write tseries and mvtseries
 
-_to_de_tseries(value) = throw(ArgumentError("Unable to write value of type $(typeof(value))."))
+_to_de_array(value) = throw(ArgumentError("Unable to write value of type $(typeof(value))."))
 
 # handle range
-_to_de_tseries(value::AbstractUnitRange) =
+_to_de_array(value::AbstractUnitRange) =
     (; eltype=_to_de_scalar_type(eltype(value)), type=C.type_range, nbytes=0, val=C_NULL)
 
-# handle vector
-_to_de_tseries(value::AbstractVector) = _to_de_tseries(Val(isempty(value)), value)
+# handle any vector or matrix
+_to_de_array(value::AbstractVecOrMat) = _to_de_array(Val(isempty(value)), value)
 
-# empty vector
-_to_de_tseries(::Val{true}, value::AbstractVector{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), type=C.type_vector, nbytes=0, val=C_NULL)
+# empty array
+_to_de_array(::Val{true}, value::AbstractVector{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), type=C.type_vector, nbytes=0, val=C_NULL)
+_to_de_array(::Val{true}, value::AbstractMatrix{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), type=C.type_matrix, nbytes=0, val=C_NULL)
 
 # vector of numbers
-function _to_de_tseries(::Val{false}, value::AbstractVector{ET}) where {ET<:Number}
+function _to_de_array(::Val{false}, value::AbstractVecOrMat{ET}) where {ET<:Number}
     val = value
     nbytes = length(value) * _to_de_scalar_nbytes(ET)
-    return (; eltype=_to_de_scalar_type(ET), type=C.type_vector, nbytes, val)
+    return (; eltype=_to_de_scalar_type(ET), type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
 end
 
-function _to_de_tseries(::Val{false}, value::AbstractVector{ET}) where {ET<:StrOrSym}
-    val = join(value, '\0') * '\0'
-    nbytes = sizeof(val)
-    return (; eltype=C.type_string, type=C.type_vector, nbytes, val)
+_to_de_array(::Val{false}, value::AbstractVecOrMat{ET}) where {ET<:StrOrSym} = _to_de_array(Val(false), map(string, value))
+function _to_de_array(::Val{false}, value::VecOrMat{String})
+    nel = length(value)
+    nbytes = sum(length, value) + nel
+    val = Vector{UInt8}(undef, nbytes)
+    _check(C.de_pack_strings(value, nel, val, Ref(nbytes)))
+    return (; eltype=C.type_string, type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
+end
+
+# handle bit array -- we must expand it to Array{Bool}
+_to_de_array(value::BitArray) = _to_de_array(Array(value))
+
+# handle mvtseries
+function _to_de_array(value::MVTSeries)
+    (; eltype, nbytes, val) = _to_de_array(value.values)
+    return (; eltype, type=C.type_mvtseries, nbytes, val)
 end
 
 # handle tseries
-function _to_de_tseries(value::TSeries)
-    (; eltype, nbytes, val) = _to_de_tseries(value.values)
+function _to_de_array(value::TSeries)
+    (; eltype, nbytes, val) = _to_de_array(value.values)
     return (; eltype, type=C.type_tseries, nbytes, val)
 end
 
+function _should_store_eltype(arr, value::AbstractArray{ET}) where {ET}
+    isempty(value) && return true
+    arr.type == C.type_range && return false
+    arr.eltype == C.type_other_scalar && return true
+    arr.eltype == C.type_string && return ET != String
+    return ET != _to_julia_scalar_type(Val(arr.eltype), Val(sizeof(ET)))
+end
+
+@inline _should_store_type(v::Val, a::Any) = (@nospecialize(v, a); true)
+@inline _should_store_type(::Val{C.type_range}, ::UnitRange) = false
+@inline _should_store_type(::Val{C.type_vector}, ::Vector) = false
+@inline _should_store_type(::Val{C.type_tseries}, ::TSeries) = false
+@inline _should_store_type(::Val{C.type_matrix}, ::Matrix) = false
+@inline _should_store_type(::Val{C.type_mvtseries}, ::MVTSeries) = false
+
+_do_store_array(::Val{1}, args...) = C.de_store_tseries(args...)
+_do_store_array(::Val{2}, args...) = C.de_store_mvtseries(args...)
+function _do_store_array(v::Val{N}, args...) where {N}
+    @nospecialize v
+    error("Can't store  $(N)d array.")
+end
+import ..set_attribute
+import ..get_attribute
+_store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{M,C.axis_id_t}, value::AbstractArray{ET,N}) where {ET,N,M} = error("Dimension mismatch: $(N)d array with $M axes.")
+function _store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{N,C.axis_id_t}, value::AbstractArray{ET,N}) where {ET,N}
+    id = Ref{C.obj_id_t}()
+    arr = _to_de_array(value)
+    GC.@preserve arr begin
+        ptr = arr.nbytes == 0 ? C_NULL : pointer(arr.val)
+        _check(_do_store_array(Val(N), de, pid, name, arr.type, arr.eltype, axes..., arr.nbytes, ptr, id))
+    end
+    if _should_store_eltype(arr, value)
+        set_attribute(de, id[], "jeltype", string(ET))
+    end
+    if _should_store_type(Val(arr.type), value)
+        set_attribute(de, id[], "jtype", string(typeof(value)))
+    end
+    return id[]
+end
+
 #############################################################################
-# read tseries
+# read tseries and mvtseries
+
+function _to_julia_array(de, id, arr)
+    value = _from_de_array(arr)
+    jtype = get_attribute(de, id, "jtype")
+    if !ismissing(jtype)
+        T = Core.eval(Main, Meta.parse(jtype))
+        return convert(T, value)
+    end
+    jeltype = get_attribute(de, id, "jeltype")
+    if !ismissing(jeltype)
+        JT = Core.eval(Main, Meta.parse(jeltype))
+        if isempty(value)
+            return JT[]
+        else
+            return map(v -> _apply_jtype(JT, v), value)
+        end
+    end
+    return value
+end
 
 # dispatcher
-_from_de_tseries(tseries::C.tseries_t) = _from_de_tseries(Val(tseries.object.type), Val(tseries.axis.type), tseries)
+_from_de_array(arr::C.tseries_t) = _from_de_array(arr, Val(arr.object.type), Val(arr.axis.type))
+_from_de_array(arr::C.mvtseries_t) = _from_de_array(arr, Val(arr.object.type), Val(arr.axis1.type), Val(arr.axis2.type))
 
 # handle type_range
-_from_de_tseries(::Val{C.type_range}, ::Val{C.axis_plain}, tseries::C.tseries_t) = 1:tseries.axis.length
-function _from_de_tseries(::Val{C.type_range}, ::Val{C.axis_range}, tseries::C.tseries_t)
-    FR = _to_julia_frequency(tseries.axis.frequency)
-    fd = reinterpret(MIT{FR}, tseries.axis.first)
-    return fd .+ (0:tseries.axis.length-1)
+_from_de_array(arr::C.tseries_t, ::Val{C.type_range}, ::Val{C.axis_plain}) = 1:arr.axis.length
+function _from_de_array(arr::C.tseries_t, ::Val{C.type_range}, ::Val{C.axis_range})
+    FR = _to_julia_frequency(arr.axis.frequency)
+    fd = reinterpret(MIT{FR}, arr.axis.first)
+    return fd .+ (0:arr.axis.length-1)
 end
-_from_de_tseries(::Val{C.type_range}, ::Val{Z}, tseries::C.tseries_t) where {Z} = error("Cannot load a range of type $Z")
+_from_de_array(::C.tseries_t, ::Val{C.type_range}, ::Val{Z}) where {Z} = error("Cannot load a range of type $Z")
 
 # handle type_vector
-_from_de_tseries(::Val{C.type_vector}, ::Val{Z}, tseries::C.tseries_t) where {Z} = error("Cannot load a vector with range of type $Z. Expected $(C.axis_plain)")
-function _from_de_tseries(::Val{C.type_vector}, ::Val{C.axis_plain}, tseries::C.tseries_t)
-    vlen = tseries.axis.length
-    return _do_load_vector_data(Val(vlen), tseries)
+_from_de_array(::C.tseries_t, ::Val{C.type_vector}, ::Val{Z},) where {Z} = error("Cannot load a vector with axis of type $Z. Expected $(C.axis_plain)")
+function _from_de_array(arr::C.tseries_t, ::Val{C.type_vector}, ::Val{C.axis_plain})
+    vlen = arr.axis.length
+    return _do_load_array_data(arr, Val(vlen))
 end
 
-function _do_load_vector_data(::Val{0}, tseries::C.tseries_t)
-    ET = _to_julia_scalar_type(Val(tseries.eltype), Val(0))
+# handle type_matrix
+_from_de_array(::C.mvtseries_t, ::Val{C.type_matrix}, ::Val{Y}, ::Val{Z}) where {Y,Z} = error("Cannot load a matrix with axes of type $Y and $Z. Expected $(C.axis_plain)")
+function _from_de_array(arr::C.mvtseries_t, ::Val{C.type_matrix}, ::Val{C.axis_plain}, ::Val{C.axis_plain})
+    d1 = arr.axis1.length
+    d2 = arr.axis2.length
+    return reshape(_do_load_array_data(arr, Val(d1 * d2)), d1, d2)
+end
+
+function _do_load_array_data(arr, ::Val{0})
+    ET = _to_julia_scalar_type(Val(arr.eltype), Val(0))
     return ET[]
 end
 
-function _do_load_vector_data(v::Val{N}, tseries::C.tseries_t) where {N}
+function _do_load_array_data(arr, v::Val{N}) where {N}
     @nospecialize v
     vlen = N::Int64
-    ET = _to_julia_scalar_type(Val(tseries.eltype), Val(tseries.nbytes ÷ vlen))
+    ET = _to_julia_scalar_type(Val(arr.eltype), Val(arr.nbytes ÷ vlen))
     vec = Vector{ET}(undef, vlen)
-    return _my_copyto!(vec, tseries)
+    return _my_copyto!(vec, arr)
 end
 
 # the case of other than string
-function _my_copyto!(dest::Vector{T}, src::C.tseries_t) where {T}
+function _my_copyto!(dest::Vector{T}, src) where {T}
     if src.nbytes != sizeof(dest)
         error("Inconsistent data: sizeof doesn't match.")
     end
@@ -250,25 +332,38 @@ function _my_copyto!(dest::Vector{T}, src::C.tseries_t) where {T}
 end
 
 # the case of string
-function _my_copyto!(dest::Vector{<:StrOrSym}, src::C.tseries_t)
-    str = unsafe_string(Base.unsafe_convert(Ptr{UInt8}, src.value), src.nbytes - 1)
-    strvec = split(str, '\0')
-    if length(strvec) != length(dest)
-        error("Inconsistent data: number of elements don't match")
-    end
+function _do_unpack_strings(buffer, bufsize, nel)
+    strvec = Vector{Ptr{Cchar}}(undef, nel)
+    _check(C.de_unpack_strings(buffer, bufsize, strvec, nel))
+    return map(Base.unsafe_string, strvec)
+end
+
+function _my_copyto!(dest::Vector{ET}, src) where {ET<:StrOrSym}
+    strings = _do_unpack_strings(src.value, src.nbytes, length(dest))
     for i in eachindex(dest)
-        dest[i] = string(strvec[i])
+        dest[i] = ET(strings[i])
     end
     return dest
 end
 
 # handle type_tseries
-_from_de_tseries(::Val{C.type_tseries}, ::Val{Z}, tseries::C.tseries_t) where {Z} = error("Cannot load a tseries with range of type $Z. Expected $(C.axis_range)")
-function _from_de_tseries(::Val{C.type_tseries}, ::Val{C.axis_range}, tseries::C.tseries_t)
-    vlen = tseries.axis.length
-    FR = _to_julia_frequency(tseries.axis.frequency)
-    fd = reinterpret(MIT{FR}, tseries.axis.first)
-    return TSeries(fd, _do_load_vector_data(Val(vlen), tseries))
+_from_de_array(::C.tseries_t, ::Val{C.type_tseries}, ::Val{Z}) where {Z} = error("Cannot load a tseries with axis of type $Z. Expected $(C.axis_range).")
+function _from_de_array(arr::C.tseries_t, ::Val{C.type_tseries}, ::Val{C.axis_range})
+    vlen = arr.axis.length
+    FR = _to_julia_frequency(arr.axis.frequency)
+    fd = reinterpret(MIT{FR}, arr.axis.first)
+    return TSeries(fd, _do_load_array_data(arr, Val(vlen)))
+end
+
+# handle type_mvtseries
+_from_de_array(::C.mvtseries_t, ::Val{C.type_mvtseries}, ::Val{Y}, ::Val{Z}) where {Y,Z} = error("Cannot load an mvtseries with axes of type $Y and $Z. Expected $(C.axis_range) and $(C.axis_names).")
+function _from_de_array(arr::C.mvtseries_t, ::Val{C.type_mvtseries}, ::Val{C.axis_range}, ::Val{C.axis_names})
+    d1 = arr.axis1.length
+    FR = _to_julia_frequency(arr.axis1.frequency)
+    fd = reinterpret(MIT{FR}, arr.axis1.first)
+    d2 = arr.axis2.length
+    cols = split(Base.unsafe_string(arr.axis2.names), '\n')
+    return MVTSeries(fd, cols, reshape(_do_load_array_data(arr, Val(d1 * d2)), d1, d2))
 end
 
 
@@ -278,16 +373,16 @@ end
 import ..new_catalog
 import ..store_scalar
 import ..store_tseries
+import ..store_mvtseries
 import ..writedb
 
 const StoreAsScalarType = Union{Symbol,AbstractString,Number}
-const StoreAsTSeriesType = Union{AbstractVector}
-const StoreAsCatalogType = Union{Workspace,AbstractDict{<:StrOrSym}}
 
 _write_data(::DEFile, ::C.obj_id_t, name::StrOrSym, value) = error("Cannot determine the storage class of $name::$(typeof(value))")
 _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::StoreAsScalarType) = store_scalar(de, pid, string(name), value)
-_write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::StoreAsTSeriesType) = store_tseries(de, pid, string(name), value)
-function _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, data::StoreAsCatalogType)
+_write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::AbstractVector) = store_tseries(de, pid, string(name), value)
+_write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::AbstractMatrix) = store_mvtseries(de, pid, string(name), value)
+function _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, data::Workspace)
     pid = new_catalog(de, pid, string(name))
     return writedb(de, pid, data)
 end
@@ -298,6 +393,7 @@ end
 
 import ..load_scalar
 import ..load_tseries
+import ..load_mvtseries
 import ..readdb
 
 function _read_data(de::DEFile, id::C.obj_id_t)
@@ -307,6 +403,7 @@ function _read_data(de::DEFile, id::C.obj_id_t)
 end
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_scalar}) = load_scalar(de, id)
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_tseries}) = load_tseries(de, id)
+_read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_mvtseries}) = load_mvtseries(de, id)
 function _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_catalog})
     search = Ref{C.de_search}()
     _check(C.de_list_catalog(de, id, search))

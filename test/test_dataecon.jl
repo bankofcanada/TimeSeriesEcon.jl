@@ -4,18 +4,14 @@
 DE = TimeSeriesEcon.DataEcon
 test_file = "test.daec"
 rm(test_file, force=true)
-rm(test_file*"-journal", force=true)
+rm(test_file * "-journal", force=true)
 
 @testset "DE file" begin
-    de = DE.opendaec(test_file)
+    global de = DE.opendaec(test_file)
     @test isopen(de)
     @test (DE.closedaec!(de); true)
     @test !isopen(de)
-end
-
-de = DE.opendaec(test_file)
-
-@testset "DE catalog" begin
+    de = DE.opendaec(test_file)
     @test begin
         id = DE.new_catalog(de, "scalars")
         id == DE.find_fullpath(de, "/scalars")
@@ -90,7 +86,7 @@ end
             id == DE.find_object(de, pid1, name)
         end
     end
-    
+
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
@@ -135,9 +131,10 @@ end
         nv5=UInt8[],
         nv6=Float16[],
         nv7=ComplexF16[],
-        z1 = TSeries(2020Q1, rand(16)),
-        z2 = TSeries(2020M7, rand(Int, 27)),
-        z3 = TSeries(w"2020-01-01"3, [1.0im .+ (1:11);])
+        z1=TSeries(2020Q1, rand(16)),
+        z2=TSeries(2020M7, rand(Int, 27)),
+        z3=TSeries(w"2020-01-01"3, [1.0im .+ (1:11);]),
+        b1=((1:100) .< 71)
     )
 
     # we can write them 
@@ -159,29 +156,75 @@ end
 
 end
 
+@testset "DE 2d arrays" begin
+    db = Workspace(
+        mt1=zeros(3, 5),
+        mt2=rand(Int32, 6, 8),
+        sm1=["What" "is"; "this" "thing?"],
+        sm2=[:this :is :What; :I :always :said],
+        mv1=MVTSeries(2020Q1, (:a, :b, :c), rand(Float32, 8, 3)),
+        mv2=MVTSeries(w"2020-01-17"5, (:a, :b), rand(Bool, 18, 2)),
+    )
+
+    pid = DE.find_fullpath(de, "/2d", false)
+    if ismissing(pid)
+        pid = DE.new_catalog(de, "2d")
+    end
+
+    # we can write them 
+    for (name, value) in pairs(db)
+        @test (DE.store_mvtseries(de, pid, name, value); true)
+    end
+
+    ldb = Workspace()
+    # we can read them 
+    for name in keys(db)
+        @test (push!(ldb, name => DE.load_mvtseries(de, pid, name)); true)
+    end
+
+    # they are equal
+    @test @compare db ldb quiet
+
+    # their types are the same
+    @test @compare map(typeof, db) map(typeof, ldb) quiet
+
+end
+
+DE.new_catalog(de, "speedtest")
+DE.closedaec!(de)
+
 @testset "DE speed" begin
-    id = DE.new_catalog(de, "speedtest")
 
     ts = TSeries(2000Y{4}, rand(400))
-    a = Workspace()
+    db = Workspace()
+    a = get!(db, :a, Workspace())
     for i = 1:100_000
         name = Symbol(:x, i)
-        ts[mod1(i,length(ts))] = i
+        ts[mod1(i, length(ts))] = i
         push!(a, name => copy(ts))
     end
+    b = get!(db, :b, Workspace())
+    names = map(i->Symbol(rand('A':'Z', 5)...), 1:400)
+    mvts = MVTSeries(2000Y{4}, names, rand(400, length(names)))
+    for i = 1:1_000  # like writing 400_000 TSeries of length 400
+        name = Symbol(:v, i)
+        mvts[mod1(i, length(mvts))] = i
+        push!(b, name => copy(mvts))
+    end
+
     tm = time()
-    DE.writedb(de, id, a)
+    DE.writedb(test_file, "/speedtest", db)
     tm = time() - tm
     @info "write time: $tm"
     @test tm < 15
-    
+
     tm = time()
-    b = DE.readdb(de, id)
+    ldb = DE.readdb(test_file, "/speedtest")
     tm = time() - tm
     @info "read time: $tm"
     @test tm < 10
 
-    @test @compare(a, b, ignoremissing, nans=true, quiet)
+    @test @compare(db, ldb, ignoremissing, nans = true, quiet)
 
 end
 
