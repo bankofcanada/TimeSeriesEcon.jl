@@ -244,6 +244,25 @@ function de_load_tseries(de, id, tseries)
     ccall((:de_load_tseries, libdaec), Cint, (de_file, obj_id_t, Ptr{tseries_t}), de, id, tseries)
 end
 
+struct mvtseries_t
+    object::object_t
+    eltype::type_t
+    axis1::axis_t
+    axis2::axis_t
+    nbytes::Int64
+    value::Ptr{Cvoid}
+end
+
+const matrix_t = mvtseries_t
+
+function de_store_mvtseries(de, pid, name, type, eltype, axis1_id, axis2_id, nbytes, value, id)
+    ccall((:de_store_mvtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, axis_id_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, axis1_id, axis2_id, nbytes, value, id)
+end
+
+function de_load_mvtseries(de, id, mvtseries)
+    ccall((:de_load_mvtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{mvtseries_t}), de, id, mvtseries)
+end
+
 function de_pack_strings(strvec, length, buffer, bufsize)
     ccall((:de_pack_strings, libdaec), Cint, (Ptr{Ptr{Cchar}}, Int64, Ptr{Cchar}, Ptr{Int64}), strvec, length, buffer, bufsize)
 end
