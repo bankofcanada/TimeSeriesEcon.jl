@@ -14,11 +14,11 @@ rm(test_file * "-journal", force=true)
     de = DE.opendaec(test_file)
 
     # test find_object throws exception or returns missing
-    @test_throws DE.DEError DE.find_object(de, DE.root, "nosuchobject")
-    @test ismissing(DE.find_object(de, DE.root, "nosuchobject", false))
+    @test_throws DE.DEError DE.find_object(de, DE.root_id, "nosuchobject")
+    @test ismissing(DE.find_object(de, DE.root_id, "nosuchobject", false))
 
     # test get_fullpath works
-    @test DE.get_fullpath(de, DE.root) == "/"
+    @test DE.get_fullpath(de, DE.root_id) == "/"
 
     # test writing an un-supported type shows a message, but doesn't throw.
     let UnsupportedType = Val{0}
