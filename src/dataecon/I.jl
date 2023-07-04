@@ -15,6 +15,17 @@ import ..DEFile
 global debug_libdaec = :nodebug
 
 export DEError
+"""
+    struct DEError <: Exception
+        ...
+    end
+
+An exception type thrown by the "libdaec" C library. It contains a numerical
+code and a message.
+
+Note that some errors thrown by the DataEcon module are of other exception
+types. This one is specifically for errors from the C library.
+"""
 struct DEError <: Exception
     rc::Cint
     msg::String
