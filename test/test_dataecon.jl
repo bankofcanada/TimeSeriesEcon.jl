@@ -12,10 +12,26 @@ rm(test_file * "-journal", force=true)
     @test (DE.closedaec!(de); true)
     @test !isopen(de)
     de = DE.opendaec(test_file)
+
+    # test find_object throws exception or returns missing
+    @test_throws DE.DEError DE.find_object(de, DE.root, "nosuchobject")
+    @test ismissing(DE.find_object(de, DE.root, "nosuchobject", false))
+
+    # test get_fullpath works
+    @test DE.get_fullpath(de, DE.root) == "/"
+
+    # test writing an un-supported type shows a message, but doesn't throw.
+    let UnsupportedType = Val{0}
+        @test_logs (:error, r".*Failed to write.*of type.*\..*"i) DE.writedb(de, Workspace(a=UnsupportedType()))
+        @test isempty(DE.readdb(de))
+    end
+    
     @test begin
         id = DE.new_catalog(de, "scalars")
         id == DE.find_fullpath(de, "/scalars")
     end
+    @test isempty(DE.readdb(de, :scalars))
+
 end
 
 @testset "DE scalar" begin
@@ -204,7 +220,7 @@ DE.closedaec!(de)
         push!(a, name => copy(ts))
     end
     b = get!(db, :b, Workspace())
-    names = map(i->Symbol(rand('A':'Z', 5)...), 1:400)
+    names = map(i -> Symbol(rand('A':'Z', 5)...), 1:400)
     mvts = MVTSeries(2000Y{4}, names, rand(400, length(names)))
     for i = 1:100  # like writing 40_000 TSeries of length 400
         name = Symbol(:v, i)
@@ -219,7 +235,7 @@ DE.closedaec!(de)
     if tm > 15
         @warn "write time is larger than expected"
     end
-    
+
     tm = time()
     ldb = DE.readdb(test_file, "/speedtest")
     tm = time() - tm
@@ -235,4 +251,34 @@ end
 # clean up after ourselves
 DE.closedaec!(de)
 rm(test_file, force=true)
+
+@testset "DE show" begin
+    @test_throws DE.DEError DE.opendaec("/this/path/does/not/exist.daec")
+    Core.eval(DE.I, :(debug_libdaec = :debug))
+    @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*in: de_open \(.*\).*"i) begin
+        try
+            DE.opendaec("/this/path/does/not/exist.daec")
+        catch err
+            if err isa DE.DEError
+                @error "$err"
+            else
+                rethrow()
+            end
+        end
+    end
+    Core.eval(DE.I, :(debug_libdaec = :nodebug))
+    @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*"i) begin
+        try
+            DE.opendaec("/this/path/does/not/exist.daec")
+        catch err
+            if err isa DE.DEError
+                @error "$err"
+            else
+                rethrow()
+            end
+        end
+    end
+    @test_logs (:info, r".*DEFile:.*\(closed\).*"i) @info "$de"
+
+end
 

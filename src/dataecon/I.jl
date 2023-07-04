@@ -11,7 +11,8 @@ import ..DEFile
 #############################################################################
 # error handling
 
-global debug_libdaec = :debug
+# global debug_libdaec = :debug
+global debug_libdaec = :nodebug
 
 export DEError
 struct DEError <: Exception
@@ -28,12 +29,12 @@ function DEError()
 end
 
 @inline _de_error!(msg, ::Val{:debug}) = C.de_error_source(msg, sizeof(msg))
-@inline _de_error!(msg, ::Val) = C.de_error(msg, sizeof(msg))
+@inline _de_error!(msg, v::Val) = (@nospecialize(v); C.de_error(msg, sizeof(msg)))
 
 
 # _check() handles results from C library calls
 # return true or false
-_check(::Type{Bool}, rc::Cint) = rc == 0
+# _check(::Type{Bool}, rc::Cint) = rc == 0
 # return true or throw an exception
 _check(rc::Cint) = rc == 0 || throw(DEError())
 

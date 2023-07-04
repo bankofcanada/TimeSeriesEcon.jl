@@ -250,7 +250,7 @@ end
 #############################################################################
 # recursive high-level read
 
-readdb(de::DEFile) = read_data(de, root)
+readdb(de::DEFile) = readdb(de, root)
 readdb(de::DEFile, id::C.obj_id_t) = read_data(de, id)
 readdb(de::DEFile, name::Symbol) = read_data(de, find_object(de, root, string(name)))
 readdb(de::DEFile, catalog::AbstractString) = read_data(de, find_fullpath(de, string(catalog)))
