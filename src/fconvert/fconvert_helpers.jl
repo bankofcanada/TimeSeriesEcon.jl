@@ -290,7 +290,7 @@ end
 
     * `method` - Determines the value to use in the extension. Default is the `:mean`, which will use the mean of the 
         existing values in the given period. The other available option is `:end` which will use the first value when
-        estending the start of a series and the last value when extending the end of a series.
+        extending the start of a series and the last value when extending the end of a series.
 """
 extend_series(F_to::Type{<:Frequency}, ts::TSeries; direction=:both, method=:mean) = extend_series!(F_to, copy(ts), Val(direction); method=method)
 extend_series!(F_to::Type{<:Frequency}, ts::TSeries, direction::Val{:end}; method=:mean) = extend_series!(F_to, ts, direction, Val(method))
