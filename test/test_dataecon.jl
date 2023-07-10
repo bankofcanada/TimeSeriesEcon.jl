@@ -27,7 +27,7 @@ rm(test_file * "-journal", force=true)
         @test_logs (:error, r".*Failed to write.*of type.*\..*"i) DE.writedb(de, Workspace(a=UnsupportedType()))
         @test isempty(DE.readdb(de))
     end
-    
+
     @test begin
         id = DE.new_catalog(de, "scalars")
         id == DE.find_fullpath(de, "/scalars")
@@ -77,8 +77,8 @@ end
         c2=8.0f1 + 3im,
         c3=8.0 + 3im,
         # Date and DateTime
-        cd1 = Dates.now(),
-        cd2 = Dates.today()
+        cd1=Dates.now(),
+        cd2=Dates.today()
     )
 
     pid = DE.find_fullpath(de, "/scalars", false)
@@ -253,8 +253,20 @@ DE.closedaec!(de)
 
 end
 
+# test emptying the File
+@testset "DE empty!" begin
+    DE.opendaec(test_file) do de
+        @test !isempty(DE.readdb(de))
+    end
+    DE.opendaec(test_file) do de
+        @test (empty!(de); true)
+        @test isempty(DE.readdb(de))
+    end
+    @test isempty(DE.readdb(test_file))
+end
+
 # clean up after ourselves
-DE.closedaec!(de)
+DE.closedaec!(de)  # should be closed already, but just in case
 rm(test_file, force=true)
 
 @testset "DE show" begin

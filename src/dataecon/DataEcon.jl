@@ -101,11 +101,11 @@ function closedaec!(de::DEFile)
 end
 
 """
-    truncatedaec(de)
+    Base.empty!(de::DEFile)
 
-Delete all objects in a .daec file. 
+Delete all objects in the given open .daec file. 
 """
-function truncatedaec end
+Base.empty!(de::DEFile) = (I._check(C.de_truncate(de)); de)
 
 #############################################################################
 # objects
