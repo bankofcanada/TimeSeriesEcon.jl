@@ -1,6 +1,8 @@
 # Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
+using Dates
+
 DE = TimeSeriesEcon.DataEcon
 test_file = "test.daec"
 rm(test_file, force=true)
@@ -74,6 +76,9 @@ end
         c1=8 + 3im,
         c2=8.0f1 + 3im,
         c3=8.0 + 3im,
+        # Date and DateTime
+        cd1 = Dates.now(),
+        cd2 = Dates.today()
     )
 
     pid = DE.find_fullpath(de, "/scalars", false)

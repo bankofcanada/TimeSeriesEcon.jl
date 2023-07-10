@@ -4,6 +4,8 @@
 # This module contains functions that are internal
 module I
 
+using Dates
+
 using ..C
 using ..TimeSeriesEcon
 import ..DEFile
@@ -59,6 +61,8 @@ _to_de_scalar_val(value::Integer) = value
 _to_de_scalar_val(value::Real) = float(value)
 _to_de_scalar_val(value::Complex) = float(value)
 _to_de_scalar_val(value::StrOrSym) = string(value)
+_to_de_scalar_val(value::Dates.Date) = Dates.datetime2unix(convert(DateTime, value))
+_to_de_scalar_val(value::Dates.DateTime) = Dates.datetime2unix(value)
 
 _to_de_scalar_type(val) = _to_de_scalar_type(typeof(val))
 _to_de_scalar_type(::Type{T}) where {T} = error("Can't handle type $T")
@@ -155,6 +159,8 @@ end
 
 _apply_jtype(::Type{Symbol}, value) = Symbol(value)
 _apply_jtype(::Type{T}, value) where {T} = convert(T, value)
+_apply_jtype(::Type{Dates.Date}, value) = convert(Dates.Date, Dates.unix2datetime(value))
+_apply_jtype(::Type{Dates.DateTime}, value) = Dates.unix2datetime(value)
 
 
 #############################################################################
@@ -388,7 +394,7 @@ import ..store_tseries
 import ..store_mvtseries
 import ..writedb
 
-const StoreAsScalarType = Union{Symbol,AbstractString,Number}
+const StoreAsScalarType = Union{Symbol,AbstractString,Number,Dates.Date,Dates.DateTime}
 
 _write_data(::DEFile, ::C.obj_id_t, name::StrOrSym, value) = error("Cannot determine the storage class of $name::$(typeof(value))")
 _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::StoreAsScalarType) = store_scalar(de, pid, string(name), value)

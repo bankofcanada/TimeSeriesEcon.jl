@@ -3,6 +3,8 @@
 
 module DataEcon
 
+using Dates
+
 export DEError
 export DEFile, opendaec, closedaec!, truncatedaec
 export root_id, find_fullpath, find_object, delete_object
