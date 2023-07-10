@@ -278,8 +278,8 @@ The object can be specified by its id, or by its full name. The full name can be
 given as a fullpath or as a parent and a name separately.  IF given separately, 
 the parent can be specified as an id or fullpath. 
 
-It is an error, and `load_scalar` throws an exception, if the object doesn't
-exist, or if the object's class is not `class_scalar`.
+Throws an exception if the object doesn't exist, or if the object's class is not
+`class_scalar`.
 
 The return value is a Julia object of an appropriate type.
 """
@@ -356,8 +356,8 @@ The object can be specified by its id, or by its full name. The full name can be
 given as a fullpath or as a parent and a name separately. IF given separately,
 the parent can be specified as an id or fullpath.
 
-It is an error, and `load_tseries` throws an exception, if the object doesn't
-exist, or if the object's class is not `class_tseries`.
+Throws an exception if the object doesn't exist, or if the object's class is not
+`class_tseries`.
 
 The return value is a Julia object of an appropriate type.
 """
@@ -378,8 +378,8 @@ The object can be specified by its id, or by its full name. The full name can be
 given as a fullpath or as a parent and a name separately. IF given separately,
 the parent can be specified as an id or fullpath.
 
-It is an error, and `load_mvtseries` throws an exception, if the object doesn't
-exist, or if the object's class is not `class_mvtseries`.
+Throws an exception if the object doesn't exist, or if the object's class is not
+`class_mvtseries`.
 
 The return value is a Julia object of an appropriate type.
 """
@@ -521,12 +521,12 @@ The object can be specified by its id, or by its full name. The full name can be
 given as a fullpath or as a parent and a name separately. If given separately,
 the parent can be specified as an id or fullpath.
 
-It is an error, and `read_data` throws an exception, if the object doesn't
-exist. Otherwise, if the object exists, `read_data` examines the class of the
-object and calls one of [`load_scalar`](@ref), [`load_tseries`](@ref), or
-[`load_mvtseries`](@ref) accordingly. That is unless the object has class
-`class_catalog`, then `read_data` returns a `Workspace` containing 
-the objects in that catalog loaded by recursive calls to `read_data`.
+Throws an exception if the object doesn't exist. Otherwise, if the object
+exists, `read_data` examines the class of the object and calls one of
+[`load_scalar`](@ref), [`load_tseries`](@ref), or [`load_mvtseries`](@ref)
+accordingly. That is unless the object has class `class_catalog`, then
+`read_data` returns a `Workspace` containing the objects in that catalog loaded
+by recursive calls to `read_data`.
 
 The return value is a Julia object of an appropriate type.
 """
