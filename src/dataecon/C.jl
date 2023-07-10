@@ -47,6 +47,10 @@ function de_close(de)
     ccall((:de_close, libdaec), Cint, (de_file,), de)
 end
 
+function de_truncate(de)
+    ccall((:de_truncate, libdaec), Cint, (de_file,), de)
+end
+
 @cenum class_t::Int32 begin
     class_catalog = 0
     class_scalar = 1
@@ -84,13 +88,15 @@ end
     freq_bdaily = 5
     freq_monthly = 8
     freq_weekly = 16
-    freq_weekly_sun = 16
+    freq_weekly_sun0 = 16
     freq_weekly_mon = 17
     freq_weekly_tue = 18
     freq_weekly_wed = 19
     freq_weekly_thu = 20
     freq_weekly_fri = 21
     freq_weekly_sat = 22
+    freq_weekly_sun7 = 23
+    freq_weekly_sun = 23
     freq_quarterly = 32
     freq_quarterly_jan = 33
     freq_quarterly_feb = 34
