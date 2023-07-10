@@ -161,7 +161,7 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         top < i < bot && continue
 
         sk = sprint(print, k, context=io, sizehint=0)
-        if v isa Union{AbstractString,Symbol,AbstractRange}
+        if v isa Union{AbstractString,Symbol,AbstractRange,Dates.Date,Dates.DateTime}
             # It's a string or a Symbol
             sv = sprint(show, v, context=io, sizehint=0)
         elseif typeof(v) == eltype(v) || typeof(v) isa Type{<:DataType}
