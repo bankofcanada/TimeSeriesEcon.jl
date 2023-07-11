@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 
@@ -118,5 +118,7 @@ julia> q
     rng = rangeof(x)
     return drop > 0 ? (first(rng)+drop:last(rng)) : (first(rng):last(rng)+drop)
 end
+
+include("dataecon/DataEcon.jl")
 
 end

@@ -14,3 +14,4 @@ include("test_serialize.jl")
 include("test_various.jl")
 include("test_22.jl")
 
+include("test_dataecon.jl")
