@@ -619,6 +619,9 @@ end
     end
 end
 
+macro _addone(expr)
+    return QuoteNode(Expr(:call, :+, 1, expr))
+end
 @testset "recursive" begin
     ts = TSeries(1U, zeros(0))
     ts[1U] = ts[2U] = 1.0
@@ -643,6 +646,10 @@ end
     @rec firstdate(s)+1:2022Q3 s[t+1] = 2.0 * s[t] + s[t-1]
     @test rangeof(s) == 2020Q1:2022Q4
     @test values(s) == Float64[0,1,2,5,12,29,70,169,408,985,2378,5741]
+    
+        tt = TSeries(0U, ones(4))
+        @rec 1U:10U tt[t] = @_addone tt[t-1]
+        @test tt == TSeries(0U, 1:11)
 end
 
 @testset "various" begin

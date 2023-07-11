@@ -49,6 +49,16 @@ macro rec(arg_rng, arg_eqn)
     if !isa(ind, Symbol)
         ind = :t
     end
+    arg_eqn = MacroTools.prewalk(arg_eqn) do e
+        if MacroTools.isexpr(e, :macrocall)
+            try
+                return Core.eval(__module__, e)
+            catch
+                return e
+            end
+        end
+        return e
+    end
     return esc(quote
         for $(ind) in $(rng)
             $(arg_eqn)
