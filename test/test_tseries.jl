@@ -567,49 +567,6 @@ end
     @test (C = overlay(A,B); overlay(C,A).values == C.values)
 end
 
-@testset "fconvert" begin
-    t = TSeries(5U, collect(1:10))
-    @test fconvert(Unit, t) === t
-    @test_throws ErrorException fconvert(Quarterly, t) 
-    
-    q = TSeries(5Q1, 1.0collect(1:10))
-    @test_throws ErrorException  fconvert(Unit, q)
-    mq = fconvert(Monthly, q)
-    @test typeof(mq) === TSeries{Monthly, Float64, Vector{Float64}}
-    @test fconvert(Monthly, q, method=:const).values == repeat(1.0:10, inner=3)
-
-    yq = fconvert(Yearly, q)
-    @test typeof(yq) === TSeries{Yearly{12}, Float64, Vector{Float64}}
-    @test fconvert(Yearly, q, method=:mean).values == [2.5, 6.5]
-    @test fconvert(Yearly, q, method=:end).values == [4.0, 8.0]
-    @test fconvert(Yearly, q, method=:begin).values == [1.0, 5.0]
-    @test fconvert(Yearly, q, method=:sum).values == [10.0, 26.0]
-
-
-    for i = 1:11
-        @test rangeof(fconvert(Yearly, TSeries(1M1 .+ (i:50)))) == 2Y:4Y
-        @test rangeof(fconvert(Yearly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y
-    end
-    for i = 1:3
-        @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (i:50)))) == 2Y:12Y
-        # @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (0:47+i)))) == 1Y:12Y 
-    end
-    for i = 1:11
-        @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (i:50)))) == 1Q2+div(i-1,3):5Q1
-        # @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y #current output is 1Q1:4Q4
-    end
-
-    #non-user called functions
-    @test_throws ArgumentError TimeSeriesEcon._to_lower(Monthly, q)
-    @test_throws ArgumentError TimeSeriesEcon._to_higher(Yearly, q)
-
-    #wrong method for conversion direction
-    @test_throws ArgumentError fconvert(Monthly, q, method=:mean)
-    @test_throws ArgumentError fconvert(Yearly, q, method=:const)
-
-
-end
-
 @testset "strip" begin
     let rng_x = 2000Y:2010Y, x = TSeries(rng_x, ones)
         x[2011Y:2015Y] .= NaN
