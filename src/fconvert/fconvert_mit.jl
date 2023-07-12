@@ -241,7 +241,6 @@ function _fconvert_using_dates_parts(F_to::Type{<:Union{<:YPFrequency,<:Weekly}}
                     holidays_map = getoption(:bdaily_holidays_map)
                 end
                 pad_start_date = first(range_from) -1
-                println(holidays_map[pad_start_date], ", ", holidays_map[pad_start_date] == 0)
                 while holidays_map[pad_start_date] == 0
                     pad_start_date = pad_start_date - 1
                 end
