@@ -516,12 +516,12 @@ Example:
     week_of_christmas = w"2022-12-25"
     week_overlapping_with_february = w"2022-02-01:2022-02-28"
 """
-macro w_str(d)
+macro w_str(d::String, ed::Integer=7)
     if findfirst(":", d) !== nothing
         dsplit = split(d, ":")
-        return weekly(Dates.Date(dsplit[1])):weekly(Dates.Date(dsplit[2]))
+        return weekly(Dates.Date(dsplit[1]), ed):weekly(Dates.Date(dsplit[2]), ed)
     end
-    return weekly(d)
+    return weekly(d, ed)
 end
 # -------------------------
 # ppy: period per year
@@ -547,10 +547,10 @@ ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year
 #-------------------------
 # date conversion
 """
-Dates.Date(m::MIT, values_base::Symbol=:end)
+Dates.Date(m::MIT, ref::Symbol=:end)
     
 Returns a Date object representing the last day in the provided MIT.
-Returns the first day in the provided MIT when `values_base == true`.
+Returns the first day in the provided MIT when `ref == true`.
 """
 Dates.Date(m::MIT{Daily}, values_base::Symbol=:end) = _d0 + Day(Int(m))
 Dates.Date(m::MIT{BDaily}, values_base::Symbol=:end) = _d0 + Day(Int(m) + 2 * floor((Int(m) - 1) / 5))
@@ -560,29 +560,29 @@ function Dates.Date(m::MIT{Weekly{end_day}}, values_base::Symbol=:end) where {en
     end
     return _d0 + Day(Int(m) * 7) - Day(7 - end_day)
 end
-function Dates.Date(m::MIT{Monthly}, values_base::Symbol=:end)
+function Dates.Date(m::MIT{Monthly}, ref::Symbol=:end)
     year, month = divrem(Int(m), 12)
-    if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(month)
+    if ref == :begin
+        return Dates.Date("$year-01-01") + Month(month)    
     end
     return Dates.Date("$year-01-01") + Month(month + 1) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly{end_month}}, values_base::Symbol=:end) where {end_month}
+function Dates.Date(m::MIT{Quarterly{end_month}}, ref::Symbol=:end) where end_month 
     year, quarter = divrem(Int(m), 4)
-    if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(quarter * 3 - (3 - end_month))
+    if ref == :begin
+        return Dates.Date("$year-01-01") + Month(quarter * 3 - (3 - end_month))    
     end
     return Dates.Date("$year-01-01") + Month((quarter + 1) * 3 - (3 - end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{HalfYearly{end_month}}, values_base::Symbol=:end) where {end_month}
+function Dates.Date(m::MIT{HalfYearly{end_month}}, ref::Symbol=:end) where end_month 
     year, half = divrem(Int(m), 2)
-    if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(half * 6 - (6 - end_month))
+    if ref == :begin
+        return Dates.Date("$year-01-01") + Month(half * 6 - (6 - end_month))    
     end
     return Dates.Date("$year-01-01") + Month((half + 1) * 6 - (6 - end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{Yearly{end_month}}, values_base::Symbol=:end) where {end_month}
-    if values_base == :begin
+function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where end_month 
+    if ref == :begin
         return Dates.Date("$(Int(m))-01-01") - Month(12 - end_month)
     end
     return Dates.Date("$(Int(m) + 1)-01-01") - Month(12 - end_month) - Day(1)
@@ -727,6 +727,7 @@ Base.:(<=)(l::Union{MIT,Duration}, r::Union{MIT,Duration}) = (l < r) || (l == r)
 
 # addition of two MIT is not allowed
 Base.:(+)(::MIT, ::MIT) = throw(ArgumentError("Illegal addition of two `MIT` values."))
+Base.:(+)(::Duration, ::MIT) = throw(ArgumentError("Illegal addition of `Duration` and `MIT`. Try `MIT` + `Duration`"))
 # addition of two Duration is valid only if they are of the same frequency
 Base.:(+)(l::Duration, r::Duration) = mixed_freq_error(l, r)
 Base.:(+)(l::Duration{F}, r::Duration{F}) where {F<:Frequency} = Duration{F}(Int(l) + Int(r))

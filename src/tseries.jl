@@ -268,21 +268,24 @@ function Base.show(io::IO, t::TSeries)
     print(io, ":")
     limit = get(io, :limit, true)
     nval = length(t.values)
+    mitpad = 2 + maximum(rangeof(t)) do mit
+        length(string(mit))
+    end
     from = t.firstdate
     nrow, ncol = displaysize(io)
     if limit && nval > nrow - 5
         top = div(nrow - 5, 2)
         bot = nval - nrow + 6 + top
         for i = 1:top
-            print(io, "\n", lpad(from + (i - 1), 8), " : ", t.values[i])
+            print(io, "\n", lpad(from + (i - 1), mitpad), " : ", t.values[i])
         end
         print(io, "\n    ⋮")
         for i = bot:nval
-            print(io, "\n", lpad(from + (i - 1), 8), " : ", t.values[i])
+            print(io, "\n", lpad(from + (i - 1), mitpad), " : ", t.values[i])
         end
     else
         for i = 1:nval
-            print(io, "\n", lpad(from + (i - 1), 8), " : ", t.values[i])
+            print(io, "\n", lpad(from + (i - 1), mitpad), " : ", t.values[i])
         end
     end
 end

@@ -58,7 +58,11 @@ Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] 
 MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
-MacroTools.@forward Workspace._c (Base.eltype,)
+
+function Base.eltype(w::Workspace)
+    ET = isempty(w) ? Any : try Base.promote_typeof(values(w)...) catch; Any; end
+    return Pair{Symbol, ET}
+end
 
 Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
 Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
@@ -123,7 +127,8 @@ function Base.summary(io::IO, w::Workspace)
     if isempty(w)
         return print(io, "Empty Workspace")
     end
-    return print(io, "Workspace with ", length(w), "-variables")
+    nvar = length(w)
+    return print(io, "Workspace with ", nvar, " variable", nvar == 1 ? "" : "s")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
@@ -156,10 +161,10 @@ function Base.show(io::IO, ::MIME"text/plain", w::Workspace)
         top < i < bot && continue
 
         sk = sprint(print, k, context=io, sizehint=0)
-        if v isa Union{AbstractString,Symbol,AbstractRange}
+        if v isa Union{AbstractString,Symbol,AbstractRange,Dates.Date,Dates.DateTime}
             # It's a string or a Symbol
             sv = sprint(show, v, context=io, sizehint=0)
-        elseif typeof(v) == eltype(v)
+        elseif typeof(v) == eltype(v) || typeof(v) isa Type{<:DataType}
             #  it's a scalar value
             sv = sprint(print, v, context=io, sizehint=0)
         else

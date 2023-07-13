@@ -60,6 +60,28 @@
         @test length(work1) == 1
     end
 
+    # test show of scalars and data types - should show actual values, instead of summary
+    let io = IOBuffer()
+        w = Workspace(; a=1, b="hello", c = Workspace(), d=Workspace(; t = 4.5), e = Workspace(;a=0.5, b=0.6))
+        w1 = map(typeof, w)
+        show(io, MIME("text/plain"), w)
+        println(io)
+        show(io, MIME("text/plain"), w1)
+        println(io)
+        seekstart(io)
+        text = read(io, String)
+        @test occursin("a ⇒ 1\n", text)
+        @test occursin("b ⇒ \"hello\"\n", text)
+        @test occursin("c ⇒ Empty Workspace\n", text)
+        @test occursin("d ⇒ Workspace with 1 variable\n", text)
+        @test occursin("e ⇒ Workspace with 2 variables\n", text)
+        @test occursin("a ⇒ Int64", text)
+        @test occursin("b ⇒ String", text)
+        @test occursin("c ⇒ Workspace", text)
+        @test occursin("d ⇒ Workspace", text)
+        @test occursin("e ⇒ Workspace", text)
+    end
+
     # stripping workspaces
     let work1 = Workspace()
         work1.a = 1
@@ -231,10 +253,12 @@ end
     @test (copyto!(dest, src); compare(src, dest, quiet=true))
     # dest has shorter range
     dest = MVTSeries(2020Q1 .+ (0:11), (:a, :b, :c))
-    @test (copyto!(dest, src); compare(src, dest, quiet=true))
+    @test (copyto!(dest, src); !compare(src, dest, quiet=true))
+    @test compare(src, dest, quiet=true, ignoremissing=true)
     # dest has longer range (not that compare uses the common range)
     dest = MVTSeries(2020Q1 .+ (0:40), (:a, :b, :c))
-    @test (copyto!(dest, src; range=2020Q1:2020Q1+19); compare(src, dest, quiet=true))
+    @test (copyto!(dest, src; range=2020Q1:2020Q1+19); compare(src, dest, quiet=true, ignoremissing=true))
+    @test !compare(src, dest, quiet=true)
     # dest is missing some variables 
     dest = MVTSeries(2020Q1 .+ (0:19), (:a, :c))
     @test (copyto!(dest, src); !compare(src, dest, quiet=true))
