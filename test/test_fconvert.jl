@@ -71,7 +71,9 @@ end
     @test typeof(yq) === TSeries{Yearly{12},Float64,Vector{Float64}}
     @test fconvert(Yearly, q, method=:mean).values == [2.5, 6.5]
     @test fconvert(Yearly, q, method=:point, ref=:end).values == [4.0, 8.0]
+    @test fconvert(Yearly, q, method=:end).values == [4.0, 8.0]
     @test fconvert(Yearly, q, method=:point, ref=:begin).values == [1.0, 5.0, 9.0]
+    @test fconvert(Yearly, q, method=:begin).values == [1.0, 5.0, 9.0]
     @test fconvert(Yearly, q, method=:sum).values == [10.0, 26.0]
 
     h = TSeries(5H1, 1.0*collect(1:10))
@@ -79,7 +81,9 @@ end
     @test typeof(yh) == TSeries{Yearly{12},Float64,Vector{Float64}}
     @test fconvert(Yearly, h, method=:mean).values == [1.5, 3.5, 5.5, 7.5, 9.5]
     @test fconvert(Yearly, h, method=:point, ref=:end).values == [2,4,6,8,10]
+    @test fconvert(Yearly, h, method=:end).values == [2,4,6,8,10]
     @test fconvert(Yearly, h, method=:point, ref=:begin).values == [1,3,5,7,9]
+    @test fconvert(Yearly, h, method=:begin).values == [1,3,5,7,9]
     @test fconvert(Yearly, h, method=:sum).values == [3,7,11,15,19]
 
     for i = 1:11
@@ -325,9 +329,11 @@ end
     y9_begin = fconvert(Yearly, q9, method=:point, ref=:begin)
     @test rangeof(y9_begin) == 2022Y:2024Y
     @test y9_begin.values == [1,5,9]
+    @test  fconvert(Yearly, q9, method=:begin) == y9_begin
     y9_end = fconvert(Yearly, q9, method=:point, ref=:end)
     @test rangeof(y9_end) == 2022Y:2023Y
     @test y9_end.values == [4,8]
+    @test  fconvert(Yearly, q9, method=:end) == y9_end
     y9_begin_m8 = fconvert(Yearly{8}, q9, method=:point, ref=:begin)
     @test rangeof(y9_begin_m8) == MIT{Yearly{8}}(2023):MIT{Yearly{8}}(2024)
     @test y9_begin_m8.values == [3,7]
@@ -388,9 +394,11 @@ end
     qs2 = fconvert(Quarterly, qs1, method=:point, ref=:end)
     @test rangeof(qs2) == 2022Q2:2022Q4
     @test values(qs2) == [2.0, 3.0, 4.0]
+    @test fconvert(Quarterly, qs1, method=:end) == qs2
     qs3 = fconvert(Quarterly, qs1, method=:point, ref=:begin)
     @test rangeof(qs3) == 2022Q2:2022Q4
     @test values(qs3) == [2.0, 3.0, 4.0]
+    @test fconvert(Quarterly, qs1, method=:begin) == qs3
 end
 
 @testset "fconvert, Weekly to lower" begin
@@ -424,6 +432,7 @@ end
     @test rangeof(r2) == 1M1:1M4
     r2_range = fconvert(Monthly, rangeof(t1), trim=:end)
     @test r2_range == 1M1:1M4
+    @test fconvert(Monthly, fconvert(Daily, t1, method=:linear), method=:end) == r2
     # r2_MIT_start = fconvert(Monthly, first(rangeof(t1)), ref=:begin, round_to=:current)
     # r2_MIT_end = fconvert(Monthly, last(rangeof(t1)), ref=:end, round_to=:previous)
     # @test r2_MIT_start:r2_MIT_end == r2_range
@@ -434,6 +443,7 @@ end
     @test rangeof(r3) == 1M1:1M5
     r3_range = fconvert(Monthly, rangeof(t1), trim=:begin)
     @test r3_range == 1M1:1M5
+    @test fconvert(Monthly, fconvert(Daily, t1, method=:linear, ref=:begin), method=:begin) == r3
     # r3_MIT_start = fconvert(Monthly, first(rangeof(t1)), ref=:begin, round_to=:next)
     # r3_MIT_end = fconvert(Monthly, last(rangeof(t1)), round_to=:current)
     # @test r3_MIT_start:r3_MIT_end == r3_range
@@ -455,11 +465,13 @@ end
     r6 = fconvert(Monthly, t1, method=:point, ref=:begin)
     @test isapprox(r6.values, [1.00, 5.00, 9.00, 13.00, 18.00], atol=1e-2)
     @test rangeof(r6) == 1M1:1M5
+    @test fconvert(Monthly, t1, method=:begin) == r6
 
     """repo CONVERT(WS1, MONTHLY, DISCRETE, END)"""
     r7 = fconvert(Monthly, t1, method=:point, ref=:end)
     @test isapprox(r7.values, [4.00, 8.00, 12.00, 17.00], atol=1e-2)
     @test rangeof(r7) == 1M1:1M4
+    @test fconvert(Monthly, t1, method=:end) == r7
 
     """repo CONVERT(WS1, MONTHLY, DISCRETE, SUMMED)"""
     r8 = fconvert(Monthly, t1, method=:sum)
@@ -484,6 +496,7 @@ end
     @test rangeof(r10) == 1M1:1M4
     r10_range = fconvert(Monthly, rangeof(t2), trim=:end)
     @test r10_range == 1M1:1M4
+    @test fconvert(Monthly, fconvert(Daily, t2, method=:linear), method=:end) == r10
     # r10_MIT_start = fconvert(Monthly, first(rangeof(t2)), ref=:begin, round_to=:current)
     # r10_MIT_end = fconvert(Monthly, last(rangeof(t2)), ref=:end, round_to=:previous)
     # @test r10_MIT_start:r10_MIT_end == r10_range
@@ -494,6 +507,7 @@ end
     @test rangeof(r11) == 1M2:1M5
     r11_range = fconvert(Monthly, rangeof(t2), trim=:begin)
     @test r11_range == 1M2:1M5
+    @test fconvert(Monthly, fconvert(Daily, t2, method=:linear, ref=:begin), method=:begin) == r11
     # r11_MIT_start = fconvert(Monthly, first(rangeof(t2)), ref=:begin, round_to=:next)
     # r11_MIT_end = fconvert(Monthly, last(rangeof(t2)), round_to=:current)
     # @test r11_MIT_start:r11_MIT_end == r11_range
@@ -515,11 +529,13 @@ end
     r14 = fconvert(Monthly, t2, method=:point, ref=:end)
     @test isapprox(r14.values, [3.00, 7.00, 12.00, 16.00], atol=1e-2)
     @test rangeof(r14) == 1M1:1M4
+    @test fconvert(Monthly, t2, method=:end) == r14
 
     """repo CONVERT(WS2, MONTHLY, DISCRETE, BEGIN)"""
     r15 = fconvert(Monthly, t2, method=:point, ref=:begin)
     @test isapprox(r15.values, [4.00, 8.00, 13.00, 17.00], atol=1e-2)
     @test rangeof(r15) == 1M2:1M5
+    @test fconvert(Monthly, t2, method=:begin) == r15
 
     """repo CONVERT(WS2, MONTHLY, DISCRETE, SUMMED)"""
     r16 = fconvert(Monthly, t2, method=:sum)
@@ -1364,6 +1380,7 @@ end
     r2 = fconvert(Weekly, t1, method=:point, ref=:end)
     @test r2.values == collect(7:7:98)
     @test rangeof(r2) == 1:14
+    @test fconvert(Weekly, t1, method=:end) == r2
     r2_range = fconvert(Weekly, rangeof(t1), trim=:end)
     @test r2_range == 1:14
     # r2_MIT_start = fconvert(Weekly, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -1373,6 +1390,7 @@ end
     r3 = fconvert(Weekly, t1, method=:point, ref=:begin)
     @test r3.values == collect(1:7:100)
     @test rangeof(r3) == 1:15
+    @test fconvert(Weekly, t1, method=:begin) == r3
     r3_range = fconvert(Weekly, rangeof(t1), trim=:begin)
     @test r3_range == 1:15
     # r3_MIT_start = fconvert(Weekly, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -1395,6 +1413,7 @@ end
     r6 = fconvert(Weekly{4}, t1, method=:point, ref=:end)
     @test r6.values == collect(4:7:95)
     @test rangeof(r6) == 1:14
+    @test fconvert(Weekly{4}, t1, method=:end) == r6
     r6_range = fconvert(Weekly{4}, rangeof(t1), trim=:end)
     @test r6_range == 1:14
     # r6_MIT_start = fconvert(Weekly{4}, first(rangeof(t1)), ref=:begin, round_to=:current)
@@ -1404,6 +1423,7 @@ end
     r7 = fconvert(Weekly{4}, t1, method=:point, ref=:begin)
     @test r7.values == collect(5:7:96)
     @test rangeof(r7) == 2:15
+    @test fconvert(Weekly{4}, t1, method=:begin) == r7
     r7_range = fconvert(Weekly{4}, rangeof(t1), trim=:begin)
     @test r7_range == 2:15
     # r7_MIT_start = fconvert(Weekly{4}, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -1431,6 +1451,7 @@ end
     r2 = fconvert(Monthly, t1, method=:point, ref=:end)
     @test r2.values == [31, 31 + 28, 31 + 28 + 31]
     @test rangeof(r2) == 1M1:1M3
+    @test fconvert(Monthly, t1, method=:end) == r2
     r2_range = fconvert(Monthly, rangeof(t1), trim=:end)
     @test r2_range == 1M1:1M3
     # r2_MIT_start = fconvert(Monthly, first(rangeof(t1)), ref=:begin, round_to=:current)
@@ -1440,6 +1461,7 @@ end
     r3 = fconvert(Monthly, t1, method=:point, ref=:begin)
     @test r3.values == [1, 1 + 31, 1 + 31 + 28, 1 + 31 + 28 + 31]
     @test rangeof(r3) == 1M1:1M4
+    @test fconvert(Monthly, t1, method=:begin) == r3
     r3_range = fconvert(Monthly, rangeof(t1), trim=:begin)
     @test r3_range == 1M1:1M4
     # r3_MIT_start = fconvert(Monthly, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -1464,6 +1486,7 @@ end
     r6 = fconvert(Monthly, t2, method=:point, ref=:end)
     @test r6.values == [21, 21 + 31, 21 + 31 + 30]
     @test rangeof(r6) == 1M4:1M6
+    @test fconvert(Monthly, t2, method=:end) == r6
     r6_range = fconvert(Monthly, rangeof(t2), trim=:end)
     @test r6_range == 1M4:1M6
     # r6_MIT_start = fconvert(Monthly, first(rangeof(t2)), ref=:begin, round_to=:current)
@@ -1473,6 +1496,7 @@ end
     r7 = fconvert(Monthly, t2, method=:point, ref=:begin)
     @test r7.values == [22, 22 + 31, 22 + 31 + 30]
     @test rangeof(r7) == 1M5:1M7
+    @test fconvert(Monthly, t2, method=:begin) == r7
     r7_range = fconvert(Monthly, rangeof(t2), trim=:begin)
     @test r7_range == 1M5:1M7
     # r7_MIT_start = fconvert(Monthly, first(rangeof(t2)), ref=:begin, round_to=:next)
@@ -1500,6 +1524,7 @@ end
     r2 = fconvert(Quarterly, t1, method=:point, ref=:end)
     @test r2.values == [90, 181, 273, 365]
     @test rangeof(r2) == 1Q1:1Q4
+    @test fconvert(Quarterly, t1, method=:end) == r2
     r2_range = fconvert(Quarterly, rangeof(t1), trim=:end)
     @test r2_range == 1Q1:1Q4
     # r2_MIT_start = fconvert(Quarterly, first(rangeof(t1)), ref=:begin, round_to=:current)
@@ -1509,6 +1534,7 @@ end
     r3 = fconvert(Quarterly, t1, method=:point, ref=:begin)
     @test r3.values == [1, 91, 182, 274, 366]
     @test rangeof(r3) == 1Q1:2Q1
+    @test fconvert(Quarterly, t1, method=:begin) == r3
     r3_range = fconvert(Quarterly, rangeof(t1), trim=:begin)
     @test r3_range == 1Q1:2Q1
     # r3_MIT_start = fconvert(Quarterly, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -1531,6 +1557,7 @@ end
     r6 = fconvert(Quarterly{1}, t1, method=:point, ref=:end)
     @test r6.values == [31, 120, 212, 304, 396]
     @test rangeof(r6) == MIT{Quarterly{1}}(4):MIT{Quarterly{1}}(8)
+    @test fconvert(Quarterly{1}, t1, method=:end) == r6
     r6_range = fconvert(Quarterly{1}, rangeof(t1), trim=:end)
     @test r6_range == MIT{Quarterly{1}}(4):MIT{Quarterly{1}}(8)
     # r6_MIT_start = fconvert(Quarterly{1}, first(rangeof(t1)), ref=:begin, round_to=:current)
@@ -1540,6 +1567,7 @@ end
     r7 = fconvert(Quarterly{1}, t1, method=:point, ref=:begin)
     @test r7.values == [32, 121, 213, 305, 397]
     @test rangeof(r7) == MIT{Quarterly{1}}(5):MIT{Quarterly{1}}(9)
+    @test fconvert(Quarterly{1}, t1, method=:begin) == r7
     r7_range = fconvert(Quarterly{1}, rangeof(t1), trim=:begin)
     @test r7_range == MIT{Quarterly{1}}(5):MIT{Quarterly{1}}(9)
     # r7_MIT_start = fconvert(Quarterly{1}, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -1567,6 +1595,7 @@ end
     r2 = fconvert(Yearly, t1, method=:point, ref=:end)
     @test r2.values == [365, 2 * 365, 3 * 365, 4 * 365 + 1, 5 * 365 + 1]
     @test rangeof(r2) == 1Y:5Y
+    @test fconvert(Yearly, t1, method=:end) == r2
     r2_range = fconvert(Yearly, rangeof(t1), trim=:end)
     @test r2_range == 1Y:5Y
     # r2_MIT_start = fconvert(Yearly, first(rangeof(t1)), ref=:begin, round_to=:current)
@@ -1577,6 +1606,7 @@ end
     r3 = fconvert(Yearly, t1, method=:point, ref=:begin)
     @test r3.values == [1, 365 + 1, 2 * 365 + 1, 3 * 365 + 1, 4 * 365 + 2, 5 * 365 + 2]
     @test rangeof(r3) == 1Y:6Y
+    @test fconvert(Yearly, t1, method=:begin) == r3
     r3_range = fconvert(Yearly, rangeof(t1), trim=:begin)
     @test r3_range == 1Y:6Y
     # r3_MIT_start = fconvert(Yearly, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -1599,6 +1629,7 @@ end
     r6 = fconvert(Yearly{8}, t1, method=:point, ref=:end)
     @test r6.values == [243, 1 * 365 + 243, 2 * 365 + 243, 3 * 365 + 243 + 1, 4 * 365 + 243 + 1]
     @test rangeof(r6) == MIT{Yearly{8}}(1):MIT{Yearly{8}}(5)
+    @test fconvert(Yearly{8}, t1, method=:end) == r6
     r6_range = fconvert(Yearly{8}, rangeof(t1), trim=:end)
     @test r6_range == MIT{Yearly{8}}(1):MIT{Yearly{8}}(5)
     # r6_MIT_start = fconvert(Yearly{8}, first(rangeof(t1)), ref=:begin, round_to=:current)
@@ -1608,6 +1639,7 @@ end
     r7 = fconvert(Yearly{8}, t1, method=:point, ref=:begin)
     @test r7.values == [244, 1 * 365 + 244, 2 * 365 + 244, 3 * 365 + 244 + 1, 4 * 365 + 244 + 1]
     @test rangeof(r7) == MIT{Yearly{8}}(2):MIT{Yearly{8}}(6)
+    @test fconvert(Yearly{8}, t1, method=:begin) == r7
     r7_range = fconvert(Yearly{8}, rangeof(t1), trim=:begin)
     @test r7_range == MIT{Yearly{8}}(2):MIT{Yearly{8}}(6)
     # r7_MIT_start = fconvert(Yearly{8}, first(rangeof(t1)), ref=:begin, round_to=:next)
@@ -2067,7 +2099,7 @@ end
             @test length(t_to.values) > 0
             # println(F_from, ", ", F_to)
             if F_to <= F_from
-                for method in (:mean, :sum, :point, :min, :max)
+                for method in (:mean, :sum, :point, :min, :max, :begin, :end)
                     for ref in (:begin, :end)
                         # @show method, ref
                         t_to_sub = @suppress fconvert(F_to, t_from, method=method, ref=ref)
