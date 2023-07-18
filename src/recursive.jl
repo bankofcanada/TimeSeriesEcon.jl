@@ -59,10 +59,10 @@ macro rec(arg_rng, arg_eqn)
         end
         return e
     end
-    return esc(quote
-        for $(ind) in $(rng)
-            $(arg_eqn)
-        end
-    end)
+    # for loop with empty body
+    ret = :(for $(ind) in $(rng) end)  
+    # replace body with arg_eqn, keeping the original source line
+    ret.args[end] = Expr(:block, __source__, arg_eqn)
+    return esc(ret)
 end
 
