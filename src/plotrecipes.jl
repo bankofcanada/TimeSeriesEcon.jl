@@ -41,7 +41,6 @@ end
     @assert y isa TSeries
     @assert z isa Nothing
     @assert frequencyof(x) == frequencyof(y)
-    # @info "Plotting TSeries"
     mit_loc = get(plotattributes, :mit_loc, :left)
     rng = get(plotattributes, :trange, x)
     rng = intersect(rng, rangeof(y))
@@ -49,6 +48,8 @@ end
     x := Float64.(rng) .+ mit_offset(Val(mit_loc), frequencyof(rng))
     if frequencyof(x) <: YPFrequency
         xformatter --> mit_formatter(Val(mit_loc), frequencyof(rng))
+    elseif frequencyof(x) <: Union{BDaily,Daily,<:Weekly}
+        x := [Date(MIT{frequencyof(x)}(Int64(i))) for i in rng]
     end
     seriestype := :path
 end
