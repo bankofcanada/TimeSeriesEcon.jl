@@ -24,17 +24,20 @@ end
     DE_BAD_CLASS = -998
     DE_BAD_TYPE = -997
     DE_BAD_NAME = -996
-    DE_SHORT_BUF = -995
-    DE_OBJ_DNE = -994
-    DE_AXIS_DNE = -993
-    DE_ARG = -992
-    DE_NO_OBJ = -991
-    DE_EXISTS = -990
-    DE_BAD_OBJ = -989
-    DE_NULL = -988
-    DE_DEL_ROOT = -987
-    DE_MIS_ATTR = -986
-    DE_INTERNAL = -985
+    DE_BAD_FREQ = -995
+    DE_SHORT_BUF = -994
+    DE_OBJ_DNE = -993
+    DE_AXIS_DNE = -992
+    DE_ARG = -991
+    DE_NO_OBJ = -990
+    DE_EXISTS = -989
+    DE_BAD_OBJ = -988
+    DE_NULL = -987
+    DE_DEL_ROOT = -986
+    DE_MIS_ATTR = -985
+    DE_INEXACT = -984
+    DE_RANGE = -983
+    DE_INTERNAL = -982
 end
 
 const de_file = Ptr{Cvoid}
@@ -81,63 +84,6 @@ end
     type_any = -1
 end
 
-@cenum frequency_t::UInt32 begin
-    freq_none = 0
-    freq_unit = 1
-    freq_daily = 4
-    freq_bdaily = 5
-    freq_monthly = 8
-    freq_weekly = 16
-    freq_weekly_sun0 = 16
-    freq_weekly_mon = 17
-    freq_weekly_tue = 18
-    freq_weekly_wed = 19
-    freq_weekly_thu = 20
-    freq_weekly_fri = 21
-    freq_weekly_sat = 22
-    freq_weekly_sun7 = 23
-    freq_weekly_sun = 23
-    freq_quarterly = 32
-    freq_quarterly_jan = 33
-    freq_quarterly_feb = 34
-    freq_quarterly_mar = 35
-    freq_quarterly_apr = 33
-    freq_quarterly_may = 34
-    freq_quarterly_jun = 35
-    freq_quarterly_jul = 33
-    freq_quarterly_aug = 34
-    freq_quarterly_sep = 35
-    freq_quarterly_oct = 33
-    freq_quarterly_nov = 34
-    freq_quarterly_dec = 35
-    freq_halfyearly = 64
-    freq_halfyearly_jan = 65
-    freq_halfyearly_feb = 66
-    freq_halfyearly_mar = 67
-    freq_halfyearly_apr = 68
-    freq_halfyearly_may = 69
-    freq_halfyearly_jun = 70
-    freq_halfyearly_jul = 65
-    freq_halfyearly_aug = 66
-    freq_halfyearly_sep = 67
-    freq_halfyearly_oct = 68
-    freq_halfyearly_nov = 69
-    freq_halfyearly_dec = 70
-    freq_yearly = 128
-    freq_yearly_jan = 129
-    freq_yearly_feb = 130
-    freq_yearly_mar = 131
-    freq_yearly_apr = 132
-    freq_yearly_may = 133
-    freq_yearly_jun = 134
-    freq_yearly_jul = 135
-    freq_yearly_aug = 136
-    freq_yearly_sep = 137
-    freq_yearly_oct = 138
-    freq_yearly_nov = 139
-    freq_yearly_dec = 140
-end
-
 const obj_id_t = Int64
 
 struct object_t
@@ -182,6 +128,81 @@ end
 
 function de_new_catalog(de, pid, name, id)
     ccall((:de_new_catalog, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, Ptr{obj_id_t}), de, pid, name, id)
+end
+
+@cenum frequency_t::UInt32 begin
+    freq_none = 0
+    freq_unit = 1
+    freq_daily = 4
+    freq_bdaily = 5
+    freq_weekly = 16
+    freq_weekly_sun0 = 16
+    freq_weekly_mon = 17
+    freq_weekly_tue = 18
+    freq_weekly_wed = 19
+    freq_weekly_thu = 20
+    freq_weekly_fri = 21
+    freq_weekly_sat = 22
+    freq_weekly_sun7 = 23
+    freq_weekly_sun = 23
+    freq_monthly = 32
+    freq_quarterly = 64
+    freq_quarterly_jan = 65
+    freq_quarterly_feb = 66
+    freq_quarterly_mar = 67
+    freq_quarterly_apr = 65
+    freq_quarterly_may = 66
+    freq_quarterly_jun = 67
+    freq_quarterly_jul = 65
+    freq_quarterly_aug = 66
+    freq_quarterly_sep = 67
+    freq_quarterly_oct = 65
+    freq_quarterly_nov = 66
+    freq_quarterly_dec = 67
+    freq_halfyearly = 128
+    freq_halfyearly_jan = 129
+    freq_halfyearly_feb = 130
+    freq_halfyearly_mar = 131
+    freq_halfyearly_apr = 132
+    freq_halfyearly_may = 133
+    freq_halfyearly_jun = 134
+    freq_halfyearly_jul = 129
+    freq_halfyearly_aug = 130
+    freq_halfyearly_sep = 131
+    freq_halfyearly_oct = 132
+    freq_halfyearly_nov = 133
+    freq_halfyearly_dec = 134
+    freq_yearly = 256
+    freq_yearly_jan = 257
+    freq_yearly_feb = 258
+    freq_yearly_mar = 259
+    freq_yearly_apr = 260
+    freq_yearly_may = 261
+    freq_yearly_jun = 262
+    freq_yearly_jul = 263
+    freq_yearly_aug = 264
+    freq_yearly_sep = 265
+    freq_yearly_oct = 266
+    freq_yearly_nov = 267
+    freq_yearly_dec = 268
+end
+
+const date_t = Int64
+
+function de_pack_year_period_date(freq, year, period, date)
+    ccall((:de_pack_year_period_date, libdaec), Cint, (frequency_t, Int32, UInt32, Ptr{date_t}), freq, year, period, date)
+end
+
+function de_unpack_year_period_date(freq, date, year, period)
+    ccall((:de_unpack_year_period_date, libdaec), Cint, (frequency_t, date_t, Ptr{Int32}, Ptr{UInt32}), freq, date, year, period)
+end
+
+function de_pack_calendar_date(freq, year, month, day, date)
+    ccall((:de_pack_calendar_date, libdaec), Cint, (frequency_t, Int32, UInt32, UInt32, Ptr{date_t}), freq, year, month, day, date)
+end
+
+function de_unpack_calendar_date(freq, date, year, month, day)
+    ccall((:de_unpack_calendar_date, libdaec), Cint, (frequency_t, date_t, Ptr{Int32}, Ptr{UInt32}, Ptr{UInt32}), freq, date, year, month, day)
 end
 
 struct scalar_t

@@ -2,6 +2,7 @@
 # All rights reserved.
 
 using Dates
+using Random
 
 DE = TimeSeriesEcon.DataEcon
 test_file = "test.daec"
@@ -298,4 +299,106 @@ rm(test_file, force=true)
     @test_logs (:info, r".*DEFile:.*\(closed\).*"i) @info "$de"
 
 end
+
+##################################################################################################
+
+# Compare the TimeSeriesEcon internal encoding of MITs to the
+# encodings produced by de_pack_xyz and de_unpack_xyz.
+
+# Known bug: in TimeSeriesEcon, MIT{BDaily} misbehave when the year is 0 or negative.
+
+# Frequency \ pack/unpack ||   year+period   |   year+month+day 
+# ===============================================================
+#     YP Date             ||     works       |   not implemented
+#     Cal Date            ||     works       |       works
+
+@testset "pack/unpack year_period" begin
+    # here we test the first column of the table - that is packing and unpacking 
+    # MITs given year-period
+    Random.seed!(0x007)
+    fc = Dict{Type{<:Frequency},Base.RefValue{Int}}()
+    jfreqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,
+        Monthly, (Quarterly{i} for i = 1:3)...,
+        (HalfYearly{i} for i = 1:6)..., (Yearly{i} for i = 1:12)...]
+    for i = 1:1000
+        fr = rand(jfreqs)
+        d1 = convert(Int, rand(Int16))
+        if fr == BDaily && d1 < 1
+            # make sure it's non-negative to work around known bug
+            d1 = 1 - d1
+        end
+        d = MIT{fr}(d1)
+        y, p = isweekly(fr) ? TimeSeriesEcon._mit2yp(d) : TimeSeriesEcon.mit2yp(d)
+        d2 = Ref{Int64}(0)
+        f = DE.I._to_de_scalar_freq(fr)
+        @test DE.C.DE_SUCCESS == DE.C.de_pack_year_period_date(f, y, p, d2)
+        if d1 != d2[]
+            @info "Not equal" fr d1 d y p d2
+            continue
+        end
+        @test d1 == d2[]
+        yr = Ref{Int32}(0)
+        pr = Ref{UInt32}(0)
+        @test DE.C.DE_SUCCESS == DE.C.de_unpack_year_period_date(f, d2[], yr, pr)
+        @test y == yr[] && p == pr[]
+        if !(y == yr[] && p == pr[])
+            @info "Not equal" fr d1 d y p d2 yr pr
+        end
+
+        get!(fc, fr, Ref(0))[] += 1
+    end
+    # make sure we tested all frequencies
+    foreach(jfreqs) do fr
+        @test get!(fc, fr, Ref(0))[] > 10
+    end
+end;
+
+
+@testset "pack/unpack year_month_day" begin
+    # here we test the second column of the table - that is packing and unpacking 
+    # MITs given year-month-day.  This doesn't work for YP frequencies.
+    Random.seed!(0x007)
+    fc = Dict{Type{<:Frequency},Base.RefValue{Int}}()
+    calfreqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,]
+    for i = 1:1000
+        fr = rand(calfreqs)
+        d1 = convert(Int, rand(Int16))
+        if fr == BDaily && d1 < 1
+            # make sure it's non-negative to work around known bug
+            d1 = 1 - d1
+        end
+        d = MIT{fr}(d1)
+        date = Date(d)
+        yr = Dates.year(date)
+        mn = Dates.month(date)
+        dy = Dates.day(date)
+
+        f = DE.I._to_de_scalar_freq(fr)
+
+        d2 = Ref{Int64}(0)
+        @test DE.C.DE_SUCCESS == DE.C.de_pack_calendar_date(f, yr, mn, dy, d2)
+        if d1 != d2[]
+            @info "Not equal" fr d1 d y p d2
+            continue
+        end
+        @test d1 == d2[]
+
+        Y = Ref{Int32}()
+        M = Ref{UInt32}()
+        D = Ref{UInt32}()
+        @test DE.C.DE_SUCCESS == DE.C.de_unpack_calendar_date(f, d1, Y, M, D)
+        if !(yr == Y[] && mn == M[] && dy == D[])
+            @info "Not equal" fr d1 d y p d2 yr pr
+        end
+        @test yr == Y[] && mn == M[] && dy == D[]
+
+        get!(fc, fr, Ref(0))[] += 1
+    end
+    # make sure we tested all supported frequencies
+    foreach(calfreqs) do fr
+        @test get!(fc, fr, Ref(0))[] > 10
+    end
+end;
+
+
 
