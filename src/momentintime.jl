@@ -563,30 +563,36 @@ end
 function Dates.Date(m::MIT{Monthly}, ref::Symbol=:end)
     year, month = divrem(Int(m), 12)
     if ref == :begin
-        return Dates.Date("$year-01-01") + Month(month)    
+        return Dates.Date("$year-01-01") + Month(month)
     end
     return Dates.Date("$year-01-01") + Month(month + 1) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly{end_month}}, ref::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{Quarterly{end_month}}, ref::Symbol=:end) where {end_month}
     year, quarter = divrem(Int(m), 4)
     if ref == :begin
-        return Dates.Date("$year-01-01") + Month(quarter * 3 - (3 - end_month))    
+        return Dates.Date("$year-01-01") + Month(quarter * 3 - (3 - end_month))
     end
     return Dates.Date("$year-01-01") + Month((quarter + 1) * 3 - (3 - end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{HalfYearly{end_month}}, ref::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{HalfYearly{end_month}}, ref::Symbol=:end) where {end_month}
     year, half = divrem(Int(m), 2)
     if ref == :begin
-        return Dates.Date("$year-01-01") + Month(half * 6 - (6 - end_month))    
+        return Dates.Date("$year-01-01") + Month(half * 6 - (6 - end_month))
     end
     return Dates.Date("$year-01-01") + Month((half + 1) * 6 - (6 - end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where end_month 
+function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where {end_month}
     if ref == :begin
         return Dates.Date("$(Int(m))-01-01") - Month(12 - end_month)
     end
     return Dates.Date("$(Int(m) + 1)-01-01") - Month(12 - end_month) - Day(1)
 end
+
+MIT{Daily}(d::Dates.Date) = daily(d)
+MIT{BDaily}(d::Dates.Date) = bdaily(d)
+MIT{BDaily}(d::Dates.Date; bias) = bdaily(d; bias)
+MIT{Weekly}(d::Dates.Date) = weekly(d)
+MIT{Weekly{end_day}}(d::Dates.Date) where {end_day} = weekly(d, end_day)
 
 #-------------------------
 # pretty printing
