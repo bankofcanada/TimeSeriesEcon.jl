@@ -63,6 +63,32 @@ _to_de_scalar_val(value::Complex) = float(value)
 _to_de_scalar_val(value::StrOrSym) = string(value)
 _to_de_scalar_val(value::Dates.Date) = Dates.datetime2unix(convert(DateTime, value))
 _to_de_scalar_val(value::Dates.DateTime) = Dates.datetime2unix(value)
+_to_de_scalar_val(value::MIT) = _pack_date(value)
+
+_pack_date(value::MIT) = Int64(value)
+function _pack_date(value::MIT{FR}) where {FR<:YPFrequency}
+    freq = _to_de_scalar_freq(FR)
+    year, period = mit2yp(value)
+    de_value = Ref{Int64}(0)
+    _check(C.de_pack_year_period_date(freq, year, period, de_value))
+    if Int(value) != de_value[]
+        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_value[])"
+    end
+    return de_value[]
+end
+function _pack_date(value::MIT{FR}) where {FR<:CalendarFrequency}
+    freq = _to_de_scalar_freq(FR)
+    date = Dates.Date(value)
+    year = Dates.year(date)
+    month = Dates.month(date)
+    day = Dates.day(date)
+    de_code = Ref{Int64}(0)
+    _check(C.de_pack_calendar_date(freq, year, month, day, de_code))
+    if Int(value) != de_code[]
+        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code[])"
+    end
+    return de_code[]
+end
 
 _to_de_scalar_type(val) = _to_de_scalar_type(typeof(val))
 _to_de_scalar_type(::Type{T}) where {T} = error("Can't handle type $T")
@@ -98,6 +124,29 @@ _to_de_scalar_ptr_unsafe(val::String) = pointer(val)
 #############################################################################
 # scalars read
 
+_unpack_date(::Type{FR}, freq, de_code) where {FR<:Frequency} = convert(MIT{FR}, Int64(de_code))
+function _unpack_date(::Type{FR}, freq, de_code) where {FR<:YPFrequency}
+    year = Ref{Int32}()
+    period = Ref{UInt32}()
+    _check(C.de_unpack_year_period_date(freq, de_code, year, period))
+    value = MIT{FR}(year[], period[])
+    if Int(value) != de_code
+        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code)"
+    end
+    return value
+end
+function _unpack_date(::Type{FR}, freq, de_code) where {FR<:CalendarFrequency}
+    year = Ref{Int32}()
+    month = Ref{UInt32}()
+    day = Ref{UInt32}()
+    _check(C.de_unpack_calendar_date(freq, de_code, year, month, day))
+    value = MIT{FR}(Dates.Date(year[], month[], day[]))
+    if Int(value) != de_code
+        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code)"
+    end
+    return value
+end
+
 function _from_de_scalar(scal::C.scalar_t)
     _type = scal.object.type
     if _type == C.type_string
@@ -107,7 +156,7 @@ function _from_de_scalar(scal::C.scalar_t)
         FR = _to_julia_frequency(scal.frequency)
         T = _to_julia_scalar_type(Val(C.type_integer), Val(scal.nbytes))
         val = unsafe_load(Ptr{T}(scal.value))
-        return convert(MIT{FR}, Int64(val))
+        return _unpack_date(FR, scal.frequency, val)
     end
     T = _to_julia_scalar_type(Val(_type), Val(scal.nbytes))
     value = unsafe_load(Ptr{T}(scal.value))
@@ -174,7 +223,7 @@ end
 
 function _make_axis(de::DEFile, rng::AbstractUnitRange{<:MIT})
     ax_id = Ref{C.axis_id_t}()
-    _check(C.de_axis_range(de, length(rng), _to_de_scalar_freq(rng), first(rng), ax_id))
+    _check(C.de_axis_range(de, length(rng), _to_de_scalar_freq(rng), _pack_date(first(rng)), ax_id))
     return ax_id[]
 end
 
@@ -188,6 +237,12 @@ end
 _get_axis_of(de::DEFile, vec::AbstractVector, dim=1) = _make_axis(de, Base.axes1(vec))
 _get_axis_of(de::DEFile, vec::AbstractUnitRange, dim=1) = _make_axis(de, vec)
 _get_axis_of(de::DEFile, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(vec, dim))
+
+function _get_axis_range_firstdate(axis::C.axis_t)
+    @assert axis.type == C.axis_range
+    FR = _to_julia_frequency(axis.frequency)
+    return _unpack_date(FR, axis.frequency, axis.first)
+end
 
 #############################################################################
 # write tseries and mvtseries
@@ -305,8 +360,7 @@ _from_de_array(arr::C.mvtseries_t) = _from_de_array(arr, Val(arr.object.type), V
 # handle type_range
 _from_de_array(arr::C.tseries_t, ::Val{C.type_range}, ::Val{C.axis_plain}) = 1:arr.axis.length
 function _from_de_array(arr::C.tseries_t, ::Val{C.type_range}, ::Val{C.axis_range})
-    FR = _to_julia_frequency(arr.axis.frequency)
-    fd = reinterpret(MIT{FR}, arr.axis.first)
+    fd = _get_axis_range_firstdate(arr.axis)
     return fd .+ (0:arr.axis.length-1)
 end
 _from_de_array(::C.tseries_t, ::Val{C.type_range}, ::Val{Z}) where {Z} = error("Cannot load a range of type $Z")
@@ -368,8 +422,7 @@ end
 _from_de_array(::C.tseries_t, ::Val{C.type_tseries}, ::Val{Z}) where {Z} = error("Cannot load a tseries with axis of type $Z. Expected $(C.axis_range).")
 function _from_de_array(arr::C.tseries_t, ::Val{C.type_tseries}, ::Val{C.axis_range})
     vlen = arr.axis.length
-    FR = _to_julia_frequency(arr.axis.frequency)
-    fd = reinterpret(MIT{FR}, arr.axis.first)
+    fd = _get_axis_range_firstdate(arr.axis)
     return TSeries(fd, _do_load_array_data(arr, Val(vlen)))
 end
 
@@ -377,8 +430,7 @@ end
 _from_de_array(::C.mvtseries_t, ::Val{C.type_mvtseries}, ::Val{Y}, ::Val{Z}) where {Y,Z} = error("Cannot load an mvtseries with axes of type $Y and $Z. Expected $(C.axis_range) and $(C.axis_names).")
 function _from_de_array(arr::C.mvtseries_t, ::Val{C.type_mvtseries}, ::Val{C.axis_range}, ::Val{C.axis_names})
     d1 = arr.axis1.length
-    FR = _to_julia_frequency(arr.axis1.frequency)
-    fd = reinterpret(MIT{FR}, arr.axis1.first)
+    fd = _get_axis_range_firstdate(arr.axis1)
     d2 = arr.axis2.length
     cols = split(Base.unsafe_string(arr.axis2.names), '\n')
     return MVTSeries(fd, cols, reshape(_do_load_array_data(arr, Val(d1 * d2)), d1, d2))
