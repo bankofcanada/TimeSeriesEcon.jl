@@ -68,7 +68,7 @@ function Base.eltype(w::Workspace)
     return Pair{Symbol,ET}
 end
 
-Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
+Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args..., (k => v for (k,v) in kwargs)...); w)
 Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
 @inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
