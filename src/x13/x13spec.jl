@@ -553,16 +553,16 @@ mutable struct X13transform
     file::Union{String,X13default}
     format::Union{String,X13default}
     func::Union{Symbol,X13default} #TODO should be function
-    mode::Union{Vector{Symbol},X13default}
+    mode::Union{Symbol,Vector{Symbol},X13default}
     name::Union{String,X13default}
     power::Union{Float64,X13default}
     precision::Union{Int64,X13default}
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default}     
-    start::Union{MIT,X13default}
+    start::Union{MIT,Vector{MIT},X13default}
     title::Union{String,X13default}
-    type::Union{Symbol,X13default}
+    type::Union{Symbol,Vector{Symbol},X13default}
     constant::Union{Float64,X13default}
     trimzero::Union{Symbol,X13default}
     
@@ -593,14 +593,14 @@ end
 mutable struct X13x11
     appendbcst::Union{Bool,X13default}
     appendfcst::Union{Bool,X13default}
-    final::Union{Vector{Symbol},X13default}
+    final::Union{Symbol,Vector{Symbol},X13default}
     mode::Union{Symbol,X13default}
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default}     
-    seasonalma::Union{Vector{Symbol},X13default}
+    seasonalma::Union{Symbol,Vector{Symbol},X13default}
     sigmalim::Union{Vector{Float64},X13default}
-    title::Union{Vector{String},X13default}
+    title::Union{String,Vector{String},X13default}
     trendma::Union{Int64,X13default}
     type::Union{Symbol,X13default}
     calendarsigma::Union{Symbol,X13default}
@@ -608,7 +608,7 @@ mutable struct X13x11
     keepholiday::Union{Bool,X13default}
     print1stpass::Union{Bool,X13default}
     sfshort::Union{Bool,X13default}
-    sigmavec::Union{Vector{Symbol},X13default}
+    sigmavec::Union{Vector{TimeSeriesEcon._FPConst},X13default}
     trendic::Union{Float64,X13default}
     true7term::Union{Bool,X13default}
 
@@ -1969,10 +1969,6 @@ Specification for including regression variables in a regARIMA model, or for spe
 * **chi2testcv** (Bool) - Sets the probability for the critical value used for the selection procedure in `chi2test`.
     The default is 0.01.
 
-* **file** (String) - See the manual.
-
-* **format** (String) - See the manual.
-
 * **pvaictest** (Float64) - Probability for generating a critical value for any AIC tests specified in this spec. This
     probablity must be > 0.0 and < 1.0. Table 7.26 in the manual shows the critical value generated for
     different values of pvaictest and different values of ν, the difference in the number of
@@ -1980,11 +1976,6 @@ Specification for including regression variables in a regARIMA model, or for spe
 
     If this argument is not specified, the aicdiff argument is used to set the critical value
     for AIC testing.
-
-* **start** (MIT) - The start date for the data values for the user-defined regression variables. The default
-    is the start date of the series. Valid values are any date up to the start date of the series
-    (or up to the start date of the `span` specified by the `span` argument of the `series` spec,
-    if present).
 
 * **testalleaster** (Bool) - Specifies if an extra regression model is evaluated when more than one Easter regressor
     is specified in the variables argument. When `testalleaster = true`, an additional
@@ -1997,12 +1988,6 @@ Specification for including regression variables in a regARIMA model, or for spe
 * **tlimit** (Float64) - Sets the value to which the absolute values of the t-statistics of AO and LS sequence
     regressors are compared to retain those outliers in the regARIMA model. If this argument
     is not specified, AO and LS sequence regressors are not checked for significance.
-
-* **user** (Vector{Symbol}) - Specifies names for any user-defined regression variables. Names are required for all 
-    user-defined variables to be included in the model. The names given are used to label estimated
-    coefficients in the program's output. Data values for the user-defined variables must be
-    supplied, using either the `data` or `file` argument (not both). The maximum number of
-    user-defined regression variables is 52. (This limit can be changed—see Section 2.8 of the manual.)
 
 * **usertype** (Vector{Symbol}) - Assigns a type of model-estimated regression effect to each user-defined regression variable. 
     It causes the variable and its estimated effects to be used and be output in the
@@ -2041,9 +2026,6 @@ Specification for including regression variables in a regARIMA model, or for spe
     `b=[0.7]` is not allowed. For a model with three regressors, `b=[0.8,missing,-0.4]` is equivalent
     to `b=[0.8,0.1,-0.4]`. To hold a parameter fixed at a specified value, use the `bfixed` argument.
 
-* **bfixed** (Vector{Bool}) - A vector of `true`/`false` entries corresponding to the entries in the `b` vector.
-        `true` entries will be held fixed.
-
 * **centeruser** (Symbol) - Specifies the removal of the (sample) mean or the seasonal means from the user-defined
     regression variables. If `centeruser=:mean`, the mean of each user-defined regressor is
     subtracted from the regressor. If `centeruser=:seasonal`, means for each calendar month
@@ -2057,6 +2039,9 @@ Specification for including regression variables in a regARIMA model, or for spe
     data used for the calculation of the coefficients of the Easter regressors (`eastermeans=false`).
     The default is `eastermeans=true`. This argument is ignored if no built-in Easter regressor
     is included in the regression model, or if the only Easter regressor is `Symbol("sceaster[w]").
+
+* **fixb** (Vector{Bool}) - A vector of `true`/`false` entries corresponding to the entries in the `b` vector.
+    `true` entries will be held fixed.
 
 * **noapply** (Symbol) - List of the types of regression effects defined in the regression spec whose 
     model-estimated values are *not* to be removed from the original series before the seasonal
@@ -2076,13 +2061,15 @@ Specification for including regression variables in a regARIMA model, or for spe
     the variables argument
 
 
+
+    
 """
 function regression(; 
     aicdiff::Union{Vector{Union{Float64,Missing}},X13default}=_X13default,
     aictest::Union{Vector{Symbol},X13default}=_X13default,
     chi2test::Union{Bool,X13default}=_X13default,
     chi2testcv::Union{Float64,X13default}=_X13default,
-    data::Union{TSeries,MVTSeries, X13default}=_X13default,
+    data::Union{MVTSeries, X13default}=_X13default,
     file::Union{String,X13default}=_X13default,
     format::Union{String,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:regressionmatrix, :aictest, :outlier, :aoutlier, :levelshift, :seasonaloutlier, :transitory, :temporarychange, :tradingday, :holiday, :regseasonal, :userdef, :chi2test, :dailyweights],
@@ -2103,13 +2090,119 @@ function regression(;
     tcrate::Union{Float64,X13default}=_X13default,
 )
     # checks and logic
+
+    start = _X13default
+    user = _X13default
+    if !(data isa X13default)
+        start = first(rangeof(data))
+        user = collect(colnames(data))
+    end
+
+
     return X13regression(aicdiff,aictest,chi2test,chi2testcv,data,file,format,print,save,savelog,pvaictest,start,testalleaster,tlimit,user,usertype,variables,b,bfixed,centeruser,eastermeans,noapply,tcrate)
 end
 regression!(spec::X13spec{F}; kwargs...) where F = (spec.regression = regression(; kwargs...))
 
 """
-seats(; kwargs...)
-seats!(spec::X13spec{F}; kwargs...)
+`seats(; kwargs...)`
+
+`seats!(spec::X13spec{F}; kwargs...)`
+
+
+An optional spec invoking the production of model based signal extraction using SEATS, a seasonal adjustment
+program developed by Victor Gómez and Agustin Maravall at the Bank of Spain.
+
+The user can set options which control ARIMA model estimation if done within the SEATS module (`epsiv`
+and `maxit`), perform checks on the model submitted to the SEATS modules (`qmax`, `rmod` and `xl`). The user
+can also choose options to decompose the trend-cycle into a long-term trend and a cycle component using the
+modified Hodrick-Prescott filter (`hpcycle` and `hplan`)
+
+### Main keyword arguments:
+
+* **appendfcst** (Bool) - Determines if forecasts will be included in certain SEATS tables selected for storage with
+    the save option. If `appendfcst=true`, then forecasted values will be stored with table s10.
+    If `appendfcst=false`, no forecasts will be stored. The default is to not include forecasts.
+
+* **finite** (Bool) - Sets level of seasonal decomposition diagnostic output. The default (`finite = false`) 
+    produces filter and diagnostic output that are obtained from infinite (Wiener-Kolmogorov)
+    filters and signal extraction error and revisions statistics are associated with semi-infinite
+    or bi-infinite data. With `filter = true`, all of the filter output and most of the signal
+    extraction error and revisions statistics are finite-sample quantities for the available data.
+
+* **hpcycle** (Bool) - If `hpcycle = true`, then the program will decompose the trend-cycle into a long-term
+    trend and a cycle component using the modified Hodrick-Prescott filter. The default
+    is not to perform this decomposition (`hpcycle = false`). For more information on the
+    Hodrick-Prescott filter, see Kaiser and Maravall (2001), Wikipedia Contributers (2015),
+    and McElroy (2008a).
+
+* **noadmiss** (Bool) - When `noadmiss=true`, if the model submitted to SEATS does not lead to an 
+    admissible decomposition, it will be replaced with a decomposable model. Otherwise when
+    `noadmiss=false`, no approximation is done in this case. The default is `noadmiss=false`.
+
+* **printphtrf** (Bool) - When `printphtrf=true`, the program will produce output related to the transfer function
+    and phase delay of the seasonal adjustment filter. Otherwise when `printphtrf=false`, no
+    such output is produced. The default is `printphtrf=false`.
+
+* **qmax** (Int64) - Sets a limit for the Ljung-Box Q statistic, which is used to determine if the model provided
+    to the SEATS module is of acceptable quality. Default is `qmax=50`.
+
+    When model coefficients are fixed in the arima or regression specs, it is often necessary
+    to choose a larger value of qmax to keep SEATS from changing the model.
+
+
+* **statseas** (Bool) - If `statseas=false`, the program will not accept a stationary seasonal model, and will change
+    the seasonal part of the model to (0 1 1). If `statseas=true`, the program will accept a
+    stationary seasonal model. The default is `statsea = true`.
+
+* **tabtables** (Vector{Symbol}) - A list of seasonal adjustment components and series to be stored in a separate file with
+    the extension .tbs. The list is entered as a text string with codes listed in Table
+    7.35 of the manual. An example entry is `tabtables=[:xo,:n,:s,:p]`. Note that components can only be added - they cannot be
+    removed as in the print argument. The default is tabtables=[:all].
+
+
+    
+### Rarely used keyword arguments:
+
+* **bias** (Int64) - Corrects for the bias that may occur in multiplicative decomposition when the period-to-period 
+    changes are relatively large when compared to the overall mean. This argument
+    should only be set when a log transformation is used.
+
+    If `bias = 1`, a correction is made for the overall bias for the full length of the series and
+    for the forecasting period. This is the default value.
+
+    If `bias = -1`, a correction is made so that, for every year (including the forecasting period), 
+    the annual average of the original series equals the annual average of the seasonally
+    adjusted series, and also (very approximately) equals the annual average of the trend.
+
+    If `bias = 0`, no bias correction is done. No other values are allowed.
+
+* **epsiv** (Float64) - Convergence criteria for ARIMA estimation within the SEATS module; this is used when
+    the SEATS module determines that a model should be changed or re-estimated. This
+    should be a small positive number; the default is `epsiv=0.001`.
+
+* **epsphi** (Int64) - When Phi(B) contains a complex root, it is allocated to the seasonal if its frequency
+    differes from the seasonal fequencies by less than epsphi degrees. Otherwise, it goes to
+    the cycle. The default is `epsphi=2`.
+
+* **hplan** (Float64) - A parameter that is used to determine the modified Hodrick-Prescott filter. By default,
+    the program will set this parameter automatically according to the seasonal period of
+    the series. For more information on the Hodrick-Prescott filter, see Kaiser and Maravall
+    (2001).
+
+* **imean** (Bool) - Indicates if the series is to be mean-corrected (`imean = true`). The default is not to remove
+    the mean from the series before signal extraction (`imean = false`)
+
+* **maxit** (Int64) - Number of iterations allowed for ARIMA estimation within the SEATS module; should
+    be a positive integer. Default is `maxit=20`.
+
+* **rmod** (Float64) - Limit for the modulus of an AR root. If the modulus of an AR root is larger than rmod,
+    the root is assigned to the trend; if the modulus of an AR root is smaller than rmod,
+    the root is assigned to the cycle. The default value is `rmod=0.80`.
+
+* **xl** (Float64) - When the modulus of an estimated root falls in the range (XL, 1), it is set to 1.00 if the
+    root is in the AR polynomial. If the root is in the MA polynomial, it is set to `xl`. The
+    default is `xl=0.99`.
+
 """
 function seats(; 
     appendfcst::Union{Bool,X13default}=_X13default,
@@ -2133,14 +2226,150 @@ function seats(;
     rmod::Union{Float64,X13default}=_X13default,
     xl::Union{Float64,X13default}=_X13default,
 )
+    #TODO printhptrf and imean should be printed as 0,1 not no,yes
+    # TODO tabtables is printed as a text string...
+    #TODO: what is a valid hpplan value?
     # checks and logic
     return X13seats(appendfcst,finite,hpcycle,noadmiss,out,print,save,savelog,printphtrf,qmax,statseas,tabtables,bias,epsiv,epsphi,hplan,imean,maxit,rmod,xl)
 end
 seats!(spec::X13spec{F}; kwargs...) where F = (spec.seats = seats(; kwargs...))
 
 """
-slidingspans(; kwargs...)
-slidingspans!(spec::X13spec{F}; kwargs...)
+`slidingspans(; kwargs...)`
+
+`slidingspans!(spec::X13spec{F}; kwargs...)`
+
+
+Optional spec providing sliding spans stability analysis. These compare different features of seasonal adjustment
+output from overlapping subspans of the time series data. The user can specify options to control the starting
+date for sliding spans comparisons (`start`), the length of the sliding spans (`length`), the threshold values determining 
+sliding spans statistics (`cutseas`, `cuttd`, `cutchng`), how the values of the regARIMA model parameter
+estimates will be obtained during the sliding spans seasonal adjustment runs (`fixmdl`), and whether regARIMA
+automatic outlier identification is performed (`outlier`).
+
+### Main keyword arguments:
+
+* **cutchng** (Float64) - Threshold value for the month-to-month, quarter-to-quarter, or year-to-year percent
+    changes in seasonally adjusted series. For a month (quarter) common to more than
+    one span, if the maximum absolute difference of its period-to-period percent changes
+    from the different spans exceeds the threshold value, then the month (quarter) is flagged
+    as having an unreliable estimate for this period-to-period change. This value must be
+    greater than 0; the default value is 3.0. Example: `cutchng=5.0`.
+
+* **cutseas** (Float64) - Threshold value for the seasonal factors and seasonally adjusted series. For a month
+    (quarter) common to more than one span, if the maximum absolute percent change of its
+    estimated seasonal factors or adjustments from the different spans exceeds the threshold
+    value, then this month’s (quarter’s) seasonal factor or adjustment is flagged as unreliable.
+    This value must be greater than 0; the default value is 3.0. Example: `cutseas=5.0`.
+
+* **cuttd** (Float64) - Threshold value for the trading day factors. For a month (quarter) common to more than
+    one span, if the maximum absolute percent change of its estimated trading day factors
+    from the different spans exceeds the threshold value, then this month's (quarter's) trading
+    day factor is flagged as unreliable. This value must be greater than 0; the default value
+    is 2.0. Example: `cuttd=1.0`.
+
+* **fixmdl** (Symbol) - Specifies how the initial values for parameters estimated in regARIMA models are to be
+    reset before seasonally adjusting a sliding span. This argument is ignored if a regARIMA
+    model is not fit to the series.
+
+    If `fixmdl=:yes`, the values for the regARIMA model parameters for each span will be set
+    to the parameter estimates taken from the original regARIMA model estimation. These
+    parameters will be taken as fixed and not re-estimated. This is the default for fixmdl.
+    
+    If `fixmdl=:no`, the program will restore the initial values to what they were when the
+    regARIMA model estimation was done for the complete series. If they were fixed in the
+    estimate spec, they remain fixed at the same values.
+    
+    If `fixmdl=:clear`, initial values for each span will be set to be the defaults, namely 0.1
+    for all coefficients, and all model parameters will be re-estimated.
+
+* **fixreg** (Vector{Symbol}) - Specifies the fixing of the coefficients of a regressor group in either a regARIMA model or
+    an irregular component regression. These coefficients will be fixed at the values obtained
+    from the model span (implicit or explicitly) indicated in the series or composite spec.
+    All other regression coefficients will be re-estimated for each sliding span. Trading day
+    (`:td`), holiday (`:holiday`), outlier (`:outlier`), or other user-defined (`:user`) regression effects
+    can be fixed. This argument is ignored if neither a regARIMA model nor an irregular
+    component regression is fit to the series, or if `fixmdl=:yes`.
+
+* **length** (Int64) - The length of each span, in months or quarters (in accordance with the sampling interval)
+    of time series data used to generate output for comparisons. A length selected by the
+    user must yield a span greater than 3 years long and less or equal to 19 years long. If
+    the length of the span is not specified by the user, the program will choose a span length
+    based on the length of the seasonal filter selected by the user (or by the program if a
+    seasonal filter was not specified by the user) when the seasonal adjustment is performed
+    by the `x11` spec, or by the level of the seasonal MA parameter coefficient (Theta), when
+    the seasonal adjustment is performed by the `seats` spec. For more information, see
+    DETAILS. Monthly data example: `length=96`.
+
+* **numspans** (Int64) - Number of sliding spans used to generate output for comparisons. The number of spans
+    selected by the user must be between 2 and 4, inclusive. If this argument is not specified
+    by the user, the program will choose the maximum number of spans (up to 4) that can
+    be formed based on the length of the sliding spans given by the user (or selected by the
+    program if the length argument is not used). Example: `numspans=4`.
+
+* **outlier** (Symbol) - Specifies whether automatic outlier detection is to be performed whenever the regARIMA
+    model is re-estimated during the processing of each span. This argument has no effect if
+    the outlier spec is not used.
+
+    If `outlier=:keep`, the program carries over any outliers automatically identified in the
+    original estimation of the regARIMA model for the complete time series, and does not
+    perform automatic outlier identification when a regARIMA model is estimated for one
+    of the sliding spans. If the date of an outlier detected for the complete span of data does
+    not occur in one of the sliding spans, the outlier will be dropped from the model for that
+    span. This is the default setting.
+
+    If `outlier=remove`, those outlier regressors that were added to the regression part of the
+    regARIMA model when automatic outlier identification was performed on the full series
+    are removed from the regARIMA model during the sliding spans analysis. Consequently,
+    their effects are not estimated and removed from the series. If outlier terms are included
+    in the regression spec, these will included in the model estimated for the spans. This
+    option gives the user a way to investigate the consequences of not doing automatic outlier
+    identification.
+
+    If `outlier=yes`, the program performs automatic outlier identification whenever a regARIMA 
+    model is estimated for a span of data.
+
+* **start** (MIT) - The starting date for sliding spans comparisons. The default is the beginning month of
+    the second span. Example: `start=1990M1`.
+
+
+### Rarely used keyword arguments:
+
+* **additivesa** (Symbol) - Specifies whether the sliding spans analysis of an additive seasonal adjustment will be
+    calculated from the maximum differences of the seasonally adjusted series (`additivesa = difference`) 
+    or from the maximum of an implied adjustment ratio of the original series
+    to the final seasonally adjusted series (`additivesa = percent`). This option will also
+    determine if differences (`additivesa = difference`) or percent changes (`additivesa = percent`) 
+    are generated in the analysis of the month-to-month, quarter-to-quarter,
+    or year-to-year changes in seasonally adjusted series. The default is `additivesa = difference`. 
+    If the seasonally adjusted series for any of the spans contains values that are
+    less than or equal to zero, the sliding spans analysis will be performed on the differences.
+
+* **fixx11reg** (Bool) - Specifies whether the irregular component regression model will be re-estimated during
+    the sliding spans analysis, if one is specified in the x11regression spec. If `fixx11reg=true`,
+    the regression coefficients of the irregular component regression model are fixed throughout 
+    the analysis at the values estimated from the entire series. If `fixx11reg=false`, the
+    irregular component regression model parameters will be re-estimated for each span.
+    The default is `fixx11reg=true`.
+
+* **x11outlier** (Bool) - Specifies whether the AO outlier identification will be performed during the sliding spans
+    analysis for the irregular component regression specified in the x11regression spec. If
+    `x11outlier=true`, AO outlier identification will be done for each span. Those AO outlier
+    regressors that were added to the irregular component regression model when automatic
+    AO outlier identification was done for the full series are removed from the irregular
+    component regression model prior to the sliding spans run. If `x11outlier=false`, then the
+    automatically identified AO outlier regressors for the full series are kept for each sliding
+    spans run. If the date of an AO outlier detected for the complete span of data does not
+    occur in one of the sliding spans, the outlier will be dropped from the model for that span.
+    The coefficients estimating the effects of these AO outliers are re-estimated whenever the
+    other irregular component regression model parameters are re-estimated. However, no
+    additional AO outliers are automatically identified and estimated. This option is ignored
+    if the x11regression spec is not used, if the selection of the aictest argument results
+    in the program not estimating an irregular component regression model, or if the sigma
+    argument is used in the x11regression spec. The default is `x11outlier=true`.
+        
+
+
 """
 function slidingspans(; 
     cutchng::Union{Float64,X13default}=_X13default,
@@ -2165,8 +2394,87 @@ end
 slidingspans!(spec::X13spec{F}; kwargs...) where F = (spec.slidingspans = slidingspans(; kwargs...))
 
 """
-spectrum(; kwargs...)
-spectrum!(spec::X13spec{F}; kwargs...)
+`spectrum(; kwargs...)`
+
+`spectrum!(spec::X13spec{F}; kwargs...)`
+
+Optional spec that provides a choice between two spectrum diagnostics to detect seasonality or trading day
+effects in monthly series. Users can set the starting date of the span of data to be used to estimate the spectra
+(`start`) and the type of spectrum estimate to be generated (`type`). For more information on the spectrum
+diagnostic, see Section 6.1 of the manual.
+
+In addition, the alternative QS statistic for detecting seasonality, applicable also to quarterly series, is
+described here and its output is illustrated. There is also an option for generating the QS statistic for the
+quarterly version of a monthly series
+
+### Main keyword arguments:
+
+* **logqs** (Bool) - Determines whether the log of the original series or seasonally adjusted series will be
+    taken before the QS statistic is computed `logqs = true`. The default is `logqs = false`.
+
+* **qcheck** (Bool) - Determines if the QS diagnostic will be generated for the quarertly version of a monthly
+    series `qcheck = true` to check for quarterly seasonality. The default is `qcheck = false`.
+    This argument only produced output for monthly time series.
+
+* **start** (MIT) - The starting date of the span of data to be used to estimate the spectra the original,
+    seasonally adjusted, and modified irregular series. This can be used to determine if there are residual trading
+    day or seasonal effects in the adjusted data from, say, the last seven years. Residual effects
+    can occur when seasonal or trading day patterns are evolving. The default starting date
+    for the spectral plots is set to be 96 observations (8 years of monthly data) from the end
+    of the series. If the span of data to be analyzed is less than 96 observations long, it is set
+    to the starting date of this span of data. Example: `start=1987M1`.
+
+* **tukey120** (Bool) - Determines whether the value of m used to generate the Tukey spectrum will be set to 120
+    if the length of the series is greater than or equal to 120 (`tukey120 = true`). If `tukey120 = false`, 
+    the length of the series is used to determine if the value of m will be 112 or 79. The
+    default is `tukey120 = true`.
+
+
+### Rarely used keyword arguments:
+
+* **decibel** (Bool) - Determines whether spectral estimates will be expressed in terms of decibel units `decibel = true`, 
+    as shown in equation (6.1) in the manual. The estimates are plotted on the untransformed scale
+    if `decibel = false`. The default is `decibel = true`.
+
+* **difference** (Symbol) - If `difference=:no`, the spectrum of the (transformed) original series or seasonally 
+    adjusted series is calculated; if `difference=:first`, the spectrum of the month-to-month
+    differences of these series is calculated. The default (`difference=:yes`) will apply a
+    max(d + D - 1, 1) difference to the (transformed) original series and seasonally adjusted
+    series before computing the spectrum, where d is the order of regular differencing and D
+    is the order of seasonal differencing in the regARIMA model specified for the series. If
+    no regARIMA model is specified, the default order of differencing is 1.
+
+* **maxar** (Int64) - An integer value used to set the maximum order of the AR spectrum used as the default
+    type of spectrum plot. Integers from 1 to 30 are acceptable values for maxar. If this
+    option is not specified, the maximum order will be set to 30.
+
+* **peakwidth** (Int64) - Allows the user to set the width of the band used to determine spectral peaks. The
+    default value is `peakwidth = 1`.
+
+* **series** (Symbol) - Allows the user to select the series used in the spectrum of the original (or composite)
+    series (Table G.0). The table below shows the series that can be specified with this argument
+    - the default is `series = :adjoriginal`.
+
+    Symbol                | Alternate symbol | Description of table                                                    
+    :---------------------| :--------------- | :----------------------------------------------------------------------- 
+    `:original`           | `:a1`            | original series                                                         
+    `:outlieradjoriginal` | `:a19`           | original series, adjusted for regARIMA outliers                         
+    `:adjoriginal`        | `:b1`            | original series, adjusted for user specified and regARIMA prior effects 
+    `:modoriginal`        | `:e1`            | original series modified for extremes                                   
+
+    Note that if the `x11` spec is not specified, the original series modified for extremes will
+    not be generated; the setting series = modoriginal will be ignored, and the default
+    setting will be used instead.
+
+* **siglevel** (Int64) - Sets the significance level for detecting a peak in the spectral plots. The default is
+    `siglevel = 6`.
+
+* **type** (Symbol) - The type of spectral estimate used in the spectral plots output by the program. 
+    If `type=:periodogram`, the periodogram of the series is calculated and plotted. The default
+    (`type=:arspec`) produces an autoregressive model spectrum of the series.
+        
+        
+
 """
 function spectrum(; 
     logqs::Union{Bool,X13default}=_X13default,
@@ -2190,49 +2498,322 @@ end
 spectrum!(spec::X13spec{F}; kwargs...) where F = (spec.spectrum = spectrum(; kwargs...))
 
 """
-transform(; kwargs...)
-transform!(spec::X13spec{F}; kwargs...)
+`transform(; kwargs...)`
+
+`transform!(spec::X13spec{F}; kwargs...)`
+
+Specification used to transform or adjust the series prior to estimating a regARIMA model. With this spec
+the series can be Box-Cox (power) or logistically transformed, length-of-month adjusted, and divided by 
+user-defined prior-adjustment factors. Data for any user-defined prior-adjustment factors must be supplied, either
+in the `data` argument, or in a file specified by the `file` argument (not both). For seasonal adjustment, a set of
+permanently removed factors can be specified and also a set of factors that are temporarily removed until the
+seasonal factors are calculated.
+
+### Main keyword arguments:
+
+* **adjust** (Symbol) - Perform length-of-month adjustment on monthly data (`adjust = :lom`), length-of-quarter 
+    adjustment on quarterly data (`adjust = :loq`), or leap year adjustment of monthly
+    or quarterly data (`adjust = :lpyear`). (See the manual.)
+
+    Do not use the adjust argument if `:td` or `:td1coef` is specified in the `variables` argument
+    of the `regression` or `x11regression` specs, or if additive or pseudo-additive seasonal
+    adjustment is specified in the mode argument of the `x11` spec. Leap year adjustment
+    (`adjust = :lpyear`) is only allowed when a log transformation is specified in either the
+    `power` or `function` arguments.
+
+* **aicdiff** (Float64) - Defines the difference in AICC needed to accept no transformation when the 
+    automatic transformation selection option is invoked (`function=:auto`). The default value
+    is `aicdiff = -2.0` for monthly and quarterly series, `aicdiff = 0.0` otherwise. For
+    more information on how this option is used to select a transformation see the manual.
+
+* **data** (TSeries or MVTSeries) - A TSeries or an MVTSeries containing two series of preadjustment factors which, 
+    unless` mode=:diff` (see below), must have positive values intended for division into the corresponding values
+    of the input time series. The default value is a vector of ones (no prior adjustment). When
+    data is used, an adjustment factor must be supplied for every observation in
+    the series (or for the span specified by the span argument of the series spec, if present).
+    Generally, an adjustment factor must also be supplied for each forecast (and backcast)
+    desired. (See the manual.)  When `mode = :diff`, the values in data are subtracted from the series, and they need not be positive.
+    
+    An MVTSeries with two series can supplied when both permanent and temporary
+    prior-adjustment factors are specified in the type set - see the manual for more information.
+
+* **function** (Symbol) - Transform the series Yt input in the series spec using a log, square root, inverse, or
+    logistic transformation. Alternatively, perform an AIC-based selection to decide between
+    a log transformation and no transformation (function=auto) using either the regARIMA
+    model specified in the regression and arima specs or the airline model (0 1 1)(0 1 1) (see
+    the manual). The default is no transformation (`function = :none`). Do not include both
+    the function and power arguments. Note: there are restrictions on the values used in
+    these arguments when preadjustment factors for seasonal adjustment are generated from
+    a regARIMA model; see the manual.  
+     
+    Symbol      | Transformation            | Range for Yₜ            | Equivalent power argument 
+    :-----------| :-------------------------| :----------------------| :-------------------------
+    `:none`     | Yₜ                         | all values             | `power = 1`               
+    `:log`      | log(Yₜ)                    | Yₜ > 0 for all t        | `power = 0`               
+    `:sqrt`     | 1/4 + 2*(sqrt(Yₜ) - 1)     | Yₜ ≥ 0 for all t        | `power = 0.5`             
+    `:inverse`  | 2 - 1/Yₜ                   | Yₜ ≠ 0 for all t        | `power = -1`              
+    `:logistic` | log(Yₜ / (1 - Yₜ)           | 0 < Yₜ < 1 for all t   | no equivalent        
+
+* **mode** (Union{Symbol, Vector{Symbol}}) - Specifies the way in which the user-defined prior adjustment factors will be applied to
+    the time series. If prior adjustment factors to be divided into the series are not given
+    as percents (e.g., [100, 100, 50, ...]), but rather as ratios (e.g., [1.0, 1.0, .5, ...]), set
+    `mode=:ratio`. If the prior adjustments are to be subtracted from the original series, set
+    `mode=:diff`. If `mode=:diff` is used when the mode of the seasonal adjustment is set to be
+    multiplicative or log additive in the `x11` spec, the factors are assumed to be on the log
+    scale. The factors will be exponentiated to put them on the same basis as the original
+    series. If this argument is not specified, then the prior adjustment factors are assumed
+    to be percents (`mode=:percent`). 
+
+    If both permanent and temporary prior-adjustment factors are specified in the type
+    argument, then up to two values can be specified for this argument, provided they are
+    compatible (e.g., `diff` cannot be specified along with ratio or percent). See DETAILS
+    for more information
+
+* **power** (Float64) - Transform the input series Yₜ using a Box-Cox power transformation.
+        
+        Yₜ = λ^2 + (Yₜ^λ 0 1)/λ for λ ≠ 0
+        Yₜ = log(Yₜ)  for λ = 0
+
+    This formula for the Box-Cox power transformation is constructed so that its values will
+    be close to Yₜ when λ is near 1 and close to log(Yₜ) when λ is near zero. It also has the
+    property that the transformed value is positive when Yₜ is greater than 1.
+    The power λ must be given (e.g., `power = .33`). The default is no transformation (λ =1), 
+    i.e., `power = 1`. The log transformation (`power = 0`), square root transformation
+    (`power = .5`), and the inverse transformation (`power = -1`) can alternatively be given
+    using the `function` argument. Do not use both the `power` and the `function` arguments
+    in the same spec file. 
+    
+    **Note:** there are restrictions on the values used in these arguments
+    when preadjustment factors for seasonal adjustment are generated from a regARIMA
+    model; see the manual.   
+    
+* **title** (String) - A title for the set of user-defined prior-adjustment factors. 
+    The title must be enclosed in quotes and may contain up to 79 characters.
+
+* **type** (Union{Symbol,Vector{Symbol}}) - Specifies whether the user-defined prior-adjustment factors are permanent 
+    factors (removed from the final seasonally adjusted series as well as the original series) or temporary
+    factors (removed from the original series for the purposes of generating seasonal factors
+    but not from the final seasonally adjusted series). If only one value is given for this argument (`type = :temporary`), 
+    then only one set of user-defined prior-adjustment factors
+    will be expected. If both types of user-defined prior-adjustment factors are given (`type = [:temporary, :permanent]`), 
+    then two sets of prior adjustment factors will be expected,
+    for more information see the manual. The default is `type = :permanent`.
+
+### Rarely used keyword arguments:
+
+* **constant** (Float64) - Positive constant value that is added to the original series before the program models
+    or seasonally adjusts the series. Once the program finishes modeling and/or seasonally
+    adjusting the series with the constant value added, this constant is removed from the
+    seasonally adjusted series as well as the trend component.
+
 """
 function transform(; 
     adjust::Union{Symbol,X13default}=_X13default,
     aicdiff::Union{Float64,X13default}=_X13default,
-    data::Any=_X13default,
+    data::Union{TSeries,MVTSeries,X13default}=_X13default,
     file::Union{String,X13default}=_X13default,
     format::Union{String,X13default}=_X13default,
     func::Union{Symbol,X13default}=_X13default,
-    mode::Union{Vector{Symbol},X13default}=_X13default,
+    mode::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     name::Union{String,X13default}=_X13default,
     power::Union{Float64,X13default}=_X13default,
     precision::Union{Int64,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:aictransform, :seriesconstant, :seriesconstantplot, :prior, :permprior, :tempprior, :prioradjusted, :permprioradjusted, :prioradjustedptd, :permprioradjustedptd, :transformed],# print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default}=[:seriesconstant, :prior, :permprior, :tempprior, :prioradjusted, :permprioradjusted, :prioradjustedptd, :permprioradjustedptd, :transformed],# save::Union{Vector{Symbol},X13default}
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
-    start::Union{MIT,X13default}=_X13default,
+    start::Union{MIT,Vector{MIT},X13default}=_X13default,
     title::Union{String,X13default}=_X13default,
-    type::Union{Symbol,X13default}=_X13default,
+    type::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     constant::Union{Float64,X13default}=_X13default,
     trimzero::Union{Symbol,X13default}=_X13default,
 )
     # checks and logic
+    #TODO: get start from data
+    #TODO: get name from data
+    #TODO: get start from data
+
     return X13transform(adjust,aicdiff,data,file,format,func,mode,name,power,precision,print,save,savelog,start,title,type,constant,trimzero)
 end
 transform!(spec::X13spec{F}; kwargs...) where F = (spec.transform = transform(; kwargs...))
 
 """
-x11(; kwargs...)
-x11!(spec::X13spec{F}; kwargs...)
+`x11(; kwargs...)`
+
+`x11!(spec::X13spec{F}; kwargs...)`
+
+An optional spec for invoking seasonal adjustment by an enhanced version of the methodology of the Census
+Bureau X-11 and X-11Q programs. The user can control the type of seasonal adjustment decomposition 
+calculated (`mode`), the seasonal and trend moving averages used (`seasonalma` and `trendma`), and the type of
+extreme value adjustment performed during seasonal adjustment (`sigmalim`). The output options, specified
+by print and save, include final tables and diagnostics for the X-11 seasonal adjustment method. In X-13-
+ARIMA-SEATS, additional specs can be used to diagnose data and adjustment problems, to develop compensating
+prior regression adjustments, and to extend the series by forecasts and backcasts. Such operations can result in
+a modified series from which the X-11 procedures obtain better seasonal adjustment factors. For more details
+on the X-11 seasonal adjustment diagnostics, see Shiskin, Young, and Musgrave (1967), Lothian and Morry
+(1978), and Ladiray and Quenneville (2001). Trading day effect adjustments and other holiday adjustments can
+be obtained from the `x11regression` spec.
+
+### Main keyword arguments:
+
+* **appendbcst** (Bool) - Determines if backcasts will be included in certain X-11 tables selected for storage with
+    the save option. If `appendbcst=true`, then backcasted values will be stored with tables
+    tables a16, b1, d10, d16, and h1. If `appendbcst=false`, no backcasts will be stored. The
+    default is to not include backcasts.
+
+* **appendfcst** (Bool) - Determines if forecasts will be included in certain X-11 tables selected for storage with
+    the save option. If `appendfcst=true`, then forecasted values will be stored with tables
+    a16, b1, d10, and d16. If `appendfcst=false`, no forecasts will be stored. The default is to
+    not include forecasts.
+
+* **final** (Union{Symbol,Vector{Symbol}}) - List of the types of prior adjustment factors, obtained from the regression and outlier
+    specs, that are to be removed from the final seasonally adjusted series. Additive outliers
+    (`final=:ao`), level change and ramp outliers (`final=:ls`), temporary change (`final=:tc`),
+    and factors derived from user-defined regressors (`final=:user`) can be removed. If this
+    option is not specified, the final seasonally adjusted series will contain these effects.
+
+* **mode** (Symbol) - Determines the mode of the seasonal adjustment decomposition to be performed. There
+    are four choices: (a) multiplicative (`mode=:mult`), (b) additive (`mode=:add`), (c) pseudo-additive 
+    (`mode=:pseudoadd`), and (d) log-additive (`mode=:logadd`) decomposition. The
+    default mode is `:mult`, unless the automatic transformation selection procedure is invoked
+    in the transform spec; in the latter case, the mode will match the transformation selected
+    for the series (`:mult` for the log transformation and `:add` for no transformation).
+
+* **seasonalma** (Union{Symbol,Vector{Symbol}}) - Specifies which seasonal moving average (also called seasonal ”filter”) will be used to
+    estimate the seasonal factors. These seasonal moving averages are n×m moving averages, meaning that 
+    an n-term simple average is taken of a sequence of consecutive m-term simple averages.
+
+    The seasonal filters shown in the table below can be selected for the entire series, or for
+    a particular month or quarter. If the same moving average is used for all calendar
+    months or quarters, only a single value need be entered. If different seasonal moving
+    averages are desired for some calendar months or quarters, a list of these must be entered,
+    specifying the desired seasonal moving average for each month or quarter. An example
+    for a quarterly series is the following: `seasonalma=[:s3x3, :s3x9, :s3x9, :s3x9]`.
+        
+    If no seasonal moving average is specified, the program will choose the final seasonal filter
+    automatically; this option can also be invoked by setting `seasonalma=:msr`. This is done
+    using the moving seasonality ratio procedure of X-11-ARIMA/88, see the manual. This is a
+    change from previous versions of X-11 and X-11-ARIMA where, when no seasonal moving
+    average was specified, a 3×3 moving average was used to calculate the initial seasonal
+    factors in each iteration, and a 3×5 moving average to calculate the final seasonal factors.
+    This seasonal filtering sequence can be specified by entering `seasonalma=:x11default`.
+
+    Symbol        | Description of option                                                                                                                                                                                                           |
+    :-------------| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+    `:s3x1`       | A 3×1 moving average.                                                                                                                                                                                                           
+    `:s3x3`       | A 3×3 moving average.                                                                                                                                                                                                           
+    `:s3x5`       | A 3×5 moving average.                                                                                                                                                                                                           
+    `:s3x9`       | A 3×9 moving average.                                                                                                                                                                                                           
+    `:s3x15`      | A 3×15 moving average.                                                                                                                                                                                                          
+    `:stable`     | Stable seasonal filter. A single seasonal factor for each calendar month or quarter is generated by calculating the simple average of all the values for each month or quarter (taken after detrending and outlier adjustment). 
+    `:x11default` | A 3×3 moving average is used to calculate the initial seasonal factors in each iteration, and a 3×5 moving average to calculate the final seasonal factors.                                                                     
+
+* **sigmalim** (Vector{Union{Float64,Missing}}) - Specifies the lower and upper sigma limits used to downweigh extreme irregular values
+    in the internal seasonal adjustment iterations. The sigmalim argument has two input values, 
+    the lower and upper sigma limits. Valid list values are any real numbers
+    greater than zero with the lower sigma limit less than the upper sigma limit (example:
+    `sigmalim=[1.8, 2.8]`). A missing value defaults to 1.5 for the lower sigma limit and 2.5
+    for the upper sigma limit. For example, the statement `sigmalim=[missing,3.0]` specifies that
+    the upper sigma limit will be set to 3.0, while the lower sigma limit will remain at the
+    1.5 default. For an explanation of
+    how X-13ARIMA-SEATS uses these sigma limits to derive adjustments for extreme values,
+    see the manual.
+
+* **title** (String,Vector{String}) - Title of the seasonal adjustment, in quotes, for the convenience of the user. This can be
+    a single title or a list of up to 8 titles. This list will be
+    printed on the title page below the series title. There is no default seasonal adjustment
+    title.
+
+* **trendma** (Int64) - Specifies which Henderson moving average will be used to estimate the final trend-cycle.
+    Any odd number greater than one and less than or equal to 101 can be specified. Example:
+    `trendma=23`. If no selection is made, the program will select a trend moving average based
+    on statistical characteristics of the data. For monthly series, either a 9-, 13- or 23-term
+    Henderson moving average will be selected. For quarterly series, the program will choose
+    either a 5- or a 7-term Henderson moving average.
+
+* **type** (Symbol) - When `type=:summary`, the program develops estimates of the trend-cycle, irregular, and
+    related diagnostics, along with residual seasonal factors and, optionally, also residual
+    trading day and holiday factors from an input series which is assumed to be either already
+    seasonally adjusted or nonseasonal. These residual factors are not removed. The output
+    series in the final seasonally adjusted series (table D11) is the same as the original series
+    (table A1). When `type=:trend`, the program develops estimates for the final trend-cycle
+    and irregular components without attempting to estimate a seasonal component. The
+    input series is assumed to be either already seasonally adjusted or nonseasonal. With this
+    option, estimated trading day and holiday effects as well as permanent prior adjustment
+    factors are removed to form the adjusted series (table D11) as well as for the calculation
+    of the trend (table D12). When a metafile with a composite spec is used to obtain
+    an indirect adjustment of an aggregate, these options are used for components of the
+    aggregate that are not seasonally adjusted. In the default setting, `type=:sa`, the program
+    calculates a seasonal decomposition of the series. With all three values of type, the final
+    seasonally adjusted series (printed in the D11 table of the main output file) is used to
+    form the indirect seasonal adjustment of the composite.
+
+### Rarely used keyword arguments:
+
+* **calendarsigma** (Symbol) - Specifies if the standard errors used for extreme value detection and adjustment 
+    are computed separately for each calendar month (quarter), or separately for two complementary
+    sets of calendar months (quarters). If `calendarsigma=:all`, the standard errors will be
+    computed separately for each month (quarter). If `calendarsigma=:signif`, the standard
+    errors will be computed separately for each month only if Cochran's hypothesis test determines that the 
+    irregular component is heteroskedastic by calendar month (quarter).
+
+    If `calendarsigma=:select`, the months (quarters) will be divided into two groups, and
+    the standard error of each group will be computed. For the select option, the argument
+    sigmavec must be used to define one of the two groups of months (quarters). If calendarsigma 
+    is not specified, the standard errors will be computed from 5 year spans of
+    irregulars, in the manner described in Dagum (1988).
+
+* **centerseasonal** (Bool) - If `centerseasonal = true`, the program will center the seasonal factors combined with
+    user-defined seasonal regression effects. The default is `centerseasonal = false`.
+
+* **keepholiday** (Bool) - Determines if holiday effects estimated by the program are to be kept in the 
+    final seasonally adjusted series. In the default setting, `keepholiday=false`, holiday adjustment
+    factors derived from the program are removed from the final seasonally adjusted series.
+    If `keepholiday=true`, holiday adjustment factors derived from the program are kept in
+    the final seasonally adjusted series. The default is used to produce a series adjusted for
+    both seasonal and holiday effects.
+
+* **print1stpass** (Bool) - If `print1stpass=true`, output from the seasonal adjustment needed to generate the
+    irregular components used for the irregular regression adjustment procedures will be
+    printed out. If `print1stpass=false`, this output will be suppressed, and only the tables associated 
+    with the irregular regression procedures are printed out. The default
+    is `print1stpass=false`. When `print1stpass=true`, the `print` argument controls which tables are actually printed.
+
+* **sfshort** (Bool) - Controls what seasonal filters are used to obtain the seasonal factors if the series is at
+    most 5 years long. For the default case, `sfshort=false`, a stable seasonal filter will be
+    used to calculate the seasonal factors, regardless of what is entered for the seasonalma
+    argument. If `sfshort=true`, X-13ARIMA-SEATS will use the central and one sided seasonal
+    filters associated with the choice given in the seasonalma argument wherever possible.
+
+* **sigmavec** (Vector{TimeSeriesEcon._FPConst}) - Specifies one of the two groups of months (quarters) for whose irregulars a group standard 
+    error will be calculated under the `calendarsigma=:select` option. The user enters the endings of 
+    monthly or quarterly MITs, i.e. M1, M1, or Q1, Q2. Example: sigmavec=[M1, M2, M3]). 
+    Warning: This argument can only be specified when `calendarsigma=:select`.
+
+* **trendic** (Float64) - Specifies the irregular-to-trend variance ratio that will be used to generate the end weights
+    for the Henderson moving average. The procedure is taken from Doherty (2001). If
+    this variable is not specified, the value of `trendic` will depend on the length of the
+    Henderson trend filter. These default values closely reproduce the end weights for the
+    set of Henderson trend filters which originally appeared in X-11 and X-11-ARIMA.
+
+* **true7term** (Bool) - Specifies the end weights used for the seven term Henderson filter. If 
+    `true7term = true`, then the asymmetric ends weights for the 7 term Henderson filter are applied for
+    observations at the end of the series where a central Henderson filter cannot be applied.
+    If `true7term = false`, then central and asymmetric weights from a 5 term Henderson filter
+    are applied, as in previous versions of the X-11-ARIMA program released by Statistics
+    Canada. The default is `true7term = false`.
+
 """
 function x11(; 
     appendbcst::Union{Bool,X13default}=_X13default,
     appendfcst::Union{Bool,X13default}=_X13default,
-    final::Union{Vector{Symbol},X13default}=_X13default,
+    final::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     mode::Union{Symbol,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt,:moveseasrat,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:totaladjustment,:trend,:tendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot],# print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default}=[:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:tendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct],# print::Union{Vector{Symbol},X13default}
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
-    seasonalma::Union{Vector{Symbol},X13default}=_X13default,
-    sigmalim::Union{Vector{Float64},X13default}=_X13default,
-    title::Union{Vector{String},X13default}=_X13default,
+    seasonalma::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    sigmalim::Union{Vector{Union{Float64,Missing}},X13default}=_X13default,
+    title::Union{String,Vector{String},X13default}=_X13default,
     trendma::Union{Int64,X13default}=_X13default,
     type::Union{Symbol,X13default}=_X13default,
     calendarsigma::Union{Symbol,X13default}=_X13default,
@@ -2240,7 +2821,7 @@ function x11(;
     keepholiday::Union{Bool,X13default}=_X13default,
     print1stpass::Union{Bool,X13default}=_X13default,
     sfshort::Union{Bool,X13default}=_X13default,
-    sigmavec::Union{Vector{Symbol},X13default}=_X13default,
+    sigmavec::Union{Vector{TimeSeriesEcon._FPConst},X13default}=_X13default,
     trendic::Union{Float64,X13default}=_X13default,
     true7term::Union{Bool,X13default}=_X13default,
 )
@@ -2252,8 +2833,172 @@ x11!(spec::X13spec{F}; kwargs...) where F = (spec.x11 = x11(; kwargs...))
 
 
 """
-x11regression(; kwargs...)
-x11regression!(spec::X13spec{F}; kwargs...)
+`x11regression(; kwargs...)`
+
+`x11regression!(spec::X13spec{F}; kwargs...)`
+
+`x11(; kwargs...)`
+
+`x11!(spec::X13spec{F}; kwargs...)`
+
+An optional spec for use in conjunction with the x11 spec for series without missing observations. This spec
+estimates calendar effects by regression modeling of the irregular component with predefined or user-defined
+regressors. The user can select predefined regression variables with the `variables` argument. The predefined
+variables are for calendar (trading-day and holiday) variation and additive outliers. A change-of-regime option
+is available with trading-day regressors. User-defined calendar effect regression variables can be included in
+the model via the user argument. Data for any user-defined variables must be supplied in the data
+argument. The regression model specified can contain both predefined and user-defined regression variables.
+
+### Main keyword arguments:
+
+* **aicdiff** (Float64) - Defines the difference in AICC needed to accept a regressor specified in the aictest
+    argument. The default value is `aicdiff=0.0`. For more information on how this option
+    is used in conjunction with the aictest argument, see the manual.
+
+* **aictest** (Union{Symbol,Vector{Symbol}}) - Specifies that an AIC-based comparison will be used to determine if a specified regression
+    variable should be included in the user's irregular component regression model. The only
+    entries allowed for this variable are `:td`, `:tdstock`, `:td1coef`, `:tdstock1coef`, `:easter`, and
+    `:user`. If a trading day model selection is specified, for example, then AIC values (with
+    a correction for the length of the series, henceforth referred to as AICC) are derived
+    for models with and without the specified trading day variable. By default, the model
+    with smaller AICC is used to generate forecasts, identify outliers, etc. If more than
+    one type of regressor is specified, the AIC-tests are performed sequentially in this order:
+    (a) trading day regressors, (b) easter regressors, (c) user-defined regressors. If there are
+    several variables of the same type (for example, several td regressors), then the aictest
+    procedure is applied to them as a group. That is, either all variables of this type will
+    be included in the final model or none. See the manual for more information on the
+    testing procedure. If this option is not specified, no automatic AIC-based selection will
+    be performed.
+
+* **critical** (Float64) - Sets the critical value (threshold) against which the absolute values of the outlier 
+    t-statistics are compared to detect additive outliers (meaning extreme irregular values). This
+    argument applies unless the sigma argument is used, or the only regressor(s) estimated
+    is flow trading day. The assigned value must be a real number greater than 0. Example:
+    `critical=4.0`. The default critical value is determined by the number of observations
+    in the interval searched for outliers (see the outlierspan argument below). Table 7.22
+    gives default critical values for a number of outlier span lengths. Larger (smaller) critical
+    values predispose x11regression to treat fewer (more) irregulars as outliers. A large
+    value of critical should be used if no protection is wanted against extreme irregular
+    values.
+
+* **data** (MVTSeries) - Assigns values to the user-defined regression variables. The time frame of the values
+    must cover the time frame of the series (or of the span specified by the span argument of
+    the series spec, if present). It must also cover the time frame of forecasts and backcasts
+    requested in the forecast spec.
+
+* **outliermethod** (Symbol) - Determines how the program successively adds detected outliers to the model. The
+    choices are `outliermethod = :addone` or `outliermethod = :addall`. See the DETAILS section of the
+    outlier spec for a description of these two methods. The default is `outliermethod = :addone`.
+    This argument cannot be used if the `sigma` argument is used.
+
+* **outlierspan** (UnitRange{MIT}) - Specifies start and end dates of the span of the irregular component to be searched for
+    outliers. The start and end dates of the span must both lie within the series. Example: `outlierspan = 1976M1:2022M3`.
+    This argument cannot be used with the `sigma` argument.
+
+* **prior** (Bool) - Specifies whether calendar factors from the irregular component regression are computed
+    in a preliminary run and applied as prior factors (`prior=true`), or as a part of the seasonal
+    adjustment process (`prior=false`). The default is `prior=false`. The prior argument has
+    no effect when a regARIMA model is specified; in this case, the irregular component
+    regression is always computed before seasonal adjustment.
+
+* **sigma** (Float64) - The sigma limit for excluding extreme values of the irregular components before trading
+    day (only) regression is performed. Irregular values larger than this number of standard
+    deviations from the mean (1.0 for multiplicative adjustments, 0.0 for additive adjustments) are 
+    excluded as extreme. Each irregular has a standard error determined by its
+    month (or quarter) type. The month types are determined by the month length, by
+    the day of the week on which the month starts. This argument cannot be used when
+    regressors other than flow trading day are present in the model, or when the `critical`
+    argument is used. The assigned value must be a real number greater than 0; the default
+    is 2.5 (which is invoked only when the flow trading day variable(s) are the only regressor
+    estimated). Example: `sigma=3.0`.
+
+* **span** (UnitRange{MIT}) - Specifies the span (data interval) of irregular component values to be used to estimate
+    the regression model's coefficients. This argument can be utilized when, for example,
+    the user does not want data early in the series to affect regression estimates used for
+    preadjustment before seasonal adjustment. As with the `modelspan` spec detailed in the
+    `series` spec, the span argument has two values, the start and end date of the desired
+    span. The start and end dates of the
+    model span must both lie within the time span of data specified for analysis in the `series`
+    spec, and the start date must precede the end date.
+
+* **tdprior** (Vector{Float64}) - User-input list of seven daily weights, starting with Monday's weight, which specify a
+    desired X-11 trading day adjustment prior to seasonal adjustment. These weights are
+    adjusted to sum to 7.0 by the program. This option can be used only with multiplicative
+    and log-additive seasonal adjustments. The values must be real numbers greater than or
+    equal to zero. Example: `tdprior=[0.7, 0.7, 0.7, 1.05, 1.4, 1.4, 1.05]`.
+
+* **usertype** (Union{Symbol,Vector{Symbol}}) - Assigns a type to the user-defined regression variables. 
+    The user-defined regression effects can be defined as a trading day (td), holiday (holiday, or other user-defined (user)
+    regression effects. A single effect type can be specified for all the user-defined regression
+    variables defined in the x11regression spec (`usertype=:td`), or each user-defined regression variable can be 
+    given its own type (`usertype=[:td, :td, :td, :td, :td, :td, :holiday, :user]`). 
+    See the manual for more information on assigning types to user-defined regressors.
+
+* **variables** (Vector{Symbol}) - List of predefined regression variables to be included in the model. The values of these
+    variables are calculated by the program, as functions of the calendar in most cases. See
+    the manual for a discussion and a table of the available predefined variables.
+
+### Rarely used keyword arguments:
+
+* **almost** (Float64) - Differential used to determine the critical value used for a set of ”almost” outliers -
+    outliers with t-statistics near the outlier critical value that are not incorporated into the
+    regARIMA model. After outlier identification, any outlier with a t-statistic larger than
+    Critical − almost is considered an ”almost outlier,” and is included in a separate table.
+    The default is `almost = 0.5`; values for this argument must always be greater than zero.
+
+* **b** (Vector{Float64}) - Specifies initial values for regression parameters in the order that they appear in the
+    `variables` and `user` arguments. If present, the `b` argument must assign initial values
+    to _all_ regression coefficients in the regARIMA model. Initial values are assigned to parameters
+    either by specifying the value in the argument list or by explicitly indicating that it is
+    missing as in the example below. Missing values take on their default value of 0.1. For
+    example, for a model with two regressors, `b=[0.7, missing]` is equivalent to `b=[0.7,0.1]`, but
+    `b=[0.7]` is not allowed. For a model with three regressors, `b=[0.8,missing,-0.4]` is equivalent
+    to `b=[0.8,0.1,-0.4]`. To hold a parameter fixed at a specified value, use the `bfixed` argument.
+
+* **fixb** (Vector{Bool}) - A vector of `true`/`false` entries corresponding to the entries in the `b` vector.
+        `true` entries will be held fixed.
+
+* **centeruser** (Symbol) - Specifies the removal of the (sample) mean or the seasonal means from the user-defined
+    regression variables. If `centeruser=:mean`, the mean of each user-defined regressor is
+    subtracted from the regressor. If `centeruser=:seasonal`, means for each calendar month
+    (or quarter) are subtracted from each of the user-defined regressors. If this option is
+    not specified, the user-defined regressors are assumed to already be in an appropriately
+    centered form and are not modified.
+
+* **eastermeans** (Bool) - Specifies whether long term (500 year) monthly means are used to deseasonalize the
+    Easter regressor associated with the variable `easter[w]`, as described in footnote 5 of
+    Table 4.1 of the manual (`eastermeans=true`), or, instead, monthly means calculated from the span of
+    data used for the calculation of the coefficients of the Easter regressors (`eastermeans=false`).
+    The default is `eastermeans=true`. This argument is ignored if no built-in Easter regressor
+    is included in the regression model, or if the only Easter regressor is `sceaster[w]` (see
+    the manual for details).
+
+* **forcecal** (Bool) - Specifies whether the calendar adjustment factors are to be constrained to have the same
+    value as the product (or sum, if additive seasonal adjustment is used) of the holiday and
+    trading day factors (`forcecal=true`), or not (`forcecal=false`). The default is `forcecal=false`.
+    This argument is functional only when both holiday and trading day regressors are specified in the `variables` argument of this spec.
+
+* **noapply** (Vector{Symbol}) - List of the types of regression effects defined in the `x11regression` spec whose 
+    model-estimated values are not to be adjusted out of the original series or final seasonally
+    adjusted series. Available effects include modelled trading day effects (`:td`) and Easter,
+    Labor Day, and Thanksgiving-Christmas holiday effects (`:holiday`).
+
+* **reweight** (Bool) - Specifies whether the daily trading day weights are to be re-weighted when at least one
+    of the daily weights in the C16 output table is less than zero (`reweight=true`), or not
+    (`reweight=false`). The default is `reweight=false`. This argument is functional only when
+    trading day regressors are specified in the variables argument of this spec. Note: the
+    default for previous versions of X-11 and X-11-ARIMA corresponds to `reweight=true`.
+
+* **umdata** (MVTSeries) - An MVTSeries of mean-adjustment values, to be subtracted from the irregular series
+    Iₜ (or Log(Iₜ)) before the coefficients of a model with a user-defined regressor are estimated. 
+    This argument is used when the mean function for predefined
+    regressors described in the manual is incorrect for the model with user-defined regressors.
+    The mean-adjustment function depends on the mode of adjustment. See the manual for
+    more information.
+
+    The time frame of these values must cover the time frame of the series (or of the span
+    specified by the span argument of the `series` spec, if present). It must also cover the
+    time frame of forecasts and backcasts requested in the `forecast` spec.
 """
 function x11regression(; 
     aicdiff::Union{Float64,X13default}=_X13default,
@@ -2291,6 +3036,10 @@ function x11regression(;
     umtrimzero::Union{Symbol,X13default}=_X13default,
 )
     # checks and logic
+    #TODO: get user from data
+    #TODO: get start from data
+    #TODO: add table of pre-defined variables
+    #TODO: get umname and umstart from umdata
     return X13x11regression(aicdiff,aictest,critical,data,file,format,outliermethod,outlierspan,print,save,savelog,prior,sigma,span,start,tdprior,user,usertype,variables,almost,b,centeruser,eastermeans,forcecal,noapply,reweight,umdata,umfile,umformat,umname,umprecision,umstart,umtrimzero)
 end
 x11regression!(spec::X13spec{F}; kwargs...) where F = (spec.x11regression = x11regression(; kwargs...))
