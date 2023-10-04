@@ -42,7 +42,7 @@ function DEError()
 end
 
 @inline _de_error!(msg, ::Val{:debug}) = C.de_error_source(msg, sizeof(msg))
-@inline _de_error!(msg, v::Val) = (@nospecialize(v); C.de_error(msg, sizeof(msg)))
+@inline _de_error!(msg, ::Val=Val(:nodebug)) = (@nospecialize(v); C.de_error(msg, sizeof(msg)))
 
 
 # _check() handles results from C library calls
@@ -63,18 +63,18 @@ _to_de_scalar_val(value::Complex) = float(value)
 _to_de_scalar_val(value::StrOrSym) = string(value)
 _to_de_scalar_val(value::Dates.Date) = Dates.datetime2unix(convert(DateTime, value))
 _to_de_scalar_val(value::Dates.DateTime) = Dates.datetime2unix(value)
-_to_de_scalar_val(value::MIT) = _pack_date(value)
+_to_de_scalar_val(value::MIT)::typeof(value) = _pack_date(value)
 
-_pack_date(value::MIT) = Int64(value)
+_pack_date(value::MIT) = value
 function _pack_date(value::MIT{FR}) where {FR<:YPFrequency}
     freq = _to_de_scalar_freq(FR)
     year, period = mit2yp(value)
-    de_value = Ref{Int64}(0)
-    _check(C.de_pack_year_period_date(freq, year, period, de_value))
-    if Int(value) != de_value[]
-        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_value[])"
+    de_code = Ref{Int64}(0)
+    _check(C.de_pack_year_period_date(freq, year, period, de_code))
+    if Int64(value) != de_code[]
+        @warn "MIT codes differ between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code[])"
     end
-    return de_value[]
+    return value
 end
 function _pack_date(value::MIT{FR}) where {FR<:CalendarFrequency}
     freq = _to_de_scalar_freq(FR)
@@ -84,10 +84,10 @@ function _pack_date(value::MIT{FR}) where {FR<:CalendarFrequency}
     day = Dates.day(date)
     de_code = Ref{Int64}(0)
     _check(C.de_pack_calendar_date(freq, year, month, day, de_code))
-    if Int(value) != de_code[]
-        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code[])"
+    if Int64(value) != de_code[]
+        @warn "MIT codes differ between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code[])"
     end
-    return de_code[]
+    return value
 end
 
 _to_de_scalar_type(val) = _to_de_scalar_type(typeof(val))
@@ -131,7 +131,7 @@ function _unpack_date(::Type{FR}, freq, de_code) where {FR<:YPFrequency}
     _check(C.de_unpack_year_period_date(freq, de_code, year, period))
     value = MIT{FR}(year[], period[])
     if Int(value) != de_code
-        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code)"
+        @warn "MIT codes differ between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code)"
     end
     return value
 end
@@ -142,25 +142,25 @@ function _unpack_date(::Type{FR}, freq, de_code) where {FR<:CalendarFrequency}
     _check(C.de_unpack_calendar_date(freq, de_code, year, month, day))
     value = MIT{FR}(Dates.Date(year[], month[], day[]))
     if Int(value) != de_code
-        @warn "MIT codes differe between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code)"
+        @warn "MIT codes differ between TimeSeriesEcon and DataEcon for $value: $(Int(value)) vs $(de_code)"
     end
     return value
 end
 
 function _from_de_scalar(scal::C.scalar_t)
-    _type = scal.object.type
-    if _type == C.type_string
+    obj_type = scal.object.obj_type
+    if obj_type == C.type_string
         return unsafe_string(Ptr{UInt8}(scal.value))
     end
-    if _type == C.type_date
+    if obj_type == C.type_date
         FR = _to_julia_frequency(scal.frequency)
         T = _to_julia_scalar_type(Val(C.type_integer), Val(scal.nbytes))
         val = unsafe_load(Ptr{T}(scal.value))
         return _unpack_date(FR, scal.frequency, val)
     end
-    T = _to_julia_scalar_type(Val(_type), Val(scal.nbytes))
+    T = _to_julia_scalar_type(Val(obj_type), Val(scal.nbytes))
     value = unsafe_load(Ptr{T}(scal.value))
-    if _type == C.type_signed && scal.frequency != C.freq_none
+    if obj_type == C.type_signed && scal.frequency != C.freq_none
         FR = _to_julia_frequency(scal.frequency)
         value = convert(Duration{FR}, Int64(value))
     end
@@ -196,6 +196,7 @@ _to_julia_frequency(::Val{C.freq_unit}) = Unit
 _to_julia_frequency(::Val{C.freq_daily}) = Daily
 _to_julia_frequency(::Val{C.freq_bdaily}) = BDaily
 _to_julia_frequency(::Val{C.freq_monthly}) = Monthly
+_to_julia_frequency(::Val{C.freq_monthly + 1}) = Monthly
 function _to_julia_frequency(::Val{CF}) where {CF}
     for (f, F) in ((C.freq_weekly => Weekly), (C.freq_quarterly => Quarterly),
         (C.freq_halfyearly => HalfYearly), (C.freq_yearly => Yearly))
@@ -239,7 +240,7 @@ _get_axis_of(de::DEFile, vec::AbstractUnitRange, dim=1) = _make_axis(de, vec)
 _get_axis_of(de::DEFile, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(vec, dim))
 
 function _get_axis_range_firstdate(axis::C.axis_t)
-    @assert axis.type == C.axis_range
+    @assert axis.ax_type == C.axis_range
     FR = _to_julia_frequency(axis.frequency)
     return _unpack_date(FR, axis.frequency, axis.first)
 end
@@ -247,24 +248,34 @@ end
 #############################################################################
 # write tseries and mvtseries
 
+
+_de_array_data(; eltype, elfreq=C.freq_none, obj_type, nbytes, val) = (;eltype, elfreq, obj_type, nbytes, val)
+
 _to_de_array(value) = throw(ArgumentError("Unable to write value of type $(typeof(value))."))
 
 # handle range
-_to_de_array(value::AbstractUnitRange) =
-    (; eltype=_to_de_scalar_type(eltype(value)), type=C.type_range, nbytes=0, val=C_NULL)
+_to_de_array(::AbstractUnitRange) = _de_array_data(; eltype=C.type_none, obj_type=C.type_range, nbytes=0, val=C_NULL)
 
 # handle any vector or matrix
 _to_de_array(value::AbstractVecOrMat) = _to_de_array(Val(isempty(value)), value)
 
+_eltypefreq(::Type{ET}) where {ET <: MIT} = (; eltype=C.type_date, elfreq=_to_de_scalar_freq(ET))
+_eltypefreq(::Type{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), elfreq=C.freq_none)
+
 # empty array
-_to_de_array(::Val{true}, value::AbstractVector{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), type=C.type_vector, nbytes=0, val=C_NULL)
-_to_de_array(::Val{true}, value::AbstractMatrix{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), type=C.type_matrix, nbytes=0, val=C_NULL)
+_to_de_array(::Val{true}, value::AbstractVecOrMat{ET}) where {ET} = _de_array_data(;
+    _eltypefreq(ET)...,
+    obj_type=ndims(value) == 1 ? C.type_vector : C.type_matrix,
+    nbytes=0,
+    val=C_NULL
+)
 
 # vector of numbers
 function _to_de_array(::Val{false}, value::AbstractVecOrMat{ET}) where {ET<:Number}
     val = value
     nbytes = length(value) * _to_de_scalar_nbytes(ET)
-    return (; eltype=_to_de_scalar_type(ET), type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
+    return _de_array_data(; _eltypefreq(ET)...,
+        obj_type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
 end
 
 _to_de_array(::Val{false}, value::AbstractVecOrMat{ET}) where {ET<:StrOrSym} = _to_de_array(Val(false), map(string, value))
@@ -273,7 +284,7 @@ function _to_de_array(::Val{false}, value::VecOrMat{String})
     nbytes = sum(length, value) + nel
     val = Vector{UInt8}(undef, nbytes)
     _check(C.de_pack_strings(value, nel, val, Ref(nbytes)))
-    return (; eltype=C.type_string, type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
+    return _de_array_data(; eltype=C.type_string, obj_type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
 end
 
 # handle bit array -- we must expand it to Array{Bool}
@@ -281,19 +292,19 @@ _to_de_array(value::BitArray) = _to_de_array(Array(value))
 
 # handle mvtseries
 function _to_de_array(value::MVTSeries)
-    (; eltype, nbytes, val) = _to_de_array(value.values)
-    return (; eltype, type=C.type_mvtseries, nbytes, val)
+    arr = _to_de_array(value.values)
+    return _de_array_data(; arr.eltype, arr.elfreq, obj_type=C.type_mvtseries, arr.nbytes, arr.val)
 end
 
 # handle tseries
 function _to_de_array(value::TSeries)
-    (; eltype, nbytes, val) = _to_de_array(value.values)
-    return (; eltype, type=C.type_tseries, nbytes, val)
+    arr = _to_de_array(value.values)
+    return _de_array_data(; arr.eltype, arr.elfreq, obj_type=C.type_tseries, arr.nbytes, arr.val)
 end
 
 function _should_store_eltype(arr, value::AbstractArray{ET}) where {ET}
     isempty(value) && return true
-    arr.type == C.type_range && return false
+    arr.obj_type == C.type_range && return false
     arr.eltype == C.type_other_scalar && return true
     arr.eltype == C.type_string && return ET != String
     return ET != _to_julia_scalar_type(Val(arr.eltype), Val(sizeof(ET)))
@@ -320,12 +331,12 @@ function _store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{N,
     arr = _to_de_array(value)
     GC.@preserve arr begin
         ptr = arr.nbytes == 0 ? C_NULL : pointer(arr.val)
-        _check(_do_store_array(Val(N), de, pid, name, arr.type, arr.eltype, axes..., arr.nbytes, ptr, id))
+        _check(_do_store_array(Val(N), de, pid, name, arr.obj_type, arr.eltype, arr.elfreq, axes..., arr.nbytes, ptr, id))
     end
     if _should_store_eltype(arr, value)
         set_attribute(de, id[], "jeltype", string(ET))
     end
-    if _should_store_type(Val(arr.type), value)
+    if _should_store_type(Val(arr.obj_type), value)
         set_attribute(de, id[], "jtype", string(typeof(value)))
     end
     return id[]
@@ -354,8 +365,8 @@ function _to_julia_array(de, id, arr)
 end
 
 # dispatcher
-_from_de_array(arr::C.tseries_t) = _from_de_array(arr, Val(arr.object.type), Val(arr.axis.type))
-_from_de_array(arr::C.mvtseries_t) = _from_de_array(arr, Val(arr.object.type), Val(arr.axis1.type), Val(arr.axis2.type))
+_from_de_array(arr::C.tseries_t) = _from_de_array(arr, Val(arr.object.obj_type), Val(arr.axis.ax_type))
+_from_de_array(arr::C.mvtseries_t) = _from_de_array(arr, Val(arr.object.obj_type), Val(arr.axis1.ax_type), Val(arr.axis2.ax_type))
 
 # handle type_range
 _from_de_array(arr::C.tseries_t, ::Val{C.type_range}, ::Val{C.axis_plain}) = 1:arr.axis.length
@@ -469,7 +480,7 @@ import ..readdb
 function _read_data(de::DEFile, id::C.obj_id_t)
     obj = Ref{C.object_t}()
     _check(C.de_load_object(de, id, obj))
-    return _read_data(de, id, Val(obj[].class))
+    return _read_data(de, id, Val(obj[].obj_class))
 end
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_scalar}) = load_scalar(de, id)
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_tseries}) = load_tseries(de, id)
@@ -483,7 +494,7 @@ function _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_catalog})
     while rc == C.DE_SUCCESS
         name = Symbol(unsafe_string(obj[].name))
         try
-            value = _read_data(de, obj[].id, Val(obj[].class))
+            value = _read_data(de, obj[].id, Val(obj[].obj_class))
             push!(data, name => value)
         catch err
             @error "Failed to load $name" err

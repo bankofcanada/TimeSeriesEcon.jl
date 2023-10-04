@@ -19,6 +19,17 @@ using ..TimeSeriesEcon
 
 include("C.jl")
 
+function __init__()
+    # make sure the loaded library is the same version as the one that generated our C.jl 
+    version = VersionNumber(unsafe_string(C.de_version()))
+    if version != VersionNumber(C.DE_VERSION)
+        throw(ErrorException("Library version $(version) does not match expected version $(C.DE_VERSION)."))
+    end
+    return 
+end
+
+const VERSION = VersionNumber(C.DE_VERSION)
+
 #############################################################################
 # open and close daec files
 

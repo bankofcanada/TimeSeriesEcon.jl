@@ -273,7 +273,7 @@ rm(test_file, force=true)
 @testset "DE show" begin
     @test_throws DE.DEError DE.opendaec("/this/path/does/not/exist.daec")
     Core.eval(DE.I, :(debug_libdaec = :debug))
-    @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*in: de_open \(.*\).*"i) begin
+    @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*"i) begin
         try
             DE.opendaec("/this/path/does/not/exist.daec")
         catch err

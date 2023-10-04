@@ -589,8 +589,7 @@ function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where {end_mont
 end
 
 MIT{Daily}(d::Dates.Date) = daily(d)
-MIT{BDaily}(d::Dates.Date) = bdaily(d)
-MIT{BDaily}(d::Dates.Date; bias) = bdaily(d; bias)
+MIT{BDaily}(d::Dates.Date; kwargs...) = bdaily(d; kwargs...)
 MIT{Weekly}(d::Dates.Date) = weekly(d)
 MIT{Weekly{end_day}}(d::Dates.Date) where {end_day} = weekly(d, end_day)
 

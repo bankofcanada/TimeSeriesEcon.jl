@@ -5,6 +5,10 @@ export DataEcon_jll
 
 using CEnum
 
+function de_version()
+    ccall((:de_version, libdaec), Ptr{Cchar}, ())
+end
+
 function de_error(msg, len)
     ccall((:de_error, libdaec), Cint, (Ptr{Cchar}, Csize_t), msg, len)
 end
@@ -23,27 +27,38 @@ end
     DE_BAD_AXIS_TYPE = -999
     DE_BAD_CLASS = -998
     DE_BAD_TYPE = -997
-    DE_BAD_NAME = -996
-    DE_BAD_FREQ = -995
-    DE_SHORT_BUF = -994
-    DE_OBJ_DNE = -993
-    DE_AXIS_DNE = -992
-    DE_ARG = -991
-    DE_NO_OBJ = -990
-    DE_EXISTS = -989
-    DE_BAD_OBJ = -988
-    DE_NULL = -987
-    DE_DEL_ROOT = -986
-    DE_MIS_ATTR = -985
-    DE_INEXACT = -984
-    DE_RANGE = -983
-    DE_INTERNAL = -982
+    DE_BAD_ELTYPE = -996
+    DE_BAD_ELTYPE_NONE = -995
+    DE_BAD_ELTYPE_DATE = -994
+    DE_BAD_NAME = -993
+    DE_BAD_FREQ = -992
+    DE_SHORT_BUF = -991
+    DE_OBJ_DNE = -990
+    DE_AXIS_DNE = -989
+    DE_ARG = -988
+    DE_NO_OBJ = -987
+    DE_EXISTS = -986
+    DE_BAD_OBJ = -985
+    DE_NULL = -984
+    DE_DEL_ROOT = -983
+    DE_MIS_ATTR = -982
+    DE_INEXACT = -981
+    DE_RANGE = -980
+    DE_INTERNAL = -979
 end
 
 const de_file = Ptr{Cvoid}
 
 function de_open(fname, de)
     ccall((:de_open, libdaec), Cint, (Ptr{Cchar}, Ptr{de_file}), fname, de)
+end
+
+function de_open_readonly(fname, de)
+    ccall((:de_open_readonly, libdaec), Cint, (Ptr{Cchar}, Ptr{de_file}), fname, de)
+end
+
+function de_open_memory(pde)
+    ccall((:de_open_memory, libdaec), Cint, (Ptr{de_file},), pde)
 end
 
 function de_close(de)
@@ -89,8 +104,8 @@ const obj_id_t = Int64
 struct object_t
     id::obj_id_t
     pid::obj_id_t
-    class::class_t
-    type::type_t
+    obj_class::class_t
+    obj_type::type_t
     name::Ptr{Cchar}
 end
 
@@ -132,9 +147,9 @@ end
 
 @cenum frequency_t::UInt32 begin
     freq_none = 0
-    freq_unit = 1
-    freq_daily = 4
-    freq_bdaily = 5
+    freq_unit = 11
+    freq_daily = 12
+    freq_bdaily = 13
     freq_weekly = 16
     freq_weekly_sun0 = 16
     freq_weekly_mon = 17
@@ -230,7 +245,7 @@ end
 
 struct axis_t
     id::axis_id_t
-    type::axis_type_t
+    ax_type::axis_type_t
     length::Int64
     frequency::frequency_t
     first::Int64
@@ -256,6 +271,7 @@ end
 struct tseries_t
     object::object_t
     eltype::type_t
+    elfreq::frequency_t
     axis::axis_t
     nbytes::Int64
     value::Ptr{Cvoid}
@@ -263,8 +279,8 @@ end
 
 const vector_t = tseries_t
 
-function de_store_tseries(de, pid, name, type, eltype, axis_id, nbytes, value, id)
-    ccall((:de_store_tseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, axis_id, nbytes, value, id)
+function de_store_tseries(de, pid, name, type, eltype, elfreq, axis_id, nbytes, value, id)
+    ccall((:de_store_tseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, frequency_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, elfreq, axis_id, nbytes, value, id)
 end
 
 function de_load_tseries(de, id, tseries)
@@ -274,6 +290,7 @@ end
 struct mvtseries_t
     object::object_t
     eltype::type_t
+    elfreq::frequency_t
     axis1::axis_t
     axis2::axis_t
     nbytes::Int64
@@ -282,8 +299,8 @@ end
 
 const matrix_t = mvtseries_t
 
-function de_store_mvtseries(de, pid, name, type, eltype, axis1_id, axis2_id, nbytes, value, id)
-    ccall((:de_store_mvtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, axis_id_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, axis1_id, axis2_id, nbytes, value, id)
+function de_store_mvtseries(de, pid, name, type, eltype, elfreq, axis1_id, axis2_id, nbytes, value, id)
+    ccall((:de_store_mvtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, frequency_t, axis_id_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, elfreq, axis1_id, axis2_id, nbytes, value, id)
 end
 
 function de_load_mvtseries(de, id, mvtseries)
@@ -315,5 +332,17 @@ end
 function de_finalize_search(search)
     ccall((:de_finalize_search, libdaec), Cint, (de_search,), search)
 end
+
+const DE_VERSION = "0.3.1"
+
+const DE_VERNUM = 0x0310
+
+const DE_VER_MAJOR = 0
+
+const DE_VER_MINOR = 3
+
+const DE_VER_REVISION = 1
+
+const DE_VER_SUBREVISION = 0
 
 end # module
