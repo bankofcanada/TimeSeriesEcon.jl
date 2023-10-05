@@ -455,7 +455,10 @@ Base.copyto!(dest::TSeries, drng::AbstractRange{<:MIT}, src::TSeries) = mixed_fr
 function Base.copyto!(dest::TSeries{F}, drng::AbstractRange{MIT{F}}, src::TSeries{F}) where {F<:Frequency}
     fullindex = union(rangeof(dest), drng)
     resize!(dest, fullindex)
-    copyto!(dest.values, Int(first(drng) - firstindex(dest) + 1), src[drng].values, 1, length(drng))
+    fd = Int(first(drng))
+    d1 = fd - Int(firstindex(dest)) + 1
+    s1 = fd - Int(firstindex(src)) + 1
+    copyto!(dest.values, d1, src.values, s1, length(drng))
     return dest
 end
 
