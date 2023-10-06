@@ -7,6 +7,76 @@
 struct X13default end
 _X13default = X13default()
 
+abstract type X13var end
+struct ao <: X13var
+    mit::MIT
+end
+struct aos <: X13var
+    mit1::MIT
+    mit2::MIT
+end
+struct ls <: X13var
+    mit::MIT
+end
+struct lss <: X13var
+    mit1::MIT
+    mit2::MIT
+end
+
+struct tc <: X13var
+    mit::MIT
+end
+
+struct so <: X13var
+    mit::MIT
+end
+
+struct rp <: X13var
+    mit1::MIT
+    mit2::MIT
+end
+
+struct qd <: X13var
+    mit1::MIT
+    mit2::MIT
+end
+struct qi <: X13var
+    mit1::MIT
+    mit2::MIT
+end
+
+struct tl <: X13var
+    mit1::MIT
+    mit2::MIT
+end
+
+struct tdstock <: X13var
+    n::Int64
+end
+struct tdstock1coef <: X13var
+    n::Int64
+end
+struct easter <: X13var
+    n::Int64
+end
+struct labour <: X13var
+    n::Int64
+end
+struct thank <: X13var
+    n::Int64
+end
+struct sceaster <: X13var
+    n::Int64
+end
+struct easterstock <: X13var
+    n::Int64
+end
+struct sincos <: X13var
+    n::Vector{Int64}
+end
+
+
+
 struct X13series{F<:Frequency}
     appendbcst::Union{Bool,X13default}
     appendfcst::Union{Bool,X13default}
@@ -30,7 +100,7 @@ struct X13series{F<:Frequency}
     missingcode::Union{Float64,X13default}
     missingval::Union{Float64,X13default}
     saveprecision::Union{Int64,X13default}
-    trimzero::Union{Symbol,X13default}
+    trimzero::Union{Bool,Symbol,X13default}
 
     # X13series(t::TSeries{F}) where F = new{F}(
     #     _X13default, # appendbcst::Union{Bool,X13default}
@@ -59,8 +129,6 @@ struct X13series{F<:Frequency}
     #     )
 end
 
-
-# TODO: The X13 spec should be either Monthly or Quarterly to determine some defaults
 
 """
 ArimaSpec
@@ -93,14 +161,25 @@ end
 
 export ArimaSpec
 
+struct ArimaModel
+    specs::Vector{ArimaSpec}
+
+    ArimaModel(p::Union{Int64,Vector{Int64}},d::Union{Int64,Vector{Int64}},q::Union{Int64,Vector{Int64}}) = new([ArimaSpec(p,d,q)])
+    ArimaModel(p::Union{Int64,Vector{Int64}},d::Union{Int64,Vector{Int64}},q::Union{Int64,Vector{Int64}},period::Int64) = new([ArimaSpec(p,d,q,period)])
+    ArimaModel(p::Union{Int64,Vector{Int64}},d::Union{Int64,Vector{Int64}},q::Union{Int64,Vector{Int64}},P::Union{Int64,Vector{Int64}},D::Union{Int64,Vector{Int64}},Q::Union{Int64,Vector{Int64}}) = new([ArimaSpec(p,d,q),ArimaSpec(P,D,Q)])
+    ArimaModel(spec::ArimaSpec) = new([spec])
+    ArimaModel(specs::ArimaSpec...) = new([specs...])
+    ArimaModel(specs::Vector{ArimaSpec}) = new(specs)
+end
+export ArimaModel
 
 mutable struct X13arima
-    model::Vector{ArimaSpec}
+    model::ArimaModel
     title::Union{String,X13default}
-    ar::Union{Vector{Union{Float64,Missing}},X13default} #default values are 0.1, must be length of AR component
-    ma::Union{Vector{Union{Float64,Missing}},X13default} #default values are 0.1, must be length of MA component
-    arfixed::Union{Vector{Bool},X13default} 
-    mafixed::Union{Vector{Bool},X13default} 
+    ar::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default} #default values are 0.1, must be length of AR component
+    ma::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default} #default values are 0.1, must be length of MA component
+    fixar::Union{Vector{Bool},X13default} 
+    fixma::Union{Vector{Bool},X13default} 
 
     # function X13arima(title::Union{String,X13default}, model::ArimaSpec)
     #     ar = Vector{Union{Float64,Missing}}()
@@ -120,18 +199,18 @@ mutable struct X13arima
 end
 
 mutable struct X13automdl
-    diff::Union{Tuple{Int64,Int64},X13default}
+    diff::Union{Vector{Int64},X13default}
     acceptdefault::Union{Bool,X13default}
     checkmu::Union{Bool,X13default}
     ljungboxlimit::Union{Float64,X13default}
-    maxorder::Union{Tuple{Int64,Int64},X13default}
-    maxdiff::Union{Tuple{Int64,Int64},X13default}
+    maxorder::Union{Vector{Union{Int64,Missing}},X13default}
+    maxdiff::Union{Vector{Union{Int64,Missing}},X13default}
     mixed::Union{Bool,X13default}
     print::Union{Vector{Symbol},X13default} #This should just be everything
     savelog::Union{Vector{Symbol},X13default}
     armalimit::Union{Float64,X13default}
     balanced::Union{Bool,X13default}
-    exactdiff::Union{Symbol,X13default} #:yes, :no, :first
+    exactdiff::Union{Bool,Symbol,X13default} #:yes, :no, :first
     fcstlim::Union{Int64,X13default}
     hrinitial::Union{Bool,X13default}
     reducecv::Union{Float64,X13default}
@@ -259,17 +338,17 @@ end
 
 mutable struct X13history
     endtable::Union{MIT,X13default}
-    estimates::Union{Vector{Symbol},X13default}
+    estimates::Union{Symbol,Vector{Symbol},X13default}
     fixmdl::Union{Bool,X13default}
     fixreg::Union{Bool,X13default}
-    fstep::Union{Vector{Int64},X13default}
+    fstep::Union{Int64,Vector{Int64},X13default}
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default} 
-    sadjlags::Union{Vector{Int64},X13default}
+    sadjlags::Union{Int64,Vector{Int64},X13default}
     start::Union{MIT,X13default}
     target::Union{Symbol,X13default}
-    trendlags::Union{Vector{Int64},X13default}
+    trendlags::Union{Int64,Vector{Int64},X13default}
     fixx11reg::Union{Bool,X13default}
     outlier::Union{Symbol,X13default}
     outlierwin::Union{Int64,X13default}
@@ -326,7 +405,7 @@ mutable struct X13outlier
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default} 
-    span::Union{UnitRange{MIT},X13default}
+    span::Union{UnitRange{<:MIT},X13default}
     types::Union{Vector{Symbol},X13default}
     almost::Union{Float64,X13default}
     tcrate::Union{Float64,X13default}
@@ -376,8 +455,8 @@ end
 
 
 mutable struct X13regression
-    aicdiff::Union{Vector{Union{Float64,Missing}},X13default}
-    aictest::Union{Vector{Symbol},X13default}
+    aicdiff::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}
+    aictest::Union{Symbol,Vector{Symbol},X13default}
     chi2test::Union{Bool,X13default}
     chi2testcv::Union{Float64,X13default}
     data::Union{TSeries,MVTSeries, X13default}
@@ -391,8 +470,8 @@ mutable struct X13regression
     testalleaster::Union{Bool,X13default}
     tlimit::Union{Float64,X13default}
     user::Union{Vector{Symbol},X13default}
-    usertype::Union{Vector{Symbol},X13default}
-    variables::Union{Vector{Symbol},X13default}
+    usertype::Union{Symbol,Vector{Symbol},X13default}
+    variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}
     b::Union{Vector{Float64},X13default}
     bfixed::Union{Vector{Bool},X13default}
     centeruser::Union{Symbol,X13default}
@@ -478,7 +557,7 @@ mutable struct X13slidingspans
     cutchng::Union{Float64,X13default}
     cutseas::Union{Float64,X13default}
     cuttd::Union{Float64,X13default}
-    fixmdl::Union{Symbol,X13default}
+    fixmdl::Union{Bool,Symbol,X13default}
     fixreg::Union{Vector{Symbol},X13default}
     length::Union{Int64,X13default}
     numspans::Union{Int64,X13default}
@@ -520,7 +599,7 @@ mutable struct X13spectrum
     start::Union{MIT,X13default}
     tukey120::Union{Bool,X13default}
     decibel::Union{Bool,X13default}
-    difference::Union{Symbol,X13default}
+    difference::Union{Bool,Symbol,X13default}
     maxar::Union{Int64,X13default}
     peakwidth::Union{Int64,X13default}
     series::Union{Symbol,X13default}
@@ -564,7 +643,7 @@ mutable struct X13transform
     title::Union{String,X13default}
     type::Union{Symbol,Vector{Symbol},X13default}
     constant::Union{Float64,X13default}
-    trimzero::Union{Symbol,X13default}
+    trimzero::Union{Bool,Symbol,X13default}
     
     # X13transform() = new(
     #     :none, # adjust::Union{Symbol,X13default}, one of :none, :lom, :loq, :lpyear
@@ -639,24 +718,24 @@ end
 
 mutable struct X13x11regression
     aicdiff::Union{Float64,X13default}
-    aictest::Union{Symbol,X13default}
+    aictest::Union{Symbol,Vector{Symbol},X13default}
     critical::Union{Float64,X13default}
     data::Any
     file::Union{String,X13default}
     format::Union{String,X13default}
     outliermethod::Union{Symbol,X13default}
-    outlierspan::Union{UnitRange{MIT}, X13default}
+    outlierspan::Union{UnitRange{<:MIT}, X13default}
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default} 
     prior::Union{Bool,X13default}
     sigma::Union{Float64,X13default}
-    span::Union{UnitRange{MIT},X13default}
+    span::Union{UnitRange{<:MIT},X13default}
     start::Union{MIT,X13default}
     tdprior::Union{Vector{Float64},X13default}
     user::Union{Vector{Symbol},X13default}
     usertype::Union{Vector{Symbol},X13default}
-    variables::Union{Vector{Any},X13default}
+    variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}
     almost::Union{Float64,X13default}
     b::Union{Vector{Float64},X13default}
     centeruser::Union{Symbol,X13default}
@@ -780,6 +859,28 @@ mutable struct X13spec{F<:Frequency}
         _X13default, # slidingspans::Union{X13slidingspans,X13default}
         _X13default, # spectrum::Union{X13spectrum,X13default}
     )
+    X13spec(t::X13series{F}; kwargs...) where F = new{F}(
+        t, # series::Union{X13series,X13default}
+        _X13default, # arima::Union{X13arima,X13default}
+        _X13default, # estimate::Union{X13estimate,X13default}
+        _X13default, # transform::Union{X13transform,X13default}
+        _X13default, # regression::Union{X13regression,X13default}
+        _X13default, # automdl::Union{X13automdl,X13default} #or its own type
+        _X13default, # x11::Union{X13x11,X13default}
+        _X13default, # x11regression::Union{X13x11regression,X13default}
+        _X13default, # check::Union{X13check,X13default}
+        _X13default, # forecast::Union{X13forecast,X13default}
+        # # composite::X13composite # not supported
+        _X13default, # force::Union{X13force,X13default}
+        _X13default, # pickmdl::Union{X13pickmdl,X13default}
+        _X13default, # history::Union{X13history,X13default}
+        _X13default, # metadata::Dict{String,String}
+        _X13default, # identify::Union{X13identify,X13default}
+        _X13default, # outlier::Union{X13outlier,X13default}
+        _X13default, # seats::Union{X13seats,X13default} # not supported
+        _X13default, # slidingspans::Union{X13slidingspans,X13default}
+        _X13default, # spectrum::Union{X13spectrum,X13default}
+    )
 end
 
 
@@ -823,10 +924,6 @@ end
     main output file. This value must be an integer between 0 and 5, inclusive (for example,
     `decimals=5`). The default number of decimals is 0.
 
-* **file** (String) - See the X13ArimaSeats manual.
-
-* **format** (String) - See the X13ArimaSeats manual.
-
 * **modelspan** (UnitRange{MIT}) - Specifies the span (data interval) of the data to be used to determine all regARIMA
     model coefficients. This argument can be utilized when, for example, the user does not
     want data early in the series to affect the forecasts, or, alternatively, data late in the
@@ -840,24 +937,6 @@ end
 
 * **name** (String) - The name of the time series. The name must be enclosed in quotes and may contain up
     to 64 characters. Up to the first 16 characters will be printed as a label on every page.
-    When specified with the predefined formats of the format argument, the first six (or
-    eight, if format="cs") characters of this name are also used to check if the program is
-    reading the correct series, or to find a particular series in a file where many series are
-    stored.
-
-* **period** (Int64) - Seasonal period of the series. If X-11 seasonal adjustments are generated, the only values
-    currently accepted by the program are 12 for Monthly series and 4 for Quarterly series.
-    If SEATS adjustments are generated, the values currently accepted by the program are
-    12 for Monthly series, 6 for bimonthly series, 4 for Quarterly series, 2 for HalfYearly series.
-    and 1 for Yearly series (primarily for trends). Otherwise, any seasonal period up to 12
-    can be specified. (This limit can be changed—see Section 2.8 of the manual.) The default value for
-    period is 12.
-
-* **precision** (Int64) - The number of decimal digits to be read from the time series. This option can only be
-    used with the predefined formats of the format argument. This value must be an integer
-    between 0 and 5, inclusive (for example, `precision=5`). The default is 0. If precision
-    is used in a series spec that does not use one of the predefined formats, the argument is
-    ignored.
 
 * **span** (UnitRange{MIT}) - Limits the data utilized for the calculations and analysis to a span (data interval) of
     the available time series. The default span corresponds to the span of the series being analyzed. The start and end 
@@ -894,15 +973,6 @@ end
 
 * **saveprecision** (Int64) - The number of decimals stored when saving a table to a separate file with the save
     argument. The default value of saveprecision is 15. Example: `saveprecision=10`.
-
-* **trimzero** (Symbol) - If `trimzero=:no`, zeroes at the beginning or end of a time series entered via the file
-    argument are treated as series values. If `trimzero=:span`, causes leading and trailing
-    zeros to be ignored outside the span of data being analyzed (the span argument must
-    be specified with both a starting date and an ending date). The default (`trimzero=:yes`)
-    causes leading and trailing zeros to be ignored. Note that when the format argument is
-    set to either free, datevalue, x13save, or tramo, all values input are treated as series
-    values, regardless of the value of trimzero.
-
 """
 function series(t::TSeries{F}; 
     appendbcst::Union{Bool,X13default}=_X13default,
@@ -926,9 +996,12 @@ function series(t::TSeries{F};
     missingcode::Union{Float64,X13default}=_X13default,
     missingval::Union{Float64,X13default}=_X13default,
     saveprecision::Union{Int64,X13default}=_X13default,
-    trimzero::Union{Symbol,X13default}=_X13default
+    trimzero::Union{Bool,Symbol,X13default}=_X13default
 ) where F<:Frequency
     data=copy(t)
+    if start isa MIT
+        data=copy(t[start:end])
+    end
     # logic and checks here...
     if name isa String && length(name) > 64
         @warn "Series name trunctated to 64 characters. Full name: $name"
@@ -944,7 +1017,11 @@ function series(t::TSeries{F};
         Throw(ArgumentError("Series divpower must be between -9 and 9. $(divpower) provided"))
     end
 
-    return X13series(appendbcst, appendfcst, comptype, compwt, data, decimals, file, format, modelspan,name, period, precision, print, save, span,start,title,type,divpower,missingcode,missingval,saveprecision,trimzero)
+    if F !== Monthly && !(F <: Yearly)
+        period = ppy(t)
+    end
+
+    return X13series{F}(appendbcst, appendfcst, comptype, compwt, data, decimals, file, format, modelspan,name, period, precision, print, save, span,start,title,type,divpower,missingcode,missingval,saveprecision,trimzero)
 end
 series!(spec::X13spec{F}, t::TSeries{F}; kwargs...) where F = (spec.series = series(t; kwargs...))
 #TODO: Another end date specification, with the form 0.per, is available to set the ending date
@@ -993,10 +1070,10 @@ of the parameters are estimated
 * **ma** (Vector{Union{Float64,Missing}) - Specifies initial values for all moving average parameters 
     in the same way `ar` does so for autoregressive parameters.
 
-* **arfixed** (Vector{Bool}) - Specifies for each element in the `ar` argument whether to hold the
+* **fixar** (Vector{Bool}) - Specifies for each element in the `ar` argument whether to hold the
     value fixed. Must be the same length as the `ar` argument.
 
-* **mafixed** (Vector{Bool}) - Specifies for each element in the `ma` argument whether to hold the
+* **fixma** (Vector{Bool}) - Specifies for each element in the `ma` argument whether to hold the
     value fixed. Must be the same length as the `ma` argument.
 
 * **title** (String) - Specifies a title for the ARIMA model, in quotes. It must be less than 80 characters.
@@ -1004,32 +1081,29 @@ of the parameters are estimated
     default is to print ARIMA Model.
 
 """
-function arima(model::ArimaSpec...; 
+function arima(model::ArimaModel; 
     title::Union{String,X13default}=_X13default,
-    ar::Union{Vector{Union{Float64,Missing}},X13default}=_X13default,
-    ma::Union{Vector{Union{Float64,Missing}},X13default}=_X13default,
-    arfixed::Union{Vector{Bool},X13default}=_X13default,
-    mafixed::Union{Vector{Bool},X13default}=_X13default,
+    ar::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    ma::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    fixar::Union{Vector{Bool},X13default}=_X13default,
+    fixma::Union{Vector{Bool},X13default}=_X13default,
 )
     # checks and logic
-    
-    #place specs in a vector
-    model = [model...]
 
     # ar arguments have correct length
-    if !(ar isa X13default)
-        @assert length(ar) == length(model[1].p) 
-    end
-    if !(ma isa X13default)
-        @assert length(ma) == length(model[1].q) 
-    end
+    # if !(ar isa X13default)
+    #     @assert length(ar) == length(model[1].p) 
+    # end
+    # if !(ma isa X13default)
+    #     @assert length(ma) == length(model[1].q) 
+    # end
 
     # fixed arguments have correct length
-    if !(arfixed isa X13default)
-        @assert length(arfixed) == length(ar) 
+    if !(fixar isa X13default)
+        @assert length(fixar) == length(ar) 
     end
-    if !(mafixed isa X13default)
-        @assert length(mafixed) == length(ma) 
+    if !(fixma isa X13default)
+        @assert length(fixma) == length(ma) 
     end
 
     if title isa String && length(title) > 79
@@ -1037,9 +1111,19 @@ function arima(model::ArimaSpec...;
         title = title[1:79]
     end
 
-    return X13arima(model, title, ar, ma, arfixed, mafixed)
+    return X13arima(model, title, ar, ma, fixar, fixma)
 end
-arima!(spec::X13spec{F}, model::ArimaSpec...; kwargs...) where F = (spec.arima = arima(model; kwargs...))
+# arima(model::ArimaModel; kwargs...) = arima(model; kwargs...)
+arima(model::ArimaSpec; kwargs...) = arima(ArimaModel(model); kwargs...)
+arima(models::ArimaSpec...; kwargs...) = arima(ArimaModel(models...); kwargs...)
+
+arima!(spec::X13spec{F}, model::ArimaModel; kwargs...) where F = (spec.arima = arima(model; kwargs...))
+arima!(spec::X13spec{F}, model::ArimaSpec; kwargs...) where F = (spec.arima = arima(ArimaModel(model); kwargs...))
+arima!(spec::X13spec{F}, models::ArimaSpec...; kwargs...) where F = (spec.arima = arima(ArimaModel(models...); kwargs...))
+
+
+# arima!(spec::X13spec{F}, model::ArimaSpec; kwargs...) where F = (spec.arima = arima((model,)...; kwargs...))
+# arima!(spec::X13spec{F}, model::ArimaSpec...; kwargs...) where F = (spec.arima = arima(model...; kwargs...))
 
 
 """
@@ -1065,7 +1149,7 @@ the selection criteria.
     of a constant term (`checkmu = true`), or will maintain the choice of the user made by the
     user in the regression spec (`checkmu = false`). The default for checkmu is `checkmu = true`.
 
-* **diff** (Tuple{Int64,Int64}) - Fixes the orders of differencing to be used in the automatic ARIMA model identification
+* **diff** (Vector{Int64}) - Fixes the orders of differencing to be used in the automatic ARIMA model identification
     procedure. The diff argument has two input values, the regular differencing order and
     the seasonal differencing order. Both values must be specified; there is no default value.
     Acceptable values for the regular differencing orders are 0, 1 and 2; acceptable values
@@ -1081,7 +1165,7 @@ the selection criteria.
     redone with a reduced value (see reducecv argument). The default for ljungboxlimit
     is `ljungboxlimit = 0.95`.
 
-* **maxdiff** (Tuple{Int64,Int64}) - Specifies the maximum orders of regular and seasonal differencing 
+* **maxdiff** (Vector{Union{Int64,Missing}}) - Specifies the maximum orders of regular and seasonal differencing 
     for the automatic
     identification of differencing orders. The maxdiff argument has two input values, the
     maximum regular differencing order and the maximum seasonal differencing order. Acceptable 
@@ -1089,14 +1173,14 @@ the selection criteria.
     for the maximum order of seasonal differencing is 1. If specified in the same
     spec file as the maxdiff argument, the values for the diff argument are ignored and the
     program performs automatic identification of nonseasonal and seasonal differencing with
-    the limits specified in maxdiff. The default is `maxdiff = (2, 1)`.
+    the limits specified in maxdiff. The default is `maxdiff = [2, 1]`.
 
-* **maxorder** (Tuple{Int64,Int64}) - Specifies the maximum orders of the regular and seasonal ARMA polynomials 
+* **maxorder** (Vector{Union{Int64,Missing}}) - Specifies the maximum orders of the regular and seasonal ARMA polynomials 
     to be examined during the automatic ARIMA model identification procedure. The maxorder
     argument has two input values, the maximum order of regular ARMA model to be tested
     and the maximum order of seasonal ARMA model to be tested. The maximum order for
     the regular ARMA model must be greater than zero, and can be at most 4; the maximum
-    order for the seasonal ARMA model can be either 1 or 2. The default is `maxorder = (2, 1)`.
+    order for the seasonal ARMA model can be either 1 or 2. The default is `maxorder = [2, 1]`.
 
 * **mixed** (Bool) - Controls whether ARIMA models with nonseasonal AR and MA terms or seasonal AR
     and MA terms will be considered in the automatic model identification procedure (`mixed = true`). 
@@ -1121,9 +1205,9 @@ the selection criteria.
     order of the combined MA operator). Setting `balanced = true` yields the same preference
     as the TRAMO program. The default is `balanced = false`.
 
-* **exactdiff** (Symbol) - Controls if exact likelihood estimation is used when Hannen-Rissanen fails in automatic
-    difference identification procedure (`exactdiff = :yes`), or if conditional likelihood estimation is used 
-    (`exactdiff = :no`). The default is to start with exact likelihood estimation, and switch to conditional if 
+* **exactdiff** (Bool or Symbol) - Controls if exact likelihood estimation is used when Hannen-Rissanen fails in automatic
+    difference identification procedure (`exactdiff = true`), or if conditional likelihood estimation is used 
+    (`exactdiff = false`). The default is to start with exact likelihood estimation, and switch to conditional if 
     the number of iterations for the exact likelihood procedure exceeds 200 iterations (`exactdiff = :first`).
 
 * **fcstlim** (Int64) - The acceptance threshold for the within-sample forecast error test of the final identified
@@ -1159,18 +1243,18 @@ the selection criteria.
 
 """
 function automdl(;
-    diff::Union{Tuple{Int64,Int64},X13default}=_X13default,
+    diff::Union{Vector{Int64},X13default}=_X13default,
     acceptdefault::Union{Bool,X13default}=_X13default,
     checkmu::Union{Bool,X13default}=_X13default,
     ljungboxlimit::Union{Float64,X13default}=_X13default,
-    maxorder::Union{Tuple{Int64,Int64},X13default}=_X13default,
-    maxdiff::Union{Tuple{Int64,Int64},X13default}=_X13default,
+    maxorder::Union{Vector{Union{Int64,Missing}},X13default}=_X13default,
+    maxdiff::Union{Vector{Union{Int64,Missing}},X13default}=_X13default,
     mixed::Union{Bool,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:autochoice, :autochoicemdl, :autodefaulttests, :autofinaltests, :autoljungboxtest, :bestfivemdl, :header, :unitroottest, :unitroottestmdl],
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
     armalimit::Union{Float64,X13default}=_X13default,
     balanced::Union{Bool,X13default}=_X13default,
-    exactdiff::Union{Symbol,X13default}=_X13default,
+    exactdiff::Union{Bool,Symbol,X13default}=_X13default,
     fcstlim::Union{Int64,X13default}=_X13default,
     hrinitial::Union{Bool,X13default}=_X13default,
     reducecv::Union{Float64,X13default}=_X13default,
@@ -1496,7 +1580,7 @@ Optional spec for requesting a sequence of runs from a sequence of truncated ver
     has no effect on the historical analysis of forecasts and likelihood estimates. Example:
     `endtable=1990M6`.
 
-* **estimates** (Vector{Symbol}) - Determines which estimates from the regARIMA modeling and/or the X-11 seasonal
+* **estimates** (Symbol or Vector{Symbol}) - Determines which estimates from the regARIMA modeling and/or the X-11 seasonal
     adjustment will be analyzed in the history analysis. Example: `estimates=[:sadj, :aic]`.
     The default is the seasonally adjusted series (`:sadj`). The following estimates are available:
 
@@ -1528,13 +1612,13 @@ Optional spec for requesting a sequence of runs from a sequence of truncated ver
     can be fixed. This argument is ignored if neither a regARIMA model nor an irregular
     component regression model is fit to the series, or if` fixmdl=:true`.
 
-* **fstep** (Vector{Int64}) - Specifies a vector of up to four (4) forecast leads that will be analyzed in the history
+* **fstep** (Int64 or Vector{Int64}) - Specifies a vector of up to four (4) forecast leads that will be analyzed in the history
     analysis of forecast errors. Example: `fstep=[1, 2, 12]` will produce an error analysis for
     the 1-step, 2-step, and 12-step ahead forecasts. The default is `fstep=[1, 12]` for monthly series
     or `fstep=[1, 4]` for quarterly series. *Warning:* The values given in this vector cannot exceed
     the specified value of the maxlead argument of the forecast spec, or be less than one.
 
-* **sadjlags** (Vector{Int64}) - Specifies a vector of up to 5 revision lags (each greater than zero) that will be analyzed
+* **sadjlags** (Int64 or Vector{Int64}) - Specifies a vector of up to 5 revision lags (each greater than zero) that will be analyzed
     in the revisions analysis of lagged seasonal adjustments. The calculated revisions for
     these revision lags will be those of the seasonal adjustments obtained using this many
     observations beyond the time point of the adjustment. That is, for each value revisionlag[i]
@@ -1561,7 +1645,7 @@ Optional spec for requesting a sequence of runs from a sequence of truncated ver
     the lags specified in sadjlags or trendlags. The default is `target=:final`; the alternative
     is `target=:concurrent`.
 
-* **trendlags** (Vector{Int64}) - Similar to `sadjlags`, this argument prescribes which lags will be used in the revisions
+* **trendlags** (Int64 or Vector{Int64}) - Similar to `sadjlags`, this argument prescribes which lags will be used in the revisions
     history of the lagged trend components. Up to 5 integer lags greater than zero can be
     specified.
 
@@ -1646,17 +1730,17 @@ Optional spec for requesting a sequence of runs from a sequence of truncated ver
 """
 function history(; 
     endtable::Union{MIT,X13default}=_X13default,
-    estimates::Union{Vector{Symbol},X13default}=_X13default,
+    estimates::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     fixmdl::Union{Bool,X13default}=_X13default,
     fixreg::Union{Bool,X13default}=_X13default,
-    fstep::Union{Vector{Int64},X13default}=_X13default,
+    fstep::Union{Int64,Vector{Int64},X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:header, :outlierhistory, :sarevisions, :sasummary, :chngrevisions, :chngsummary, :indsarevisions, :indsasummary, :trendrevisions, :trendsummary, :trenchchngrevisions, :trendchngsummary, :sfrevisions, :sfsummary, :lkhdhistory, :fcsterrors, :armahistory, :tdhistory, :sfilterhistory, :saestimates, :chngestimates, :indsaestimates, :trendestimates, :trendchngestimates, :sfestimates, :fcsthistory],
     save::Union{Vector{Symbol},X13default} =[:outlierhistory, :sarevisions, :chngrevisions, :indsarevisions, :trendrevisions, :trenchchngrevisions, :sfrevisions, :sfsummary, :lkhdhistory, :fcsterrors, :armahistory, :tdhistory, :sfilterhistory, :saestimates, :chngestimates, :indsaestimates, :trendestimates, :trendchngestimates, :sfestimates, :fcsthistory],
     savelog::Union{Vector{Symbol},X13default} =[:alldiagnostics],
-    sadjlags::Union{Vector{Int64},X13default}=_X13default,
+    sadjlags::Union{Int64,Vector{Int64},X13default}=_X13default,
     start::Union{MIT,X13default}=_X13default,
     target::Union{Symbol,X13default}=_X13default,
-    trendlags::Union{Vector{Int64},X13default}=_X13default,
+    trendlags::Union{Int64,Vector{Int64},X13default}=_X13default,
     fixx11reg::Union{Bool,X13default}=_X13default,
     outlier::Union{Symbol,X13default}=_X13default,
     outlierwin::Union{Int64,X13default}=_X13default,
@@ -1789,13 +1873,13 @@ each run of two or more successive level shifts cancels to form a temporary leve
 
 """
 function outlier(; 
-    critical::Union{Vector{Union{Float64,Missing}},X13default}=_X13default,
+    critical::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
     lsrun::Union{Int64,X13default}=_X13default,
     method::Union{Symbol,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:header, :iterations, :tests, :temporaryls, :finaltests],
     save::Union{Vector{Symbol},X13default}= [:iterations, :finaltests],
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
-    span::Union{UnitRange{MIT},X13default}=_X13default,
+    span::Union{UnitRange{<:MIT},X13default}=_X13default,
     types::Union{Vector{Symbol},X13default}=_X13default,
     almost::Union{Float64,X13default}=_X13default,
     tcrate::Union{Float64,X13default}=_X13default,
@@ -1907,6 +1991,7 @@ function pickmdl(;
     qlim::Union{Int64,X13default}=_X13default,
 )
     # checks and logic
+    # TODO: support for the file argument (model specs)
     return X13pickmdl(bcstlim,fcstlim,file,identify,method,mode,outofsample,overdiff,print,savelog,qlim)
 end
 pickmdl!(spec::X13spec{F}; kwargs...) where F = (spec.pickmdl = pickmdl(; kwargs...))
@@ -1922,8 +2007,7 @@ Specification for including regression variables in a regARIMA model, or for spe
     modeling a constant effect, fixed seasonality, trading-day and holiday variation, additive outliers, level shifts,
     and temporary changes or ramps. Change-of-regime regression variables can be specified for seasonal and
     trading-day regressors. User-defined regression variables can be added to the model with the `user` argument.
-    Data for any user-defined variables must be supplied, either in the `data` argument, or in a file specified by
-    the `file` argument (not both). The `regression` spec can contain both predefined and user-defined regression
+    Data for any user-defined variables must be supplied, either in the `data` argument. The `regression` spec can contain both predefined and user-defined regression
     variables.
 
 ### Main keyword arguments:
@@ -1944,7 +2028,7 @@ Specification for including regression variables in a regARIMA model, or for spe
 
     For more information on how this option is used in conjunction with the aictest argument, see the manual.
 
-* **aictest** (Vector{Symbol}) - Specifies that an AIC-based selection will be used to determine if a given set of regression
+* **aictest** (Symbol or Vector{Symbol}) - Specifies that an AIC-based selection will be used to determine if a given set of regression
     variables will be included with the regARIMA model specified. The only entries allowed
     for this variable are `:td`, `:tdnolpyear`, `:tdstock`, `:td1coef`, `:td1nolpyear`, `:tdstock1coef`,
     `:lom`, `:loq`, `:lpyear`, `:easter`, `:easterstock`, and `:user`. If a trading day model selection is
@@ -1989,7 +2073,7 @@ Specification for including regression variables in a regARIMA model, or for spe
     regressors are compared to retain those outliers in the regARIMA model. If this argument
     is not specified, AO and LS sequence regressors are not checked for significance.
 
-* **usertype** (Vector{Symbol}) - Assigns a type of model-estimated regression effect to each user-defined regression variable. 
+* **usertype** (Symbol or Vector{Symbol}) - Assigns a type of model-estimated regression effect to each user-defined regression variable. 
     It causes the variable and its estimated effects to be used and be output in the
     same way as a predefined regressor of the same type. This option is useful when trying
     out alternatives to the regression effects provided by the program.
@@ -2001,7 +2085,7 @@ Specification for including regression variables in a regARIMA model, or for spe
     `:holiday4`, and `:holiday5`). This gives the user flexibility in specifying more than one
     holiday, and the chi-squared statistic is generated separately for these user-defined holidays.
     One effect type can be specified for all the user-defined regression variables defined in the
-    regression spec (`usertype=[:td]`), or each user-defined regression variable can be given its
+    regression spec (`usertype=:td`), or each user-defined regression variable can be given its
     own type (`usertype=[:td, :td, :td, :td, :td, :td, :holiday, :user]`). Once a type other than
     user has been assigned to a user-defined variable, further specifications for the variable
     in other arguments, such as `aictest` or `noapply`, must use this type designation, not
@@ -2060,13 +2144,10 @@ Specification for including regression variables in a regARIMA model, or for spe
     user will have to enter a value of tcrate if a temporary change outlier was specified in
     the variables argument
 
-
-
-    
 """
 function regression(; 
-    aicdiff::Union{Vector{Union{Float64,Missing}},X13default}=_X13default,
-    aictest::Union{Vector{Symbol},X13default}=_X13default,
+    aicdiff::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    aictest::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     chi2test::Union{Bool,X13default}=_X13default,
     chi2testcv::Union{Float64,X13default}=_X13default,
     data::Union{MVTSeries, X13default}=_X13default,
@@ -2080,8 +2161,8 @@ function regression(;
     testalleaster::Union{Bool,X13default}=_X13default,
     tlimit::Union{Float64,X13default}=_X13default,
     user::Union{Vector{Symbol},X13default}=_X13default,
-    usertype::Union{Vector{Symbol},X13default}=_X13default,
-    variables::Union{Vector{Symbol},X13default}=_X13default,
+    usertype::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    variables::Union{Symbol,X13var,Vector{<:Union{Symbol,X13var,Any}},X13default}=_X13default,
     b::Union{Vector{Float64},X13default}=_X13default,
     bfixed::Union{Vector{Bool},X13default}=_X13default,
     centeruser::Union{Symbol,X13default}=_X13default,
@@ -2098,8 +2179,21 @@ function regression(;
         user = collect(colnames(data))
     end
 
+    # ensure correct type of variables
+    _variables = X13default()
+    if !(variables isa X13default)
+        if variables isa Vector
+            _variables = Vector{Union{Symbol,X13var}}()
+            for var in variables
+                push!(_variables, var)
+            end
+        else
+            _variables = variables
+        end
+    end
 
-    return X13regression(aicdiff,aictest,chi2test,chi2testcv,data,file,format,print,save,savelog,pvaictest,start,testalleaster,tlimit,user,usertype,variables,b,bfixed,centeruser,eastermeans,noapply,tcrate)
+
+    return X13regression(aicdiff,aictest,chi2test,chi2testcv,data,file,format,print,save,savelog,pvaictest,start,testalleaster,tlimit,user,usertype,_variables,b,bfixed,centeruser,eastermeans,noapply,tcrate)
 end
 regression!(spec::X13spec{F}; kwargs...) where F = (spec.regression = regression(; kwargs...))
 
@@ -2229,6 +2323,7 @@ function seats(;
     #TODO printhptrf and imean should be printed as 0,1 not no,yes
     # TODO tabtables is printed as a text string...
     #TODO: what is a valid hpplan value?
+    #TODO; understand tabtables
     # checks and logic
     return X13seats(appendfcst,finite,hpcycle,noadmiss,out,print,save,savelog,printphtrf,qmax,statseas,tabtables,bias,epsiv,epsphi,hplan,imean,maxit,rmod,xl)
 end
@@ -2268,15 +2363,15 @@ automatic outlier identification is performed (`outlier`).
     day factor is flagged as unreliable. This value must be greater than 0; the default value
     is 2.0. Example: `cuttd=1.0`.
 
-* **fixmdl** (Symbol) - Specifies how the initial values for parameters estimated in regARIMA models are to be
+* **fixmdl** (Bool or Symbol) - Specifies how the initial values for parameters estimated in regARIMA models are to be
     reset before seasonally adjusting a sliding span. This argument is ignored if a regARIMA
     model is not fit to the series.
 
-    If `fixmdl=:yes`, the values for the regARIMA model parameters for each span will be set
+    If `fixmdl=true`, the values for the regARIMA model parameters for each span will be set
     to the parameter estimates taken from the original regARIMA model estimation. These
     parameters will be taken as fixed and not re-estimated. This is the default for fixmdl.
     
-    If `fixmdl=:no`, the program will restore the initial values to what they were when the
+    If `fixmdl=false`, the program will restore the initial values to what they were when the
     regARIMA model estimation was done for the complete series. If they were fixed in the
     estimate spec, they remain fixed at the same values.
     
@@ -2289,7 +2384,7 @@ automatic outlier identification is performed (`outlier`).
     All other regression coefficients will be re-estimated for each sliding span. Trading day
     (`:td`), holiday (`:holiday`), outlier (`:outlier`), or other user-defined (`:user`) regression effects
     can be fixed. This argument is ignored if neither a regARIMA model nor an irregular
-    component regression is fit to the series, or if `fixmdl=:yes`.
+    component regression is fit to the series, or if `fixmdl=true`.
 
 * **length** (Int64) - The length of each span, in months or quarters (in accordance with the sampling interval)
     of time series data used to generate output for comparisons. A length selected by the
@@ -2375,7 +2470,7 @@ function slidingspans(;
     cutchng::Union{Float64,X13default}=_X13default,
     cutseas::Union{Float64,X13default}=_X13default,
     cuttd::Union{Float64,X13default}=_X13default,
-    fixmdl::Union{Symbol,X13default}=_X13default,
+    fixmdl::Union{Bool,Symbol,X13default}=_X13default,
     fixreg::Union{Vector{Symbol},X13default}=_X13default,
     length::Union{Int64,X13default}=_X13default,
     numspans::Union{Int64,X13default}=_X13default,
@@ -2436,9 +2531,9 @@ quarterly version of a monthly series
     as shown in equation (6.1) in the manual. The estimates are plotted on the untransformed scale
     if `decibel = false`. The default is `decibel = true`.
 
-* **difference** (Symbol) - If `difference=:no`, the spectrum of the (transformed) original series or seasonally 
+* **difference** (Bool or Symbol) - If `difference=false`, the spectrum of the (transformed) original series or seasonally 
     adjusted series is calculated; if `difference=:first`, the spectrum of the month-to-month
-    differences of these series is calculated. The default (`difference=:yes`) will apply a
+    differences of these series is calculated. The default (`difference=true`) will apply a
     max(d + D - 1, 1) difference to the (transformed) original series and seasonally adjusted
     series before computing the spectrum, where d is the order of regular differencing and D
     is the order of seasonal differencing in the regARIMA model specified for the series. If
@@ -2485,7 +2580,7 @@ function spectrum(;
     start::Union{MIT,X13default}=_X13default,
     tukey120::Union{Bool,X13default}=_X13default,
     decibel::Union{Bool,X13default}=_X13default,
-    difference::Union{Symbol,X13default}=_X13default,
+    difference::Union{Bool,Symbol,X13default}=_X13default,
     maxar::Union{Int64,X13default}=_X13default,
     peakwidth::Union{Int64,X13default}=_X13default,
     series::Union{Symbol,X13default}=_X13default,
@@ -2504,8 +2599,8 @@ spectrum!(spec::X13spec{F}; kwargs...) where F = (spec.spectrum = spectrum(; kwa
 
 Specification used to transform or adjust the series prior to estimating a regARIMA model. With this spec
 the series can be Box-Cox (power) or logistically transformed, length-of-month adjusted, and divided by 
-user-defined prior-adjustment factors. Data for any user-defined prior-adjustment factors must be supplied, either
-in the `data` argument, or in a file specified by the `file` argument (not both). For seasonal adjustment, a set of
+user-defined prior-adjustment factors. Data for any user-defined prior-adjustment factors must be supplied
+in the `data` argument. For seasonal adjustment, a set of
 permanently removed factors can be specified and also a set of factors that are temporarily removed until the
 seasonal factors are calculated.
 
@@ -2519,10 +2614,10 @@ seasonal factors are calculated.
     of the `regression` or `x11regression` specs, or if additive or pseudo-additive seasonal
     adjustment is specified in the mode argument of the `x11` spec. Leap year adjustment
     (`adjust = :lpyear`) is only allowed when a log transformation is specified in either the
-    `power` or `function` arguments.
+    `power` or `func` arguments.
 
 * **aicdiff** (Float64) - Defines the difference in AICC needed to accept no transformation when the 
-    automatic transformation selection option is invoked (`function=:auto`). The default value
+    automatic transformation selection option is invoked (`func=:auto`). The default value
     is `aicdiff = -2.0` for monthly and quarterly series, `aicdiff = 0.0` otherwise. For
     more information on how this option is used to select a transformation see the manual.
 
@@ -2537,11 +2632,11 @@ seasonal factors are calculated.
     An MVTSeries with two series can supplied when both permanent and temporary
     prior-adjustment factors are specified in the type set - see the manual for more information.
 
-* **function** (Symbol) - Transform the series Yt input in the series spec using a log, square root, inverse, or
+* **func** (Symbol) - Transform the series Yt input in the series spec using a log, square root, inverse, or
     logistic transformation. Alternatively, perform an AIC-based selection to decide between
     a log transformation and no transformation (function=auto) using either the regARIMA
     model specified in the regression and arima specs or the airline model (0 1 1)(0 1 1) (see
-    the manual). The default is no transformation (`function = :none`). Do not include both
+    the manual). The default is no transformation (`func = :none`). Do not include both
     the function and power arguments. Note: there are restrictions on the values used in
     these arguments when preadjustment factors for seasonal adjustment are generated from
     a regARIMA model; see the manual.  
@@ -2554,7 +2649,7 @@ seasonal factors are calculated.
     `:inverse`  | 2 - 1/Yₜ                   | Yₜ ≠ 0 for all t        | `power = -1`              
     `:logistic` | log(Yₜ / (1 - Yₜ)           | 0 < Yₜ < 1 for all t   | no equivalent        
 
-* **mode** (Union{Symbol, Vector{Symbol}}) - Specifies the way in which the user-defined prior adjustment factors will be applied to
+* **mode** (Symbol or Vector{Symbol}) - Specifies the way in which the user-defined prior adjustment factors will be applied to
     the time series. If prior adjustment factors to be divided into the series are not given
     as percents (e.g., [100, 100, 50, ...]), but rather as ratios (e.g., [1.0, 1.0, .5, ...]), set
     `mode=:ratio`. If the prior adjustments are to be subtracted from the original series, set
@@ -2580,7 +2675,7 @@ seasonal factors are calculated.
     The power λ must be given (e.g., `power = .33`). The default is no transformation (λ =1), 
     i.e., `power = 1`. The log transformation (`power = 0`), square root transformation
     (`power = .5`), and the inverse transformation (`power = -1`) can alternatively be given
-    using the `function` argument. Do not use both the `power` and the `function` arguments
+    using the `func` argument. Do not use both the `power` and the `func` arguments
     in the same spec file. 
     
     **Note:** there are restrictions on the values used in these arguments
@@ -2590,7 +2685,7 @@ seasonal factors are calculated.
 * **title** (String) - A title for the set of user-defined prior-adjustment factors. 
     The title must be enclosed in quotes and may contain up to 79 characters.
 
-* **type** (Union{Symbol,Vector{Symbol}}) - Specifies whether the user-defined prior-adjustment factors are permanent 
+* **type** (Symbol or Vector{Symbol}) - Specifies whether the user-defined prior-adjustment factors are permanent 
     factors (removed from the final seasonally adjusted series as well as the original series) or temporary
     factors (removed from the original series for the purposes of generating seasonal factors
     but not from the final seasonally adjusted series). If only one value is given for this argument (`type = :temporary`), 
@@ -2625,7 +2720,7 @@ function transform(;
     title::Union{String,X13default}=_X13default,
     type::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     constant::Union{Float64,X13default}=_X13default,
-    trimzero::Union{Symbol,X13default}=_X13default,
+    trimzero::Union{Bool,Symbol,X13default}=_X13default,
 )
     # checks and logic
     #TODO: get start from data
@@ -2665,7 +2760,7 @@ be obtained from the `x11regression` spec.
     a16, b1, d10, and d16. If `appendfcst=false`, no forecasts will be stored. The default is to
     not include forecasts.
 
-* **final** (Union{Symbol,Vector{Symbol}}) - List of the types of prior adjustment factors, obtained from the regression and outlier
+* **final** (Symbol or Vector{Symbol}) - List of the types of prior adjustment factors, obtained from the regression and outlier
     specs, that are to be removed from the final seasonally adjusted series. Additive outliers
     (`final=:ao`), level change and ramp outliers (`final=:ls`), temporary change (`final=:tc`),
     and factors derived from user-defined regressors (`final=:user`) can be removed. If this
@@ -2678,7 +2773,7 @@ be obtained from the `x11regression` spec.
     in the transform spec; in the latter case, the mode will match the transformation selected
     for the series (`:mult` for the log transformation and `:add` for no transformation).
 
-* **seasonalma** (Union{Symbol,Vector{Symbol}}) - Specifies which seasonal moving average (also called seasonal ”filter”) will be used to
+* **seasonalma** (Symbol or Vector{Symbol}) - Specifies which seasonal moving average (also called seasonal ”filter”) will be used to
     estimate the seasonal factors. These seasonal moving averages are n×m moving averages, meaning that 
     an n-term simple average is taken of a sequence of consecutive m-term simple averages.
 
@@ -2812,7 +2907,7 @@ function x11(;
     save::Union{Vector{Symbol},X13default}=[:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:tendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct],# print::Union{Vector{Symbol},X13default}
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
     seasonalma::Union{Symbol,Vector{Symbol},X13default}=_X13default,
-    sigmalim::Union{Vector{Union{Float64,Missing}},X13default}=_X13default,
+    sigmalim::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
     title::Union{String,Vector{String},X13default}=_X13default,
     trendma::Union{Int64,X13default}=_X13default,
     type::Union{Symbol,X13default}=_X13default,
@@ -2855,7 +2950,7 @@ argument. The regression model specified can contain both predefined and user-de
     argument. The default value is `aicdiff=0.0`. For more information on how this option
     is used in conjunction with the aictest argument, see the manual.
 
-* **aictest** (Union{Symbol,Vector{Symbol}}) - Specifies that an AIC-based comparison will be used to determine if a specified regression
+* **aictest** (Symbol or Vector{Symbol}) - Specifies that an AIC-based comparison will be used to determine if a specified regression
     variable should be included in the user's irregular component regression model. The only
     entries allowed for this variable are `:td`, `:tdstock`, `:td1coef`, `:tdstock1coef`, `:easter`, and
     `:user`. If a trading day model selection is specified, for example, then AIC values (with
@@ -2927,7 +3022,7 @@ argument. The regression model specified can contain both predefined and user-de
     and log-additive seasonal adjustments. The values must be real numbers greater than or
     equal to zero. Example: `tdprior=[0.7, 0.7, 0.7, 1.05, 1.4, 1.4, 1.05]`.
 
-* **usertype** (Union{Symbol,Vector{Symbol}}) - Assigns a type to the user-defined regression variables. 
+* **usertype** (Symbol or Vector{Symbol}) - Assigns a type to the user-defined regression variables. 
     The user-defined regression effects can be defined as a trading day (td), holiday (holiday, or other user-defined (user)
     regression effects. A single effect type can be specified for all the user-defined regression
     variables defined in the x11regression spec (`usertype=:td`), or each user-defined regression variable can be 
@@ -3002,24 +3097,24 @@ argument. The regression model specified can contain both predefined and user-de
 """
 function x11regression(; 
     aicdiff::Union{Float64,X13default}=_X13default,
-    aictest::Union{Symbol,X13default}=_X13default,
+    aictest::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     critical::Union{Float64,X13default}=_X13default,
     data::Any=_X13default,
     file::Union{String,X13default}=_X13default,
     format::Union{String,X13default}=_X13default,
     outliermethod::Union{Symbol,X13default}=_X13default,
-    outlierspan::Union{UnitRange{MIT}, X13default}=_X13default,
+    outlierspan::Union{UnitRange{<:MIT}, X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:priortd, :extremeval, :x11reg, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :outlierhdr, :xaictest, :extremevalb, :x11regb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :outliertests, :xregressionmatrix, :xregressioncmatrix],# print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default}=[:priortd, :extremeval, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :extremevalb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :xregressionmatrix, :xregressioncmatrix],# save::Union{Vector{Symbol},X13default},
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics], # savelog::Union{Vector{Symbol},X13default}     
     prior::Union{Bool,X13default}=_X13default,
     sigma::Union{Float64,X13default}=_X13default,
-    span::Union{UnitRange{MIT},X13default}=_X13default,
+    span::Union{UnitRange{<:MIT},X13default}=_X13default,
     start::Union{MIT,X13default}=_X13default,
     tdprior::Union{Vector{Float64},X13default}=_X13default,
     user::Union{Vector{Symbol},X13default}=_X13default,
     usertype::Union{Vector{Symbol},X13default}=_X13default,
-    variables::Union{Vector{Any},X13default}=_X13default,
+    variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}=_X13default,
     almost::Union{Float64,X13default}=_X13default,
     b::Union{Vector{Float64},X13default}=_X13default,
     centeruser::Union{Symbol,X13default}=_X13default,
@@ -3033,7 +3128,7 @@ function x11regression(;
     umname::Union{String,X13default}=_X13default,
     umprecision::Union{Int64,X13default}=_X13default,
     umstart::Union{MIT,X13default}=_X13default,
-    umtrimzero::Union{Symbol,X13default}=_X13default,
+    umtrimzero::Union{Bool,Symbol,X13default}=_X13default,
 )
     # checks and logic
     #TODO: get user from data
