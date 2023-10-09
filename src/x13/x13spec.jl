@@ -59,7 +59,7 @@ end
 struct easter <: X13var
     n::Int64
 end
-struct labour <: X13var
+struct labor <: X13var
     n::Int64
 end
 struct thank <: X13var
@@ -73,6 +73,21 @@ struct easterstock <: X13var
 end
 struct sincos <: X13var
     n::Vector{Int64}
+end
+
+struct td <: X13var
+    mit::MIT
+    regimechange::Symbol
+
+    td(mit::MIT, rc::Symbol) = new(mit, rc)
+    td(mit::MIT) = new(mit, :both)
+end
+struct seasonal <: X13var
+    mit::MIT
+    regimechange::Symbol
+
+    seasonal(mit::MIT, rc::Symbol) = new(mit, rc)
+    seasonal(mit::MIT) = new(mit, :both)
 end
 
 
@@ -399,14 +414,14 @@ mutable struct X13identify
 end
 
 mutable struct X13outlier
-    critical::Union{Vector{Float64},X13default}
+    critical::Union{Float64,Vector{Union{Missing,Float64}},Vector{Float64},X13default}
     lsrun::Union{Int64,X13default}
     method::Union{Symbol,X13default}
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default} 
     span::Union{UnitRange{<:MIT},X13default}
-    types::Union{Vector{Symbol},X13default}
+    types::Union{Symbol,Vector{Symbol},X13default}
     almost::Union{Float64,X13default}
     tcrate::Union{Float64,X13default}
     
@@ -469,11 +484,11 @@ mutable struct X13regression
     start::Union{MIT,X13default}
     testalleaster::Union{Bool,X13default}
     tlimit::Union{Float64,X13default}
-    user::Union{Vector{Symbol},X13default}
+    user::Union{Symbol,Vector{Symbol},X13default}
     usertype::Union{Symbol,Vector{Symbol},X13default}
     variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}
     b::Union{Vector{Float64},X13default}
-    bfixed::Union{Vector{Bool},X13default}
+    fixb::Union{Vector{Bool},X13default}
     centeruser::Union{Symbol,X13default}
     eastermeans::Union{Bool,X13default}
     noapply::Union{Symbol,X13default}
@@ -633,7 +648,7 @@ mutable struct X13transform
     format::Union{String,X13default}
     func::Union{Symbol,X13default} #TODO should be function
     mode::Union{Symbol,Vector{Symbol},X13default}
-    name::Union{String,X13default}
+    name::Union{Symbol,Vector{Symbol},X13default}
     power::Union{Float64,X13default}
     precision::Union{Int64,X13default}
     print::Union{Vector{Symbol},X13default}
@@ -733,11 +748,12 @@ mutable struct X13x11regression
     span::Union{UnitRange{<:MIT},X13default}
     start::Union{MIT,X13default}
     tdprior::Union{Vector{Float64},X13default}
-    user::Union{Vector{Symbol},X13default}
-    usertype::Union{Vector{Symbol},X13default}
+    user::Union{Symbol,Vector{Symbol},X13default}
+    usertype::Union{Symbol,Vector{Symbol},X13default}
     variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}
     almost::Union{Float64,X13default}
     b::Union{Vector{Float64},X13default}
+    fixb::Union{Vector{Bool},X13default}
     centeruser::Union{Symbol,X13default}
     eastermeans::Union{Bool,X13default}
     forcecal::Union{Bool,X13default}
@@ -1808,7 +1824,7 @@ each run of two or more successive level shifts cancels to form a temporary leve
 
 ### Main keyword arguments:
 
-* **critical** (Vector{Union{Float64,Missing}}) - Sets the value to which the absolute values of the outlier t-statistics are compared to
+* **critical** (Float64 or Vector{Union{Float64,Missing}}) - Sets the value to which the absolute values of the outlier t-statistics are compared to
     detect outliers. The default critical value is determined by the number of observations
     in the interval searched for outliers (see the `span` argument below). It is obtained by a
     modification of the asymptotic formula of Ljung (1993) that interpolates critical values
@@ -1873,14 +1889,14 @@ each run of two or more successive level shifts cancels to form a temporary leve
 
 """
 function outlier(; 
-    critical::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    critical::Union{Float64,Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
     lsrun::Union{Int64,X13default}=_X13default,
     method::Union{Symbol,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:header, :iterations, :tests, :temporaryls, :finaltests],
     save::Union{Vector{Symbol},X13default}= [:iterations, :finaltests],
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
     span::Union{UnitRange{<:MIT},X13default}=_X13default,
-    types::Union{Vector{Symbol},X13default}=_X13default,
+    types::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     almost::Union{Float64,X13default}=_X13default,
     tcrate::Union{Float64,X13default}=_X13default,
 )
@@ -2108,7 +2124,7 @@ Specification for including regression variables in a regARIMA model, or for spe
     missing as in the example below. Missing values take on their default value of 0.1. For
     example, for a model with two regressors, `b=[0.7, missing]` is equivalent to `b=[0.7,0.1]`, but
     `b=[0.7]` is not allowed. For a model with three regressors, `b=[0.8,missing,-0.4]` is equivalent
-    to `b=[0.8,0.1,-0.4]`. To hold a parameter fixed at a specified value, use the `bfixed` argument.
+    to `b=[0.8,0.1,-0.4]`. To hold a parameter fixed at a specified value, use the `fixb` argument.
 
 * **centeruser** (Symbol) - Specifies the removal of the (sample) mean or the seasonal means from the user-defined
     regression variables. If `centeruser=:mean`, the mean of each user-defined regressor is
@@ -2160,11 +2176,11 @@ function regression(;
     start::Union{MIT,X13default}=_X13default,
     testalleaster::Union{Bool,X13default}=_X13default,
     tlimit::Union{Float64,X13default}=_X13default,
-    user::Union{Vector{Symbol},X13default}=_X13default,
+    user::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     usertype::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     variables::Union{Symbol,X13var,Vector{<:Union{Symbol,X13var,Any}},X13default}=_X13default,
     b::Union{Vector{Float64},X13default}=_X13default,
-    bfixed::Union{Vector{Bool},X13default}=_X13default,
+    fixb::Union{Vector{Bool},X13default}=_X13default,
     centeruser::Union{Symbol,X13default}=_X13default,
     eastermeans::Union{Bool,X13default}=_X13default,
     noapply::Union{Symbol,X13default}=_X13default,
@@ -2177,6 +2193,9 @@ function regression(;
     if !(data isa X13default)
         start = first(rangeof(data))
         user = collect(colnames(data))
+        if length(user) == 1
+            user = user[1]
+        end
     end
 
     # ensure correct type of variables
@@ -2193,7 +2212,7 @@ function regression(;
     end
 
 
-    return X13regression(aicdiff,aictest,chi2test,chi2testcv,data,file,format,print,save,savelog,pvaictest,start,testalleaster,tlimit,user,usertype,_variables,b,bfixed,centeruser,eastermeans,noapply,tcrate)
+    return X13regression(aicdiff,aictest,chi2test,chi2testcv,data,file,format,print,save,savelog,pvaictest,start,testalleaster,tlimit,user,usertype,_variables,b,fixb,centeruser,eastermeans,noapply,tcrate)
 end
 regression!(spec::X13spec{F}; kwargs...) where F = (spec.regression = regression(; kwargs...))
 
@@ -2710,7 +2729,7 @@ function transform(;
     format::Union{String,X13default}=_X13default,
     func::Union{Symbol,X13default}=_X13default,
     mode::Union{Symbol,Vector{Symbol},X13default}=_X13default,
-    name::Union{String,X13default}=_X13default,
+    name::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     power::Union{Float64,X13default}=_X13default,
     precision::Union{Int64,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:aictransform, :seriesconstant, :seriesconstantplot, :prior, :permprior, :tempprior, :prioradjusted, :permprioradjusted, :prioradjustedptd, :permprioradjustedptd, :transformed],# print::Union{Vector{Symbol},X13default}
@@ -2726,6 +2745,18 @@ function transform(;
     #TODO: get start from data
     #TODO: get name from data
     #TODO: get start from data
+
+    start = _X13default
+    name = _X13default
+    if !(data isa X13default)
+        start = first(rangeof(data))
+        if data isa MVTSeries
+            name = collect(colnames(data))
+            if length(name) == 1
+                name = name[1]
+            end
+        end
+    end
 
     return X13transform(adjust,aicdiff,data,file,format,func,mode,name,power,precision,print,save,savelog,start,title,type,constant,trimzero)
 end
@@ -3048,7 +3079,7 @@ argument. The regression model specified can contain both predefined and user-de
     missing as in the example below. Missing values take on their default value of 0.1. For
     example, for a model with two regressors, `b=[0.7, missing]` is equivalent to `b=[0.7,0.1]`, but
     `b=[0.7]` is not allowed. For a model with three regressors, `b=[0.8,missing,-0.4]` is equivalent
-    to `b=[0.8,0.1,-0.4]`. To hold a parameter fixed at a specified value, use the `bfixed` argument.
+    to `b=[0.8,0.1,-0.4]`. To hold a parameter fixed at a specified value, use the `fixb` argument.
 
 * **fixb** (Vector{Bool}) - A vector of `true`/`false` entries corresponding to the entries in the `b` vector.
         `true` entries will be held fixed.
@@ -3112,11 +3143,12 @@ function x11regression(;
     span::Union{UnitRange{<:MIT},X13default}=_X13default,
     start::Union{MIT,X13default}=_X13default,
     tdprior::Union{Vector{Float64},X13default}=_X13default,
-    user::Union{Vector{Symbol},X13default}=_X13default,
-    usertype::Union{Vector{Symbol},X13default}=_X13default,
-    variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}=_X13default,
+    user::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    usertype::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    variables::Union{Symbol,X13var,Vector{<:Union{Symbol,X13var,Any}},X13default}=_X13default,
     almost::Union{Float64,X13default}=_X13default,
     b::Union{Vector{Float64},X13default}=_X13default,
+    fixb::Union{Vector{Bool},X13default}=_X13default,
     centeruser::Union{Symbol,X13default}=_X13default,
     eastermeans::Union{Bool,X13default}=_X13default,
     forcecal::Union{Bool,X13default}=_X13default,
@@ -3135,7 +3167,42 @@ function x11regression(;
     #TODO: get start from data
     #TODO: add table of pre-defined variables
     #TODO: get umname and umstart from umdata
-    return X13x11regression(aicdiff,aictest,critical,data,file,format,outliermethod,outlierspan,print,save,savelog,prior,sigma,span,start,tdprior,user,usertype,variables,almost,b,centeruser,eastermeans,forcecal,noapply,reweight,umdata,umfile,umformat,umname,umprecision,umstart,umtrimzero)
+
+    start = _X13default
+    user = _X13default
+    if !(data isa X13default)
+        start = first(rangeof(data))
+        user = collect(colnames(data))
+        if length(user) == 1
+            user = user[1]
+        end
+    end
+
+    umstart = _X13default
+    umname = _X13default
+    if !(umdata isa X13default)
+        umstart = first(rangeof(umdata))
+        umname = collect(colnames(umdata))
+        if length(umname) == 1
+            umname = umname[1]
+        end
+    end
+
+    # ensure correct type of variables
+    _variables = X13default()
+    if !(variables isa X13default)
+        if variables isa Vector
+            _variables = Vector{Union{Symbol,X13var}}()
+            for var in variables
+                push!(_variables, var)
+            end
+        else
+            _variables = variables
+        end
+    end
+
+
+    return X13x11regression(aicdiff,aictest,critical,data,file,format,outliermethod,outlierspan,print,save,savelog,prior,sigma,span,start,tdprior,user,usertype,_variables,almost,b,fixb,centeruser,eastermeans,forcecal,noapply,reweight,umdata,umfile,umformat,umname,umprecision,umstart,umtrimzero)
 end
 x11regression!(spec::X13spec{F}; kwargs...) where F = (spec.x11regression = x11regression(; kwargs...))
 

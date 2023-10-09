@@ -44,6 +44,16 @@ _spec_name_dict = Dict{Type,String}(
     X13x11 => "x11",
     X13x11regression => "x11regression"
 )
+_regime_change_dict_start = Dict{Symbol, String}(
+    :both => "/",
+    :zerobefore => "//",
+    :zeroafter => "/",
+)
+_regime_change_dict_end = Dict{Symbol, String}(
+    :both => "/",
+    :zerobefore => "/",
+    :zeroafter => "//",
+)
 
 function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,X13forecast,X13history,X13identify,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression}, ; test=false)
     s = Vector{String}()
@@ -59,7 +69,7 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
         if !(val isa X13default)
             if key == :func
                 key = :function
-            elseif key ∈ (:ma, )
+            elseif key ∈ (:ma, :b)
                 push!(s, "$key = $(x12write_fixed_values(spec, key, val))")
                 continue
             end
@@ -113,6 +123,21 @@ x13write(val::ArimaModel) = x13write(val.specs)
 x13write(val::ArimaSpec) = val.period != 0 ? "($(val.p) $(val.d) $(val.q))$(val.period)" : "($(val.p) $(val.d) $(val.q))"
 x13write(val::Vector{ArimaSpec}) = join(x13write.(val), "")
 x13write(val::TSeries) = "($(join(values(val), " ")))"
+function x13write(val::MVTSeries) 
+    cols = columns(val)
+    if length(cols) == 1
+        return x13write(cols[first(keys(cols))])
+    else
+        # loop though all columns for time period 1, then for time period 2, etc.
+        vals = Vector{Float64}()
+        for t in rangeof(val)
+            for key in keys(cols)
+                push!(vals, cols[key][t])
+            end
+        end
+        return "($(join(vals, " ")))"
+    end
+end
 x13write(val::Number) = val
 x13write(val::Symbol) = val
 x13write(val::Missing) = ""
@@ -123,20 +148,22 @@ x13write(val::X13.ao) = "ao$(x13write(val.mit))"
 x13write(val::X13.ls) = "ls$(x13write(val.mit))"
 x13write(val::X13.tc) = "tc$(x13write(val.mit))"
 x13write(val::X13.so) = "so$(x13write(val.mit))"
-x13write(val::X13.aos) = "aos$(x13write(val.mit1))-$(x13write(val.mi2))"
-x13write(val::X13.lss) = "lss$(x13write(val.mit1))-$(x13write(val.mi2))"
-x13write(val::X13.rp) = "rp$(x13write(val.mit1))-$(x13write(val.mi2))"
-x13write(val::X13.qd) = "qd$(x13write(val.mit1))-$(x13write(val.mi2))"
-x13write(val::X13.qi) = "qi$(x13write(val.mit1))-$(x13write(val.mi2))"
-x13write(val::X13.tl) = "tl$(x13write(val.mit1))-$(x13write(val.mi2))"
+x13write(val::X13.aos) = "aos$(x13write(val.mit1))-$(x13write(val.mit2))"
+x13write(val::X13.lss) = "lss$(x13write(val.mit1))-$(x13write(val.mit2))"
+x13write(val::X13.rp) = "rp$(x13write(val.mit1))-$(x13write(val.mit2))"
+x13write(val::X13.qd) = "qd$(x13write(val.mit1))-$(x13write(val.mit2))"
+x13write(val::X13.qi) = "qi$(x13write(val.mit1))-$(x13write(val.mit2))"
+x13write(val::X13.tl) = "tl$(x13write(val.mit1))-$(x13write(val.mit2))"
 x13write(val::tdstock) = "tdstock[$(val.n)]"
 x13write(val::tdstock1coef) = "tdstock1coef[$(val.n)]"
 x13write(val::easter) = "easter[$(val.n)]"
-x13write(val::labour) = "labour[$(val.n)]"
+x13write(val::labor) = "labor[$(val.n)]"
 x13write(val::thank) = "thank[$(val.n)]"
 x13write(val::sceaster) = "sceaster[$(val.n)]"
 x13write(val::easterstock) = "easterstock[$(val.n)]"
 x13write(val::sincos) = "sincos[$(join(val.n, " "))]"
+x13write(val::td) = "td$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::seasonal) = "seasonal$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
 
 
 
