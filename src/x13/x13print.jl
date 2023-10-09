@@ -162,9 +162,14 @@ x13write(val::thank) = "thank[$(val.n)]"
 x13write(val::sceaster) = "sceaster[$(val.n)]"
 x13write(val::easterstock) = "easterstock[$(val.n)]"
 x13write(val::sincos) = "sincos[$(join(val.n, " "))]"
-x13write(val::td) = "td$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
-x13write(val::seasonal) = "seasonal$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
-
+x13write(val::td)           = val.regimechange == :neither ? "td" : "td$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::tdnolpyear)   = val.regimechange == :neither ? "tdnolpyear" : "tdnolpyear$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::td1coef)      = val.regimechange == :neither ? "td1coef" : "td1coef$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::td1nolpyear)  = val.regimechange == :neither ? "td1nolpyear" : "td1nolpyear$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::lpyear)       = val.regimechange == :neither ? "lpyear" : "lpyear$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::lom)          = val.regimechange == :neither ? "lom" : "lom$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::loq)          = val.regimechange == :neither ? "loq" : "loq$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::seasonal)     = val.regimechange == :neither ? "seasonal" : "seasonal$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
 
 
 function x13write(val::MIT)
