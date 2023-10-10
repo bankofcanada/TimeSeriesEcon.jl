@@ -249,7 +249,7 @@ end
 # write tseries and mvtseries
 
 
-_de_array_data(; eltype, elfreq=C.freq_none, obj_type, nbytes, val) = (;eltype, elfreq, obj_type, nbytes, val)
+_de_array_data(; eltype, elfreq=C.freq_none, obj_type, nbytes, val) = (; eltype, elfreq, obj_type, nbytes, val)
 
 _to_de_array(value) = throw(ArgumentError("Unable to write value of type $(typeof(value))."))
 
@@ -259,7 +259,7 @@ _to_de_array(::AbstractUnitRange) = _de_array_data(; eltype=C.type_none, obj_typ
 # handle any vector or matrix
 _to_de_array(value::AbstractVecOrMat) = _to_de_array(Val(isempty(value)), value)
 
-_eltypefreq(::Type{ET}) where {ET <: MIT} = (; eltype=C.type_date, elfreq=_to_de_scalar_freq(ET))
+_eltypefreq(::Type{ET}) where {ET<:MIT} = (; eltype=C.type_date, elfreq=_to_de_scalar_freq(ET))
 _eltypefreq(::Type{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), elfreq=C.freq_none)
 
 # empty array
@@ -472,6 +472,18 @@ end
 #############################################################################
 # helpers for readdb
 
+function _finalize_search(rc, search)
+    try
+        if rc != C.DE_NO_OBJ
+            _check(rc)
+        end
+        C.de_finalize_search(search)
+    catch err
+        C.de_finalize_search(search)
+        rethrow(err)
+    end
+end
+
 import ..load_scalar
 import ..load_tseries
 import ..load_mvtseries
@@ -502,18 +514,49 @@ function _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_catalog})
         end
         rc = C.de_next_object(search[], obj)
     end
-    if rc == C.DE_NO_OBJ
-        C.de_finalize_search(search[])
-        return data
-    end
-    try
-        _check(rc)
-    catch err
-        C.de_finalize_search(search[])
-        rethrow(err)
-    end
-    return nothing
+    _finalize_search(rc, search[])
+    return data
 end
 
+#############################################################################
+# helpers for list_catalog
+
+function _list_catalog(de::DEFile, cid::C.obj_id_t, maxdepth::Int, verbose::Bool, io::IO)
+    search = Ref{C.de_search}()
+    _check(C.de_list_catalog(de, cid, search))
+    obj = Ref{C.object_t}()
+    rc = C.de_next_object(search[], obj)
+    list = []
+    while rc == C.DE_SUCCESS
+        oname = unsafe_string(obj[].name)
+        try
+            fp = Ref{Ptr{Cchar}}()
+            depth = Ref{Int64}()
+            _check(C.de_get_object_info(de, obj[].id, fp, depth, C_NULL))
+            if depth[] <= maxdepth
+                if obj[].obj_class == C.class_catalog
+                    verbose && print(io, "  "^(depth[] - 1), oname, '/')
+                    if depth[] < maxdepth
+                        verbose && println(io)
+                        append!(list, _list_catalog(de, obj[].id, maxdepth, verbose, io))
+                    else # depth[] == maxdepth
+                        count = Ref{Int64}()
+                        _check(C.de_catalog_size(de, obj[].id, count))
+                        verbose && println(io, count[] == 0 ? "(empty)" : "($(count[]) objects)")
+                    end
+                else
+                    verbose && println("  "^(depth[] - 1), " ", oname)
+                    push!(list, unsafe_string(fp[]))
+                end
+            end
+        catch err
+            @error "Failed to ge info for $oname($(obj[].id))" err
+            C.de_clear_error()
+        end
+        rc = C.de_next_object(search[], obj)
+    end
+    _finalize_search(rc, search[])
+    return list
+end
 
 end

@@ -141,6 +141,10 @@ function de_find_fullpath(de, fullpath, id)
     ccall((:de_find_fullpath, libdaec), Cint, (de_file, Ptr{Cchar}, Ptr{obj_id_t}), de, fullpath, id)
 end
 
+function de_catalog_size(de, pid, count)
+    ccall((:de_catalog_size, libdaec), Cint, (de_file, obj_id_t, Ptr{Int64}), de, pid, count)
+end
+
 function de_new_catalog(de, pid, name, id)
     ccall((:de_new_catalog, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, Ptr{obj_id_t}), de, pid, name, id)
 end

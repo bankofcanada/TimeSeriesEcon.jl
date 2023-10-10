@@ -25,7 +25,7 @@ function __init__()
     if version != VersionNumber(C.DE_VERSION)
         throw(ErrorException("Library version $(version) does not match expected version $(C.DE_VERSION)."))
     end
-    return 
+    return
 end
 
 const VERSION = VersionNumber(C.DE_VERSION)
@@ -143,7 +143,8 @@ See also [`find_object`](@ref)
 """
 function find_fullpath(de::DEFile, fullpath::AbstractString, dne_error::Bool=true)
     id = Ref{C.obj_id_t}()
-    rc = C.de_find_fullpath(de, string(fullpath), id)
+    pref = startswith(fullpath, '/') ? "" : "/"
+    rc = C.de_find_fullpath(de, pref * string(fullpath), id)
     if dne_error == false && rc == C.DE_OBJ_DNE
         return missing
     end
@@ -198,6 +199,31 @@ delete all objects in a file, use [`truncatedaec`](@ref)
 function delete_object(de::DEFile, id::C.obj_id_t)
     I._check(C.de_delete_object(de, id))
     return nothing
+end
+
+# import ..LittleDict
+
+"""
+    get_all_attributes(de, obejct_id)
+
+Retrieve the names and value of all attributes of the object with the given id.
+They are returned in a dictionary.
+"""
+function get_all_attributes(de::DEFile, id::C.obj_id_t; delim="‖")
+    number = Ref{Int64}()
+    names = Ref{Ptr{Cchar}}()
+    values = Ref{Ptr{Cchar}}()
+    rc = C.de_get_all_attributes(de, id, delim, number, names, values)
+    I._check(rc)
+    if number[] == 0
+        return Dict{String,String}()
+    end
+    all_names = String[split(unsafe_string(names[]), delim);]
+    all_values = String[split(unsafe_string(values[]), delim);]
+    if length(all_names) != length(all_values)
+        error("number of names and values don't match. Try a different delimiter.")
+    end
+    return Dict{String,String}(all_names .=> all_values)
 end
 
 """
@@ -427,6 +453,20 @@ function new_catalog(de::DEFile, pid::C.obj_id_t, name::String)
     return id[]
 end
 
+@inline catalog_size(de::DEFile, name::Symbol) = catalog_size(de, find_object(de, root_id, string(name)))
+@inline catalog_size(de::DEFile, name::AbstractString) = catalog_size(de, find_fullpath(de, name))
+function catalog_size(de::DEFile, pid::C.obj_id_t)
+    count = Ref{Int64}()
+    I._check(C.de_catalog_size(de, pid, count))
+    return count[]
+end
+
+@inline list_catalog(de::DEFile, name::Symbol; kwargs...) = list_catalog(de, find_object(de, root_id, string(name)); kwargs...)
+@inline list_catalog(de::DEFile, name::AbstractString; kwargs...) = list_catalog(de, find_fullpath(de, string(name)); kwargs...)
+function list_catalog(de::DEFile, cid::C.obj_id_t=root_id; quiet=false, verbose=!quiet, file::IO=Base.stdout, maxdepth::Int=typemax(Int))
+    I._list_catalog(de, cid, maxdepth, verbose, file)
+end
+
 #############################################################################
 # recursive high-level write
 
@@ -513,10 +553,12 @@ All object contained in the specified catalog are loaded by [`read_data`](@ref).
 """
 function readdb end
 
-readdb(de::DEFile) = readdb(de, root_id)
-readdb(de::DEFile, id::C.obj_id_t) = read_data(de, id)
-readdb(de::DEFile, name::Symbol) = read_data(de, find_object(de, root_id, string(name)))
-readdb(de::DEFile, catalog::AbstractString) = read_data(de, find_fullpath(de, string(catalog)))
+readdb(de::DEFile, id::C.obj_id_t=root_id) = read_data(de, id)
+readdb(de::DEFile, name::Symbol) = (oid = find_object(de, root_id, string(name)); read_data(de, oid))
+function readdb(de::DEFile, name::AbstractString)
+    oid = startswith(name, '/') ? find_fullpath(de, string(name)) : find_object(de, root_id, string(name))
+    read_data(de, oid)
+end
 function readdb(file::AbstractString, args...)
     opendaec(file) do de
         readdb(de, args...)
