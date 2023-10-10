@@ -52,7 +52,7 @@ Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(w, val, sym)
 # MacroTools.@forward Workspace._c (Base.getindex,)
 Base.getindex(w::Workspace, sym) = getindex(_c(w), convert(Symbol, sym))
 Base.getindex(w::Workspace, sym, syms...) = getindex(w, (sym, syms...,))
-Base.getindex(w::Workspace, syms::Vector) = getindex(w, (syms...,))
+Base.getindex(w::Workspace, syms::Vector) = Workspace(convert(Symbol, s) => w[s] for s in syms)
 Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] for s in syms)
 
 MacroTools.@forward Workspace._c (Base.setindex!,)
@@ -68,7 +68,7 @@ function Base.eltype(w::Workspace)
     return Pair{Symbol,ET}
 end
 
-Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
+Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args..., (k => v for (k,v) in kwargs)...); w)
 Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
 @inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
