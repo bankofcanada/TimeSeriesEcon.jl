@@ -56,7 +56,7 @@ _check(rc::Cint) = rc == 0 || throw(DEError())
 
 const StrOrSym = Union{Symbol,AbstractString}
 
-_to_de_scalar_val(value) = throw(ArgumentError("Unable to write value of type $(typeof(value))."))
+_to_de_scalar_val(value) = throw(ArgumentError("Unable to write scalar value of type $(typeof(value))."))
 _to_de_scalar_val(value::Integer) = value
 _to_de_scalar_val(value::Real) = float(value)
 _to_de_scalar_val(value::Complex) = float(value)
@@ -91,7 +91,7 @@ function _pack_date(value::MIT{FR}) where {FR<:CalendarFrequency}
 end
 
 _to_de_scalar_type(val) = _to_de_scalar_type(typeof(val))
-_to_de_scalar_type(::Type{T}) where {T} = error("Can't handle type $T")
+# _to_de_scalar_type(::Type{T}) where {T} = error("Can't handle type $T")
 _to_de_scalar_type(::Type{T}) where {T<:MIT} = C.type_date
 _to_de_scalar_type(::Type{T}) where {T<:Duration} = C.type_signed
 _to_de_scalar_type(::Type{T}) where {T<:Bool} = C.type_signed
@@ -235,6 +235,7 @@ function _make_axis(de::DEFile, rng::AbstractVector{<:Union{Symbol,AbstractStrin
     return ax_id[]
 end
 
+# _get_axis_of(de::DEFile, vec::NTuple, dim=1) = _make_axis(de, Base.axes1(vec))
 _get_axis_of(de::DEFile, vec::AbstractVector, dim=1) = _make_axis(de, Base.axes1(vec))
 _get_axis_of(de::DEFile, vec::AbstractUnitRange, dim=1) = _make_axis(de, vec)
 _get_axis_of(de::DEFile, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(vec, dim))
@@ -319,13 +320,13 @@ end
 
 _do_store_array(::Val{1}, args...) = C.de_store_tseries(args...)
 _do_store_array(::Val{2}, args...) = C.de_store_mvtseries(args...)
-function _do_store_array(v::Val{N}, args...) where {N}
-    @nospecialize v
-    error("Can't store  $(N)d array.")
-end
+# function _do_store_array(v::Val{N}, args...) where {N}
+#     @nospecialize v
+#     error("Can't store  $(N)d array.")
+# end
 import ..set_attribute
 import ..get_attribute
-_store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{M,C.axis_id_t}, value::AbstractArray{ET,N}) where {ET,N,M} = error("Dimension mismatch: $(N)d array with $M axes.")
+# _store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{M,C.axis_id_t}, value::AbstractArray{ET,N}) where {ET,N,M} = error("Dimension mismatch: $(N)d array with $M axes.")
 function _store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{N,C.axis_id_t}, value::AbstractArray{ET,N}) where {ET,N}
     id = Ref{C.obj_id_t}()
     arr = _to_de_array(value)
@@ -374,7 +375,7 @@ function _from_de_array(arr::C.tseries_t, ::Val{C.type_range}, ::Val{C.axis_rang
     fd = _get_axis_range_firstdate(arr.axis)
     return fd .+ (0:arr.axis.length-1)
 end
-_from_de_array(::C.tseries_t, ::Val{C.type_range}, ::Val{Z}) where {Z} = error("Cannot load a range of type $Z")
+# _from_de_array(::C.tseries_t, ::Val{C.type_range}, ::Val{Z}) where {Z} = error("Cannot load a range of axis type $Z")
 
 # handle type_vector
 _from_de_array(::C.tseries_t, ::Val{C.type_vector}, ::Val{Z},) where {Z} = error("Cannot load a vector with axis of type $Z. Expected $(C.axis_plain)")
@@ -461,6 +462,7 @@ const StoreAsScalarType = Union{Symbol,AbstractString,Number,Dates.Date,Dates.Da
 
 _write_data(::DEFile, ::C.obj_id_t, name::StrOrSym, value) = error("Cannot determine the storage class of $name::$(typeof(value))")
 _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::StoreAsScalarType) = store_scalar(de, pid, string(name), value)
+# _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::NTuple) = store_tseries(de, pid, string(name), value)
 _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::AbstractVector) = store_tseries(de, pid, string(name), value)
 _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::AbstractMatrix) = store_mvtseries(de, pid, string(name), value)
 function _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, data::Workspace)

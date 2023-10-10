@@ -10,15 +10,23 @@ rm(test_file, force=true)
 rm(test_file * "-journal", force=true)
 
 @testset "DE file" begin
-    global de = DE.opendaec(test_file)
+    global de
+    @test_throws DE.DEError DE.opendaec(test_file, readonly=true)
+    de = DE.opendaec(test_file)
     @test isopen(de)
     @test (DE.closedaec!(de); true)
     @test !isopen(de)
+    @test (de = DE.opendaec(test_file, readonly=true); isopen(de))
+    @test (DE.closedaec!(de); !isopen(de))
     de = DE.opendaec(test_file)
 
     # test find_object throws exception or returns missing
     @test_throws DE.DEError DE.find_object(de, DE.root_id, "nosuchobject")
     @test ismissing(DE.find_object(de, DE.root_id, "nosuchobject", false))
+
+    dm = nothing
+    @test (dm = DE.opendaecmem(); isopen(dm))
+    @test (DE.closedaec!(dm); !isopen(dm))
 
     # test get_fullpath works
     @test DE.get_fullpath(de, DE.root_id) == "/"
@@ -35,6 +43,10 @@ rm(test_file * "-journal", force=true)
     end
     @test isempty(DE.readdb(de, :scalars))
 
+end
+
+@testset "DE errors" begin
+    @test_throws ArgumentError DE.store_scalar(de, :err, Val(0))
 end
 
 @testset "DE scalar" begin
@@ -95,20 +107,6 @@ end
         end
     end
 
-
-    pid1 = DE.find_fullpath(de, "/scalars1", false)
-    if ismissing(pid1)
-        pid1 = DE.new_catalog(de, "scalars1")
-    end
-
-    # we can write them 
-    for (name, value) in pairs(db)
-        @test begin
-            id = DE.store_scalar(de, "/scalars1/$name", value)
-            id == DE.find_object(de, pid1, name)
-        end
-    end
-
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
@@ -127,6 +125,21 @@ end
         @test (push!(ldb, name => DE.load_scalar(de, "/scalars/$name")); true)
     end
 
+    # list_catalog returns what we expect
+    begin
+        @test isempty(DE.list_catalog(de; quiet=true, recursive=false))
+        lst = DE.list_catalog(de, "/scalars"; quiet=true)
+        @test length(lst) == length(db)
+        for k in keys(db)
+            @test "/scalars/$k" in lst
+        end
+        lst = DE.list_catalog(de; quiet=true)
+        @test length(lst) == length(db)
+        for k in keys(db)
+            @test "/scalars/$k" in lst
+        end
+    end
+
     # they are equal
     @test @compare db ldb quiet
 
@@ -134,8 +147,8 @@ end
     @test @compare map(typeof, db) map(typeof, ldb) quiet
 
     # delete + recursive delete 
-    @test (DE.delete_object(de, "scalars1"); true)
-    @test ismissing(DE.find_fullpath(de, "scalars1", false))
+    @test (DE.delete_object(de, "scalars"); true)
+    @test ismissing(DE.find_fullpath(de, "scalars", false))
 
 end
 

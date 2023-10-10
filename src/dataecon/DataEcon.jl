@@ -81,20 +81,30 @@ Otherwise, call [`closedaec!`](@ref).
 """
 function opendaec end
 
-function opendaec(fname::AbstractString)
+function _do_open(C_open, args...)
     handle = Ref{C.de_file}()
+    I._check(C_open(args..., handle))
+    return handle
+end
+
+function opendaec(fname::AbstractString; readonly=false)
     fname = string(fname)
-    I._check(C.de_open(fname, handle))
+    handle = _do_open(readonly ? C.de_open_readonly : C.de_open, fname)
     return DEFile(handle, fname)
 end
 
-function opendaec(f::Function, fname::AbstractString)
-    de = opendaec(fname)
+function opendaec(f::Function, fname::AbstractString; readonly=false)
+    de = opendaec(fname; readonly)
     try
         f(de)
     finally
         closedaec!(de)
     end
+end
+
+function opendaecmem()
+    handle = _do_open(C.de_open_memory)
+    return DEFile(handle, ":memory:")
 end
 
 """
@@ -463,7 +473,8 @@ end
 
 @inline list_catalog(de::DEFile, name::Symbol; kwargs...) = list_catalog(de, find_object(de, root_id, string(name)); kwargs...)
 @inline list_catalog(de::DEFile, name::AbstractString; kwargs...) = list_catalog(de, find_fullpath(de, string(name)); kwargs...)
-function list_catalog(de::DEFile, cid::C.obj_id_t=root_id; quiet=false, verbose=!quiet, file::IO=Base.stdout, maxdepth::Int=typemax(Int))
+function list_catalog(de::DEFile, cid::C.obj_id_t=root_id; quiet=false, verbose=!quiet, file::IO=Base.stdout,
+    recursive=true, maxdepth::Int=recursive ? typemax(Int) : 1)
     I._list_catalog(de, cid, maxdepth, verbose, file)
 end
 
@@ -529,7 +540,7 @@ function write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value)
     try
         I._write_data(de, pid, name, value)
     catch err
-        parent = get_fullpath(de, pid)
+        parent = pid == 0 ? "" : get_fullpath(de, pid)
         @error "Failed to write $parent/$name of type $(typeof(value))." err
         # rethrow()
     end
