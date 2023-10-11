@@ -188,6 +188,7 @@ MIT, Duration
 # --------------------------
 # conversions with Int
 MIT{F}(x::Int) where {F<:Frequency} = reinterpret(MIT{F}, x)
+MIT{F}(x::Base.BitInteger) where {F<:Frequency} = MIT{F}(Int(x))
 MIT{Yearly}(x::Int) = MIT{Yearly{12}}(x)
 MIT{Quarterly}(x::Int) = MIT{Quarterly{3}}(x)
 MIT{HalfYearly}(x::Int) = MIT{HalfYearly{6}}(x)

@@ -49,6 +49,19 @@ end
     @test_throws ArgumentError DE.store_scalar(de, :err, Val(0))
 end
 
+function _check_attributes(name, value, attr, has_jtype, has_jeltype)
+    sz = 0
+    if (name in has_jtype)
+        @test get(attr, "jtype", nothing) == string(typeof(value))
+        sz += 1
+    end
+    if (name in has_jeltype)
+        @test get(attr, "jeltype", nothing) == string(Base.eltype(value))
+        sz += 1
+    end
+    @test length(attr) == sz
+end
+
 @testset "DE scalar" begin
     db = Workspace(
         # integers
@@ -94,17 +107,22 @@ end
         cd2=Dates.today()
     )
 
-    pid = DE.find_fullpath(de, "/scalars", false)
+    cata = "scalars"
+    # Julia types that are not directly supporded by DataEcon.
+    has_jtype = [:ns1, :f3, :c1, :cd1, :cd2]
+    has_jeltype = []
+
+    pid = DE.find_fullpath(de, cata, false)
     if ismissing(pid)
-        pid = DE.new_catalog(de, "scalars")
+        pid = DE.new_catalog(de, cata)
     end
 
     # we can write them 
     for (name, value) in pairs(db)
-        @test begin
-            id = DE.store_scalar(de, pid, name, value)
-            id == DE.find_fullpath(de, "/scalars/$name")
-        end
+        id = DE.store_scalar(de, pid, name, value)
+        @test id == DE.find_fullpath(de, "/$cata/$name")
+        attr = DE.get_all_attributes(de, id)
+        _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
     ldb = Workspace()
@@ -122,21 +140,22 @@ end
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_scalar(de, "/scalars/$name")); true)
+        @test (push!(ldb, name => DE.load_scalar(de, "/$cata/$name")); true)
     end
 
     # list_catalog returns what we expect
     begin
         @test isempty(DE.list_catalog(de; quiet=true, recursive=false))
-        lst = DE.list_catalog(de, "/scalars"; quiet=true)
+        @test length(db) == DE.catalog_size(de, cata)
+        lst = DE.list_catalog(de, "/$cata"; quiet=true)
         @test length(lst) == length(db)
         for k in keys(db)
-            @test "/scalars/$k" in lst
+            @test "/$cata/$k" in lst
         end
         lst = DE.list_catalog(de; quiet=true)
         @test length(lst) == length(db)
         for k in keys(db)
-            @test "/scalars/$k" in lst
+            @test "/$cata/$k" in lst
         end
     end
 
@@ -169,18 +188,43 @@ end
         z1=TSeries(2020Q1, rand(16)),
         z2=TSeries(2020M7, rand(Int, 27)),
         z3=TSeries(w"2020-01-01"3, [1.0im .+ (1:11);]),
+        z4=TSeries(bd"2020-01-01", MIT{HalfYearly{1}}[rand(Int16, 20);]),
         b1=((1:100) .< 71)
     )
 
+    cata = "series"
+    has_jtype = [:b1]
+    has_jeltype = [:vs2, :nv1, :nv5, :nv6, :nv7, :b1]
+
+    pid = DE.find_fullpath(de, "/$cata", false)
+    if ismissing(pid)
+        pid = DE.new_catalog(de, cata)
+    end
+
     # we can write them 
     for (name, value) in pairs(db)
-        @test (DE.store_tseries(de, name, value); true)
+        id = DE.store_tseries(de, pid, name, value)
+        @test id == DE.find_fullpath(de, "/$cata/$name")
+        attr = DE.get_all_attributes(de, id)
+        _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
     ldb = Workspace()
-    # we can read them 
+    # we can read them from (pid,name)
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_tseries(de, name)); true)
+        @test (push!(ldb, name => DE.load_tseries(de, pid, name)); true)
+    end
+
+    # they are equal
+    @test @compare db ldb quiet
+
+    # their types are the same
+    @test @compare map(typeof, db) map(typeof, ldb) quiet
+
+    ldb = Workspace()
+    # we can read them from full path
+    for name in keys(db)
+        @test (push!(ldb, name => DE.load_tseries(de, "/$cata/$name")); true)
     end
 
     # they are equal

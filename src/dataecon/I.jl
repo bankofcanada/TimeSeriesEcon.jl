@@ -90,8 +90,7 @@ function _pack_date(value::MIT{FR}) where {FR<:CalendarFrequency}
     return value
 end
 
-_to_de_scalar_type(val) = _to_de_scalar_type(typeof(val))
-# _to_de_scalar_type(::Type{T}) where {T} = error("Can't handle type $T")
+_to_de_scalar_type(@nospecialize(val)) = _to_de_scalar_type(typeof(val))
 _to_de_scalar_type(::Type{T}) where {T<:MIT} = C.type_date
 _to_de_scalar_type(::Type{T}) where {T<:Duration} = C.type_signed
 _to_de_scalar_type(::Type{T}) where {T<:Bool} = C.type_signed
@@ -101,15 +100,17 @@ _to_de_scalar_type(::Type{T}) where {T<:Base.IEEEFloat} = C.type_float
 _to_de_scalar_type(::Type{T}) where {T<:Complex{<:Base.IEEEFloat}} = C.type_complex
 _to_de_scalar_type(::Type{T}) where {T<:StrOrSym} = C.type_string
 
-_to_de_scalar_freq(val) = TimeSeriesEcon._has_frequencyof(val) ? _to_de_scalar_freq(frequencyof(val)) : C.freq_none
+_to_de_scalar_freq(@nospecialize(val)) = C.freq_none
+_to_de_scalar_freq(::MIT{F}) where{F} = _to_de_scalar_freq(F)
+_to_de_scalar_freq(::Duration{F}) where{F} = _to_de_scalar_freq(F)
 _to_de_scalar_freq(::Type{Unit}) = C.freq_unit
 _to_de_scalar_freq(::Type{Daily}) = C.freq_daily
 _to_de_scalar_freq(::Type{BDaily}) = C.freq_bdaily
-_to_de_scalar_freq(::Type{Weekly}) = C.freq_weekly
+# _to_de_scalar_freq(::Type{Weekly}) = C.freq_weekly
 _to_de_scalar_freq(::Type{Monthly}) = C.freq_monthly
-_to_de_scalar_freq(::Type{Quarterly}) = C.freq_quarterly
-_to_de_scalar_freq(::Type{HalfYearly}) = C.freq_halfyearly
-_to_de_scalar_freq(::Type{Yearly}) = C.freq_yearly
+# _to_de_scalar_freq(::Type{Quarterly}) = C.freq_quarterly
+# _to_de_scalar_freq(::Type{HalfYearly}) = C.freq_halfyearly
+# _to_de_scalar_freq(::Type{Yearly}) = C.freq_yearly
 _to_de_scalar_freq(::Type{Weekly{end_day}}) where {end_day} = C.frequency_t(C.freq_weekly + mod1(end_day, 7))
 _to_de_scalar_freq(::Type{Quarterly{end_month}}) where {end_month} = C.frequency_t(C.freq_quarterly + mod1(end_month, 3))
 _to_de_scalar_freq(::Type{HalfYearly{end_month}}) where {end_month} = C.frequency_t(C.freq_halfyearly + mod1(end_month, 6))
@@ -152,46 +153,41 @@ function _from_de_scalar(scal::C.scalar_t)
     if obj_type == C.type_string
         return unsafe_string(Ptr{UInt8}(scal.value))
     end
+    T = _to_julia_scalar_type(Val(obj_type), Val(scal.frequency), Val(scal.nbytes))
     if obj_type == C.type_date
-        FR = _to_julia_frequency(scal.frequency)
-        T = _to_julia_scalar_type(Val(C.type_integer), Val(scal.nbytes))
-        val = unsafe_load(Ptr{T}(scal.value))
-        return _unpack_date(FR, scal.frequency, val)
-    end
-    T = _to_julia_scalar_type(Val(obj_type), Val(scal.nbytes))
-    value = unsafe_load(Ptr{T}(scal.value))
-    if obj_type == C.type_signed && scal.frequency != C.freq_none
-        FR = _to_julia_frequency(scal.frequency)
-        value = convert(Duration{FR}, Int64(value))
+        value = unsafe_load(Ptr{Int64}(scal.value))
+        value = _unpack_date(frequencyof(T), scal.frequency, value)::T
+    else
+        value = unsafe_load(Ptr{T}(scal.value))
     end
     return value
 end
 
-_to_julia_scalar_type(::Val{C.type_integer}, ::Val{0}) = Int  # the default integer if size is unknown
-_to_julia_scalar_type(::Val{C.type_integer}, ::Val{1}) = Int8
-_to_julia_scalar_type(::Val{C.type_integer}, ::Val{2}) = Int16
-_to_julia_scalar_type(::Val{C.type_integer}, ::Val{4}) = Int32
-_to_julia_scalar_type(::Val{C.type_integer}, ::Val{8}) = Int64
-_to_julia_scalar_type(::Val{C.type_integer}, ::Val{16}) = Int128
-_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{0}) = UInt
-_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{1}) = UInt8
-_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{2}) = UInt16
-_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{4}) = UInt32
-_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{8}) = UInt64
-_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{16}) = UInt128
-_to_julia_scalar_type(::Val{C.type_float}, ::Val{0}) = Float64
-_to_julia_scalar_type(::Val{C.type_float}, ::Val{2}) = Float16
-_to_julia_scalar_type(::Val{C.type_float}, ::Val{4}) = Float32
-_to_julia_scalar_type(::Val{C.type_float}, ::Val{8}) = Float64
-_to_julia_scalar_type(::Val{C.type_complex}, ::Val{0}) = ComplexF64
-_to_julia_scalar_type(::Val{C.type_complex}, ::Val{4}) = ComplexF16
-_to_julia_scalar_type(::Val{C.type_complex}, ::Val{8}) = ComplexF32
-_to_julia_scalar_type(::Val{C.type_complex}, ::Val{16}) = ComplexF64
-_to_julia_scalar_type(::Val{C.type_string}, ::Val) = String
-_to_julia_scalar_type(::Val{C.type_date}, ::Val{8}) = Int64
+_to_julia_scalar_type(::Val{C.type_integer}, ::Val{C.freq_none}, ::Val{0}) = Int  # the default integer if size is unknown
+_to_julia_scalar_type(::Val{C.type_integer}, ::Val{C.freq_none}, ::Val{1}) = Int8
+_to_julia_scalar_type(::Val{C.type_integer}, ::Val{C.freq_none}, ::Val{2}) = Int16
+_to_julia_scalar_type(::Val{C.type_integer}, ::Val{C.freq_none}, ::Val{4}) = Int32
+_to_julia_scalar_type(::Val{C.type_integer}, ::Val{C.freq_none}, ::Val{8}) = Int64
+_to_julia_scalar_type(::Val{C.type_integer}, ::Val{C.freq_none}, ::Val{16}) = Int128
+_to_julia_scalar_type(::Val{C.type_signed}, fr::Val, ::Val{8}) = Duration{_to_julia_frequency(fr)}
+_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{C.freq_none}, ::Val{0}) = UInt
+_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{C.freq_none}, ::Val{1}) = UInt8
+_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{C.freq_none}, ::Val{2}) = UInt16
+_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{C.freq_none}, ::Val{4}) = UInt32
+_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{C.freq_none}, ::Val{8}) = UInt64
+_to_julia_scalar_type(::Val{C.type_unsigned}, ::Val{C.freq_none}, ::Val{16}) = UInt128
+_to_julia_scalar_type(::Val{C.type_float}, ::Val{C.freq_none}, ::Val{0}) = Float64
+_to_julia_scalar_type(::Val{C.type_float}, ::Val{C.freq_none}, ::Val{2}) = Float16
+_to_julia_scalar_type(::Val{C.type_float}, ::Val{C.freq_none}, ::Val{4}) = Float32
+_to_julia_scalar_type(::Val{C.type_float}, ::Val{C.freq_none}, ::Val{8}) = Float64
+_to_julia_scalar_type(::Val{C.type_complex}, ::Val{C.freq_none}, ::Val{0}) = ComplexF64
+_to_julia_scalar_type(::Val{C.type_complex}, ::Val{C.freq_none}, ::Val{4}) = ComplexF16
+_to_julia_scalar_type(::Val{C.type_complex}, ::Val{C.freq_none}, ::Val{8}) = ComplexF32
+_to_julia_scalar_type(::Val{C.type_complex}, ::Val{C.freq_none}, ::Val{16}) = ComplexF64
+_to_julia_scalar_type(::Val{C.type_string}, ::Val{C.freq_none}, ::Val) = String
+_to_julia_scalar_type(::Val{C.type_date}, fr::Val, ::Val{8}) = MIT{_to_julia_frequency(fr)}
 # _to_julia_scalar_type(::Val{C.type_other_scalar}, ::Val) = Any
 
-_to_julia_frequency(f::C.frequency_t) = _to_julia_frequency(Val(f))
 _to_julia_frequency(::Val{C.freq_unit}) = Unit
 _to_julia_frequency(::Val{C.freq_daily}) = Daily
 _to_julia_frequency(::Val{C.freq_bdaily}) = BDaily
@@ -224,7 +220,7 @@ end
 
 function _make_axis(de::DEFile, rng::AbstractUnitRange{<:MIT})
     ax_id = Ref{C.axis_id_t}()
-    _check(C.de_axis_range(de, length(rng), _to_de_scalar_freq(rng), _pack_date(first(rng)), ax_id))
+    _check(C.de_axis_range(de, length(rng), _to_de_scalar_freq(frequencyof(rng)), _pack_date(first(rng)), ax_id))
     return ax_id[]
 end
 
@@ -242,7 +238,7 @@ _get_axis_of(de::DEFile, vec::AbstractArray, dim=1) = _make_axis(de, Base.axes(v
 
 function _get_axis_range_firstdate(axis::C.axis_t)
     @assert axis.ax_type == C.axis_range
-    FR = _to_julia_frequency(axis.frequency)
+    FR = _to_julia_frequency(Val(axis.frequency))
     return _unpack_date(FR, axis.frequency, axis.first)
 end
 
@@ -260,7 +256,8 @@ _to_de_array(::AbstractUnitRange) = _de_array_data(; eltype=C.type_none, obj_typ
 # handle any vector or matrix
 _to_de_array(value::AbstractVecOrMat) = _to_de_array(Val(isempty(value)), value)
 
-_eltypefreq(::Type{ET}) where {ET<:MIT} = (; eltype=C.type_date, elfreq=_to_de_scalar_freq(ET))
+_eltypefreq(::Type{ET}) where {ET<:MIT} = (; eltype=C.type_date, elfreq=_to_de_scalar_freq(frequencyof(ET)))
+_eltypefreq(::Type{ET}) where {ET<:Duration} = (; eltype=C.type_signed, elfreq=_to_de_scalar_freq(frequencyof(ET)))
 _eltypefreq(::Type{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), elfreq=C.freq_none)
 
 # empty array
@@ -308,7 +305,7 @@ function _should_store_eltype(arr, value::AbstractArray{ET}) where {ET}
     arr.obj_type == C.type_range && return false
     arr.eltype == C.type_other_scalar && return true
     arr.eltype == C.type_string && return ET != String
-    return ET != _to_julia_scalar_type(Val(arr.eltype), Val(sizeof(ET)))
+    return ET != _to_julia_scalar_type(Val(arr.eltype), Val(arr.elfreq), Val(sizeof(ET)))
 end
 
 @inline _should_store_type(v::Val, a::Any) = (@nospecialize(v, a); true)
@@ -393,14 +390,14 @@ function _from_de_array(arr::C.mvtseries_t, ::Val{C.type_matrix}, ::Val{C.axis_p
 end
 
 function _do_load_array_data(arr, ::Val{0})
-    ET = _to_julia_scalar_type(Val(arr.eltype), Val(0))
+    ET = _to_julia_scalar_type(Val(arr.eltype), Val(arr.elfreq), Val(0))
     return ET[]
 end
 
 function _do_load_array_data(arr, v::Val{N}) where {N}
     @nospecialize v
     vlen = N::Int64
-    ET = _to_julia_scalar_type(Val(arr.eltype), Val(arr.nbytes ÷ vlen))
+    ET = _to_julia_scalar_type(Val(arr.eltype), Val(arr.elfreq), Val(arr.nbytes ÷ vlen))
     vec = Vector{ET}(undef, vlen)
     return _my_copyto!(vec, arr)
 end
