@@ -290,6 +290,12 @@ DE.closedaec!(de)
         mvts[mod1(i, length(mvts))] = i
         push!(b, name => copy(mvts))
     end
+    scalar_types = Base.BitInteger_types ∪ (Float16, Float32, Float64, ComplexF16, ComplexF32, ComplexF64)
+    c = get!(db, :c, Workspace())
+    for i = 1:100_000
+        name = Symbol(:c, i)
+        push!(c, name => rand(rand(scalar_types)))
+    end
 
     tm = time()
     DE.writedb(test_file, "/speedtest", db)

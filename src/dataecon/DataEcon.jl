@@ -463,16 +463,14 @@ function new_catalog(de::DEFile, pid::C.obj_id_t, name::String)
     return id[]
 end
 
-@inline catalog_size(de::DEFile, name::Symbol) = catalog_size(de, find_object(de, root_id, string(name)))
-@inline catalog_size(de::DEFile, name::AbstractString) = catalog_size(de, find_fullpath(de, name))
+@inline catalog_size(de::DEFile, name::StrOrSym) = catalog_size(de, find_fullpath(de, name))
 function catalog_size(de::DEFile, pid::C.obj_id_t)
     count = Ref{Int64}()
     I._check(C.de_catalog_size(de, pid, count))
     return count[]
 end
 
-@inline list_catalog(de::DEFile, name::Symbol; kwargs...) = list_catalog(de, find_object(de, root_id, string(name)); kwargs...)
-@inline list_catalog(de::DEFile, name::AbstractString; kwargs...) = list_catalog(de, find_fullpath(de, string(name)); kwargs...)
+@inline list_catalog(de::DEFile, name::StrOrSym; kwargs...) = list_catalog(de, find_fullpath(de, string(name)); kwargs...)
 function list_catalog(de::DEFile, cid::C.obj_id_t=root_id; quiet=false, verbose=!quiet, file::IO=Base.stdout,
     recursive=true, maxdepth::Int=recursive ? typemax(Int) : 1)
     I._list_catalog(de, cid, maxdepth, verbose, file)
