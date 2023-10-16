@@ -8,6 +8,7 @@ struct X13default end
 _X13default = X13default()
 
 abstract type X13var end
+
 struct ao <: X13var
     mit::MIT
 end
@@ -65,6 +66,7 @@ end
 struct thank <: X13var
     n::Int64
 end
+
 struct sceaster <: X13var
     n::Int64
 end
@@ -116,7 +118,6 @@ struct lpyear <: X13var
     lpyear(mit::MIT) = new(mit, :both)
     lpyear() = new(1M1, :neither)
 end
-
 struct lom <: X13var
     mit::MIT
     regimechange::Symbol
@@ -143,6 +144,16 @@ struct seasonal <: X13var
     seasonal() = new(1M1, :neither)
 end
 
+struct Span
+    b::Union{MIT, Missing}
+    e::Union{MIT,Missing,TimeSeriesEcon._FPConst,UnionAll}
+
+    Span(x::UnitRange{<:MIT}) = new(first(x), last(x))
+    Span(b,e) = new(b,e)
+    Span(b) = new(b,missing)
+    Span(b::Nothing, e) = new(missing,e)
+end
+
 
 
 struct X13series{F<:Frequency}
@@ -154,13 +165,13 @@ struct X13series{F<:Frequency}
     decimals::Union{Int64,X13default}
     file::Union{String,X13default}
     format::Union{String,X13default}
-    modelspan::Union{UnitRange{MIT{F}},X13default}
+    modelspan::Union{UnitRange{MIT{F}},Span, X13default}
     name::Union{String,X13default}
     period::Union{Int64,X13default}
     precision::Union{Int64,X13default}
     print::Union{Vector{Symbol},X13default} #This should just be everything
     save::Union{Vector{Symbol},X13default}
-    span::Union{UnitRange{MIT{F}},X13default}
+    span::Union{UnitRange{MIT{F}},Span,X13default}
     start::Union{MIT{F},X13default}
     title::Union{String,X13default}
     type::Union{Symbol, X13default}
@@ -473,7 +484,7 @@ mutable struct X13outlier
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default} 
-    span::Union{UnitRange{<:MIT},X13default}
+    span::Union{UnitRange{<:MIT},Span,X13default}
     types::Union{Symbol,Vector{Symbol},X13default}
     almost::Union{Float64,X13default}
     tcrate::Union{Float64,X13default}
@@ -591,7 +602,7 @@ mutable struct X13seats
     bias::Union{Int64,X13default}
     epsiv::Union{Float64,X13default}
     epsphi::Union{Int64,X13default}
-    hplan::Union{Float64,X13default}
+    hplan::Union{Int64,X13default}
     imean::Union{Bool,X13default}
     maxit::Union{Int64,X13default}
     rmod::Union{Float64,X13default}
@@ -792,13 +803,13 @@ mutable struct X13x11regression
     file::Union{String,X13default}
     format::Union{String,X13default}
     outliermethod::Union{Symbol,X13default}
-    outlierspan::Union{UnitRange{<:MIT}, X13default}
+    outlierspan::Union{UnitRange{<:MIT}, Span, X13default}
     print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default} 
     savelog::Union{Vector{Symbol},X13default} 
     prior::Union{Bool,X13default}
     sigma::Union{Float64,X13default}
-    span::Union{UnitRange{<:MIT},X13default}
+    span::Union{UnitRange{<:MIT}, Span, X13default}
     start::Union{MIT,X13default}
     tdprior::Union{Vector{Float64},X13default}
     user::Union{Symbol,Vector{Symbol},X13default}
@@ -993,7 +1004,7 @@ end
     main output file. This value must be an integer between 0 and 5, inclusive (for example,
     `decimals=5`). The default number of decimals is 0.
 
-* **modelspan** (UnitRange{MIT}) - Specifies the span (data interval) of the data to be used to determine all regARIMA
+* **modelspan** (UnitRange{MIT} or X13.span) - Specifies the span (data interval) of the data to be used to determine all regARIMA
     model coefficients. This argument can be utilized when, for example, the user does not
     want data early in the series to affect the forecasts, or, alternatively, data late in the
     series to affect regression estimates used for preadjustment before seasonal adjustment.
@@ -1004,10 +1015,15 @@ end
     other specs to be estimated from the time series data starting in January, 1968 and
     ending at the end date of the TSeries `ts`.
 
+    An X13.Span can also be used in this field, this is specified with two values with a value of missing,
+    substituting for the beginning or ending of the provided series. Example: `X13.Span(1968M1,missing)`.
+    The second value can also be a monthly or a quarterly indicator, such as `M11` or `Q2`. If this is th ecase,
+    the ending tdate of the modelspan will be the most recent occurence in the data of the specified month or quarter.
+
 * **name** (String) - The name of the time series. The name must be enclosed in quotes and may contain up
     to 64 characters. Up to the first 16 characters will be printed as a label on every page.
 
-* **span** (UnitRange{MIT}) - Limits the data utilized for the calculations and analysis to a span (data interval) of
+* **span** (UnitRange{MIT} or Span) - Limits the data utilized for the calculations and analysis to a span (data interval) of
     the available time series. The default span corresponds to the span of the series being analyzed. The start and end 
     dates of the span must both lie within the series, and the start date must precede the end date.
 
@@ -1015,6 +1031,9 @@ end
     the statement `modelspan=1968M1:last(dateof(ts))`` causes whatever regARIMA model is specified in
     other specs to be estimated from the time series data starting in January, 1968 and
     ending at the end date of the TSeries `ts`. 
+
+    An X13.Span can also be used in this field, this is specified with two values with a value of missing,
+    substituting for the beginning or ending of the provided series. Example: `X13.Span(1968M1,missing)`.
 
 * **title** (String) - A title describing the time series. The title may contain
     up to 79 characters. It will be printed on each page of the output (unless the -p option
@@ -1051,13 +1070,13 @@ function series(t::TSeries{F};
     decimals::Union{Int64,X13default}=_X13default,
     file::Union{String,X13default}=_X13default,
     format::Union{String,X13default}=_X13default,
-    modelspan::Union{UnitRange{MIT{F}},X13default}=_X13default,
+    modelspan::Union{UnitRange{MIT{F}},Span,X13default}=_X13default,
     name::Union{String,X13default}=_X13default,
     period::Union{Int64,X13default}=_X13default,
     precision::Union{Int64,X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:header, :span, :seriesplot, :specfile, :savefile, :specorig, :missingvaladj, :calendaradjorig, :outlieradjorig, :adjoriginal, :adjorigplot],
     save::Union{Vector{Symbol},X13default}=[:span, :specorig, :missingvaladj, :calendaradjorig, :outlieradjorig, :adjoriginal],
-    span::Union{UnitRange{MIT{F}},X13default}=_X13default,
+    span::Union{UnitRange{MIT{F}},Span,X13default}=_X13default,
     start::Union{MIT{F},X13default}=_X13default,
     title::Union{String,X13default}=_X13default,
     type::Union{Symbol, X13default}=_X13default,
@@ -1090,17 +1109,37 @@ function series(t::TSeries{F};
         period = ppy(t)
     end
 
+    if span isa UnitRange
+        if first(span) < first(rangeof(t)) || last(span) > last(rangeof(t))
+            throw(ArgumentError("span ($span) must be contained within the range of the provided series ($(rangeof(data)))."))
+        end
+    elseif span isa Span
+        if span.b isa MIT && span.b < first(rangeof(t))
+            throw(ArgumentError("the start of the specified span must be on or after the start of the provided series ($(first(rangeof(data)))). Received: $(span.b)"))
+        end
+        if span.e isa MIT && span.e > last(rangeof(t))
+            throw(ArgumentError("the end of the specified spanmust be on or after the end of the provided series ($(last(rangeof(data)))). Received: $(span.b)"))
+        end
+    end
+
+    if !(divpower isa X13default)
+        if divpower < -9 || divpower > 9
+            throw(ArgumentError("divpower values must be between -9 and 9 (inclusive). Received: $(divpower)."))
+        end
+    end
+
+    if span isa X13.Span
+        if span.e isa TimeSeriesEcon._FPConst || span.e isa UnionAll
+            throw(ArgumentError("Spans with an fuzzy ending time, such as M11 or Q2, are not allowed in the span argument of the series spec. Please pass an MIT or `missing`. Received: $(span.e)."))
+        end
+    end
+
+
+
+
     return X13series{F}(appendbcst, appendfcst, comptype, compwt, data, decimals, file, format, modelspan,name, period, precision, print, save, span,start,title,type,divpower,missingcode,missingval,saveprecision,trimzero)
 end
 series!(spec::X13spec{F}, t::TSeries{F}; kwargs...) where F = (spec.series = series(t; kwargs...))
-#TODO: Another end date specification, with the form 0.per, is available to set the ending date
-    # of modelspan to always be the most recent occurrence of a specific calendar month
-    # (quarter for quarterly data) in the span of data analyzed, where per denotes the calendar
-    # month (quarter). Thus, if the span of data considered ends in a month other than
-    # December, modelspan=(,0.dec) will cause the model parameters to stay fixed at the
-    # values obtained from data ending in the next-to-final calendar year of the span.
-# TODO The start date of the time series in the format start=year.seasonal period. (See Section
-    # 3.3 and the examples in the Manual.) The default value of start is 1.1. (See DETAILS.)
 
 """
 `arima(model::ArimaSpecs...; kwargs...)`
@@ -1333,17 +1372,62 @@ function automdl(;
     # checks and logic
     #TODO: Acceptable values for the regular differencing orders are 0, 1 and 2; 
     # acceptable values for the seasonal differencing orders are 0 and 1.
-    #TODO Acceptable 
-    # values for the maximum order of regular differencing are 1 or 2, and the acceptable value 
-    #     for the maximum order of seasonal differencing is 1
+#  the model, ma, andar arguments of the arima spec cannot be used when the file argument is specified in the estimate spec
+    if !(diff isa X13default) 
+        if length(diff) !== 2
+            throw(ArgumentError("The diff argument of the automdl spec must contain exactly two values."))
+        end
+        if diff[1] ∉ (0,1,2)
+            throw(ArgumentError("Acceptable values for the regular differencing orders of the automdl spec are 0, 1, and 2. Received: $(diff[1])."))
+        end
+        if diff[2] ∉ (0,1)
+            throw(ArgumentError("Acceptable values for the seasonal differencing orders of the automdl spec are 0 and 2. Received: $(diff[2])."))
+        end
+        if !(maxdiff isa X13default)
+            @warn "The diff argument of the automdl spec will be ignored because a maxdiff argument is specified."
+        end
+    end
 
-    # TODO: The maximum order for
-    # the regular ARMA model must be greater than zero, and can be at most 4; the maximum
-    # order for the seasonal ARMA model can be either 1 or 2.
+    if !(maxdiff isa X13default) 
+        if length(maxdiff) !== 2
+            throw(ArgumentError("The maxdiff argument of the automdl spec must contain exactly two values."))
+        end
+        if !(maxdiff[1] isa Missing) && maxdiff[1] ∉ (0,1,2)
+            throw(ArgumentError("Acceptable values for the regular maximum differencing orders of the automdl spec are 1, and 2. Received: $(maxdiff[1])."))
+        end
+        if !(maxdiff[1] isa Missing) && maxdiff[2] ∉ (0,1)
+            throw(ArgumentError("The only acceptable value for the seasonal maximum differencing orders of the automdl spec is 1. Received: $(maxdiff[2])."))
+        end
+    end
 
-    #TODO: reducecv should be between 0 and 1
+    if !(maxorder isa X13default) 
+        if length(maxorder) !== 2
+            throw(ArgumentError("The maxorder argument of the automdl spec must contain exactly two values."))
+        end
+        @show maxorder
+        if !(maxorder[1] isa Missing) && maxorder[1] ∉ (1,2,3,4)
+            throw(ArgumentError("The maximum order for the regular ARMA model must be greater than zero and can be at most 4. Received: $(maxorder[1])."))
+        end
+        if !(maxorder[2] isa Missing) && maxorder[2] ∉ (1,2)
+            throw(ArgumentError("The maximum order for the seasonal ARMA model can be either 1 or 2. Received: $(maxorder[2])."))
+        end
+    end
 
-    #TODO: urfinal value should be greater than one.
+    if !(armalimit isa X13default) && armalimit <= 0.0
+        throw(ArgumentError("armalimit should have a value geater than zero. Received: $(armalimit)."))
+    end
+
+    if !(fcstlim isa X13default) && (fcstlim < 0 || fctslim > 100)
+        throw(ArgumentError("fcstlim must not be less than zero or greater than 100. Received: $(fcstlim)."))
+    end
+
+    if !(reducecv isa X13default) && (reducecv < 0.0 || reducecv > 1.0)
+        throw(ArgumentError("reducecv should be between 0 and 1. Received: $(reducecv)."))
+    end
+
+    if !(urfinal isa X13default) && urfinal < 1.0 
+        throw(ArgumentError("urfinal should be greater than 1. Received: $(urfinal)."))
+    end
 
     return X13automdl(diff,acceptdefault,checkmu,ljungboxlimit,maxorder,maxdiff,mixed,print,savelog,armalimit,balanced,exactdiff,fcstlim,hrinitial,reducecv,rejectfcst,urfinal)
 end
@@ -1572,6 +1656,10 @@ function force(;
     indforce::Union{Bool,X13default}=_X13default,
 )
     # checks and logic
+    if !(rho isa X13default) && (rho < 0.0 || rho > 1.0)
+        throw(ArgumentError("rho must be between 0 and 1. Received: $(rho)."))
+    end
+
     # TODO: printing start will be difficult
 
     return X13force(lambda,mode,print,save,savelog,rho,round,start,target,type,usefcst,indforce)
@@ -1818,6 +1906,28 @@ function history(;
     x11outlier::Union{Bool,X13default}=_X13default,
 ) 
     # checks and logic
+    if fstep isa Vector{Int64}
+        if length(fstep) > 4
+            throw(ArgumentError("fstep can contain up to four forecast leads. Received: $(fstep)."))
+        end
+        if any(fstep .< 1)
+            throw(ArgumentError("fstep values cannot be less than one. Received: $(fstep)."))
+        end
+    elseif fstep isa Int64 && fstep < 1
+        throw(ArgumentError("fstep cannot be less than one. Received: $(fstep)."))
+    end
+
+    if sadjlags isa Vector{Int64}
+        if length(sadjlags) > 5
+            throw(ArgumentError("sadjlags can contain up to five revision lags. Received: $(sadjlags)."))
+        end
+        if any(sadjlags .< 1)
+            throw(ArgumentError("sadjlags values cannot be less than one. Received: $(sadjlags)."))
+        end
+    elseif fstep isa Int64 && fstep < 1
+        throw(ArgumentError("sadjlags cannot be less than one. Received: $(sadjlags)."))
+    end
+
     return X13history(endtable,estimates,fixmdl,fixreg,fstep,print,save,savelog,sadjlags,start,target,trendlags,fixx11reg,outlier,outlierwin,refresh,transformfcst,x11outlier)
 end
 history!(spec::X13spec{F}; kwargs...) where F = (spec.history = history(; kwargs...))
@@ -1907,12 +2017,15 @@ each run of two or more successive level shifts cancels to form a temporary leve
     choices are `method = :addone` or `method = :addall`. See DETAILS for a description of
     these two methods. The default is `method = :addone`.
 
-* **span** (UnitRange{MIT}) - Specifies start and end dates of a span of the time series to be searched for outliers. The
+* **span** (UnitRange{MIT} or Span) - Specifies start and end dates of a span of the time series to be searched for outliers. The
     start and end dates of the span must both lie within the series and within the model
     span if one is specified by the modelspan argument of the series spec, and the start
     date must precede the end date. (If there is a span argument
     in the series spec, then, in the above remarks, replace the start and end dates of the
     series by the start and end dates of the span given in the series spec.)
+
+    An X13.Span can also be used in this field, this is specified with two values with a value of missing,
+    substituting for the beginning or ending of the provided series. Example: `X13.Span(1968M1,missing)`.
 
 * **types** (Vector{Symbol}) - Specifies the types of outliers to detect. The choices are: `types = [:ao]`, detect additive
     outliers only; `types = [:ls]`, detect level shifts only; `types = [:tc]`, detect temporary change
@@ -1948,17 +2061,35 @@ function outlier(;
     print::Union{Vector{Symbol},X13default}=[:header, :iterations, :tests, :temporaryls, :finaltests],
     save::Union{Vector{Symbol},X13default}= [:iterations, :finaltests],
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
-    span::Union{UnitRange{<:MIT},X13default}=_X13default,
+    span::Union{UnitRange{<:MIT},Span,X13default}=_X13default,
     types::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     almost::Union{Float64,X13default}=_X13default,
     tcrate::Union{Float64,X13default}=_X13default,
 )
     # checks and logic
-    #TODO: `lsrun` may be given values from 0 to 5
+    if critical isa Vector
+        if length(critical) > 3
+            throw(ArgumentError("critical can contain up to three values. Received: $(critical)."))
+        end
+    end
 
-    #TODO: values for `almost` argument must always be greater than zero
+    if !(lsrun isa X13default) && (lsrun < 0 || lsrun > 5)
+        throw(ArgumentError("lsrun can take values from 0 to 5. Received: $(lsrun)."))
+    end
 
-    #todo: tcrate must be a number greater than zero and less than one
+    if !(almost isa X13default) && (almost  < 0.0)
+        throw(ArgumentError("almost must have a value greater than zero. Received: $(almost)."))
+    end
+
+    if !(tcrate isa X13default) && (tcrate  <= 0.0 || tcrate >= 1.0)
+        throw(ArgumentError("tcrate must be a number greater than zero and less than one. Received: $(tcrate)."))
+    end
+
+    if span isa X13.Span
+        if span.e isa TimeSeriesEcon._FPConst || span.e isa UnionAll
+            throw(ArgumentError("Spans with an fuzzy ending time, such as M11 or Q2, are not allowed in the span argument of the outlier spec. Please pass an MIT or `missing`. Received: $(span.e)."))
+        end
+    end
 
     return X13outlier(critical,lsrun,method,print,save,savelog,span,types,almost,tcrate)
 end
@@ -2059,7 +2190,26 @@ function pickmdl(;
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics],
     qlim::Union{Int64,X13default}=_X13default,
 )
+    # TODO: file argument MUST BE SPECIFIED
     # checks and logic
+    if !(bcstlim isa X13default) && (bcstlim < 0 || bcstlim > 100)
+        throw(ArgumentError("bcstlim must be a value between 0 and 100 (inclusive). Received: $(bcstlim)."))
+    end
+    if !(fcstlim isa X13default) && (fcstlim < 0 || fcstlim > 100)
+        throw(ArgumentError("fcstlim must be a value between 0 and 100 (inclusive). Received: $(fcstlim)."))
+    end
+    if !(qlim isa X13default) && (qlim < 0 || qlim > 100)
+        throw(ArgumentError("qlim must be a value between 0 and 100 (inclusive). Received: $(qlim)."))
+    end
+    if !(overdiff isa X13default) 
+        if overdiff > 1.0
+            throw(ArgumentError("overdiff must not be greater than 1. Received: $(overdiff)."))
+        end
+        if overdiff < 0.9
+            throw(ArgumentError("overdiff should not be less than 0.9. Received: $(overdiff)."))
+        end
+    end
+
     # TODO: support for the file argument (model specs)
     return X13pickmdl(bcstlim,fcstlim,file,identify,method,mode,outofsample,overdiff,print,savelog,qlim)
 end
@@ -2270,8 +2420,8 @@ function regression(;
     noapply::Union{Symbol,X13default}=_X13default,
     tcrate::Union{Float64,X13default}=_X13default,
 )
-    # checks and logic
-
+   
+    # derivations
     start = _X13default
     user = _X13default
     if !(data isa X13default)
@@ -2292,6 +2442,81 @@ function regression(;
             end
         else
             _variables = variables
+        end
+    end
+
+    # checks and logic
+    if !(aicdiff isa X13default) && !(pvaictest isa X13default)
+        throw(ArgumentError("The aicdiff argument cannot be used in the same regression spec as the pvaictest argument."))
+    end
+
+    if !(usertype isa X13default)
+        if !(user isa X13default) && usertype isa Vector{Symbol} && user isa Vector{Symbol}
+            if length(usertype) > 1 && (length(usertype) != length(user))
+                throw(ArgumentError("The usertype argument must have the same length as the number of user series provided ($(length(user))) when more than a single type is specified. Received: $(usertype)"))
+            end
+        end
+        usertype_allowed_values = (:constant, :seasonal, :td, :lom, :loq, :lpyear, :ao, :ls, :so, :transitory, :user, :holiday, :holiday2, :holiday3, :holiday4, :holiday5)
+        if usertype isa Vector{Symbol} && length(filter(x -> x  ∉ usertype_allowed_values, usertype)) > 0
+            throw(ArgumentError("The usertype argument can only have the following values: $(usertype_allowed_values). \n\nReceived: $(usertype)"))
+        elseif usertype isa Symbol && usertype ∉ usertype_allowed_values
+            throw(ArgumentError("The usertype argument can only have the following values: $(usertype_allowed_values). \n\nReceived: $(usertype)"))
+        end
+    end
+
+    #TODO: enforce correct length of b?
+    if !(variables isa X13default)
+        vars = variables isa Vector ? variables : [variables]
+        all_aos = Vector{UnitRange{<:MIT}}()
+        all_lss = Vector{UnitRange{<:MIT}}()
+        for v in vars
+            if v isa tdstock && (v.n < 1 || v.n > 31)
+                throw(ArgumentError("tdstock variables must have a value between 1 and 31 (inclusive). Received: $(v.n)."))
+            end
+            if v isa easter && (v.n < 0 || v.n > 25)
+                throw(ArgumentError("easter variables must have a value between 1 and 25 (inclusive). Received: $(v.n)."))
+            end
+            if v isa labor && (v.n < 1 || v.n > 25)
+                throw(ArgumentError("labor variables must have a value between 1 and 25 (inclusive). Received: $(v.n)."))
+            end
+            if v isa thank && (v.n < -8 || v.n > 17)
+                throw(ArgumentError("labor variables must have a value between -8 and 17 (inclusive). Received: $(v.n)."))
+            end
+            if v isa sceaster && (v.n < 1 || v.n > 24)
+                throw(ArgumentError("sceaster variables must have a value between 1 and 24 (inclusive). Received: $(v.n)."))
+            end
+            if v isa easterstock && (v.n < 1 || v.n > 25)
+                throw(ArgumentError("easterstock variables must have a value between 1 and 25 (inclusive). Received: $(v.n)."))
+            end
+            if v isa aos
+                push!(all_aos, v.mit1:v.mit2)
+            end
+            if v isa lss
+                push!(all_lss, v.mit1:v.mit2)
+            end
+        end
+        for n1 in 1:length(all_aos)
+            for n2 in 1:length(all_aos)
+                if n1 !== n2 && length(intersect(all_aos[n1], all_aos[n2])) > 0
+                    @warn "The variables spec has overlapping aos specifications: $(all_aos[n1]) and $(all_aos[n2])."
+                end
+            end
+        end
+        for n1 in 1:length(all_lss)
+            for n2 in 1:length(all_lss)
+                if n1 !== n2 &&length(intersect(all_lss[n1], all_lss[n2])) > 0
+                    @warn "The variables spec has overlapping lss specifications: $(all_lss[n1]) and $(all_lss[n2])."
+                end
+            end
+        end
+    end
+
+    allowed_aictest_values =  (:td, :tdnolpyear, :tdstock, :td1coef, :td1nolpyear, :tdstock1coef, :lom, :loq, :lpyear, :easter, :easterstock, :user)
+    if aictest isa Symbol && aictest ∉ allowed_aictest_values
+        throw(ArgumentError("aictest can only contain these entries: $(allowed_aictest_values). Received: $(aictest)."))
+    elseif aictest isa Vector{Symbol} 
+        if length(filter(a -> a ∈ allowed_aictest_values, aictest)) < length(aictest)
+            throw(ArgumentError("aictest can only contain these entries: $(allowed_aictest_values). Received: $(aictest)."))
         end
     end
 
@@ -2381,10 +2606,10 @@ modified Hodrick-Prescott filter (`hpcycle` and `hplan`)
     differes from the seasonal fequencies by less than epsphi degrees. Otherwise, it goes to
     the cycle. The default is `epsphi=2`.
 
-* **hplan** (Float64) - A parameter that is used to determine the modified Hodrick-Prescott filter. By default,
+* **hplan** (Int64) - A parameter that is used to determine the modified Hodrick-Prescott filter. By default,
     the program will set this parameter automatically according to the seasonal period of
     the series. For more information on the Hodrick-Prescott filter, see Kaiser and Maravall
-    (2001).
+    (2001). Example `hplan = 1000`.
 
 * **imean** (Bool) - Indicates if the series is to be mean-corrected (`imean = true`). The default is not to remove
     the mean from the series before signal extraction (`imean = false`)
@@ -2406,8 +2631,9 @@ function seats(;
     finite::Union{Bool,X13default}=_X13default,
     hpcycle::Union{Bool,X13default}=_X13default,
     noadmiss::Union{Bool,X13default}=_X13default,
-    out::Union{Int64,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:seriesfcstdecomp,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum],# print::Union{Vector{Symbol},X13default}
+    out::Union{Int64,X13default}=_X13default, #set an actual default here as we want to save the tables
+    # print::Union{Vector{Symbol},X13default}=[:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:seriesfcstdecomp,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum],# print::Union{Vector{Symbol},X13default}
+    print::Union{Vector{Symbol},X13default}=_X13default, #set to nothing here because we want to save the tables...
     save::Union{Vector{Symbol},X13default} =[:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:seriesfcstdecomp,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum,:componentmodels,:filtersaconc,:filtersasym,:filtertrendconc,:filterdrendsym,:squaredgainsaconc,:squaredgainsasym,:squaredfaintrendconc,:squaredgaintrendsym,:timeshiftsaconc,:timeshifttrendconc,:wkendfilter,:seasonalpct,:irregularpct,:transitorypct,:adjustfacpct],
     savelog::Union{Vector{Symbol},X13default} =[:seatsmodel,:x13model,:normalitytest,:overunderestimation,:totalssquarederror,:componentvariance,:concurrentesterror,:percentreductionse,:averageabsdiffannual,:seasonalsignif],
     printphtrf::Union{Bool,X13default}=_X13default,
@@ -2417,17 +2643,22 @@ function seats(;
     bias::Union{Int64,X13default}=_X13default,
     epsiv::Union{Float64,X13default}=_X13default,
     epsphi::Union{Int64,X13default}=_X13default,
-    hplan::Union{Float64,X13default}=_X13default,
+    hplan::Union{Int64,X13default}=_X13default,
     imean::Union{Bool,X13default}=_X13default,
     maxit::Union{Int64,X13default}=_X13default,
     rmod::Union{Float64,X13default}=_X13default,
     xl::Union{Float64,X13default}=_X13default,
 )
-    #TODO printhptrf and imean should be printed as 0,1 not no,yes
     # TODO tabtables is printed as a text string...
-    #TODO: what is a valid hpplan value?
     #TODO; understand tabtables
     # checks and logic
+    if !(epsiv isa X13default) && epsiv <= 0.0
+        throw(ArgumentError("epsiv should be a small positive number. Received: $(epsiv)."))
+    end
+    if !(hpcycle isa X13default) && !(hplan isa X13default) && hpcycle == false
+        @warn "Hodrick-Prescott filters will be used even though hpcycle is $hpcycle because an hplan value has been specified."
+    end
+
     return X13seats(appendfcst,finite,hpcycle,noadmiss,out,print,save,savelog,printphtrf,qmax,statseas,tabtables,bias,epsiv,epsphi,hplan,imean,maxit,rmod,xl)
 end
 seats!(spec::X13spec{F}; kwargs...) where F = (spec.seats = seats(; kwargs...))
@@ -2587,6 +2818,10 @@ function slidingspans(;
     x11outlier::Union{Bool,X13default}=_X13default,
 )
     # checks and logic
+    if !(fixmdl isa X13default) && !(fixreg isa X13default) && fixmdl == true
+        @warn "fixreg will be ignored because fixmdl is set to true."
+    end
+
     return X13slidingspans(cutchng,cutseas,cuttd,fixmdl,fixreg,length,numspans,outlier,print,save,savelog,start,additivesa,fixx11reg,x11outlier)
 end
 slidingspans!(spec::X13spec{F}; kwargs...) where F = (spec.slidingspans = slidingspans(; kwargs...))
@@ -2650,8 +2885,7 @@ quarterly version of a monthly series
     default value is `peakwidth = 1`.
 
 * **series** (Symbol) - Allows the user to select the series used in the spectrum of the original (or composite)
-    series (Table G.0). The table below shows the series that can be specified with this argument
-    - the default is `series = :adjoriginal`.
+    series (Table G.0). The table below shows the series that can be specified with this argument. The default is `series = :adjoriginal`.
 
     Symbol                | Alternate symbol | Description of table                                                    
     :---------------------| :--------------- | :----------------------------------------------------------------------- 
@@ -2839,6 +3073,43 @@ function transform(;
             if length(name) == 1
                 name = name[1]
             end
+        end
+    end
+
+    if !(func isa X13default) && !(power isa X13default)
+        throw(ArgumentError("Either power or func can be specified, but not both."))
+    end
+
+    if !(adjust isa X13default) && adjust == :lpyear
+        if !(power isa X13default) && power !== 0.0
+            throw(ArgumentError("adjust can only be :lpyear when a log-transform (power=0.0) is specified."))
+        elseif !(func isa X13default) && func !== :log
+            throw(ArgumentError("adjust can only be :lpyear when a log-transform (func=:log) is specified."))
+        end
+    end
+
+    if mode isa Vector{Symbol}
+        if length(mode) > 2
+            throw(ArgumentError("Only up to two values can be included in the mode argument. Received: $(length(mode))."))
+        end
+        if :diff ∈ mode && (:ratio ∈ mode || :percent ∈ mode)
+            throw(ArgumentError("The :diff mode is not compatible with the :ratio or :percent modes. Received: $(mode)."))
+        end
+    end
+
+    if title isa String && length(title) > 79
+        @warn "Series title trunctated to 79 characters. Full title: $title"
+        title = title[1:79]
+    end
+
+    if !(type isa X13default) 
+        if data isa X13default
+            throw(ArgumentError("A user-defined prior-adjustment type is specified, but not data has been provided."))
+        end
+        if data isa TSeries && type isa Vector{Symbol} && length(type) > 1
+            throw(ArgumentError("The number of user-defined prior adjustment types provided ($(length(type))) must match the number of data series provided (1)."))
+        elseif data isa MVTSeries && type isa Vector{Symbol} && length(type) !== length(columns(data))
+            throw(ArgumentError("The number of user-defined prior adjustment types provided ($(length(type))) must match the number of data series provided ($(length(columns(data))))."))
         end
     end
 
@@ -3036,6 +3307,12 @@ function x11(;
     true7term::Union{Bool,X13default}=_X13default,
 )
     # checks and logic
+    if !(trendma isa X13default)
+        if trendma % 2 !== 1 || trendma < 3 || trendma > 101
+            throw(ArgumentError("trendma must be an unequal number between 3 and 101. Received: $(trendma)."))
+        end
+    end
+
     return X13x11(appendbcst,appendfcst,final,mode,print,save,savelog,seasonalma,sigmalim,title,trendma,type,calendarsigma,centerseasonal,keepholiday,print1stpass,sfshort,sigmavec,trendic,true7term)
 end
 x11!(spec::X13spec{F}; kwargs...) where F = (spec.x11 = x11(; kwargs...))
@@ -3101,9 +3378,12 @@ argument. The regression model specified can contain both predefined and user-de
     outlier spec for a description of these two methods. The default is `outliermethod = :addone`.
     This argument cannot be used if the `sigma` argument is used.
 
-* **outlierspan** (UnitRange{MIT}) - Specifies start and end dates of the span of the irregular component to be searched for
+* **outlierspan** (UnitRange{MIT} or Span) - Specifies start and end dates of the span of the irregular component to be searched for
     outliers. The start and end dates of the span must both lie within the series. Example: `outlierspan = 1976M1:2022M3`.
     This argument cannot be used with the `sigma` argument.
+
+    An X13.Span can also be used in this field, this is specified with two values with a value of missing,
+    substituting for the beginning or ending of the provided series. Example: `X13.Span(1968M1,missing)`.
 
 * **prior** (Bool) - Specifies whether calendar factors from the irregular component regression are computed
     in a preliminary run and applied as prior factors (`prior=true`), or as a part of the seasonal
@@ -3122,7 +3402,7 @@ argument. The regression model specified can contain both predefined and user-de
     is 2.5 (which is invoked only when the flow trading day variable(s) are the only regressor
     estimated). Example: `sigma=3.0`.
 
-* **span** (UnitRange{MIT}) - Specifies the span (data interval) of irregular component values to be used to estimate
+* **span** (UnitRange{MIT} or Span) - Specifies the span (data interval) of irregular component values to be used to estimate
     the regression model's coefficients. This argument can be utilized when, for example,
     the user does not want data early in the series to affect regression estimates used for
     preadjustment before seasonal adjustment. As with the `modelspan` spec detailed in the
@@ -3130,6 +3410,11 @@ argument. The regression model specified can contain both predefined and user-de
     span. The start and end dates of the
     model span must both lie within the time span of data specified for analysis in the `series`
     spec, and the start date must precede the end date.
+
+    An X13.Span can also be used in this field, this is specified with two values with a value of missing,
+    substituting for the beginning or ending of the provided series. Example: `X13.Span(1968M1,missing)`.
+    The second value can also be a monthly or a quarterly indicator, such as `M11` or `Q2`. If this is th ecase,
+    the ending tdate of the modelspan will be the most recent occurence in the data of the specified month or quarter.
 
 * **tdprior** (Vector{Float64}) - User-input list of seven daily weights, starting with Monday's weight, which specify a
     desired X-11 trading day adjustment prior to seasonal adjustment. These weights are
@@ -3230,13 +3515,13 @@ function x11regression(;
     file::Union{String,X13default}=_X13default,
     format::Union{String,X13default}=_X13default,
     outliermethod::Union{Symbol,X13default}=_X13default,
-    outlierspan::Union{UnitRange{<:MIT}, X13default}=_X13default,
+    outlierspan::Union{UnitRange{<:MIT}, Span, X13default}=_X13default,
     print::Union{Vector{Symbol},X13default}=[:priortd, :extremeval, :x11reg, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :outlierhdr, :xaictest, :extremevalb, :x11regb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :outliertests, :xregressionmatrix, :xregressioncmatrix],# print::Union{Vector{Symbol},X13default}
     save::Union{Vector{Symbol},X13default}=[:priortd, :extremeval, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :extremevalb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :xregressionmatrix, :xregressioncmatrix],# save::Union{Vector{Symbol},X13default},
     savelog::Union{Vector{Symbol},X13default}=[:alldiagnostics], # savelog::Union{Vector{Symbol},X13default}     
     prior::Union{Bool,X13default}=_X13default,
     sigma::Union{Float64,X13default}=_X13default,
-    span::Union{UnitRange{<:MIT},X13default}=_X13default,
+    span::Union{UnitRange{<:MIT},Span,X13default}=_X13default,
     start::Union{MIT,X13default}=_X13default,
     tdprior::Union{Vector{Float64},X13default}=_X13default,
     user::Union{Symbol,Vector{Symbol},X13default}=_X13default,
@@ -3290,6 +3575,59 @@ function x11regression(;
         else
             _variables = variables
         end
+
+        if !(aictest isa X13default)
+            aics = aictest isa Vector ? aictest : [aictest]
+            vars =_variables isa Vector ? _variables : [_variables]
+            types_used = Set(collect_regvar_types(vars))
+            if length(filter(a -> a ∈ (:td, :tdstock, :td1coef, :tdstock1coef), aics)) > 1 && length(filter(a -> a  ∈ (:td, :tdstock, :td1coef, :tdstock1coef), types_used)) > 1
+                for aic in aics
+                    if aic  ∈ (:td, :tdstock, :td1coef, :tdstock1coef) && aic ∉ types_used
+                        throw(ArgumentError("Trading day regressors specified in the aictest must correspond with trading day regressors provided in the variables argument. $(aic) was specified in the aictest argument, but the variables argument uses $(filter(x -> x ∈ (:td, :tdstock, :td1coef, :tdstock1coef), types_used))."))
+                    end
+                end
+            end
+        end
+    end
+
+    allowed_aictest_values =  (:td, :tdstock, :td1coef, :tdstock1coef, :easter, :user)
+    if aictest isa Symbol && aictest ∉ allowed_aictest_values
+        throw(ArgumentError("aictest can only contain these entries: $(allowed_aictest_values). Received: $(aictest)."))
+    elseif aictest isa Vector{Symbol} && length(filter(a -> a ∈ allowed_aictest_values, aictest)) < length(aictest)
+        throw(ArgumentError("aictest can only contain these entries: $(allowed_aictest_values). Received: $(aictest)."))
+    end
+
+    if !(sigma isa X13default) && sigma <= 0.0
+        throw(ArgumentError("sigma must be a number greater than 0. Received: $(sigma)."))
+    end
+    
+    if !(tdprior isa X13default)
+        if length(tdprior) !== 7
+            throw(ArgumentError("tdprior must have a length of exactly 7. Received: $(tdprior)."))
+        end
+        if any(tdprior .< 0.0)
+            throw(ArgumentError("tdprior values must all be greater than or equal to 0. Received: $(tdprior)."))
+        end
+    end
+
+    if !(usertype isa X13default)
+        if !(user isa X13default) && usertype isa Vector{Symbol} && user isa Vector{Symbol}
+            if length(usertype) > 1 && (length(usertype) != length(user))
+                throw(ArgumentError("The usertype argument must have the same length as the number of user series provided ($(length(user))) when more than a single type is specified. Received: $(usertype)"))
+            end
+        end
+        usertype_allowed_values = (:td, :holiday, :user)
+        if usertype isa Vector{Symbol} && length(filter(x -> x  ∉ usertype_allowed_values, usertype)) > 0
+            throw(ArgumentError("The usertype argument can only have the following values: $(usertype_allowed_values). \n\nReceived: $(usertype)"))
+        elseif usertype isa Symbol && usertype ∉ usertype_allowed_values
+            throw(ArgumentError("The usertype argument can only have the following values: $(usertype_allowed_values). \n\nReceived: $(usertype)"))
+        end
+    end
+
+    if outlierspan isa X13.Span
+        if span.e isa TimeSeriesEcon._FPConst || span.e isa UnionAll
+            throw(ArgumentError("Spans with a fuzzy ending time, such as M11 or Q2, are not allowed in the span argument of the series spec. Please pass an MIT or `missing`. Received: $(span.e)."))
+        end
     end
 
 
@@ -3308,9 +3646,568 @@ function validateX13spec(spec::X13spec)
         if !(spec.pickmdl isa X13default)
             throw(ArgumentError("The arima spec cannot be used in the same spec file as the pickmdl or automdl specs."))
         end
+
+        #  the model, ma, andar arguments of the arima spec cannot be used when the file argument is specified in the estimate spec
+        if !(spec.estimate isa X13default) && !(spec.estimate.file isa X13default) && (!(spec.arima.ar isa X13default) || !(spec.arima.ar isa X13default) || !(spec.arima.model isa X13default))
+            throw(ArgumentError("The model, ma, and ar arguments of the arima spec cannot be used when the file argument is specified in the estimate spec"))
+        end
+
+
     end
 
-    #TODO: the model, ma, andar arguments of the arima spec cannot be used when the file argument is specified in the estimate spec
+    if !(spec.automdl isa X13default)
+        if !(spec.pickmdl isa X13default)
+            throw(ArgumentError("The automdl spec cannot be used in the same spec file as the pickmdl or arima specs."))
+        end
+
+         if !(spec.estimate isa X13default) && !(spec.estimate.file isa X13default)
+            throw(ArgumentError("The automdl spec cannot be used in the same spec file as an estimate spec employing the file argument."))
+        end
+
+    end
+
+    if !(spec.estimate isa X13default) && !(spec.estimate.file isa X13default)
+        if !(spec.regression isa X13default)
+            if !(spec.regression.variables isa X13default) || !(spec.regression.user isa X13default) || !(spec.regression.b isa X13default)
+                throw(ArgumentError("The variables, user, and b arguments of the regression spec cannot be used when the estimate spec contains the file argument."))
+            end
+        end
+    end
+
+    if !(spec.forecast isa X13default)
+        if !(spec.forecast.exclude isa X13default) && !(spec.x11 isa X13default)
+            #TODO: warning: exclude cannot be used if seasonal adjustment is specified by the x11 spec...
+        end
+
+        if !(spec.forecast.maxlead isa X13default) && !(spec.history isa X13default) && !(spec.history.fstep isa X13default)
+            if spec.history.fstep isa Vector{Int64} && any(spec.history.fstep .> spec.forecast.maxlead)
+                throw(ArgumentError("The values of fstep in the history spec cannot be greater than the maxlead specified in the history spec ($(spec.forecast.maxlead)). Recieved: $(spec.history.fstep)."))
+            end
+        end
+    end
+
+    if !(spec.history isa X13default)
+        if !(spec.history.outlier isa X13default) && (spec.outlier isa X13default)
+            @warn "The outlier argument of the history spec has no effect when no outlier spec is specified."
+        end
+    end
+
+    # regression variable type exceptions
+    if !(spec.regression isa X13default) && !(spec.regression.variables isa X13default)
+        vars = spec.regression.variables isa Vector ? spec.regression.variables : [spec.regression.variables]
+        if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default) && spec.transform.adjust == :lom
+            for v in vars
+                if v == :td || v == :lom || v isa td || v isa lom
+                    throw(ArgumentError("When adjust=:lom is specified in the transform spec, the inclusion of either td or lom variables in the variables list of the regression spec leads to conflicts."))
+                end
+            end
+        end
+
+        types_used = Set(collect_regvar_types(vars))
+        series_range = rangeof(spec.series.data)
+        span_range = rangeof(spec.series.data)
+        if spec.series.span isa UnitRange
+            span_range = spec.series.span
+        elseif spec.series.span isa Span
+            if spec.series.span.b isa MIT
+                span_range = spec.series.span.b:last(span_range)
+            end
+            if spec.series.span.e isa MIT
+                span_range = first(span_range):spec.series.span.e
+            end
+            ## TODO: treatment of 0.per ranges here
+        end
+        for v in vars
+            vtypesymbol = v
+            if !(vtypesymbol isa Symbol)
+                vtypesymbol = var_types_map[typeof(v)]
+            end
+            if !(spec.series.type isa X13default)
+                if spec.series.type != :flow
+                    if vtypesymbol ∈ (:td, :tdnolpyear, :td1coef, :td1nolpyear, :lpyear, :easter, :labor, :thank, :sceaster)
+                        throw(ArgumentError("$vtype regressors can only be used with flow-type data. The provided series has the type: $(spec.series.type)."))
+                    end
+                elseif spec.series.type != :stock
+                    if vtypesymbol ∈ (:tdstock, :td1stock, :easterstock)
+                        throw(ArgumentError("$vtype regressors can only be used with stock-type data. The provided series has the type: $(spec.series.type)."))
+                    end
+                end
+            end
+            if vtypesymbol == :td
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("td regressors can only be used with Monthly or Quarterly data."))
+                end
+                if length(intersect(types_used, Set([:tdnolpyear, :td1coef, :td1nolpyear, :lpyear, :lom, :loq, :tdstock, :tdstock1coef]))) > 0
+                    throw(ArgumentError("td cannot me used with tdnolpyear, td1coef, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
+                end
+                if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
+                    throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the regression spec."))
+                end
+            end
+            if vtypesymbol == :tdnolpyear
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("tdnolpyear regressors can only be used with Monthly or Quarterly data."))
+                end
+                if length(intersect(types_used, Set([:td, :td1coef, :td1nolpyear, :tdstock, :tdstock1coef]))) > 0
+                    throw(ArgumentError("tdnolpyear cannot me used with td, td1coef, td1nolpyear, tdstock, or tdstock1coef regressors."))
+                end
+            end
+            if vtypesymbol == :td1coef
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("td1coef regressors can only be used with Monthly or Quarterly data."))
+                end
+                if length(intersect(types_used, Set([:td, :tdnolpyear, :td1nolpyear, :lpyear, :lom, :loq, :tdstock, :tdstock1coef]))) > 0
+                    throw(ArgumentError("td1coef cannot me used with td, tdnolpyear, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
+                end
+                if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
+                    throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the regression spec."))
+                end
+            end
+            if vtypesymbol == :td1nolpyear
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("td1nolpyear regressors can only be used with Monthly or Quarterly data."))
+                end
+                if length(intersect(types_used, Set([:td, :tdnolpyear, :td1coef, :tdstock, :tdstock1coef]))) > 0
+                    throw(ArgumentError("td1nolpyear cannot me used with td, tdnolpyear, td1coef, tdstock, or tdstock1coef regressors."))
+                end
+            end
+            if vtypesymbol == :lpyear
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("lpyear regressors can only be used with Monthly or Quarterly data."))
+                end
+                if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
+                    throw(ArgumentError("lpyear cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                end
+            end
+            if vtypesymbol == :lom
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("lom regressors can only be used with Monthly or Quarterly data."))
+                end
+                if length(intersect(types_used, Set([:td,:td1coef,:tdstock, :tdstock1coef]))) > 0
+                    throw(ArgumentError("lom cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                end
+            end
+            if vtypesymbol == :loq
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("loq regressors can only be used with Monthly or Quarterly data."))
+                end
+                if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
+                    throw(ArgumentError("loq cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                end
+            end
+            if vtypesymbol == :tdstock
+                if !(ismonthly(spec.series.data))
+                    throw(ArgumentError("tdstock regressors can only be used with Monthly data."))
+                end
+                if length(intersect(types_used, Set([:tdstock1coef, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
+                    throw(ArgumentError("tdstock cannot me used with tdstock1coef, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                end
+            end
+            if vtypesymbol == :tdstock1coef
+                if !(ismonthly(spec.series.data))
+                    throw(ArgumentError("tdstock1coef regressors can only be used with Monthly data."))
+                end
+                if length(intersect(types_used, Set([:tdstock, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
+                    throw(ArgumentError("tdstock1coef cannot me used with tdstock, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                end
+            end
+            if vtypesymbol == :labor
+                if !(ismonthly(spec.series.data))
+                    throw(ArgumentError("labor regressors can only be used with Monthly data."))
+                end
+            end
+            if vtypesymbol == :sceaster
+                if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                    throw(ArgumentError("sceaster regressors can only be used with Monthly data."))
+                end
+            end
+            if v isa ao && !(v.mit ∈ series_range)
+                throw(ArgumentError("ao regressors must have a date within the series range ($(series_range)). Received: ao($(v.mit))"))
+            end
+            if v isa tc && !(v.mit ∈ series_range)
+                throw(ArgumentError("tc regressors must have a date within the series range ($(series_range)). Received: tc($(v.mit))"))
+            end
+            if v isa ls 
+                if !(v.mit ∈ series_range)
+                    throw(ArgumentError("ls regressors must have a date within the series range ($(series_range)). Received: ls($(v.mit))"))
+                elseif v.mit == first(span_range)
+                    throw(ArgumentError("ls regressors cannot be at the start of the series range or the span range ($(span_range)). Received: ls($(v.mit))"))
+                end
+            end
+            if v isa so 
+                if !(v.mit ∈ series_range)
+                    throw(ArgumentError("so regressors must have a date within the series range ($(series_range)). Received: so($(v.mit))"))
+                elseif v.mit == first(span_range)
+                    throw(ArgumentError("so regressors cannot be at the start of the series range or the span range ($(span_range)). Received: so($(v.mit))"))
+                end
+            end
+            if v isa aos && (!(v.mit1 ∈ series_range) || !(v.mit2 ∈ series_range))
+                throw(ArgumentError("aos regressors must have a date within the series range ($(series_range)). Received: aos($(v.mit1),$(v.mit2))"))
+            end
+            if v isa lss && (!(v.mit1 ∈ series_range) || !(v.mit2 ∈ series_range))
+                throw(ArgumentError("lss regressors must have a date within the series range ($(series_range)). Received: aos($(v.mit1),$(v.mit2))"))
+            end
+            if v isa rp && (!(v.mit1 ∈ series_range) || !(v.mit2 ∈ series_range))
+                throw(ArgumentError("rp regressors must have a date within the series range ($(series_range)). Received: rp($(v.mit1),$(v.mit2))"))
+            end
+            if v isa qd && (!(v.mit1 ∈ series_range) || !(v.mit2 ∈ series_range))
+                throw(ArgumentError("qd regressors must have a date within the series range ($(series_range)). Received: qd($(v.mit1),$(v.mit2))"))
+            end
+            if v isa qi && (!(v.mit1 ∈ series_range) || !(v.mit2 ∈ series_range))
+                throw(ArgumentError("qi regressors must have a date within the series range ($(series_range)). Received: qi($(v.mit1),$(v.mit2))"))
+            end
+            if v isa tl && (!(v.mit1 ∈ series_range) || !(v.mit2 ∈ series_range))
+                throw(ArgumentError("tl regressors must have a date within the series range ($(series_range)). Received: tl($(v.mit1),$(v.mit2))"))
+            end
+        end
+
+        if !(spec.regression.aictest isa X13default)
+            ## type restrictions for AIC test
+            aictests = spec.regression.aictest isa Vector ? spec.regression.aictest : [spec.regression.aictest]
+            for aic in aictests
+                if !(spec.series.type isa X13default)
+                    if spec.series.type != :flow
+                        if aic ∈ (:tdnolpyear, :td1coef, :td1nolpyear, :lpyear, :easter, :labor, :thank, :sceaster)
+                            throw(ArgumentError("aictest: $aic regressors can only be tested for with flow-type data. The provided series has the type: $(spec.series.type)."))
+                        end
+                    elseif spec.series.type != :stock
+                        if aic ∈ (:tdstock, :td1stock, :easterstock)
+                            throw(ArgumentError("aictest: $aic regressors can only be tested for with stock-type data. The provided series has the type: $(spec.series.type)."))
+                        end
+                    end
+                end
+
+                if aic == :td
+                    if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                        throw(ArgumentError("aictest: td regressors can only be used with Monthly or Quarterly data."))
+                    end
+                    if length(intersect(types_used, Set([:lpyear, :lom, :loq]))) > 0
+                        throw(ArgumentError("aictest: td cannot me used with lpyear, lom, loq, regressors."))
+                    end
+                end
+                if aic == :tdnolpyear
+                    if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                        throw(ArgumentError("aictest: tdnolpyear regressors can only be used with Monthly or Quarterly data."))
+                    end
+                    if length(intersect(types_used, Set([:td, :td1coef, :td1nolpyear, :tdstock, :tdstock1coef]))) > 0
+                        throw(ArgumentError("aictest: tdnolpyear cannot me used with td, td1coef, td1nolpyear, tdstock, or tdstock1coef regressors."))
+                    end
+                end
+                if aic == :td1coef
+                    if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                        throw(ArgumentError("aictest: td1coef regressors can only be used with Monthly or Quarterly data."))
+                    end
+                    if length(intersect(types_used, Set([:td, :tdnolpyear, :td1nolpyear, :lpyear, :lom, :loq, :tdstock, :tdstock1coef]))) > 0
+                        throw(ArgumentError("aictest: td1coef cannot me used with td, tdnolpyear, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
+                    end
+                end
+                if aic == :td1nolpyear
+                    if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                        throw(ArgumentError("aictest: td1nolpyear regressors can only be used with Monthly or Quarterly data."))
+                    end
+                    if length(intersect(types_used, Set([:td, :tdnolpyear, :td1coef, :tdstock, :tdstock1coef]))) > 0
+                        throw(ArgumentError("aictest: td1nolpyear cannot me used with td, tdnolpyear, td1coef, tdstock, or tdstock1coef regressors."))
+                    end
+                end
+                if aic == :lpyear
+                    if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                        throw(ArgumentError("aictest: lpyear regressors can only be used with Monthly or Quarterly data."))
+                    end
+                    if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
+                        throw(ArgumentError("aictest: lpyear cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                    end
+                end
+                if aic == :lom
+                    if !(ismonthly(spec.series.data))
+                        throw(ArgumentError("aictest: lom regressors can only tested for with Monthly data."))
+                    end
+                    if length(intersect(types_used, Set([:td,:td1coef,:tdstock, :tdstock1coef]))) > 0
+                        throw(ArgumentError("aictest: lom cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                    end
+                end
+                if aic == :loq
+                    if !(isquarterly(spec.series.data))
+                        throw(ArgumentError("aictest: loq regressors can only be tested for with Quarterly data."))
+                    end
+                    if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
+                        throw(ArgumentError("aictest: loq cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                    end
+                end
+                if aic == :tdstock
+                    if !(ismonthly(spec.series.data))
+                        throw(ArgumentError("aictest: tdstock regressors can only be used with Monthly data."))
+                    end
+                    if length(intersect(types_used, Set([:tdstock1coef, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
+                        throw(ArgumentError("aictest: tdstock cannot me used with tdstock1coef, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                    end
+                end
+                if aic == :tdstock1coef
+                    if !(ismonthly(spec.series.data))
+                        throw(ArgumentError("aictest: tdstock1coef regressors can only be used with Monthly data."))
+                    end
+                    if length(intersect(types_used, Set([:tdstock, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
+                        throw(ArgumentError("aictest: tdstock1coef cannot me used with tdstock, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                    end
+                end
+                if aic == :labor
+                    if !(ismonthly(spec.series.data))
+                        throw(ArgumentError("aictest: labor regressors can only be used with Monthly data."))
+                    end
+                end
+                if aic == :sceaster
+                    if !(ismonthly(spec.series.data)) && !(isquarterly(spec.series.data))
+                        throw(ArgumentError("aictest: sceaster regressors can only be used with Monthly data."))
+                    end
+                end
+            end
+        end
+    end
+
+    if !(spec.regression isa X13default) && !(spec.regression.data isa X13default)
+        if !(spec.regression.data isa X13default)
+            datarange = rangeof(spec.regression.data)
+            series_range = rangeof(spec.series.data)
+            required_range = rangeof(spec.series.data)
+            if spec.series.span isa UnitRange
+                required_range = spec.series.span
+            elseif spec.series.span isa Span
+                if spec.series.span.b isa MIT
+                    required_range = spec.series.span.b:last(required_range)
+                end
+                if spec.series.span.e isa MIT
+                    required_range = first(required_range):spec.series.span.e
+                end
+                ## TODO: treatment of 0.per ranges here
+            end
+            if !(spec.forecast isa X13default)
+                if !(spec.forecast.maxback isa X13default)
+                    required_range = first(required_range)-spec.forecast.maxback:last(required_range)
+                end
+                if !(spec.forecast.maxlead isa X13default)
+                    required_range = first(required_range):last(required_range)+spec.forecast.maxlead
+                end
+            end
+            if intersect(required_range, datarange) !== required_range
+                throw(ArgumentError("The data provided in the regression spec must cover the range of the supplied data (or the span specified by the span argument of the series spec), as well as any forecasts and backcasts requested by the forecast spec. The required range is $(required_range), but the provided range was only $(datarange)."))
+            end
+        end
+    end
+
+   
+
+    if !(spec.history isa X13default) 
+        if !(spec.history.outlier isa X13default) && (spec.outlier isa X13default)
+            @warn "The outlier argument of the history spec has no effect when no outlier spec is specified."
+        end
+    end
+
+    if !(spec.seats isa X13default)
+        if !(spec.seats.hpcycle isa X13default) && spec.seats.hplan isa X13default && spec.seats.hpcycle == true
+            if ismonthly(spec.series.data) && length(spec.series.data) < 120
+                @warn "Hodrick-Prescott filters will not be used as the default hplan requires at least 120 monthly observations. The provided series has $(length(spec.series.data)) observations."
+            elseif isquarterly(spec.series.data) && length(spec.series.data) < 48
+                @warn "Hodrick-Prescott filters will not be used as the default hplan requires at least 48 quarterly observations. The provided series has $(length(spec.series.data)) observations."
+            end
+        end
+    end
+
+    # If the beginning date specified in the modelspan argument is not the same as the starting date in the span argument, backcasts cannot be generated
+    if !(spec.series.modelspan isa X13default) && !(spec.forecast isa X13default) && !(spec.forecast.maxback isa X13default)
+        if !(spec.series.span isa X13default) && first(spec.series.modelspan) !== first(spec.series.span)
+            @warn "Backcasts will not be generated as the start of the modelspan specified ($(spec.series.modelspan)) does not coincide with the start of the series span specified ($(spec.series.span))."
+        end
+    end
+    
+    if !(spec.slidingspans isa X13default)
+        if !(spec.slidingspans.length isa X13default)
+            if isquarterly(spec.series.data) && spec.slidingspans.length < 12
+                throw(ArgumentError("The length argument of the slidingspans spec must cover at least 3 years. Current length is ≈$(spec.slidingspan.length / 4) years."))
+            end
+            if isquarterly(spec.series.data) && spec.slidingspans.length > 4*19
+                throw(ArgumentError("The length argument of the slidingspans spec can cover at most 19 years. Current length is ≈$(spec.slidingspan.length / 4) years."))
+            end
+
+            if ismonthly(spec.series.data) && spec.slidingspans.length < 36
+                throw(ArgumentError("The length argument of the slidingspans spec must cover at least 3 years. Current length is ≈$(spec.slidingspan.length / 12) years."))
+            end
+            if ismonthly(spec.series.data) && spec.slidingspans.length > 12*19
+                throw(ArgumentError("The length argument of the slidingspans spec can cover at most 19 years. Current length is ≈$(spec.slidingspan.length / 12) years."))
+            end
+        end
+        if !(spec.slidingspans.outlier isa X13default) && spec.outlier isa X13default
+            @warn "The outlier argument of the slidingspans spec will be ignored as there is no outlier spec specified."
+        end
+    end
+
+    if !(spec.spectrum isa X13default)
+        if !(spec.spectrum.qcheck isa X13default) && spec.spectrum.qcheck == true && !ismonthly(spec.series.data)
+            @warn "The qcheck argument of the spectrum spec only produces output for a monthly TSeries."
+        end
+    end
+
+    if !(spec.transform isa X13default)
+        if !(spec.transform.adjust isa X13default) && !(spec.x11 isa X13default) && !(spec.x11.mode isa X13default)
+            if spec.x11.mode == :add || spec.x11.mode == :pseudoadd
+                throw(ArgumentError("The adjust argument of the transform spec cannot be used when the mode argument of the x11 spec is :add or :pseudoadd."))
+            end
+        end
+        if !(spec.x11 isa X13default)
+            if spec.x11.mode isa X13default && spec.transform.power isa X13default && spec.transform.func isa X13default 
+                throw(ArgumentError("The default value for the mode argument of the x11 spec (multiplicative) conflicts with te default for the function and power arguments of the transform spec (no transformation)."))
+            end
+        end
+    end
+
+    if !(spec.x11regression isa X13default)
+        #TODO:
+        if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
+            throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the x11regression spec."))
+        end
+
+        if !(spec.x11regression.data isa X13default)
+            data_range = rangeof(spec.x11regression.data)
+            required_range = rangeof(spec.series.data)
+            if spec.series.span isa UnitRange
+                required_range = spec.series.span
+            elseif spec.series.span isa Span
+                if spec.series.span.b isa MIT
+                    required_range = spec.series.span.b:last(required_range)
+                end
+                if spec.series.span.e isa MIT
+                    required_range = first(required_range):spec.series.span.e
+                end
+                ## TODO: treatment of 0.per ranges here
+            end
+            if !(spec.forecast isa X13default)
+                if !(spec.forecast.maxback isa X13default)
+                    required_range = first(required_range)-spec.forecast.maxback:last(required_range)
+                end
+                if !(spec.forecast.maxlead isa X13default)
+                    required_range = first(required_range):last(required_range)+spec.forecast.maxlead
+                end
+            end
+            if intersect(required_range, data_range) !== required_range
+                throw(ArgumentError("The data provided in the x11regression spec must cover the range of the supplied data (or the span specified by the span argument of the series spec), as well as any forecasts and backcasts requested by the forecast spec. The required range is $(required_range), but the provided range was only $(data_range)."))
+            end
+        end
+        if !(spec.x11regression.umdata isa X13default)
+            data_range = rangeof(spec.x11regression.umdata)
+            required_range = rangeof(spec.series.data)
+            if spec.series.span isa UnitRange
+                required_range = spec.series.span
+            elseif spec.series.span isa Span
+                if spec.series.span.b isa MIT
+                    required_range = spec.series.span.b:last(required_range)
+                end
+                if spec.series.span.e isa MIT
+                    required_range = first(required_range):spec.series.span.e
+                end
+                ## TODO: treatment of 0.per ranges here
+            end
+            if !(spec.forecast isa X13default)
+                if !(spec.forecast.maxback isa X13default)
+                    required_range = first(required_range)-spec.forecast.maxback:last(required_range)
+                end
+                if !(spec.forecast.maxlead isa X13default)
+                    required_range = first(required_range):last(required_range)+spec.forecast.maxlead
+                end
+            end
+            if intersect(required_range, data_range) !== required_range
+                throw(ArgumentError("The umdata provided in the x11regression spec must cover the range of the supplied data (or the span specified by the span argument of the series spec), as well as any forecasts and backcasts requested by the forecast spec. The required range is $(required_range), but the provided range was only $(data_range)."))
+            end
+        end
+
+        if !(spec.x11regression.outlierspan isa X13default)
+            if intersect(spec.x11regression.outlierspan, rangeof(spec.series.data)) !== spec.x11regression.outlierspan
+                throw(ArgumentError("The outlierspan argument of the x11regression spec must lie within the range of the provided data ($(rangeof(spec.series.data)))). Received: $(spec.x11regression.outlierspan)."))
+            end
+        end
+        if !(spec.x11regression.span isa X13default)
+            required_range = rangeof(spec.series.data)
+            if spec.series.span isa UnitRange
+                required_range = spec.series.span
+            elseif spec.series.span isa Span
+                if spec.series.span.b isa MIT
+                    required_range = spec.series.span.b:last(required_range)
+                end
+                if spec.series.span.e isa MIT
+                    required_range = first(required_range):spec.series.span.e
+                end
+                ## TODO: treatment of 0.per ranges here
+            end
+            if intersect(spec.x11regression.span, required_range) !== spec.x11regression.span
+                throw(ArgumentError("The span argument of the x11regression spec must lie within the range of the provided data ($(required_range))). Received: $(spec.x11regression.span)."))
+            end
+        end
+
+        if !(spec.x11regression.variables isa X13default)
+            vars = spec.x11regression.variables isa Vector ? spec.x11regression.variables : [spec.x11regression.variables]
+            types_used = Set(collect_regvar_types(vars))
+            if !(spec.x11regression.usertype isa X13default)
+                if spec.x11regression.usertype isa Symbol
+                    push!(types_used, spec.x11regression.usertype)
+                else
+                    for ut in spec.x11regresison.usertype
+                        push!(types_used, ut)
+                    end
+                end
+            end
+
+            if !(spec.x11regression.forcecal isa X13default)
+                if !(any([:td, :td1coef, :tdstock, :tdstock1coef] .∈ types_used ) && any([:easter, :labor, :thank, :sceaster] .∈ types_used ))
+                    @warn "The forcecal argument of the x11regression will not have any effect as the variables argument does not contain both td and holiday regressors."
+                end
+            end
+        end
+    end
+
+    if !(spec.x11regression isa X13default) && !(spec.regression isa X13default)
+        # TODO: When trading day and/or holiday adjustments are estimated from both the regression and x11regression specs, then the noapply option must be used to ensure that only one set of factors is used in the adjustment...
+    end
+    
+
+   
+    
+end
+
+var_types_map = Dict{Type,Symbol}(
+    ao => :ao,
+    aos => :aos,
+    ls => :ls,
+    lss => :lss,
+    tc => :tc,
+    so => :so,
+    rp => :rp,
+    qd => :qd,
+    qi => :qi,
+    tl => :tl,
+    tdstock => :tdstock,
+    tdstock1coef => :tdstock1coef,
+    easter => :easter,
+    labor => :labor,
+    thank => :thank,
+    sceaster => :sceaster,
+    easterstock => :easterstock,
+    sincos => :sincos,
+    td => :td,
+    tdnolpyear => :tdnolpyear,
+    td1coef => :td1coef,
+    td1nolpyear => :td1nolpyear,
+    lpyear => :lpyear,
+    lom => :lom,
+    loq => :loq,
+    seasonal => :seasonal,
+)
+function collect_regvar_types(vars)
+    types_used = Vector{Symbol}()
+    for v in vars
+        if v isa Symbol
+            push!(types_used, v)
+        else
+            push!(types_used, var_types_map[typeof(v)])
+        end
+    end
+    return types_used
 end
 
 export X13spec

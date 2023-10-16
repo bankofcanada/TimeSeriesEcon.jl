@@ -9,6 +9,9 @@ end
 function x13write(spec::X13spec; test=false)
     s = Vector{String}()
 
+    # check spec consistency
+    validateX13spec(spec)
+
     # print series or composite first, currently we only support series
     push!(s, x13write(getfield(spec, :series); test))
 
@@ -55,9 +58,17 @@ _regime_change_dict_end = Dict{Symbol, String}(
     :zeroafter => "//",
 )
 
+_per_quarterly_strings_dict = Dict{UnionAll, String}(
+    Q1 =>  "0.q1",
+    Q2 =>  "0.q2",
+    Q3 =>  "0.q3",
+    Q4 =>  "0.q4" #TODO: check if these work.
+)
+
 function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,X13forecast,X13history,X13identify,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression}, ; test=false)
     s = Vector{String}()
     spectype = typeof(spec)
+    keys_at_end = Vector{Symbol}()
     for key in fieldnames(spectype)
         if test && key ∈ (:print,:save,:savelog)
             continue
@@ -69,13 +80,25 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
         if !(val isa X13default)
             if key == :func
                 key = :function
-            elseif key ∈ (:ma, :b)
-                push!(s, "$key = $(x12write_fixed_values(spec, key, val))")
+            elseif key ∈ (:printphtrf,)
+                push!(s, "$key = $(x13write_altbool(val))")
+                continue
+            elseif key ∈ (:ma, :ar, :b)
+                # Write these at the end of the spec file
+                push!(keys_at_end, key)
                 continue
             end
 
             push!(s, "$key = $(x13write(val))")
         end
+    end
+    for key in keys_at_end
+        val = getfield(spec,key)
+       if key ∈ (:ma, :ar, :b)
+            push!(s, "$key = $(x12write_fixed_values(spec, key, val))")
+            continue
+        end
+        push!(s, "$key = $(x13write(val))")
     end
     if length(s) > 0
         return "$(_spec_name_dict[spectype]) {\n\t$(join(s,"\n\t"))\n}"
@@ -118,6 +141,7 @@ end
 x13write(val::String) = "\"$val\""
 x13write(val::Vector{Symbol}) = "($(join(val, " ")))"
 x13write(val::Bool) = val ? "yes" : "no"
+x13write_altbool(val::Bool) = val ? 1 : 0
 
 x13write(val::ArimaModel) = x13write(val.specs)
 x13write(val::ArimaSpec) = val.period != 0 ? "($(val.p) $(val.d) $(val.q))$(val.period)" : "($(val.p) $(val.d) $(val.q))"
@@ -143,6 +167,7 @@ x13write(val::Symbol) = val
 x13write(val::Missing) = ""
 x13write(val::Vector{Union{Int64,Missing}}) = "($(join(x13write.(val), ", ")))"
 x13write(val::Vector{<:Any}) = "($(join(x13write.(val), ", ")))"
+x13write(val::Vector{String}) = "($(join(x13write.(val), "\n\t")))"
 x13write(val::Vector{<:Union{Symbol,X13var}}) = "($(join(x13write.(val), " ")))"
 x13write(val::X13.ao) = "ao$(x13write(val.mit))"
 x13write(val::X13.ls) = "ls$(x13write(val.mit))"
@@ -170,6 +195,9 @@ x13write(val::lpyear)       = val.regimechange == :neither ? "lpyear" : "lpyear$
 x13write(val::lom)          = val.regimechange == :neither ? "lom" : "lom$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
 x13write(val::loq)          = val.regimechange == :neither ? "loq" : "loq$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
 x13write(val::seasonal)     = val.regimechange == :neither ? "seasonal" : "seasonal$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
+x13write(val::Span)         = "($(x13write(val.b)), $(x13write(val.e)))"
+x13write(val::TimeSeriesEcon._FPConst{Monthly, N}) where N = "0.$(_months[N])"
+x13write(val::UnionAll) = _per_quarterly_strings_dict[val]
 
 
 function x13write(val::MIT)
