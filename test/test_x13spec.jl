@@ -16,7 +16,10 @@ using TimeSeriesEcon
     X13.check!(spec)
     X13.forecast!(spec)
     X13.force!(spec)
-    X13.pickmdl!(spec)
+    X13.pickmdl!(spec, [
+        X13.ArimaModel(0,1,1,0,1,1; default=true)
+        X13.ArimaModel(0,1,2,0,1,1;)
+    ])
     X13.history!(spec)
     X13.identify!(spec)
     X13.outlier!(spec)
@@ -315,35 +318,29 @@ end
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
     spec = X13.X13spec(xts)
-    X13.pickmdl!(spec)
     X13.x11!(spec, seasonalma=:s3x9)
-    X13.force!(spec, start=10)
+    X13.force!(spec, start=M10)
     s = X13.x13write(spec, test=true)
-    @test contains(s, "pickmdl { }")
     @test contains(s, "x11 {\n\tseasonalma = s3x9\n}")
-    @test contains(s, "force {\n\tstart = 10\n}")
+    @test contains(s, "force {\n\tstart = oct\n}")
     
     # Manual example 2
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
     spec = X13.X13spec(xts)
-    X13.pickmdl!(spec)
     X13.x11!(spec, seasonalma=:s3x9)
-    X13.force!(spec, start=10, type=:regress, rho=0.8)
+    X13.force!(spec, start=M10, type=:regress, rho=0.8)
     s = X13.x13write(spec, test=true)
-    @test contains(s, "pickmdl { }")
     @test contains(s, "x11 {\n\tseasonalma = s3x9\n}")
-    @test contains(s, "force {\n\trho = 0.8\n\tstart = 10\n\ttype = regress\n}")
+    @test contains(s, "force {\n\trho = 0.8\n\tstart = oct\n\ttype = regress\n}")
     
     # Manual example 3
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
     spec = X13.X13spec(xts)
-    X13.pickmdl!(spec)
     X13.x11!(spec, seasonalma=:s3x5)
     X13.force!(spec, type=:none, round=true)
     s = X13.x13write(spec, test=true)
-    @test contains(s, "pickmdl { }")
     @test contains(s, "x11 {\n\tseasonalma = s3x5\n}")
     @test contains(s, "force {\n\tround = yes\n\ttype = none\n}")
 end
@@ -564,6 +561,57 @@ end
     
 end
 
+@testset "Metadata" begin
+
+    # Manual example 1
+    ts = TSeries(1964M1, collect(1:50))
+    xts = X13.series(ts, title="Monthly Retail Sales")
+    spec = X13.X13spec(xts)
+    X13.regression!(spec; variables=:td, aictest=[:td, :easter])
+    X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
+    X13.check!(spec)
+    X13.outlier!(spec; types = :all)
+    X13.metadata!(spec, "analyst"=>"John J. J. Smith")
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n\taictest = (td easter)\n\tvariables = td\n}")
+    @test contains(s, "arima {\n\tmodel = (0 1 1)(0 1 1)\n}")
+    @test contains(s, "check { }")
+    @test contains(s, "outlier {\n\ttypes = all\n}")
+    @test contains(s, "metadata {\n\tkey = \"analyst\"\n\tvalue = \"John J. J. Smith\"\n}")
+
+    # Manual example 2
+    ts = TSeries(1964M1, collect(1:150))
+    xts = X13.series(ts, title="Monthly Retail Sales")
+    spec = X13.X13spec(xts)
+    X13.regression!(spec; variables=[:td, X13.ao(1967M6), X13.ls(1971M6), X13.easter(8)])
+    X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
+    X13.check!(spec)
+    X13.metadata!(spec, ["analyst"=>"John J. J. Smith", "spec.updated"=>"October 31, 2006"])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n\tvariables = (td ao1967.jun ls1971.jun easter[8])\n}")
+    @test contains(s, "arima {\n\tmodel = (0 1 1)(0 1 1)\n}")
+    @test contains(s, "check { }")
+    @test contains(s, "metadata {\n\tkey = (\n\t\t\"analyst\"\n\t\t\"spec.updated\"\n\t)\n\tvalue = (\n\t\t\"John J. J. Smith\"\n\t\t\"October 31, 2006\"\n\t)\n}")
+
+    # Manual example 3
+    ts = TSeries(1964M1, collect(1:150))
+    xts = X13.series(ts, title="Monthly Retail Sales")
+    spec = X13.X13spec(xts)
+    X13.regression!(spec; variables=[:td, X13.ao(1967M6), X13.ls(1971M6), X13.easter(15)])
+    X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
+    X13.check!(spec)
+    X13.x11!(spec)
+    X13.metadata!(spec, ["analyst"=>"John J. J. Smith", "spec.final"=>"November 10, 2006", "key3"=>"AO caused by strike, LS caused by survey change"])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n\tvariables = (td ao1967.jun ls1971.jun easter[15])\n}")
+    @test contains(s, "arima {\n\tmodel = (0 1 1)(0 1 1)\n}")
+    @test contains(s, "check { }")
+    @test contains(s, "x11 { }")
+    @test contains(s, "metadata {\n\tkey = (\n\t\t\"analyst\"\n\t\t\"spec.final\"\n\t\t\"key3\"\n\t)\n\tvalue = (\n\t\t\"John J. J. Smith\"\n\t\t\"November 10, 2006\"\n\t\t\"AO caused by strike, LS caused by survey change\"\n\t)\n}")
+
+    println(s)
+end
+
 @testset "Outlier" begin
 
     # Manual example 1
@@ -618,17 +666,25 @@ end
 
 @testset "Pickmdl" begin
 
+    models = [
+        X13.ArimaModel(0,1,1,0,1,1; default=true)
+        X13.ArimaModel(0,1,2,0,1,1;)
+        X13.ArimaModel(2,1,0,0,1,1;)
+        X13.ArimaModel(0,2,2,0,1,1;)
+        X13.ArimaModel(2,1,2,0,1,1;)
+    ]
+
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
     spec = X13.X13spec(xts)
     X13.regression!(spec; variables=[:td, :seasonal])
-    X13.pickmdl!(spec, mode=:fcst, file="nosdiff.mdl")
+    X13.pickmdl!(spec, models, mode=:fcst)
     X13.estimate!(spec)
     X13.x11!(spec)
     s = X13.x13write(spec, test=true)
     @test contains(s, "regression {\n\tvariables = (td seasonal)\n}")
-    @test contains(s, "pickmdl {\n\tfile = \"nosdiff.mdl\"\n\tmode = fcst\n}")
+    @test contains(s, "pickmdl {\n\tmodels = ((0 1 1)(0 1 1), (0 1 2)(0 1 1), (2 1 0)(0 1 1), (0 2 2)(0 1 1), (2 1 2)(0 1 1))\n\tmode = fcst\n}")
     @test contains(s, "estimate { }")
     @test contains(s, "x11 { }")
 
@@ -637,13 +693,13 @@ end
     xts = X13.series(ts, title="Monthly Sales")
     spec = X13.X13spec(xts)
     X13.regression!(spec; variables=:td)
-    X13.pickmdl!(spec, mode=:fcst, file="nosdiff.mdl", method=:first, fcstlim=20, qlim=10, overdiff=0.99, identify=:all)
+    X13.pickmdl!(spec, models, mode=:fcst, method=:first, fcstlim=20, qlim=10, overdiff=0.99, identify=:all)
     X13.estimate!(spec)
     X13.outlier!(spec)
     X13.x11!(spec)
     s = X13.x13write(spec, test=true)
     @test contains(s, "regression {\n\tvariables = td\n}")
-    @test contains(s, "pickmdl {\n\tfcstlim = 20\n\tfile = \"nosdiff.mdl\"\n\tidentify = all\n\tmethod = first\n\tmode = fcst\n\toverdiff = 0.99\n\tqlim = 10\n}")
+    @test contains(s, "pickmdl {\n\tfcstlim = 20\n\tmodels = ((0 1 1)(0 1 1), (0 1 2)(0 1 1), (2 1 0)(0 1 1), (0 2 2)(0 1 1), (2 1 2)(0 1 1))\n\tidentify = all\n\tmethod = first\n\tmode = fcst\n\toverdiff = 0.99\n\tqlim = 10\n}")
     @test contains(s, "estimate { }")
     @test contains(s, "outlier { }")
     @test contains(s, "x11 { }")
@@ -653,13 +709,13 @@ end
     xts = X13.series(ts, title="Monthly Sales")
     spec = X13.X13spec(xts)
     X13.regression!(spec; variables=:td)
-    X13.pickmdl!(spec, mode=:fcst, file="nosdiff.mdl", outofsample=true)
+    X13.pickmdl!(spec, models, mode=:fcst, outofsample=true)
     X13.estimate!(spec)
     X13.outlier!(spec)
     X13.x11!(spec)
     s = X13.x13write(spec, test=true)
     @test contains(s, "regression {\n\tvariables = td\n}")
-    @test contains(s, "pickmdl {\n\tfile = \"nosdiff.mdl\"\n\tmode = fcst\n\toutofsample = yes\n}")
+    @test contains(s, "pickmdl {\n\tmodels = ((0 1 1)(0 1 1), (0 1 2)(0 1 1), (2 1 0)(0 1 1), (0 2 2)(0 1 1), (2 1 2)(0 1 1))\n\tmode = fcst\n\toutofsample = yes\n}")
     @test contains(s, "estimate { }")
     @test contains(s, "x11 { }")
 
@@ -1114,6 +1170,24 @@ end
     @test contains(s, "forecast {\n\tmaxlead = 18\n}")
     @test contains(s, "seats { }")
 
+    # Example with tabtables
+    ts = TSeries(MIT{YPFrequency{6}}(1995*6), collect(1:50))
+    xts = X13.series(ts, title="Model based adjustment of Bimonthly exports")
+    spec = X13.X13spec(xts)
+    X13.transform!(spec; func=:log)
+    X13.regression!(spec; aictest=:td)
+    X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
+    X13.outlier!(spec, types=[:ao, :ls, :tc])
+    X13.forecast!(spec, maxlead=18)
+    X13.seats!(spec, tabtables=[:xo,:n,:s,:p])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "transform {\n\tfunction = log\n}")
+    @test contains(s, "regression {\n\taictest = td\n}")
+    @test contains(s, "arima {\n\tmodel = (0 1 1)(0 1 1)\n}")
+    @test contains(s, "outlier {\n\ttypes = (ao ls tc)\n}")
+    @test contains(s, "forecast {\n\tmaxlead = 18\n}")
+    @test contains(s, "seats {\n\ttabtables = \"xo,n,s,p\"\n}")
+
 end
 
 @testset "Series" begin
@@ -1473,6 +1547,16 @@ end
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n\taicdiff = 0.0\n\tfunction = auto\n}")
     @test contains(s, "x11 { }")
+
+    # Example with sigmavec
+    ts = TSeries(1978M1, collect(1:50))
+    xts = X13.series(ts, title="Total U.K. Retail Sales")
+    spec = X13.X13spec(xts)
+    X13.transform!(spec, func=:auto, aicdiff=0.0)
+    X13.x11!(spec, calendarsigma=:select, sigmavec=[M1, M2, M12])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "transform {\n\taicdiff = 0.0\n\tfunction = auto\n}")
+    @test contains(s, "x11 {\n\tcalendarsigma = select\n\tsigmavec = (jan, feb, dec)\n}")
     
 end
 
@@ -1580,4 +1664,15 @@ end
     
 end
 
-# TODO: printing of simavec in x11 spec
+@testset "run" begin
+    ts = TSeries(1950Q1, collect(1:150))
+    xts = X13.series(ts, title="Quarterly Grape Harvest")
+    spec = X13.X13spec(xts)
+    X13.arima!(spec, X13.ArimaModel(0,1,1))
+    X13.estimate!(spec)
+
+    k = X13.run(spec)
+
+
+    @test k isa X13.X13result
+end
