@@ -88,7 +88,7 @@ include("various.jl")
 include("linalg.jl")
 
 include("x13/X13.jl")
-export X13
+export X13, run
 
 """
     rangeof(s; drop::Integer)

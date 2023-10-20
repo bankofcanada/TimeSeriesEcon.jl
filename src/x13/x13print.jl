@@ -125,7 +125,7 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
             elseif key ∈ (:print,)
                 push!(s, "$key = $(x13write_plus(val))")
                 continue
-            elseif spec isa X13pickmdl && key ∈ (:models)
+            elseif spec isa X13pickmdl && key ∈ (:models,)
                 if length(outfolder) > 0
                     #TODO: write outfile
                     mdl_string = x13write(val)
