@@ -549,7 +549,7 @@ function _list_catalog(de::DEFile, cid::C.obj_id_t, maxdepth::Int, verbose::Bool
                 end
             end
         catch err
-            @error "Failed to ge info for $oname($(obj[].id))" err
+            @error "Failed to get info for $oname($(obj[].id))" err
             C.de_clear_error()
         end
         rc = C.de_next_object(search[], obj)
