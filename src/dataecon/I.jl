@@ -42,7 +42,7 @@ function DEError()
 end
 
 @inline _de_error!(msg, ::Val{:debug}) = C.de_error_source(msg, sizeof(msg))
-@inline _de_error!(msg, ::Val=Val(:nodebug)) = (@nospecialize(v); C.de_error(msg, sizeof(msg)))
+@inline _de_error!(msg, v::Val=Val(:nodebug)) = (@nospecialize(v); C.de_error(msg, sizeof(msg)))
 
 
 # _check() handles results from C library calls
