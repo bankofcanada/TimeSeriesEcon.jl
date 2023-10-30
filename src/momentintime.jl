@@ -429,7 +429,7 @@ macro bd_str(d)
     return try
         bdaily(d)
     catch
-        e:(throw($e))
+        :(throw($e))
     end
 end;
 
@@ -454,8 +454,10 @@ Example:
     second_week_of_april = bd"2022-04-04:2022-04-08"
 """
 macro bd_str(d, bias)
-    if findfirst(":", d) !== nothing
-        throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
+    if contains(d, ":")
+        return :(
+            throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
+        )
     end
     if bias == ""
         return bdaily(d)

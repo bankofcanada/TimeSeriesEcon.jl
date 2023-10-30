@@ -472,7 +472,7 @@ end
     @test Date(last(bd_rng)) == Date("2022-01-21")
 
     # this test does not catch the error for some reason
-    # @test_throws ArgumentError bd"2022-01-01:2022-01-22"p
+    @test_throws ArgumentError bd"2022-01-01:2022-01-22"p
 end
 
 @testset "issue #45" begin
