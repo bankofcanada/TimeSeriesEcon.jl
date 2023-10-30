@@ -475,6 +475,20 @@ end
     # @test_throws ArgumentError bd"2022-01-01:2022-01-22"p
 end
 
+@testset "issue #45" begin
+    # errors related to divrem returning negative 
+    # remainder for negative argument
+    
+    #  Example 1:
+    @test_throws ArgumentError bd"0-1-1"
+    @test bd"0-1-1"p == bdaily(Date(-1,12,31))
+    @test bd"0-1-1"n == bdaily(Date(0,1,3))
+    #  Example 2:
+    @test string(bdaily(Date(-1, 1, 1))) == "-0001-01-01"
+    #  Example 3:
+    @test mit2yp(bd"1-1-1" - 1) == (0, 260)
+end
+
 @testset "Weekly" begin
 
     w1 = MIT{Weekly}(105451)

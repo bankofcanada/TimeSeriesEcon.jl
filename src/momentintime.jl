@@ -388,6 +388,7 @@ is `true`, meaning that the preceding Friday is returned.
 """
 function bdaily(d::Date; bias::Symbol=getoption(:bdaily_creation_bias))
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
+    (rem < 0) && ((num_weekends, rem) = (num_weekends - 1, rem + 7))
     adjustment = 0
     if rem == 0 # Sunday
         if bias ∈ (:next, :nearest)
@@ -425,7 +426,11 @@ macro bd_str(d)
         end
         return rng
     end
-    return bdaily(d)
+    return try
+        bdaily(d)
+    catch
+        e:(throw($e))
+    end
 end;
 
 """
@@ -452,22 +457,22 @@ macro bd_str(d, bias)
     if findfirst(":", d) !== nothing
         throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
     end
-    if bias ∉ ("n", "next", "p", "previous", "s", "strict", "near", "nearest")
-        throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous", "s", "strict", "near", "nearest")."""))
-    end
     if bias == ""
         return bdaily(d)
     elseif bias == "n" || bias == "next"
         return bdaily(d, bias=:next)
-    elseif bias == "p" || bias == "p"
+    elseif bias == "p" || bias == "previous"
         return bdaily(d, bias=:previous)
     elseif bias == "s" || bias == "strict"
         return bdaily(d, bias=:strict)
     elseif bias == "near" || bias == "nearest"
         return bdaily(d, bias=:nearest)
+    else
+        return :(
+            throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous", "s", "strict", "near", "nearest")."""))
+        )
     end
-
-end;
+end
 
 """
     weekly(d::Date) 
@@ -586,7 +591,7 @@ function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where {end_mont
     if ref == :begin
         return Dates.Date(Int(m), 1, 1) - Month(12 - end_month)
     end
-    return Dates.Date(Int(m)+1, 1, 1) - Month(12 - end_month) - Day(1)
+    return Dates.Date(Int(m) + 1, 1, 1) - Month(12 - end_month) - Day(1)
 end
 
 MIT{Daily}(d::Dates.Date) = daily(d)
