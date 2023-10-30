@@ -428,7 +428,7 @@ macro bd_str(d)
     end
     return try
         bdaily(d)
-    catch
+    catch e
         :(throw($e))
     end
 end;
