@@ -23,7 +23,7 @@ function __init__()
     # make sure the loaded library is the same version as the one that generated our C.jl 
     version = VersionNumber(unsafe_string(C.de_version()))
     if version != VersionNumber(C.DE_VERSION)
-        throw(ErrorException("Library version $(version) does not match expected version $(C.DE_VERSION)."))
+        throw(ErrorException("DataEcon library version $(version) does not match expected version $(C.DE_VERSION)."))
     end
     return
 end
@@ -87,14 +87,14 @@ function _do_open(C_open, args...)
     return handle
 end
 
-function opendaec(fname::AbstractString; readonly=false)
+function opendaec(fname::AbstractString; readonly=true, write=!readonly)
     fname = string(fname)
-    handle = _do_open(readonly ? C.de_open_readonly : C.de_open, fname)
-    return DEFile(handle, fname)
+    open_func = _do_open(write ? C.de_open : C.de_open_readonly, fname)
+    return DEFile(open_func, fname)
 end
 
-function opendaec(f::Function, fname::AbstractString; readonly=false)
-    de = opendaec(fname; readonly)
+function opendaec(f::Function, fname::AbstractString; readonly=true, write=!readonly)
+    de = opendaec(fname; readonly, write)
     try
         f(de)
     finally
@@ -214,7 +214,7 @@ end
 # import ..LittleDict
 
 """
-    get_all_attributes(de, obejct_id)
+    get_all_attributes(de, object_id)
 
 Retrieve the names and value of all attributes of the object with the given id.
 They are returned in a dictionary.
@@ -509,7 +509,7 @@ end
 writedb(de::DEFile, data::Workspace) = writedb(de, root_id, data)
 writedb(de::DEFile, parent::AbstractString, data::Workspace) = writedb(de, find_fullpath(de, string(parent)), data)
 function writedb(file::AbstractString, args...)
-    opendaec(file) do de
+    opendaec(file, write=true) do de
         writedb(de, args...)
     end
 end
@@ -569,7 +569,7 @@ function readdb(de::DEFile, name::AbstractString)
     read_data(de, oid)
 end
 function readdb(file::AbstractString, args...)
-    opendaec(file) do de
+    opendaec(file, readonly=true) do de
         readdb(de, args...)
     end
 end

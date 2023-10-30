@@ -12,13 +12,13 @@ rm(test_file * "-journal", force=true)
 @testset "DE file" begin
     global de
     @test_throws DE.DEError DE.opendaec(test_file, readonly=true)
-    de = DE.opendaec(test_file)
+    de = DE.opendaec(test_file, write=true)
     @test isopen(de)
     @test (DE.closedaec!(de); true)
     @test !isopen(de)
     @test (de = DE.opendaec(test_file, readonly=true); isopen(de))
     @test (DE.closedaec!(de); !isopen(de))
-    de = DE.opendaec(test_file)
+    de = DE.opendaec(test_file, write=true)
 
     # test find_object throws exception or returns missing
     @test_throws DE.DEError DE.find_object(de, DE.root_id, "nosuchobject")
@@ -322,7 +322,7 @@ end
     DE.opendaec(test_file) do de
         @test !isempty(DE.readdb(de))
     end
-    DE.opendaec(test_file) do de
+    DE.opendaec(test_file, write=true) do de
         @test (empty!(de); true)
         @test isempty(DE.readdb(de))
     end
@@ -372,7 +372,7 @@ end
 
 # Frequency \ pack/unpack ||   year+period   |   year+month+day 
 # ===============================================================
-#     YP Date             ||     works       |   not implemented
+#     YP Date             ||     works       |   works as of DataEcon v0.3.1
 #     Cal Date            ||     works       |       works
 
 @testset "pack/unpack year_period" begin
@@ -380,11 +380,11 @@ end
     # MITs given year-period
     Random.seed!(0x007)
     fc = Dict{Type{<:Frequency},Base.RefValue{Int}}()
-    jfreqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,
+    all_freqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,
         Monthly, (Quarterly{i} for i = 1:3)...,
         (HalfYearly{i} for i = 1:6)..., (Yearly{i} for i = 1:12)...]
     for i = 1:1000
-        fr = rand(jfreqs)
+        fr = rand(all_freqs)
         d1 = convert(Int, rand(Int16))
         if fr == BDaily && d1 < 1
             # make sure it's non-negative to work around known bug
@@ -411,7 +411,7 @@ end
         get!(fc, fr, Ref(0))[] += 1
     end
     # make sure we tested all frequencies
-    foreach(jfreqs) do fr
+    foreach(all_freqs) do fr
         @test get!(fc, fr, Ref(0))[] > 10
     end
 end;
@@ -419,17 +419,16 @@ end;
 
 @testset "pack/unpack year_month_day" begin
     # here we test the second column of the table - that is packing and unpacking 
-    # MITs given year-month-day.  This doesn't work for YP frequencies.
+    # MITs given year-month-day. 
     Random.seed!(0x007)
     fc = Dict{Type{<:Frequency},Base.RefValue{Int}}()
-    calfreqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,]
+    # all_freqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,]
+    all_freqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,
+        Monthly, (Quarterly{i} for i = 1:3)...,
+        (HalfYearly{i} for i = 1:6)..., (Yearly{i} for i = 1:12)...]
     for i = 1:1000
-        fr = rand(calfreqs)
+        fr = rand(all_freqs)
         d1 = convert(Int, rand(Int16))
-        if fr == BDaily && d1 < 1
-            # make sure it's non-negative to work around known bug
-            d1 = 1 - d1
-        end
         d = MIT{fr}(d1)
         date = Date(d)
         yr = Dates.year(date)
@@ -458,7 +457,7 @@ end;
         get!(fc, fr, Ref(0))[] += 1
     end
     # make sure we tested all supported frequencies
-    foreach(calfreqs) do fr
+    foreach(all_freqs) do fr
         @test get!(fc, fr, Ref(0))[] > 10
     end
 end;

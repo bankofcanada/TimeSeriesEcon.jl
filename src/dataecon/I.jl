@@ -56,7 +56,7 @@ _check(rc::Cint) = rc == 0 || throw(DEError())
 
 const StrOrSym = Union{Symbol,AbstractString}
 
-_to_de_scalar_val(value) = throw(ArgumentError("Unable to write scalar value of type $(typeof(value))."))
+_to_de_scalar_val(@nospecialize(value)) = throw(ArgumentError("DataEcon: unable to write scalar value of type $(typeof(value))."))
 _to_de_scalar_val(value::Integer) = value
 _to_de_scalar_val(value::Real) = float(value)
 _to_de_scalar_val(value::Complex) = float(value)
@@ -245,8 +245,15 @@ end
 #############################################################################
 # write tseries and mvtseries
 
+struct _ArrayData
+    eltype::C.type_t
+    elfreq::C.frequency_t
+    obj_type::C.type_t
+    nbytes::Int
+    val
+end
 
-_de_array_data(; eltype, elfreq=C.freq_none, obj_type, nbytes, val) = (; eltype, elfreq, obj_type, nbytes, val)
+_de_array_data(; eltype, elfreq=C.freq_none, obj_type, nbytes, val) = _ArrayData(eltype, elfreq, obj_type, nbytes, val)
 
 _to_de_array(value) = throw(ArgumentError("Unable to write value of type $(typeof(value))."))
 
