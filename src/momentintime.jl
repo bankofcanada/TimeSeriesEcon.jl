@@ -248,19 +248,19 @@ MIT{Yearly}(y::Integer, p::Integer) = MIT{Yearly{12}}(y, p)
 MIT{Quarterly}(y::Integer, p::Integer) = MIT{Quarterly{3}}(y, p)
 MIT{HalfYearly}(y::Integer, p::Integer) = MIT{HalfYearly{6}}(y, p)
 function _weekly_from_yp(F::Type{<:Weekly{end_day}}, y, p) where {end_day}
-    first_day_of_year = Dates.Date("$y-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     d = first_day_of_year + Day(7 * (p - 1))
     return weekly(d, end_day)
 end
 function MIT{F}(y::Integer, p::Integer) where {F<:BDaily}
-    first_day_of_year = Dates.Date("$y-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     first_day = dayofweek(first_day_of_year)
     days_diff = first_day > 5 ? 8 - first_day : 0
     d = first_day_of_year + Day(days_diff)
     return bdaily(d) + p - 1
 end
 function MIT{F}(y::Integer, p::Integer) where {F<:Daily}
-    first_day_of_year = Dates.Date("$y-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     return daily(first_day_of_year) + p - 1
 end
 
@@ -342,7 +342,7 @@ Construct an `MIT{Yearly}` from an year and a period.
 yy(y::Integer, p::Integer=1) = MIT{Yearly{12}}(y, p)
 
 
-_d0 = Date("0001-01-01") - Day(1)
+_d0 = Date(1, 1, 1) - Day(1)
 """
     daily(d::Date)
 
@@ -489,7 +489,7 @@ function weekly_from_iso(y::Int, p::Int)
     if p > 53 || p < 1
         throw(ArgumentError("The provided period must be between 1 and 53 (inclusive)."))
     end
-    first_day_of_year = Dates.Date("$(y)-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     week_of_first_day = week(first_day_of_year)
     year_end_padding = week_of_first_day !== 1 ? 1 : 0
     d2 = first_day_of_year + Day(((p - 1) + year_end_padding) * 7)
@@ -564,29 +564,29 @@ end
 function Dates.Date(m::MIT{Monthly}, ref::Symbol=:end)
     year, month = divrem(Int(m), 12)
     if ref == :begin
-        return Dates.Date("$year-01-01") + Month(month)
+        return Dates.Date(year, 1, 1) + Month(month)
     end
-    return Dates.Date("$year-01-01") + Month(month + 1) - Day(1)
+    return Dates.Date(year, 1, 1) + Month(month + 1) - Day(1)
 end
 function Dates.Date(m::MIT{Quarterly{end_month}}, ref::Symbol=:end) where {end_month}
     year, quarter = divrem(Int(m), 4)
     if ref == :begin
-        return Dates.Date("$year-01-01") + Month(quarter * 3 - (3 - end_month))
+        return Dates.Date(year, 1, 1) + Month(quarter * 3 - (3 - end_month))
     end
-    return Dates.Date("$year-01-01") + Month((quarter + 1) * 3 - (3 - end_month)) - Day(1)
+    return Dates.Date(year, 1, 1) + Month((quarter + 1) * 3 - (3 - end_month)) - Day(1)
 end
 function Dates.Date(m::MIT{HalfYearly{end_month}}, ref::Symbol=:end) where {end_month}
     year, half = divrem(Int(m), 2)
     if ref == :begin
-        return Dates.Date("$year-01-01") + Month(half * 6 - (6 - end_month))
+        return Dates.Date(year, 1, 1) + Month(half * 6 - (6 - end_month))
     end
-    return Dates.Date("$year-01-01") + Month((half + 1) * 6 - (6 - end_month)) - Day(1)
+    return Dates.Date(year, 1, 1) + Month((half + 1) * 6 - (6 - end_month)) - Day(1)
 end
 function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where {end_month}
     if ref == :begin
-        return Dates.Date("$(Int(m))-01-01") - Month(12 - end_month)
+        return Dates.Date(Int(m), 1, 1) - Month(12 - end_month)
     end
-    return Dates.Date("$(Int(m) + 1)-01-01") - Month(12 - end_month) - Day(1)
+    return Dates.Date(Int(m)+1, 1, 1) - Month(12 - end_month) - Day(1)
 end
 
 MIT{Daily}(d::Dates.Date) = daily(d)
