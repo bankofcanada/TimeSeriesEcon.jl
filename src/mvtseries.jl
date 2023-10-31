@@ -477,12 +477,12 @@ end
 
 # single argument - list/tuple of variables - return a TSeries of the column
 @inline function Base.getindex(x::MVTSeries, cols::_MVTSAxes2)
-    inds = [_colind(x, c) for c in cols]
+    inds = _colind(x, cols)
     return MVTSeries(firstdate(x), cols, getindex(_vals(x), :, inds))
 end
 
 @inline function Base.setindex!(x::MVTSeries, val, cols::_MVTSAxes2)
-    inds = [_colind(x, c) for c in cols]
+    inds = _colind(x, cols)
     setindex!(x.values, val, :, inds)
 end
 

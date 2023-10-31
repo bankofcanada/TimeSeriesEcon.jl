@@ -257,7 +257,7 @@ end
     @test compare(src, dest, quiet=true, ignoremissing=true)
     # dest has longer range (not that compare uses the common range)
     dest = MVTSeries(2020Q1 .+ (0:40), (:a, :b, :c))
-    @test (copyto!(dest, src; range=2020Q1:2020Q1+19); compare(src, dest, quiet=true, ignoremissing=true))
+    @test (copyto!(dest, src; trange=2020Q1:2020Q1+19); compare(src, dest, quiet=true, ignoremissing=true))
     @test !compare(src, dest, quiet=true)
     # dest is missing some variables 
     dest = MVTSeries(2020Q1 .+ (0:19), (:a, :c))
@@ -265,7 +265,7 @@ end
     @test compare(src, dest, quiet=true, ignoremissing=true)
     # dest is missing some variables, we initialize with NaN and we copy only a shorter range
     dest = MVTSeries(2020Q1 .+ (0:19), (:a, :c), NaN)
-    @test (copyto!(dest, src; range=2020Q1:2020Q1+10); true)
+    @test (copyto!(dest, src; trange=2020Q1:2020Q1+10); true)
     # not equal over the full range
     @test !compare(src, dest; quiet=true, ignoremissing=true)
     # not equal on the missing variable

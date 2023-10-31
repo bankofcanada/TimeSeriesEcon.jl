@@ -2,6 +2,7 @@
 # All rights reserved.
 
 using Dates
+using Random
 
 DE = TimeSeriesEcon.DataEcon
 test_file = "test.daec"
@@ -9,15 +10,23 @@ rm(test_file, force=true)
 rm(test_file * "-journal", force=true)
 
 @testset "DE file" begin
-    global de = DE.opendaec(test_file)
+    global de
+    @test_throws DE.DEError DE.opendaec(test_file, readonly=true)
+    de = DE.opendaec(test_file, write=true)
     @test isopen(de)
     @test (DE.closedaec!(de); true)
     @test !isopen(de)
-    de = DE.opendaec(test_file)
+    @test (de = DE.opendaec(test_file, readonly=true); isopen(de))
+    @test (DE.closedaec!(de); !isopen(de))
+    de = DE.opendaec(test_file, write=true)
 
     # test find_object throws exception or returns missing
     @test_throws DE.DEError DE.find_object(de, DE.root_id, "nosuchobject")
     @test ismissing(DE.find_object(de, DE.root_id, "nosuchobject", false))
+
+    dm = nothing
+    @test (dm = DE.opendaecmem(); isopen(dm))
+    @test (DE.closedaec!(dm); !isopen(dm))
 
     # test get_fullpath works
     @test DE.get_fullpath(de, DE.root_id) == "/"
@@ -34,6 +43,23 @@ rm(test_file * "-journal", force=true)
     end
     @test isempty(DE.readdb(de, :scalars))
 
+end
+
+@testset "DE errors" begin
+    @test_throws ArgumentError DE.store_scalar(de, :err, Val(0))
+end
+
+function _check_attributes(name, value, attr, has_jtype, has_jeltype)
+    sz = 0
+    if (name in has_jtype)
+        @test get(attr, "jtype", nothing) == string(typeof(value))
+        sz += 1
+    end
+    if (name in has_jeltype)
+        @test get(attr, "jeltype", nothing) == string(Base.eltype(value))
+        sz += 1
+    end
+    @test length(attr) == sz
 end
 
 @testset "DE scalar" begin
@@ -81,31 +107,22 @@ end
         cd2=Dates.today()
     )
 
-    pid = DE.find_fullpath(de, "/scalars", false)
+    cata = "scalars"
+    # Julia types that are not directly supporded by DataEcon.
+    has_jtype = [:ns1, :f3, :c1, :cd1, :cd2]
+    has_jeltype = []
+
+    pid = DE.find_fullpath(de, cata, false)
     if ismissing(pid)
-        pid = DE.new_catalog(de, "scalars")
+        pid = DE.new_catalog(de, cata)
     end
 
     # we can write them 
     for (name, value) in pairs(db)
-        @test begin
-            id = DE.store_scalar(de, pid, name, value)
-            id == DE.find_fullpath(de, "/scalars/$name")
-        end
-    end
-
-
-    pid1 = DE.find_fullpath(de, "/scalars1", false)
-    if ismissing(pid1)
-        pid1 = DE.new_catalog(de, "scalars1")
-    end
-
-    # we can write them 
-    for (name, value) in pairs(db)
-        @test begin
-            id = DE.store_scalar(de, "/scalars1/$name", value)
-            id == DE.find_object(de, pid1, name)
-        end
+        id = DE.store_scalar(de, pid, name, value)
+        @test id == DE.find_fullpath(de, "/$cata/$name")
+        attr = DE.get_all_attributes(de, id)
+        _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
     ldb = Workspace()
@@ -123,7 +140,23 @@ end
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_scalar(de, "/scalars/$name")); true)
+        @test (push!(ldb, name => DE.load_scalar(de, "/$cata/$name")); true)
+    end
+
+    # list_catalog returns what we expect
+    begin
+        @test isempty(DE.list_catalog(de; quiet=true, recursive=false))
+        @test length(db) == DE.catalog_size(de, cata)
+        lst = DE.list_catalog(de, "/$cata"; quiet=true)
+        @test length(lst) == length(db)
+        for k in keys(db)
+            @test "/$cata/$k" in lst
+        end
+        lst = DE.list_catalog(de; quiet=true)
+        @test length(lst) == length(db)
+        for k in keys(db)
+            @test "/$cata/$k" in lst
+        end
     end
 
     # they are equal
@@ -133,8 +166,8 @@ end
     @test @compare map(typeof, db) map(typeof, ldb) quiet
 
     # delete + recursive delete 
-    @test (DE.delete_object(de, "scalars1"); true)
-    @test ismissing(DE.find_fullpath(de, "scalars1", false))
+    @test (DE.delete_object(de, "scalars"); true)
+    @test ismissing(DE.find_fullpath(de, "scalars", false))
 
 end
 
@@ -155,18 +188,43 @@ end
         z1=TSeries(2020Q1, rand(16)),
         z2=TSeries(2020M7, rand(Int, 27)),
         z3=TSeries(w"2020-01-01"3, [1.0im .+ (1:11);]),
+        z4=TSeries(bd"2020-01-01", MIT{HalfYearly{1}}[rand(Int16, 20);]),
         b1=((1:100) .< 71)
     )
 
+    cata = "series"
+    has_jtype = [:b1]
+    has_jeltype = [:vs2, :nv1, :nv5, :nv6, :nv7, :b1]
+
+    pid = DE.find_fullpath(de, "/$cata", false)
+    if ismissing(pid)
+        pid = DE.new_catalog(de, cata)
+    end
+
     # we can write them 
     for (name, value) in pairs(db)
-        @test (DE.store_tseries(de, name, value); true)
+        id = DE.store_tseries(de, pid, name, value)
+        @test id == DE.find_fullpath(de, "/$cata/$name")
+        attr = DE.get_all_attributes(de, id)
+        _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
     ldb = Workspace()
-    # we can read them 
+    # we can read them from (pid,name)
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_tseries(de, name)); true)
+        @test (push!(ldb, name => DE.load_tseries(de, pid, name)); true)
+    end
+
+    # they are equal
+    @test @compare db ldb quiet
+
+    # their types are the same
+    @test @compare map(typeof, db) map(typeof, ldb) quiet
+
+    ldb = Workspace()
+    # we can read them from full path
+    for name in keys(db)
+        @test (push!(ldb, name => DE.load_tseries(de, "/$cata/$name")); true)
     end
 
     # they are equal
@@ -232,6 +290,12 @@ DE.closedaec!(de)
         mvts[mod1(i, length(mvts))] = i
         push!(b, name => copy(mvts))
     end
+    scalar_types = Base.BitInteger_types ∪ (Float16, Float32, Float64, ComplexF16, ComplexF32, ComplexF64)
+    c = get!(db, :c, Workspace())
+    for i = 1:100_000
+        name = Symbol(:c, i)
+        push!(c, name => rand(rand(scalar_types)))
+    end
 
     tm = time()
     DE.writedb(test_file, "/speedtest", db)
@@ -258,7 +322,7 @@ end
     DE.opendaec(test_file) do de
         @test !isempty(DE.readdb(de))
     end
-    DE.opendaec(test_file) do de
+    DE.opendaec(test_file, write=true) do de
         @test (empty!(de); true)
         @test isempty(DE.readdb(de))
     end
@@ -272,7 +336,7 @@ rm(test_file, force=true)
 @testset "DE show" begin
     @test_throws DE.DEError DE.opendaec("/this/path/does/not/exist.daec")
     Core.eval(DE.I, :(debug_libdaec = :debug))
-    @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*in: de_open \(.*\).*"i) begin
+    @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*"i) begin
         try
             DE.opendaec("/this/path/does/not/exist.daec")
         catch err
@@ -298,4 +362,105 @@ rm(test_file, force=true)
     @test_logs (:info, r".*DEFile:.*\(closed\).*"i) @info "$de"
 
 end
+
+##################################################################################################
+
+# Compare the TimeSeriesEcon internal encoding of MITs to the
+# encodings produced by de_pack_xyz and de_unpack_xyz.
+
+# Known bug: in TimeSeriesEcon, MIT{BDaily} misbehave when the year is 0 or negative.
+
+# Frequency \ pack/unpack ||   year+period   |   year+month+day 
+# ===============================================================
+#     YP Date             ||     works       |   works as of DataEcon v0.3.1
+#     Cal Date            ||     works       |       works
+
+@testset "pack/unpack year_period" begin
+    # here we test the first column of the table - that is packing and unpacking 
+    # MITs given year-period
+    Random.seed!(0x007)
+    fc = Dict{Type{<:Frequency},Base.RefValue{Int}}()
+    all_freqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,
+        Monthly, (Quarterly{i} for i = 1:3)...,
+        (HalfYearly{i} for i = 1:6)..., (Yearly{i} for i = 1:12)...]
+    for i = 1:1000
+        fr = rand(all_freqs)
+        d1 = convert(Int, rand(Int16))
+        if fr == BDaily && d1 < 1
+            # make sure it's non-negative to work around known bug
+            d1 = 1 - d1
+        end
+        d = MIT{fr}(d1)
+        y, p = isweekly(fr) ? TimeSeriesEcon._mit2yp(d) : TimeSeriesEcon.mit2yp(d)
+        d2 = Ref{Int64}(0)
+        f = DE.I._to_de_scalar_freq(fr)
+        @test DE.C.DE_SUCCESS == DE.C.de_pack_year_period_date(f, y, p, d2)
+        if d1 != d2[]
+            @info "Not equal" fr d1 d y p d2
+            continue
+        end
+        @test d1 == d2[]
+        yr = Ref{Int32}(0)
+        pr = Ref{UInt32}(0)
+        @test DE.C.DE_SUCCESS == DE.C.de_unpack_year_period_date(f, d2[], yr, pr)
+        @test y == yr[] && p == pr[]
+        if !(y == yr[] && p == pr[])
+            @info "Not equal" fr d1 d y p d2 yr pr
+        end
+
+        get!(fc, fr, Ref(0))[] += 1
+    end
+    # make sure we tested all frequencies
+    foreach(all_freqs) do fr
+        @test get!(fc, fr, Ref(0))[] > 10
+    end
+end;
+
+
+@testset "pack/unpack year_month_day" begin
+    # here we test the second column of the table - that is packing and unpacking 
+    # MITs given year-month-day. 
+    Random.seed!(0x007)
+    fc = Dict{Type{<:Frequency},Base.RefValue{Int}}()
+    # all_freqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,]
+    all_freqs = [Daily, BDaily, (Weekly{i} for i = 1:7)...,
+        Monthly, (Quarterly{i} for i = 1:3)...,
+        (HalfYearly{i} for i = 1:6)..., (Yearly{i} for i = 1:12)...]
+    for i = 1:1000
+        fr = rand(all_freqs)
+        d1 = convert(Int, rand(Int16))
+        d = MIT{fr}(d1)
+        date = Date(d)
+        yr = Dates.year(date)
+        mn = Dates.month(date)
+        dy = Dates.day(date)
+
+        f = DE.I._to_de_scalar_freq(fr)
+
+        d2 = Ref{Int64}(0)
+        @test DE.C.DE_SUCCESS == DE.C.de_pack_calendar_date(f, yr, mn, dy, d2)
+        if d1 != d2[]
+            @info "Not equal" fr d1 d y p d2
+            continue
+        end
+        @test d1 == d2[]
+
+        Y = Ref{Int32}()
+        M = Ref{UInt32}()
+        D = Ref{UInt32}()
+        @test DE.C.DE_SUCCESS == DE.C.de_unpack_calendar_date(f, d1, Y, M, D)
+        if !(yr == Y[] && mn == M[] && dy == D[])
+            @info "Not equal" fr d1 d y p d2 yr pr
+        end
+        @test yr == Y[] && mn == M[] && dy == D[]
+
+        get!(fc, fr, Ref(0))[] += 1
+    end
+    # make sure we tested all supported frequencies
+    foreach(all_freqs) do fr
+        @test get!(fc, fr, Ref(0))[] > 10
+    end
+end;
+
+
 

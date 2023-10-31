@@ -52,7 +52,7 @@ Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(w, val, sym)
 # MacroTools.@forward Workspace._c (Base.getindex,)
 Base.getindex(w::Workspace, sym) = getindex(_c(w), convert(Symbol, sym))
 Base.getindex(w::Workspace, sym, syms...) = getindex(w, (sym, syms...,))
-Base.getindex(w::Workspace, syms::Vector) = getindex(w, (syms...,))
+Base.getindex(w::Workspace, syms::Vector) = Workspace(convert(Symbol, s) => w[s] for s in syms)
 Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] for s in syms)
 
 MacroTools.@forward Workspace._c (Base.setindex!,)
@@ -60,11 +60,15 @@ MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.val
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
 
 function Base.eltype(w::Workspace)
-    ET = isempty(w) ? Any : try Base.promote_typeof(values(w)...) catch; Any; end
-    return Pair{Symbol, ET}
+    ET = isempty(w) ? Any : try
+        Base.promote_typeof(values(w)...)
+    catch
+        Any
+    end
+    return Pair{Symbol,ET}
 end
 
-Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
+Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args..., (k => v for (k,v) in kwargs)...); w)
 Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
 @inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
@@ -241,9 +245,19 @@ end
 export @weval
 
 
-function Base.copyto!(x::MVTSeries, w::Workspace; range::AbstractUnitRange{<:MIT}=rangeof(x))
+Base.copyto!(x::MVTSeries, w::Workspace; verbose=false, trange=rangeof(x)) = copyto!(x, trange, w; verbose)
+function Base.copyto!(x::MVTSeries, range::AbstractUnitRange{<:MIT}, w::Workspace; verbose=false)
+    missing = []
     for (key, value) in pairs(x)
-        copyto!(value, range, w[key])
+        w_val = get(w, key, nothing)
+        if !isnothing(w_val)
+            copyto!(value, range, w_val)
+        else
+            verbose && push!(missing, key)
+        end
+    end
+    if verbose
+        @warn "Variables not copied (missing from Workspace): $(join(missing, ", "))"
     end
     return x
 end
