@@ -6,11 +6,19 @@ function x13write(outfile::String, spec::X13spec; test=false)
     # println(join(s, "\n"))
 end
 
-function impose_line_length!(s::Vector{String}, limit=132)
+function impose_line_length!(s::Vector{<:AbstractString}, limit=132, delve=true) #132
     # return s
     counter = 1
     while counter < length(s)
         line = s[counter]
+        # check data lines
+        if delve && occursin("\n", line)
+            sub_lines = split(line,"\n")
+            impose_line_length!(sub_lines, limit, false)
+            s[counter] = join(sub_lines, "\n")
+            counter += 1
+            continue
+        end
         if length(line) > limit
             splitchar = " "
             if occursin(" + ", line)
@@ -35,10 +43,12 @@ function impose_line_length!(s::Vector{String}, limit=132)
     end
 end
 
-function x13write(spec::X13spec; test=false, outfolder=spec.folder)
+function x13write(spec::X13spec; test=false, outfolder::Union{String,X13default}=spec.folder)
     if !test && outfolder isa X13default
         spec.folder = mktempdir(; prefix="x13_", cleanup=true)
+        outfolder = spec.folder
     end
+    # @show outfolder
 
     s = Vector{String}()
 
@@ -53,7 +63,7 @@ function x13write(spec::X13spec; test=false, outfolder=spec.folder)
         end
         val = getfield(spec,key)
         if !(val isa X13default)
-            push!(s, x13write(val; test))
+            push!(s, x13write(val; test, outfolder))
         end
     end
     spec.string = join(s, "\n")
@@ -104,11 +114,13 @@ _per_quarterly_strings_dict = Dict{UnionAll, String}(
     Q4 =>  "q4" #TODO: check if these work.
 )
 
-function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,X13forecast,X13history,X13identify,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression}, ; test=false, outfolder="")
+function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,X13forecast,X13history,X13identify,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression}; test=false, outfolder::Union{String,X13default}=X13default())
+    # println(typeof(spec))
     s = Vector{String}()
     spectype = typeof(spec)
     keys_at_end = Vector{Symbol}()
     for key in fieldnames(spectype)
+        # println("  $key")
         if test && key ∈ (:print,:save,:savelog)
             continue
         end
@@ -119,6 +131,24 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
         if !(val isa X13default)
             if key == :func
                 key = :function
+            # elseif key == :data && spec isa X13regression
+            #     # get file string
+            #     if val isa MVTSeries
+            #         ts = first(columns(val))[2]
+            #         println(ts)
+            #         _s = Vector{String}()
+            #         for t in rangeof(ts)
+            #             y,p = mit2yp(t)
+            #             push!(_s, "$y\t$p\t$(ts[t])")
+            #         end
+            #         filepath = joinpath(outfolder, "regdata.edt")
+            #         open(filepath, "w") do f
+            #             println(f, join(_s, "\n"))
+            #         end
+            #         push!(s, "file = \"$(filepath)\"" )
+            #         push!(s, "format = \"DATEVALUE\"" )
+            #         continue
+            #     end
             elseif key ∈ (:printphtrf, :tabtables,)
                 push!(s, "$key = $(x13write_alt(val))")
                 continue
@@ -126,18 +156,17 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
                 push!(s, "$key = $(x13write_plus(val))")
                 continue
             elseif spec isa X13pickmdl && key ∈ (:models,)
-                if length(outfolder) > 0
-                    #TODO: write outfile
-                    mdl_string = x13write(val)
+                if !(outfolder isa X13default) && length(outfolder) > 0
+                    mdl_string = x13write(val)*"\n"
                     open(joinpath(outfolder, "pickmdl.mdl"), "w") do f
-                        println(f, mdl_string)
+                        print(f, mdl_string);
                     end
-                    push!(s, "$file = \"pickmdl.mdl\"")
+                    push!(s, "file = \"$(joinpath(outfolder, "pickmdl.mdl"))\"")
                 else
                     push!(s, "$key = $(x13write(val))")
                 end
                 continue
-            elseif key ∈ (:ma, :ar, :b)
+            elseif key ∈ (:ma, :ar, :b, :aictest)
                 # Write these at the end of the spec file
                 push!(keys_at_end, key)
                 continue
@@ -147,6 +176,7 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
         end
     end
     for key in keys_at_end
+        # println("    $key")
         val = getfield(spec,key)
        if key ∈ (:ma, :ar, :b)
             push!(s, "$key = $(x12write_fixed_values(spec, key, val))")
@@ -162,7 +192,7 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
     end
 end
 
-function x13write(spec::X13series; test=false, outfolder="")
+function x13write(spec::X13series; test=false, outfolder::Union{String,X13default}=X13default())
     s = Vector{String}()
     for key in fieldnames(typeof(spec))
         if test && key ∈ (:print,:save,:savelog)
@@ -181,7 +211,7 @@ function x13write(spec::X13series; test=false, outfolder="")
     return "series {\n\t$(join(s,"\n\t"))\n}"
 end
 
-function x13write(spec::X13metadata; test=false, outfolder="")
+function x13write(spec::X13metadata; test=false, outfolder::Union{String,X13default}=X13default())
     s = Vector{String}()
     keys_vector = [p[1] for p in spec.entries]
     values_vector = [p[2] for p in spec.entries]
@@ -244,17 +274,27 @@ end
 x13write(val::TSeries) = "($(join(values(val), " ")))"
 function x13write(val::MVTSeries) 
     cols = columns(val)
+    colnames = collect(keys(cols))
     if length(cols) == 1
         return x13write(cols[first(keys(cols))])
     else
         # loop though all columns for time period 1, then for time period 2, etc.
-        vals = Vector{Float64}()
+        vals = Vector{String}()
+        # println(val.values)
         for t in rangeof(val)
-            for key in keys(cols)
-                push!(vals, cols[key][t])
-            end
+            # println(val[t])
+            push!(vals, join(val[t], "\t"))
+            # for key in colnames
+            #     key == colnames[end] ? push!(vals, "$(cols[key][t])\n\t") : push!(vals, "$(cols[key][t])\t")
+            #     # push!(vals, cols[key][t])
+            # end
+            # vals[end] = vals[end]*"\n"
         end
-        return "($(join(vals, " ")))"
+        # vals = vals[begin:end-13]
+        # println(join(vals, "\t"))
+        # vals[end] = vals[end][1:end-1]
+        # println(s2)
+        return "(\t$(join(vals, "\n\t"))\t)"
     end
 end
 x13write(val::Number) = val
