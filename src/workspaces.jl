@@ -3,7 +3,9 @@
 
 # 
 
-export Workspace
+export Workspace, AbstractWorkspace
+
+abstract type AbstractWorkspace end
 
 """
     struct Workspace
@@ -24,7 +26,7 @@ Members of the `Workspace` can be accessed using "dot" notation or using
 `[]` indexing, like a dictionary.
 
 """
-struct Workspace
+struct Workspace <: AbstractWorkspace
     _c::OrderedDict{Symbol,Any}
     # punt construction to container
     Workspace(args...; kwargs...) = new(OrderedDict{Symbol,Any}(args...; kwargs...))
@@ -32,7 +34,7 @@ struct Workspace
     Workspace(; kw...) = new(OrderedDict{Symbol,Any}(kw))
 end
 
-_c(w::Workspace) = getfield(w, :_c)
+_c(w::AbstractWorkspace) = getfield(w, :_c)
 
 _dict_to_workspace(x) = x
 _dict_to_workspace(x::AbstractDict) = Workspace(x)
@@ -45,31 +47,31 @@ function Workspace(fromdict::AbstractDict; recursive=false)
     return w
 end
 
-Base.propertynames(w::Workspace, private::Bool=false) = tuple(keys(w)...)
-Base.getproperty(w::Workspace, sym::Symbol) = sym === :_c ? _c(w) : getindex(w, sym)
-Base.setproperty!(w::Workspace, sym::Symbol, val) = setindex!(w, val, sym)
+Base.propertynames(w::AbstractWorkspace, private::Bool=false) = tuple(keys(w)...)
+Base.getproperty(w::AbstractWorkspace, sym::Symbol) = sym === :_c ? _c(w) : getindex(w, sym)
+Base.setproperty!(w::AbstractWorkspace, sym::Symbol, val) = setindex!(w, val, sym)
 
 # MacroTools.@forward Workspace._c (Base.getindex,)
-Base.getindex(w::Workspace, sym) = getindex(_c(w), convert(Symbol, sym))
-Base.getindex(w::Workspace, sym, syms...) = getindex(w, (sym, syms...,))
-Base.getindex(w::Workspace, syms::Vector) = getindex(w, (syms...,))
-Base.getindex(w::Workspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] for s in syms)
+Base.getindex(w::AbstractWorkspace, sym) = getindex(_c(w), convert(Symbol, sym))
+Base.getindex(w::AbstractWorkspace, sym, syms...) = getindex(w, (sym, syms...,))
+Base.getindex(w::AbstractWorkspace, syms::Vector) = getindex(w, (syms...,))
+Base.getindex(w::AbstractWorkspace, syms::Tuple) = typeof(w)(convert(Symbol, s) => w[s] for s in syms)
 
 MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
 
-function Base.eltype(w::Workspace)
+function Base.eltype(w::AbstractWorkspace)
     ET = isempty(w) ? Any : try Base.promote_typeof(values(w)...) catch; Any; end
     return Pair{Symbol, ET}
 end
 
-Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
-Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
+Base.push!(w::AbstractWorkspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
+Base.delete!(w::AbstractWorkspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
-@inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
-Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
-Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
+@inline Base.in(name, w::AbstractWorkspace) = convert(Symbol, name) ∈ keys(_c(w))
+Base.get(f::Function, w::AbstractWorkspace, key) = get(f, _c(w), key)
+Base.get!(f::Function, w::AbstractWorkspace, key) = get!(f, _c(w), key)
 
 """
     rangeof(w)
@@ -79,12 +81,12 @@ of all [`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of
 `w`. If there are objects of different frequencies there will be a
 mixed-frequency error.
 """
-rangeof(w::Workspace; method=intersect) = (
+rangeof(w::AbstractWorkspace; method=intersect) = (
     iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));
     mapreduce(rangeof, method, iterable)
 )
 
-_has_frequencyof(::Type{Workspace}) = true
+_has_frequencyof(::Type{<:AbstractWorkspace}) = true
 _has_frequencyof(::T) where {T} = _has_frequencyof(T)
 _has_frequencyof(::Type{<:MIT}) = true
 _has_frequencyof(::Type{<:Duration}) = true
@@ -98,7 +100,7 @@ function _has_frequencyof(::Type{T}) where {T}
     end
 end
 
-function frequencyof(w::Workspace; check=false)
+function frequencyof(w::AbstractWorkspace; check=false)
     # recursively collect all frequencies in w.
     freqs = []
     for v in values(w)
@@ -196,7 +198,7 @@ Apply [`strip!`](@ref) to all TSeries members of the given workspace. This
 includes nested workspaces, unless `recursive=false`.
 
 """
-function strip!(w::Workspace; recursive=true)
+function strip!(w::AbstractWorkspace; recursive=true)
     for (key, value) in w._c
         if value isa TSeries
             strip!(value)
@@ -208,8 +210,8 @@ function strip!(w::Workspace; recursive=true)
 end
 
 ###########################
-Base.filter(f, w::Workspace) = Workspace(filter(f, _c(w)))
-Base.filter!(f, w::Workspace) = (filter!(f, _c(w)); w)
+Base.filter(f, w::AbstractWorkspace) = typeof(w)(filter(f, _c(w)))
+Base.filter!(f, w::AbstractWorkspace) = (filter!(f, _c(w)); w)
 
 
 ###########################
@@ -241,15 +243,15 @@ end
 export @weval
 
 
-function Base.copyto!(x::MVTSeries, w::Workspace; range::AbstractUnitRange{<:MIT}=rangeof(x))
+function Base.copyto!(x::MVTSeries, w::AbstractWorkspace; range::AbstractUnitRange{<:MIT}=rangeof(x))
     for (key, value) in pairs(x)
         copyto!(value, range, w[key])
     end
     return x
 end
 
-function Base.map(f::Function, w::Workspace)
-    ret = Workspace()
+function Base.map(f::Function, w::AbstractWorkspace)
+    ret = typeof(w)()
     for (k, v) in w
         ret[k] = f(v)
     end

@@ -120,7 +120,7 @@ julia> q
     21Q4 : 21.0
 ```
 """
-@inline function rangeof(x::Union{TSeries,MVTSeries,Workspace}; drop::Integer)
+@inline function rangeof(x::Union{TSeries,MVTSeries,<:AbstractWorkspace}; drop::Integer)
     rng = rangeof(x)
     return drop > 0 ? (first(rng)+drop:last(rng)) : (first(rng):last(rng)+drop)
 end
