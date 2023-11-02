@@ -4,7 +4,7 @@ using TimeSeriesEcon
 
 @testset "X13 building a spec" begin
     ts = TSeries(2022Q1, collect(1:50))
-    spec = X13.X13spec(ts)
+    spec = X13.newspec(ts)
     m = X13.ArimaSpec()
     X13.arima!(spec,m)
     X13.estimate!(spec)
@@ -90,7 +90,7 @@ end
     # Manual example 1
     ts = TSeries(1950Q1, collect(1:50))
     xts = X13.series(ts, title="Quarterly Grape Harvest")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.arima!(spec, X13.ArimaModel(0,1,1))
     X13.estimate!(spec)
     s = X13.x13write(spec, test=true)
@@ -100,7 +100,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.arima!(spec, X13.ArimaModel(2,1,0,0,1,1))
     X13.estimate!(spec)
@@ -110,7 +110,7 @@ end
     @test contains(s, "transform {\n\tfunction = log\n}")
     
     # Manual example 3
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec; variables=[:seasonal, :const])
     X13.arima!(spec, X13.ArimaModel(0,1,1))
@@ -124,7 +124,7 @@ end
     # Manual example 4
     ts = TSeries(1950Y, collect(1:50))
     xts = X13.series(ts, title="Annual Olive Harvest")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.arima!(spec, X13.ArimaModel([2],1,0))
     X13.estimate!(spec)
     s = X13.x13write(spec, test=true)
@@ -134,7 +134,7 @@ end
     # Manual example 5
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec, variables = :const )
     X13.arima!(spec, X13.ArimaModel(0,1,1,12))
@@ -149,7 +149,7 @@ end
     # Manual example 6
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec, variables = [:const, :seasonal] )
     m = X13.ArimaModel(X13.ArimaSpec(1,1,0),X13.ArimaSpec(1,0,0,3),X13.ArimaSpec(0,0,1))
@@ -164,7 +164,7 @@ end
     # Manual example 7
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.arima!(spec, X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12); ma = [missing, 1.0], fixma = [false, true])
     X13.estimate!(spec)
@@ -179,7 +179,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:seasonal, :const])
     X13.automdl!(spec)
     X13.estimate!(spec)
@@ -192,7 +192,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=:td)
     X13.automdl!(spec; diff=[1,1], maxorder=[3,missing])
     X13.outlier!(spec)
@@ -207,7 +207,7 @@ end
     # Manual example 3 
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; aictest=:td)
     X13.automdl!(spec) #savelog argument here...
     X13.estimate!(spec)
@@ -223,7 +223,7 @@ end
     # Manual example 1
     ts = TSeries(1964M1, collect(1:150))
     xts = X13.series(ts, title="Monthly Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:td, X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
     X13.check!(spec)
@@ -235,7 +235,7 @@ end
     # Manual example 2
     ts = TSeries(1964M1, collect(1:500))
     xts = X13.series(ts, title="Warehouse clubs and supercenters")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.ao(2000M3), X13.tc(2001M2)])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -253,7 +253,7 @@ end
     # Manual example 3
     ts = TSeries(1964M1, collect(1:500))
     xts = X13.series(ts, title="Warehouse clubs and supercenters")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, :seasonal, X13.ao(2000M3), X13.tc(2001M2)])
     X13.arima!(spec, X13.ArimaModel(0,1,1))
@@ -274,7 +274,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=:seasonal)
     X13.arima!(spec, X13.ArimaModel(0,1,1); ma=[0.25], fixma=[true])
     X13.estimate!(spec)
@@ -286,7 +286,7 @@ end
     # Manual example 2
     ts = TSeries(1978M12, collect(1:350))
     xts = X13.series(ts, title="Monthly Inventory")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.ao(1999M1)])
     X13.arima!(spec, X13.ArimaModel(1, 1, 0, 0, 1, 1))
@@ -301,7 +301,7 @@ end
     #TODO: alternative to file argument
     ts = TSeries(1978M12, collect(1:300))
     xts = X13.series(ts, title="Monthly Inventory")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.estimate!(spec, file="Inven.mdl", fix=:all)
     X13.outlier!(spec, span=X13.Span(2000M1))
@@ -317,7 +317,7 @@ end
     # Manual example 1
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=:s3x9)
     X13.force!(spec, start=M10)
     s = X13.x13write(spec, test=true)
@@ -327,7 +327,7 @@ end
     # Manual example 2
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=:s3x9)
     X13.force!(spec, start=M10, type=:regress, rho=0.8)
     s = X13.x13write(spec, test=true)
@@ -337,7 +337,7 @@ end
     # Manual example 3
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=:s3x5)
     X13.force!(spec, type=:none, round=true)
     s = X13.x13write(spec, test=true)
@@ -349,7 +349,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=:td)
     X13.arima!(spec, X13.ArimaSpec(0, 1, 1), X13.ArimaSpec(0, 1, 1, 12))
@@ -363,7 +363,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=:td)
     X13.arima!(spec, X13.ArimaSpec(0, 1, 1), X13.ArimaSpec(0, 1, 1, 12))
@@ -382,7 +382,7 @@ end
     # Manual example 3
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=:td)
     X13.arima!(spec, X13.ArimaSpec(0, 1, 1), X13.ArimaSpec(0, 1, 1, 12))
@@ -398,7 +398,7 @@ end
     # Manual example 4
     ts = TSeries(1976M1, collect(1:250))
     xts = X13.series(ts, title="Monthly Sales", span=first(rangeof(ts)):1990M3)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=:td)
     X13.arima!(spec, X13.ArimaSpec(0, 1, 1), X13.ArimaSpec(0, 1, 1, 12))
@@ -414,7 +414,7 @@ end
     # Manual example 5
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=:td)
     X13.arima!(spec, X13.ArimaSpec(0, 1, 1), X13.ArimaSpec(0, 1, 1, 12))
@@ -430,7 +430,7 @@ end
     # Manual example 6
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=:td)
     X13.arima!(spec, X13.ArimaSpec(0, 1, 1), X13.ArimaSpec(0, 1, 1, 12))
@@ -452,7 +452,7 @@ end
     # Manual example 2
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Sales of livestock")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=:s3x9)
     X13.history!(spec, sadjlags=2)
     s = X13.x13write(spec, test=true)
@@ -463,7 +463,7 @@ end
     # Manual example 2
     ts = TSeries(1969M7, collect(1:150))
     xts = X13.series(ts, title="Exports of leather goods")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:const, :td, X13.ls(1972M5), X13.ls(1976M10)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 2, 1, 1, 0))
     X13.estimate!(spec)
@@ -477,7 +477,7 @@ end
     # Manual example 3
     ts = TSeries(1969M7, collect(1:150))
     xts = X13.series(ts, title="Exports of leather goods")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:const, :td, X13.ls(1972M5), X13.ls(1976M10)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 2, 1, 1, 0))
     X13.estimate!(spec)
@@ -491,7 +491,7 @@ end
     # Manual example 4
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Housing Starts in the Midwest", comptype=:add, modelspan=X13.Span(missing,M12))
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=:td)
     X13.arima!(spec, X13.ArimaModel(0, 1, 2, 0, 1, 1))
     X13.x11!(spec, seasonalma=:s3x3)
@@ -510,7 +510,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.identify!(spec, diff=[0, 1], sdiff=[0, 1])
     s = X13.x13write(spec, test=true)
@@ -521,7 +521,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:const, :seasonal])
     X13.identify!(spec, diff=[0, 1])
     s = X13.x13write(spec, test=true)
@@ -532,7 +532,7 @@ end
     # Manual example 3
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.easter(14)])
     X13.identify!(spec, diff=[1], sdiff=[1])
@@ -545,7 +545,7 @@ end
     # Manual example 4
     ts = TSeries(1963Q1, collect(1:50))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[X13.ls(1971Q1)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
     X13.identify!(spec, diff=[0, 1], sdiff=[0, 1], maxlag=16)
@@ -566,7 +566,7 @@ end
     # Manual example 1
     ts = TSeries(1964M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=:td, aictest=[:td, :easter])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
     X13.check!(spec)
@@ -582,7 +582,7 @@ end
     # Manual example 2
     ts = TSeries(1964M1, collect(1:150))
     xts = X13.series(ts, title="Monthly Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:td, X13.ao(1967M6), X13.ls(1971M6), X13.easter(8)])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
     X13.check!(spec)
@@ -596,7 +596,7 @@ end
     # Manual example 3
     ts = TSeries(1964M1, collect(1:150))
     xts = X13.series(ts, title="Monthly Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:td, X13.ao(1967M6), X13.ls(1971M6), X13.easter(15)])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
     X13.check!(spec)
@@ -615,7 +615,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.arima!(spec, X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12))
     X13.outlier!(spec, lsrun=5, types=[:ao, :ls])
     s = X13.x13write(spec, test=true)
@@ -625,7 +625,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:250))
     xts = X13.series(ts, title="Monthly Sales", span=1980M1:1992M12)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[X13.ls(1981M6), X13.ls(1990M11)])
     X13.arima!(spec,  X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12))
     X13.estimate!(spec)
@@ -639,7 +639,7 @@ end
     # Manual example 3
     ts = TSeries(1976M1, collect(1:250))
     xts = X13.series(ts, title="Monthly Sales", span=1980M1:1992M12)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.arima!(spec,  X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12))
     X13.estimate!(spec)
     X13.outlier!(spec, types=:ls, critical=3.0, lsrun=2, span=1987M1:1988M12)
@@ -651,7 +651,7 @@ end
     # Manual example 4
     ts = TSeries(1976M1, collect(1:250))
     xts = X13.series(ts, title="Monthly Sales", span=1980M1:1992M12)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.arima!(spec,  X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12))
     X13.estimate!(spec)
     X13.outlier!(spec, critical=[3.0, 4.5, 4.0], types=:all)
@@ -675,7 +675,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:td, :seasonal])
     X13.pickmdl!(spec, models, mode=:fcst)
     X13.estimate!(spec)
@@ -689,7 +689,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=:td)
     X13.pickmdl!(spec, models, mode=:fcst, method=:first, fcstlim=20, qlim=10, overdiff=0.99, identify=:all)
     X13.estimate!(spec)
@@ -705,7 +705,7 @@ end
     # Manual example 3
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=:td)
     X13.pickmdl!(spec, models, mode=:fcst, outofsample=true)
     X13.estimate!(spec)
@@ -726,7 +726,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:const, :seasonal])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1))
     X13.estimate!(spec)
@@ -738,7 +738,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Irregular Component of Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:const, X13.sincos([4,5])])
     X13.estimate!(spec)
     X13.spectrum!(spec)
@@ -750,7 +750,7 @@ end
     # Manual example 3
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.easter(8), X13.labor(10), X13.thank(3)])
     X13.identify!(spec, diff=[0, 1], sdiff=[0, 1])
@@ -762,7 +762,7 @@ end
     # Manual example 4
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:tdnolpyear, :lom, X13.easter(8), X13.labor(10), X13.thank(3)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -776,7 +776,7 @@ end
     # Manual example 5
     ts = TSeries(1990M1, collect(1:50))
     xts = X13.series(ts, title="Retail inventory of food products")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[X13.tdstock1coef(31), X13.easterstock(8)], aictest = [:td, :easter])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
     X13.x11!(spec)
@@ -789,7 +789,7 @@ end
     # Manual example 6
     ts = TSeries(1990Q1, collect(1:150))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(2007Q1), X13.rp(2005Q2,2005Q4), X13.ao(1998Q1), :td])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -803,7 +803,7 @@ end
     # Manual example 7
     ts = TSeries(1990Q1, collect(1:150))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -817,7 +817,7 @@ end
     # Manual example 8
     ts = TSeries(1990Q1, collect(1:150))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td], user=:tls, data=MVTSeries(1990Q1, [:tls], collect(51:200)))
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -831,7 +831,7 @@ end
     # Manual example 9
     ts = TSeries(1981Q1, collect(1:50))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=X13.tl(1985Q3,1987Q1))
     X13.identify!(spec, diff=[0,1], sdiff=[0,1])
     s = X13.x13write(spec, test=true)
@@ -841,7 +841,7 @@ end
     # Manual example 10
     ts = TSeries(1970M1, collect(1:50))
     xts = X13.series(ts, title="Monthly Riverflow")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:seasonal, :const], data=MVTSeries(1960M1, [:temp, :precip], hcat(collect(1.0:0.1:18),collect(0.0:0.2:34))))
     X13.arima!(spec, X13.ArimaModel(3, 0, 0, 0, 0, 0))
     X13.estimate!(spec)
@@ -853,7 +853,7 @@ end
     # Manual example 11
     ts = TSeries(1967M1, collect(1:250))
     xts = X13.series(ts, title="Retail Inventory - Family Apparel", type=:stock)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.tdstock(31), X13.ao(1980M7)], aictest=:tdstock)
     X13.arima!(spec, X13.ArimaModel(0, 1, 0, 0, 1, 1))
@@ -867,7 +867,7 @@ end
     # Manual example 12
     ts = TSeries(1976M1, collect(1:150))
     xts = X13.series(ts, title="Retail Sales - Televisions", type=:flow)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.td(1985M12), X13.seasonal(1985M12)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1))
@@ -881,7 +881,7 @@ end
     # Manual example 13
     ts = TSeries(1976M1, collect(1:150))
     xts = X13.series(ts, title="Retail Sales - Televisions", type=:flow)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.td(1985M12, :zerobefore), :seasonal, X13.seasonal(1985M12, :zerobefore)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1))
@@ -895,7 +895,7 @@ end
     # Manual example 14
     ts = TSeries(1993Q1, collect(1:150))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(2001Q3), X13.ls(2007Q1), X13.ls(2007Q3), X13.ao(2008Q4)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -909,7 +909,7 @@ end
     # Manual example 15
     ts = TSeries(1993Q1, collect(1:150))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(2001Q3), X13.tl(2007Q1,2007Q2), X13.ao(2008Q4)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -923,7 +923,7 @@ end
     # Manual example 16
     ts = TSeries(1993Q1, collect(1:150))
     xts = X13.series(ts, title="Quarterly Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(2001Q3), X13.lss(2007Q1,2007Q3), X13.ao(2008Q4)])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -937,7 +937,7 @@ end
     # Manual example 17
     ts = TSeries(1980M1, collect(1:50))
     xts = X13.series(ts, title="Exports of pasta products")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables=[:const, :td])
     X13.automdl!(spec)
     X13.x11!(spec, mode=:add)
@@ -949,7 +949,7 @@ end
     # Manual example 18
     ts = TSeries(1975M1, collect(1:250))
     xts = X13.series(ts, title="Retail sales of children's apparel")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:const, :td, X13.ao(1976M1), X13.ls(1991M12), X13.easter(8), :seasonal],
         data=MVTSeries(1975M1, [:sale88, :sale89, :sale90], hcat(collect(1.0:0.1:28.3),collect(0.0:0.2:54.6),collect(3.0:0.3:84.9)))
@@ -967,7 +967,7 @@ end
     # Manual example 19
     ts = TSeries(1975M1, collect(1:250))
     xts = X13.series(ts, title="Retail sales of children's apparel")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:const, :td, X13.ao(1976M1), X13.ls(1991M12), X13.easter(8), :seasonal],
         data=MVTSeries(1975M1, [:sale88, :sale89, :sale90], hcat(collect(1.0:0.1:28.3),collect(0.0:0.2:54.6),collect(3.0:0.3:84.9))),
@@ -986,7 +986,7 @@ end
     # Manual example 20
     ts = TSeries(1975M1, collect(1:150))
     xts = X13.series(ts, title="Midwest total starts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(1977M1), X13.ls(1979M1), X13.ls(1979M3), X13.ls(1980M1), :td],
         b = [-0.7946, -0.8739, 0.6773, -0.6850, 0.0209, 0.0107, -0.0022, 0.0018, 0.0088, -0.0075],
@@ -1005,7 +1005,7 @@ end
     # Manual example 21
     ts = TSeries(1975M1, collect(1:50))
     xts = X13.series(ts, title="Department store sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.easter(8)])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -1027,7 +1027,7 @@ end
     # Manual example 22
     ts = TSeries(1975M1, collect(1:50))
     xts = X13.series(ts, title="Department store sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.easter(8), X13.easter(0)])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -1049,7 +1049,7 @@ end
     # Manual example 23
     ts = TSeries(1975M1, collect(1:50))
     xts = X13.series(ts, title="Department store sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.easter(8), X13.easter(0)], aictest=[:td, :easter], testalleaster=true)
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -1071,7 +1071,7 @@ end
     # Manual example 24
     ts = TSeries(1990Q1, collect(1:50))
     xts = X13.series(ts, title="US Total Housing Starts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec;
         data=MVTSeries(1985Q1, [:s1, :s2, :s3], hcat(collect(1.0:0.1:10.3),collect(0.0:0.2:18.6),collect(3.0:0.3:30.9))),
@@ -1090,7 +1090,7 @@ end
     # Manual example 25
     ts = TSeries(1991M1, collect(1:150))
     xts = X13.series(ts, title="Payment to family nanny, taiwan", span=X13.Span(1993M1))
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec;
         variables=[X13.ao(1995M9), X13.ao(1997M1), X13.ao(1997M2)],
@@ -1117,7 +1117,7 @@ end
     # Manual example 1
     ts = TSeries(1987M1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:auto)
     X13.regression!(spec; aictest=:td)
     X13.automdl!(spec)
@@ -1135,7 +1135,7 @@ end
     # Manual example 2
     ts = TSeries(1990Q1, collect(1:50))
     xts = X13.series(ts, title="Exports of truck parts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; aictest=:td)
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -1153,7 +1153,7 @@ end
     # Manual example 3
     ts = TSeries(MIT{YPFrequency{6}}(1995*6), collect(1:50))
     xts = X13.series(ts, title="Model based adjustment of Bimonthly exports")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; aictest=:td)
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -1171,7 +1171,7 @@ end
     # Example with tabtables
     ts = TSeries(MIT{YPFrequency{6}}(1995*6), collect(1:50))
     xts = X13.series(ts, title="Model based adjustment of Bimonthly exports")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; aictest=:td)
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -1193,21 +1193,21 @@ end
     # Manual example 1
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="A simple example")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     s = X13.x13write(spec, test=true)
     @test contains(s, "series {\n\tdata = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 \n\t\t45 46 47 48 49 50)\n\tstart = 1967.jan\n\ttitle = \"A simple example\"\n}")
     
     # Manual example 2
     ts = TSeries(1940Q1, collect(1:250))
     xts = X13.series(ts, span=1964Q1:1990Q4)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     s = X13.x13write(spec, test=true)
     @test contains(s, "series {\n\tdata = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 \n\t\t45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 \n\t\t88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 \n\t\t123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 \n\t\t155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 \n\t\t187 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 \n\t\t219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250)\n\tperiod = 4\n\tspan = (1964.1, 1990.4)\n\tstart = 1940.1\n}")
     
     # Manual example 6
     ts = TSeries(1976M1, collect(1.0:0.1:25.0))
     xts = X13.series(ts, span=first(rangeof(ts)):1992M12, comptype=:add, decimals=2)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     s = X13.x13write(spec, test=true)
     @test contains(s, "series {\n\tcomptype = add\n\tdata = (1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 \n\t\t4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0 5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 5.9 6.0 6.1 6.2 6.3 6.4 6.5 6.6 6.7 6.8 6.9 7.0 7.1 7.2 \n\t\t7.3 7.4 7.5 7.6 7.7 7.8 7.9 8.0 8.1 8.2 8.3 8.4 8.5 8.6 8.7 8.8 8.9 9.0 9.1 9.2 9.3 9.4 9.5 9.6 9.7 9.8 9.9 10.0 10.1 10.2 10.3 \n\t\t10.4 10.5 10.6 10.7 10.8 10.9 11.0 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9 12.0 12.1 12.2 12.3 12.4 12.5 12.6 12.7 12.8 12.9 \n\t\t13.0 13.1 13.2 13.3 13.4 13.5 13.6 13.7 13.8 13.9 14.0 14.1 14.2 14.3 14.4 14.5 14.6 14.7 14.8 14.9 15.0 15.1 15.2 15.3 15.4 15.5 \n\t\t15.6 15.7 15.8 15.9 16.0 16.1 16.2 16.3 16.4 16.5 16.6 16.7 16.8 16.9 17.0 17.1 17.2 17.3 17.4 17.5 17.6 17.7 17.8 17.9 18.0 18.1 \n\t\t18.2 18.3 18.4 18.5 18.6 18.7 18.8 18.9 19.0 19.1 19.2 19.3 19.4 19.5 19.6 19.7 19.8 19.9 20.0 20.1 20.2 20.3 20.4 20.5 20.6 20.7 \n\t\t20.8 20.9 21.0 21.1 21.2 21.3 21.4 21.5 21.6 21.7 21.8 21.9 22.0 22.1 22.2 22.3 22.4 22.5 22.6 22.7 22.8 22.9 23.0 23.1 23.2 23.3 \n\t\t23.4 23.5 23.6 23.7 23.8 23.9 24.0 24.1 24.2 24.3 24.4 24.5 24.6 24.7 24.8 24.9 25.0)\n\tdecimals = 2\n\tspan = (1976.jan, 1992.dec)\n\tstart = 1976.jan\n}")
     
@@ -1218,7 +1218,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Tourist")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=:s3x9)
     X13.slidingspans!(spec)
     s = X13.x13write(spec, test=true)
@@ -1228,7 +1228,7 @@ end
     # Manual example 2
     ts = TSeries(1967Q1, collect(1:50))
     xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=[:s3x9, :s3x9, :s3x5, :s3x5], trendma=7, mode=:logadd)
     X13.slidingspans!(spec, cutseas = 5.0, cutchng = 5.0)
     s = X13.x13write(spec, test=true)
@@ -1238,7 +1238,7 @@ end
     # Manual example 3
     ts = TSeries(1980M1, collect(1:50))
     xts = X13.series(ts, title="Number of employed machinists - X-11")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables = [:const, :td, X13.rp(1982M5,1982M10)])
     X13.arima!(spec, X13.ArimaModel(0,1,2,0,1,1))
     X13.outlier!(spec)
@@ -1260,7 +1260,7 @@ end
     # Manual example 4
     ts = TSeries(1980M1, collect(1:50))
     xts = X13.series(ts, title="Number of employed machinists - Seats")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec; variables = [:const, :td, X13.rp(1982M5,1982M10)])
     X13.arima!(spec, X13.ArimaModel(0,1,2,0,1,1))
     X13.outlier!(spec)
@@ -1282,7 +1282,7 @@ end
     # Manual example 5
     ts = TSeries(1975M1, collect(1:50))
     xts = X13.series(ts, title="Cheese sales in Wisconsin")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec; variables = [:const, :seasonal, :tdnolpyear])
     X13.arima!(spec, X13.ArimaModel(3,1,0))
@@ -1300,7 +1300,7 @@ end
     # Manual example 6
     ts = TSeries(1967Q1, collect(1:50))
     xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=:s3x9)
     X13.slidingspans!(spec, length=40, numspans=3)
     s = X13.x13write(spec, test=true)
@@ -1314,7 +1314,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Klaatu")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=:s3x9, trendma=23)
     X13.spectrum!(spec, logqs=true)
     s = X13.x13write(spec, test=true)
@@ -1324,7 +1324,7 @@ end
     # Manual example 2
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Spectrum analysis of Building Permits Series")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.spectrum!(spec, start=1987M1)
     s = X13.x13write(spec, test=true)
@@ -1334,7 +1334,7 @@ end
     # Manual example 3
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="TOTAL ONE-FAMILY Housing Starts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=[:s3x9], title="Composite adj. of 1-Family housing starts")
     X13.spectrum!(spec, type=:periodgram)
     s = X13.x13write(spec, test=true)
@@ -1344,7 +1344,7 @@ end
     # Manual example 4
     ts = TSeries(1988M1, collect(1:50))
     xts = X13.series(ts, title="Total U.S. Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[:td, X13.easter(8), X13.labor(8)])
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
@@ -1366,7 +1366,7 @@ end
     # Manual example 1
     ts = TSeries(1967M1, collect(1:50))
     xts = X13.series(ts, title="Transform example")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; data=TSeries(1967M1,collect(0.1:0.1:5.0)), mode=:ratio, adjust=:lom)
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n\tadjust = lom\n\tdata = (0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 \n\t\t3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0)\n\tmode = ratio\n\tstart = 1967.jan\n}")
@@ -1374,7 +1374,7 @@ end
     # Manual example 2
     ts = TSeries(1997Q1, collect(1:50))
     xts = X13.series(ts, title="Transform example")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; constant=45.0, func=:auto)
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n\tfunction = auto\n\tconstant = 45.0\n}")
@@ -1382,7 +1382,7 @@ end
     # Manual example 3
     ts = TSeries(1980M1, collect(1:50))
     xts = X13.series(ts, title="Total U.S. Retail Sales --- Current Dollars")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log, data=TSeries(1970M1,collect(0.1:0.1:17.0)), title="Consumer Price Index" )
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n\tdata = (0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 \n\t\t3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0 5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 5.9 6.0 6.1 6.2 6.3 \n\t\t6.4 6.5 6.6 6.7 6.8 6.9 7.0 7.1 7.2 7.3 7.4 7.5 7.6 7.7 7.8 7.9 8.0 8.1 8.2 8.3 8.4 8.5 8.6 8.7 8.8 8.9 9.0 9.1 9.2 9.3 9.4 9.5 \n\t\t9.6 9.7 9.8 9.9 10.0 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.0 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9 12.0 12.1 12.2 \n\t\t12.3 12.4 12.5 12.6 12.7 12.8 12.9 13.0 13.1 13.2 13.3 13.4 13.5 13.6 13.7 13.8 13.9 14.0 14.1 14.2 14.3 14.4 14.5 14.6 14.7 14.8 \n\t\t14.9 15.0 15.1 15.2 15.3 15.4 15.5 15.6 15.7 15.8 15.9 16.0 16.1 16.2 16.3 16.4 16.5 16.6 16.7 16.8 16.9 17.0)\n\tfunction = log\n\tstart = 1970.jan\n\ttitle = \"Consumer Price Index\"\n}")
@@ -1390,7 +1390,7 @@ end
     # Manual example 4
     ts = TSeries(1980M1, collect(1:50))
     xts = X13.series(ts, title="Total U.S. Retail Sales --- Current Dollars")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log, data=TSeries(1970M1,collect(0.1:0.1:17.0)), title="Consumer Price Index", type=:temporary)
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n\tdata = (0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 \n\t\t3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0 5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 5.9 6.0 6.1 6.2 6.3 \n\t\t6.4 6.5 6.6 6.7 6.8 6.9 7.0 7.1 7.2 7.3 7.4 7.5 7.6 7.7 7.8 7.9 8.0 8.1 8.2 8.3 8.4 8.5 8.6 8.7 8.8 8.9 9.0 9.1 9.2 9.3 9.4 9.5 \n\t\t9.6 9.7 9.8 9.9 10.0 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.0 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9 12.0 12.1 12.2 \n\t\t12.3 12.4 12.5 12.6 12.7 12.8 12.9 13.0 13.1 13.2 13.3 13.4 13.5 13.6 13.7 13.8 13.9 14.0 14.1 14.2 14.3 14.4 14.5 14.6 14.7 14.8 \n\t\t14.9 15.0 15.1 15.2 15.3 15.4 15.5 15.6 15.7 15.8 15.9 16.0 16.1 16.2 16.3 16.4 16.5 16.6 16.7 16.8 16.9 17.0)\n\tfunction = log\n\tstart = 1970.jan\n\ttitle = \"Consumer Price Index\"\n\ttype = temporary\n}")
@@ -1398,7 +1398,7 @@ end
     # Manual example 5
     ts = TSeries(1901Q1, collect(1:50))
     xts = X13.series(ts, title="Annual Rainfall")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; power=.3333)
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n\tpower = 0.3333\n}")
@@ -1406,7 +1406,7 @@ end
     # Manual example 6
     ts = TSeries(1980M1, collect(1:50))
     xts = X13.series(ts, title="Annual Rainfall")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:log, 
         data=MVTSeries(1970M1,[:cpi, :strike], hcat(collect(0.1:0.1:17.0), collect(17.0:-0.1:0.1))), 
         title="Consumer Price Index & Strike Effect"
@@ -1417,7 +1417,7 @@ end
     # Manual example 7
     ts = TSeries(1978M1, collect(1:50))
     xts = X13.series(ts, title="Total U.K. Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec; func=:auto, aicdiff=0.0)
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n\taicdiff = 0.0\n\tfunction = auto\n}")
@@ -1430,7 +1430,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Klaatu")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec)
     X13.spectrum!(spec, logqs=true)
     s = X13.x13write(spec, test=true)
@@ -1439,7 +1439,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Klaatu")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=:s3x9, trendma=23)
     X13.x11regression!(spec, variables=:td, aictest=:td)
     s = X13.x13write(spec, test=true)
@@ -1449,7 +1449,7 @@ end
     # Manual example 3
     ts = TSeries(1967Q1, collect(1:50))
     xts = X13.series(ts, title="Quarterly housing starts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=[:s3x3, :s3x3, :s3x5, :s3x5], trendma=7)
     s = X13.x13write(spec, test=true)
     @test contains(s, "x11 {\n\tseasonalma = (s3x3 s3x3 s3x5 s3x5)\n\ttrendma = 7\n}")
@@ -1457,7 +1457,7 @@ end
     # Manual example 4
     ts = TSeries(1969M7, collect(1:150))
     xts = X13.series(ts, title="Exports of leather goods")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec, variables=[:const, :td, X13.ls(1972M5), X13.ls(1976M10)])
     X13.arima!(spec, X13.ArimaModel(0,1,2,1,1,0))
     X13.estimate!(spec)
@@ -1473,7 +1473,7 @@ end
     # Manual example 5
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec, variables=[:const, :td], 
         data=MVTSeries(1975M1, [:sale88, :sale90], hcat(collect(1.0:0.1:19.1),collect(3.0:0.3:57.3)))
@@ -1491,7 +1491,7 @@ end
     # Manual example 6
     ts = TSeries(1976M1, collect(1:150))
     xts = X13.series(ts, title="NORTHEAST ONE FAMILY Housing Starts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec, variables=[X13.ao(1976M2), X13.ao(1978M2), X13.ls(1980M2), X13.ls(1982M11), X13.ao(1984M2)])
     X13.arima!(spec, X13.ArimaModel(0,1,2,0,1,1))
@@ -1507,7 +1507,7 @@ end
     # Manual example 7
     ts = TSeries(1976M1, collect(1:150))
     xts = X13.series(ts, title="Trend for NORTHEAST ONE FAMILY Housing Starts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec, variables=[X13.ls(1980M2), X13.ls(1982M11),])
     X13.arima!(spec, X13.ArimaModel(0,1,1))
     X13.forecast!(spec)
@@ -1521,7 +1521,7 @@ end
     # Manual example 8
     ts = TSeries(1975M1, collect(1:50))
     xts = X13.series(ts, title="Automobile sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec, variables=[:const], 
         data=MVTSeries(1975M1, [:strike80, :strike85, :strike90], hcat(collect(1.0:0.1:8.3),collect(0.0:0.2:14.6),collect(3.0:0.3:24.9)))
@@ -1539,7 +1539,7 @@ end
     # Manual example 9
     ts = TSeries(1978M1, collect(1:50))
     xts = X13.series(ts, title="Total U.K. Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:auto, aicdiff=0.0)
     X13.x11!(spec)
     s = X13.x13write(spec, test=true)
@@ -1549,7 +1549,7 @@ end
     # Example with sigmavec
     ts = TSeries(1978M1, collect(1:50))
     xts = X13.series(ts, title="Total U.K. Retail Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:auto, aicdiff=0.0)
     X13.x11!(spec, calendarsigma=:select, sigmavec=[M1, M2, M12])
     s = X13.x13write(spec, test=true)
@@ -1563,7 +1563,7 @@ end
     # Manual example 1
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Westus")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec)
     X13.x11regression!(spec, variables=:td)
     s = X13.x13write(spec, test=true)
@@ -1573,7 +1573,7 @@ end
     # Manual example 2
     ts = TSeries(1976M1, collect(1:50))
     xts = X13.series(ts, title="Westus")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec)
     X13.x11regression!(spec, variables=:td, aictest=[:td, :easter])
     s = X13.x13write(spec, test=true)
@@ -1583,7 +1583,7 @@ end
     # Manual example 3
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Ukclothes")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec)
     X13.x11regression!(spec, variables=:td, usertype=:holiday, critical=4.0,
         data=MVTSeries(1980M1, [:easter1, :easter2], hcat(collect(0.1:0.1:11),collect(11:-0.1:0.1)))
@@ -1595,7 +1595,7 @@ end
     # Manual example 4
     ts = TSeries(1980M1, collect(1:50))
     xts = X13.series(ts, title="nzstarts")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec)
     X13.x11regression!(spec, variables=:td, tdprior=[1.4, 1.4, 1.4, 1.4, 1.4, 0.0, 0.0])
     s = X13.x13write(spec, test=true)
@@ -1605,7 +1605,7 @@ end
     # Manual example 5
     ts = TSeries(1964Q1, collect(1:150))
     xts = X13.series(ts, title="MIDWEST ONE FAMILY Housing Starts", span=1964Q1:1989Q3)
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec)
     X13.x11regression!(spec, variables=[:td, X13.easter(8)],
         b=[0.4453, 0.8550, -0.3012, 0.2717, -0.1705, 0.0983, -0.0082],
@@ -1618,7 +1618,7 @@ end
     # Manual example 6
     ts = TSeries(1967M1, collect(1:150))
     xts = X13.series(ts, title="Motor Home Sales", span=X13.Span(1972M1))
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=:x11default, sigmalim = [1.8, 2.8], appendfcst=true)
     X13.x11regression!(spec, variables=[X13.td(1990M1), X13.easter(8), X13.labor(10), X13.thank(10)])
     s = X13.x13write(spec, test=true)
@@ -1628,7 +1628,7 @@ end
     # Manual example 7
     ts = TSeries(1975M1, collect(1:50))
     xts = X13.series(ts, title="Automobile sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.transform!(spec, func=:log)
     X13.regression!(spec, variables=[:const], 
         data=MVTSeries(1975M1, [:strike80, :strike85, :strike90], hcat(collect(1.0:0.1:8.3),collect(0.0:0.2:14.6),collect(3.0:0.3:24.9)))
@@ -1649,16 +1649,18 @@ end
     # invalid aictest when using :td variable
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec, variables=[:const, :td], aictest=:lom)
     @test_throws ArgumentError X13.x13write(spec, test=true)
 
     # invalid mixing of td and tdstock regressors
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
-    spec = X13.X13spec(xts)
+    spec = X13.newspec(xts)
     X13.regression!(spec, variables=[:const, :td, :tdstock])
     @test_throws ArgumentError X13.x13write(spec, test=true)
     
 end
+
+
 

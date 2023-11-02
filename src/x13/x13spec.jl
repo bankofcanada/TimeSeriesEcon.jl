@@ -560,79 +560,61 @@ mutable struct X13spec{F<:Frequency}
     folder::Union{String,X13default}
     string::Union{String,X13default}
 
-    X13spec(F::Frequency) = new{F}(
-        _X13default, # series::Union{X13series,X13default}
-        _X13default, # arima::Union{X13arima,X13default}
-        _X13default, # estimate::Union{X13estimate,X13default}
-        _X13default, # transform::Union{X13transform,X13default}
-        _X13default, # regression::Union{X13regression,X13default}
-        _X13default, # automdl::Union{X13automdl,X13default} #or its own type
-        _X13default, # x11::Union{X13x11,X13default}
-        _X13default, # x11regression::Union{X13x11regression,X13default}
-        _X13default, # check::Union{X13check,X13default}
-        _X13default, # forecast::Union{X13forecast,X13default}
-        # # composite::X13composite # not supported
-        _X13default, # force::Union{X13force,X13default}
-        _X13default, # pickmdl::Union{X13pickmdl,X13default}
-        _X13default, # history::Union{X13history,X13default}
-        _X13default, # metadata::Dict{String,String}
-        _X13default, # identify::Union{X13identify,X13default}
-        _X13default, # outlier::Union{X13outlier,X13default}
-        _X13default, # seats::Union{X13seats,X13default} # not supported
-        _X13default, # slidingspans::Union{X13slidingspans,X13default}
-        _X13default, # spectrum::Union{X13spectrum,X13default}
-        _X13default, # folder::Union{String,X13default}
-        _X13default, # string::Union{String,X13default}
-    )
-    X13spec(t::TSeries{F}; kwargs...) where F = new{F}(
-        series(t; kwargs...), # series::Union{X13series,X13default}
-        _X13default, # arima::Union{X13arima,X13default}
-        _X13default, # estimate::Union{X13estimate,X13default}
-        _X13default, # transform::Union{X13transform,X13default}
-        _X13default, # regression::Union{X13regression,X13default}
-        _X13default, # automdl::Union{X13automdl,X13default} #or its own type
-        _X13default, # x11::Union{X13x11,X13default}
-        _X13default, # x11regression::Union{X13x11regression,X13default}
-        _X13default, # check::Union{X13check,X13default}
-        _X13default, # forecast::Union{X13forecast,X13default}
-        # # composite::X13composite # not supported
-        _X13default, # force::Union{X13force,X13default}
-        _X13default, # pickmdl::Union{X13pickmdl,X13default}
-        _X13default, # history::Union{X13history,X13default}
-        _X13default, # metadata::Dict{String,String}
-        _X13default, # identify::Union{X13identify,X13default}
-        _X13default, # outlier::Union{X13outlier,X13default}
-        _X13default, # seats::Union{X13seats,X13default} # not supported
-        _X13default, # slidingspans::Union{X13slidingspans,X13default}
-        _X13default, # spectrum::Union{X13spectrum,X13default}
-        _X13default, # folder::Union{String,X13default}
-        _X13default, # string::Union{String,X13default}
-    )
-    X13spec(t::X13series{F}; kwargs...) where F = new{F}(
-        t, # series::Union{X13series,X13default}
-        _X13default, # arima::Union{X13arima,X13default}
-        _X13default, # estimate::Union{X13estimate,X13default}
-        _X13default, # transform::Union{X13transform,X13default}
-        _X13default, # regression::Union{X13regression,X13default}
-        _X13default, # automdl::Union{X13automdl,X13default} #or its own type
-        _X13default, # x11::Union{X13x11,X13default}
-        _X13default, # x11regression::Union{X13x11regression,X13default}
-        _X13default, # check::Union{X13check,X13default}
-        _X13default, # forecast::Union{X13forecast,X13default}
-        # # composite::X13composite # not supported
-        _X13default, # force::Union{X13force,X13default}
-        _X13default, # pickmdl::Union{X13pickmdl,X13default}
-        _X13default, # history::Union{X13history,X13default}
-        _X13default, # metadata::Dict{String,String}
-        _X13default, # identify::Union{X13identify,X13default}
-        _X13default, # outlier::Union{X13outlier,X13default}
-        _X13default, # seats::Union{X13seats,X13default} # not supported
-        _X13default, # slidingspans::Union{X13slidingspans,X13default}
-        _X13default, # spectrum::Union{X13spectrum,X13default}
-        _X13default, # folder::Union{String,X13default}
-        _X13default, # string::Union{String,X13default}
-    )
 end
+
+function newspec(series::Union{X13series,X13default}; 
+    arima::Union{X13arima,X13default} = _X13default,
+    estimate::Union{X13estimate,X13default} = _X13default,
+    transform::Union{X13transform,X13default} = _X13default,
+    regression::Union{X13regression,X13default} = _X13default,
+    automdl::Union{X13automdl,X13default} = _X13default,
+    x11::Union{X13x11,X13default} = _X13default,
+    x11regression::Union{X13x11regression,X13default} = _X13default,
+    check::Union{X13check,X13default} = _X13default,
+    forecast::Union{X13forecast,X13default} = _X13default,
+    # composite::X13composite # not supported
+    force::Union{X13force,X13default} = _X13default,
+    pickmdl::Union{X13pickmdl,X13default} = _X13default,
+    history::Union{X13history,X13default} = _X13default,
+    metadata::Union{X13metadata,X13default} = _X13default,
+    identify::Union{X13identify,X13default} = _X13default,
+    outlier::Union{X13outlier,X13default} = _X13default,
+    seats::Union{X13seats,X13default} = _X13default,
+    slidingspans::Union{X13slidingspans,X13default} = _X13default,
+    spectrum::Union{X13spectrum,X13default} = _X13default,
+    folder::Union{String,X13default} = _X13default,
+    string::Union{String,X13default} = _X13default
+    )
+    return X13spec{frequencyof(series.data)}(series, arima, estimate,transform,regression,automdl,x11,x11regression,check,forecast,force,pickmdl,history,metadata,identify,outlier,seats,slidingspans,spectrum,folder,string)
+end
+function newspec(F::Frequency; 
+    series::Union{X13series,X13default} = _X13default,
+    arima::Union{X13arima,X13default} = _X13default,
+    estimate::Union{X13estimate,X13default} = _X13default,
+    transform::Union{X13transform,X13default} = _X13default,
+    regression::Union{X13regression,X13default} = _X13default,
+    automdl::Union{X13automdl,X13default} = _X13default,
+    x11::Union{X13x11,X13default} = _X13default,
+    x11regression::Union{X13x11regression,X13default} = _X13default,
+    check::Union{X13check,X13default} = _X13default,
+    forecast::Union{X13forecast,X13default} = _X13default,
+    # composite::X13composite # not supported
+    force::Union{X13force,X13default} = _X13default,
+    pickmdl::Union{X13pickmdl,X13default} = _X13default,
+    history::Union{X13history,X13default} = _X13default,
+    metadata::Union{X13metadata,X13default} = _X13default,
+    identify::Union{X13identify,X13default} = _X13default,
+    outlier::Union{X13outlier,X13default} = _X13default,
+    seats::Union{X13seats,X13default} = _X13default,
+    slidingspans::Union{X13slidingspans,X13default} = _X13default,
+    spectrum::Union{X13spectrum,X13default} = _X13default,
+    folder::Union{String,X13default} = _X13default,
+    string::Union{String,X13default} = _X13default
+    )
+    return X13spec{F}(series, arima, estimate,transform,regression,automdl,x11,x11regression,check,forecast,force,pickmdl,history,metadata,identify,outlier,seats,slidingspans,spectrum,folder,string)
+end
+newspec(ts::TSeries; kwargs...) = newspec(X13.series(ts); kwargs...)
+
 
 
 

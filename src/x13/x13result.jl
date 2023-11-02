@@ -197,7 +197,7 @@ function x13_read_key_values(lines::Vector{<:AbstractString}, separator=r"[\t\:]
         val = strip(line[split_point+1:end])
         foundval = false
         if key == :date
-            val = Dates.Date(val, Dates.DateFormat("u d, y"))
+            val = Dates.Date(replace(val, r"\s+"=>" "), Dates.DateFormat("u d, y"))
             foundval = true
         end
         if !foundval
