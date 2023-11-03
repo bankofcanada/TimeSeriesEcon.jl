@@ -39,8 +39,9 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
         cmdout = Base.run(c, stdin_buffer, stdout_buffer, stderr_buffer)
     catch err
         if err isa ProcessFailedException
+            # just ignore this for now, catch it when reading the errors file or stderr.
         else
-            throw(err)
+            throw(err) #TODO: maybe rethrow? investigate
         end
     end
     stdin = String(take!(stdin_buffer))
@@ -50,6 +51,26 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
     if length(stderr) > 0
         println(stderr)
         error("running X13 failed. See above. Additional information may be available in $(spec.folder)")
+    end
+    stdout_lines = split(stdout, "\n")
+    for (i,l) in enumerate(stdout_lines)
+        # sometimes there's an error message but it doesn't get printed to the error file
+        # this can happen if a line in the spec file is too long
+        if occursin("ERROR:", l)
+            error_msg = stdout_lines[i]
+            for j in i+1:length(stdout_lines)
+                if findfirst("     ", stdout_lines[j]) == 1:5
+                    error_msg = error_msg*"\n"*stdout_lines[j]
+                else
+                    break
+                end
+            end
+            if errors
+                @error error_msg
+            else
+                throw(error(error_msg))
+            end
+        end
     end
     
     res = X13.X13result(spec, spec.folder, stdout, Workspace(), Workspace(), Workspace(), Vector{String}(), Vector{String}(), Vector{String}(), Workspace())
@@ -104,7 +125,7 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
         elseif ext ∉ _ignored_extensions && ext !== :txt && ext !== :log
             println("=================================================================================================================")
             # println(ext)
-            # println(read(file, String))
+            println(read(file, String))
             println(file)
         end
     end
@@ -125,13 +146,15 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
 
     if length(res.errors) > 0
         for err in res.errors
-            println("ERROR: $err")
+            @error err
         end
         if errors
             @warn "There were errors in the specification file."
         else #if length(res.errors) > 1 || findfirst("span of data end date", res.errors[1]) !== 1:21
+            error("There were errors in the specification file.")
             # println(findfirst("span of data end date", res.errors[1]))
-            @assert length(res.errors) == 0 "There were errors in the specification file."
+            # @assert length(res.errors) == 0 "There were errors in the specification file."
+            # TODO: just throw an errorexception
         end
     end
 
@@ -150,13 +173,13 @@ _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct,
     :tad, :psf, :pir, :pe5, :pe6, :pe7, :pe8, :paf, :f1, :otl, :ftr, :ira, :fvr, :p6a, :p6r, :e6a, :e6r, :saa, :ffc, 
     :rnd, :fts, :btr, :bct, :fch, :fce, :amh, :tre, :sae, :trr, :sar, :tal, :ycs, :sfs, :chs, :tds, :ads, 
     :a2p, :a1c, :a2t, :xrm, :a4d, :xhl, :bxh, :xca, :xcc,
-    :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, 
+    :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, :pss, :psi, :psc, :ltt, :cyc,
     :td, :ao, :ls, :hol, :chl, :tc, :usr,) # these have dates
 # _table_extensions = (, ) #TODO: maybe make these tables...
 _table_extensions = (:pcf,:acf,:ac2,:itr,:spr,:sp0, :sp1, :sp2, :str, :st0, :st1, :st2, :rts, :acm, :rcm, :d8b, :oit, :rot, :xoi,
-    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, 
+    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf, 
     )
-_kv_list_extensions = (:lks,)
+_kv_list_extensions = (:lks, :mdc,)
 _ignored_extensions = (
     :spc, # the input spec file
     :gmt, # a list of files in the graphics folder
@@ -165,7 +188,7 @@ _ignored_extensions = (
 )
 
 # check what we haven't seen:
-all_treated_outputs = [_series_extensions..., _table_extensions..., _kv_list_extensions...]
+all_treated_outputs = [_series_extensions..., _table_extensions..., _kv_list_extensions..., :iac, :ipc, :mdl, :est]
 non_treaded_output_keys = Vector{Symbol}()
 for spec in keys(_output_save_tables)
     for sym in _output_save_tables[spec]
@@ -175,7 +198,7 @@ for spec in keys(_output_save_tables)
     end
 end
 @showall non_treaded_output_keys
-# [:iac, :ipc, :smv, :sas, :sis, :cis, :ais, :yis, :so, :a13, :sec, :ofd, :stc, :wkf, :sta, :cyc, :mdc, :ltt, :pss, :psi, :psc, :psa, :is1, :is2, :it0, :it1, :ser, :ter, :is0, :it2, :b18, :hxc, :bcc, :xrc, :a4p, :a3p, :chr, :iar, :tcr, :sfr, :lkh, :tdh, :sfh, :che, :iae, :tce, :sfe, :mva, :c9, :fsd, :fad, :sac, :act, :mdl, :est]
+# [:iac, :ipc, :smv, :sas, :sis, :cis, :ais, :yis, :so, :a13, :sec, :ofd, :stc, :wkf, :sta, :cyc, :mdc, :ltt, :pss, :psi, :psc, :psa, :is1, :is2, :it0, :it1, :ser, :ter, :is0, :it2, :b18, :hxc, :bcc, :xrc, :a4p, :a3p, :chr, :iar, :tcr, :sfr, :lkh, :tdh, :sfh, :che, :iae, :tce, :sfe, :mva, :c9, :fsd, :fad, :sac, :act]
 
 
 function x13read_udg(file)

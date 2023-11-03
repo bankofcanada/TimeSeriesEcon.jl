@@ -32,7 +32,7 @@ specified with the `seasonalma` keyword argument. Similarly a default trend movi
 See the documentation for the x11 spec for details on available keyword arguments.
 """
 function deseasonalize!(ts::TSeries; kwargs...)
-    spec = X13.newspec(db[Symbol("ts_$(i)_pre")]; x11=X13.x11(; kwargs...))
+    spec = X13.newspec(ts; x11=X13.x11(; save=:d11, kwargs...))
     res = X13.run(spec, verbose=false)
     ts.values = res.series.d11.values
     ts

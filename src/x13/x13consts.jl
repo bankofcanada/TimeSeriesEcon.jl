@@ -448,7 +448,7 @@ _output_save_tables = Dict{Symbol, Vector{Symbol}}(
     :regression => [:rmx, :otl, :ao, :ls, :so, :a13, :tc, :td, :hol, :a10, :usr],
     :seats => [:s11, :dsa, :ttc, :sec, :tac, :ftf, :ofd, :afd, :s10, :s16, :dor, :s18, :yfd, :faf, :gaf, :stc, :wkf, :tfd, :s13, :s14, :sta, :dtr, :gac, :gtc, :gtf, :cyc, :ssm, :mdc, :ftc, :sfd, :ltt, :fac, :pss, :psi, :psc, :psa],
     :series => [:a1, :sp0, :mva, :a18, :a19, :b1],
-    :slidingspans => [:smv, :sfs, :chs, :sas, :ycs, :tds, :sis, :cis, :ais, :yis],
+    :slidingspans => [:smy, :sfs, :chs, :sas, :ycs, :tds, :sis, :cis, :ais, :yis],
     :spectrum => [:is1, :sp2, :sp0, :s1s, :st2, :is2, :it0, :s2s, :it1, :sp1, :str, :ser, :ter, :st0, :is0, :it2, :spr, :st1],
     :transform => [:a2, :a2t, :a4d, :a3, :trn, :a4p, :a2p, :a3p, :a1c],
     :x11 => [:d4, :tad, :d8b, :e1, :d6, :b5, :d9, :d2, :d1, :tac, :c2, :b20, :e7, :c9, :b17, :c7, :c13, :b10, :f1, :c11, :e2, :d12, :c19, :e11, :c6, :b3, :tal, :e5, :b7, :b19, :c4, :ira, :e3, :fsd, :b2, :e18, :d10, :b11, :c1, :c17, :e6, :d11, :c10, :d5, :b8, :d16, :fad, :b6, :d8, :d18, :d13, :sac, :d7, :e8, :chl, :c5, :b13, :c20, :paf, :pe8, :pir, :pe5, :pe6, :psf, :pe7],
@@ -643,9 +643,6 @@ _output_descriptions = Dict{Symbol,Dict{Symbol,String}}(
         :prs => "Percent reduction standard error", # diagnostic
         :aad => "Annual Average absolute difference", # diagnostic
         :ssg => "Test for seasonal significance", # diagnostic
-
-
-
     ),
     :series => Dict{Symbol,String}(
         :hdr => "summary of options selected for this run of X-13-ARIMA-SEATS",

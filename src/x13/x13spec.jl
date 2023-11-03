@@ -173,8 +173,8 @@ struct X13series{F<:Frequency}
     name::Union{String,X13default}
     period::Union{Int64,X13default}
     precision::Union{Int64,X13default}
-    print::Union{Vector{Symbol},X13default} #This should just be everything
-    save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default} #This should just be everything
+    save::Union{Symbol,Vector{Symbol},X13default}
     span::Union{UnitRange{MIT{F}},Span,X13default}
     start::Union{MIT{F},X13default}
     title::Union{String,X13default}
@@ -208,11 +208,11 @@ mutable struct ArimaSpec
     period::Union{Int64,X13default}
 
     ArimaSpec() = new(0,0,0,0)
-    ArimaSpec(p::Union{Int64,Vector{Int64}}) = new(p,0,0,0)
+    ArimaSpec(p::Union{Int64,Vector{Int64}}) = new(p,0,0,0) # could write these in one line iwth dfaults
     ArimaSpec(p::Union{Int64,Vector{Int64}}, d::Union{Int64,Vector{Int64}}) = new(p,d,0,0)
     ArimaSpec(p::Union{Int64,Vector{Int64}}, d::Union{Int64,Vector{Int64}}, q::Union{Int64,Vector{Int64}}) = new(p,d,q,0)
     ArimaSpec(p::Union{Int64,Vector{Int64}}, d::Union{Int64,Vector{Int64}}, q::Union{Int64,Vector{Int64}}, period::Int64) = new(p,d,q,period)
-    ArimaSpec(p::Union{Int64,Vector{Int64}},d::Union{Int64,Vector{Int64}},q::Union{Int64,Vector{Int64}},P::Union{Int64,Vector{Int64}},D::Union{Int64,Vector{Int64}},Q::Union{Int64,Vector{Int64}}) = (new(p,d,q,0), new(P,D,Q,0))
+    ArimaSpec(p::Union{Int64,Vector{Int64}}, d::Union{Int64,Vector{Int64}},q::Union{Int64,Vector{Int64}},P::Union{Int64,Vector{Int64}},D::Union{Int64,Vector{Int64}},Q::Union{Int64,Vector{Int64}}) = (new(p,d,q,0), new(P,D,Q,0))
 end
 
 export ArimaSpec
@@ -247,7 +247,7 @@ mutable struct X13automdl
     maxorder::Union{Vector{Union{Int64,Missing}},X13default}
     maxdiff::Union{Vector{Union{Int64,Missing}},X13default}
     mixed::Union{Bool,X13default}
-    print::Union{Vector{Symbol},X13default} #This should just be everything
+    print::Union{Symbol,Vector{Symbol},X13default} #This should just be everything
     savelog::Union{Symbol,Vector{Symbol},X13default}
     armalimit::Union{Float64,X13default}
     balanced::Union{Bool,X13default}
@@ -262,8 +262,8 @@ end
 mutable struct X13check
     maxlag::Union{Int64,X13default}
     qtype::Union{Symbol,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default}
     savelog::Union{Symbol,Vector{Symbol},X13default}
     acflimit::Union{Float64,X13default}
     qlimit::Union{Float64,X13default}
@@ -273,8 +273,8 @@ mutable struct X13estimate
     exact::Union{Symbol,X13default}
     maxiter::Union{Int64,X13default}
     outofsample::Union{Bool,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default}
     savelog::Union{Symbol,Vector{Symbol},X13default}
     tol::Union{Float64,X13default}
     file::Union{String,X13default}
@@ -284,8 +284,8 @@ end
 mutable struct X13force
     lambda::Union{Float64,X13default}
     mode::Union{Symbol,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default}
     rho::Union{Float64,X13default}
     round::Union{Bool,X13default}
     start::Union{Symbol, TimeSeriesEcon._FPConst, UnionAll, X13default} #q3
@@ -300,8 +300,8 @@ mutable struct X13forecast
     lognormal::Union{Bool,X13default}
     maxback::Union{Int64,X13default}
     maxlead::Union{Int64,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default}
     probability::Union{Float64,X13default}
 end
 
@@ -312,8 +312,8 @@ mutable struct X13history
     fixmdl::Union{Bool,X13default}
     fixreg::Union{Bool,X13default}
     fstep::Union{Int64,Vector{Int64},X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default} 
     sadjlags::Union{Int64,Vector{Int64},X13default}
     start::Union{MIT,X13default}
@@ -331,8 +331,8 @@ mutable struct X13identify
     diff::Union{Vector{Int64},X13default}
     sdiff::Union{Vector{Int64},X13default}
     maxlag::Union{Int64,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
 end
 
 mutable struct X13metadata
@@ -343,8 +343,8 @@ mutable struct X13outlier
     critical::Union{Float64,Vector{Union{Missing,Float64}},Vector{Float64},X13default}
     lsrun::Union{Int64,X13default}
     method::Union{Symbol,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default} 
     span::Union{UnitRange{<:MIT},Span,X13default}
     types::Union{Symbol,Vector{Symbol},X13default}
@@ -361,7 +361,7 @@ mutable struct X13pickmdl
     mode::Union{Symbol,X13default}
     outofsample::Union{Bool,X13default}
     overdiff::Union{Float64,X13default}
-    print::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}
     savelog::Union{Symbol,Vector{Symbol},X13default}
     qlim::Union{Int64,X13default}
 end
@@ -375,8 +375,8 @@ mutable struct X13regression
     data::Union{TSeries,MVTSeries, X13default}
     file::Union{String,X13default}
     format::Union{String,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default} 
     pvaictest::Union{Float64,X13default}
     start::Union{MIT,X13default}
@@ -399,8 +399,8 @@ mutable struct X13seats
     hpcycle::Union{Bool,X13default}
     noadmiss::Union{Bool,X13default}
     out::Union{Int64,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default} 
     printphtrf::Union{Bool,X13default}
     qmax::Union{Int64,X13default}
@@ -425,8 +425,8 @@ mutable struct X13slidingspans
     length::Union{Int64,X13default}
     numspans::Union{Int64,X13default}
     outlier::Union{Symbol,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default} 
     start::Union{MIT,X13default}
     additivesa::Union{Symbol,X13default}
@@ -436,8 +436,8 @@ end
 
 mutable struct X13spectrum
     logqs::Union{Bool,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default} 
     qcheck::Union{Bool,X13default}
     start::Union{MIT,X13default}
@@ -462,8 +462,8 @@ mutable struct X13transform
     name::Union{Symbol,Vector{Symbol},X13default}
     power::Union{Float64,X13default}
     precision::Union{Int64,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default}     
     start::Union{MIT,Vector{MIT},X13default}
     title::Union{String,X13default}
@@ -478,8 +478,8 @@ mutable struct X13x11
     appendfcst::Union{Bool,X13default}
     final::Union{Symbol,Vector{Symbol},X13default}
     mode::Union{Symbol,X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default}     
     seasonalma::Union{Symbol,Vector{Symbol},X13default}
     sigmalim::Union{Vector{Float64},X13default}
@@ -505,8 +505,8 @@ mutable struct X13x11regression
     format::Union{String,X13default}
     outliermethod::Union{Symbol,X13default}
     outlierspan::Union{UnitRange{<:MIT}, Span, X13default}
-    print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default} 
+    print::Union{Symbol,Vector{Symbol},X13default}
+    save::Union{Symbol,Vector{Symbol},X13default} 
     savelog::Union{Symbol,Vector{Symbol},X13default} 
     prior::Union{Bool,X13default}
     sigma::Union{Float64,X13default}
@@ -727,8 +727,8 @@ function series(t::TSeries{F};
     name::Union{String,X13default}=_X13default,
     period::Union{Int64,X13default}=_X13default,
     precision::Union{Int64,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:default, :adjoriginal, :adjorigplot, :calendaradjorig, :outlieradjorig, :seriesplot],
-    save::Union{Vector{Symbol},X13default}=[:span, :specfile, :adjoriginal, :calendaradjorig, :outlieradjorig, :seriesmvadj],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     span::Union{UnitRange{MIT{F}},Span,X13default}=_X13default,
     start::Union{MIT{F},X13default}=_X13default,
     title::Union{String,X13default}=_X13default,
@@ -789,9 +789,19 @@ function series(t::TSeries{F};
         end
     end
 
+    _print_all = [:default, :adjoriginal, :adjorigplot, :calendaradjorig, :outlieradjorig, :seriesplot]
+    _save_all = [:span, :specfile, :adjoriginal, :calendaradjorig, :outlieradjorig, :seriesmvadj]
+
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
+
     return X13series{F}(appendbcst, appendfcst, comptype, compwt, data, decimals, file, format, modelspan,name, period, precision, print, save, span,start,title,type,divpower,missingcode,missingval,saveprecision,trimzero)
 end
-series!(spec::X13spec{F}, t::TSeries{F}; kwargs...) where F = (spec.series = series(t; kwargs...))
+series!(spec::X13spec{F}, t::TSeries{F}; kwargs...) where F = (spec.series = series(t; kwargs...); spec)
 
 """
 `arima(model::ArimaSpecs...; kwargs...)`
@@ -877,9 +887,9 @@ end
 arima(model::ArimaSpec; kwargs...) = arima(ArimaModel(model); kwargs...)
 arima(models::ArimaSpec...; kwargs...) = arima(ArimaModel(models...); kwargs...)
 
-arima!(spec::X13spec{F}, model::ArimaModel; kwargs...) where F = (spec.arima = arima(model; kwargs...))
-arima!(spec::X13spec{F}, model::ArimaSpec; kwargs...) where F = (spec.arima = arima(ArimaModel(model); kwargs...))
-arima!(spec::X13spec{F}, models::ArimaSpec...; kwargs...) where F = (spec.arima = arima(ArimaModel(models...); kwargs...))
+arima!(spec::X13spec{F}, model::ArimaModel; kwargs...) where F = (spec.arima = arima(model; kwargs...); spec)
+arima!(spec::X13spec{F}, model::ArimaSpec; kwargs...) where F = (spec.arima = arima(ArimaModel(model); kwargs...); spec)
+arima!(spec::X13spec{F}, models::ArimaSpec...; kwargs...) where F = (spec.arima = arima(ArimaModel(models...); kwargs...); spec)
 
 
 # arima!(spec::X13spec{F}, model::ArimaSpec; kwargs...) where F = (spec.arima = arima((model,)...; kwargs...))
@@ -1010,7 +1020,7 @@ function automdl(;
     maxorder::Union{Vector{Union{Int64,Missing}},X13default}=_X13default,
     maxdiff::Union{Vector{Union{Int64,Missing}},X13default}=_X13default,
     mixed::Union{Bool,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:autochoice, :autochoicemdl, :autodefaulttests, :autofinaltests, :autoljungboxtest, :bestfivemdl, :header, :unitroottest, :unitroottestmdl],
+    print::Union{Symbol,Vector{Symbol},X13default}=[:autochoice, :autochoicemdl, :autodefaulttests, :autofinaltests, :autoljungboxtest, :bestfivemdl, :header, :unitroottest, :unitroottestmdl],
     savelog::Union{Symbol,Vector{Symbol},X13default}=:alldiagnostics,
     armalimit::Union{Float64,X13default}=_X13default,
     balanced::Union{Bool,X13default}=_X13default,
@@ -1077,9 +1087,14 @@ function automdl(;
         throw(ArgumentError("urfinal should be greater than 1. Received: $(urfinal)."))
     end
 
+    _print_all = [:autochoice, :autochoicemdl, :autodefaulttests, :autofinaltests, :autoljungboxtest, :bestfivemdl, :header, :unitroottest, :unitroottestmdl]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+
     return X13automdl(diff,acceptdefault,checkmu,ljungboxlimit,maxorder,maxdiff,mixed,print,savelog,armalimit,balanced,exactdiff,fcstlim,hrinitial,reducecv,rejectfcst,urfinal)
 end
-automdl!(spec::X13spec{F}; kwargs...) where F = (spec.automdl = automdl(; kwargs...))
+automdl!(spec::X13spec{F}; kwargs...) where F = (spec.automdl = automdl(; kwargs...); spec)
 
 
 """
@@ -1115,16 +1130,25 @@ Specification to produce statistics for diagnostic checking of residuals from th
 function check(; 
     maxlag::Union{Int64,X13default}=_X13default,
     qtype::Union{Symbol,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:acf, :acfplot, :pacf, :pacfplot, :acfsquared, :acfsquaredplot, :normalitytest, :durbinwatson, :friedmantest, :histogram],
-    save::Union{Vector{Symbol},X13default}=[:acf, :pacf, :acfsquared],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:alldiagnostics,
     acflimit::Union{Float64,X13default}=_X13default,
     qlimit::Union{Float64,X13default}=_X13default
 )
     # checks and logic
+    _print_all = [:acf, :acfplot, :pacf, :pacfplot, :acfsquared, :acfsquaredplot, :normalitytest, :durbinwatson, :friedmantest, :histogram]
+    _save_all = [:acf, :pacf, :acfsquared]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
+
     return X13check(maxlag,qtype,print,save,savelog,acflimit,qlimit)
 end
-check!(spec::X13spec{F}; kwargs...) where F = (spec.check = check(; kwargs...))
+check!(spec::X13spec{F}; kwargs...) where F = (spec.check = check(; kwargs...); spec)
 
 """
 `estimate(; kwargs...)`
@@ -1186,17 +1210,26 @@ function estimate(;
     exact::Union{Symbol,X13default}=_X13default,
     maxiter::Union{Int64,X13default}=_X13default,
     outofsample::Union{Bool,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:options, :model, :estimates, :averagefcsterr, :lkstats, :iterations, :iterationerrors, :regcmatrix, :armacmatrix, :lformulas, :roots, :regressioneffects, :regressionresiduals, :residuals],
-    save::Union{Vector{Symbol},X13default}=[:model, :estimates, :lkstats, :iterations, :regcmatrix, :armacmatrix, :roots, :regressioneffects, :regressionresiduals, :residuals],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:alldiagnostics,
     tol::Union{Float64,X13default}=_X13default,
     file::Union{String,X13default}=_X13default,
     fix::Union{Symbol,X13default}=_X13default,
 )
     # checks and logic
+
+    _print_all = [:options, :model, :estimates, :averagefcsterr, :lkstats, :iterations, :iterationerrors, :regcmatrix, :armacmatrix, :lformulas, :roots, :regressioneffects, :regressionresiduals, :residuals]
+    _save_all = [:model, :estimates, :lkstats, :iterations, :regcmatrix, :armacmatrix, :roots, :regressioneffects, :regressionresiduals, :residuals]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
     return X13estimate(exact,maxiter,outofsample,print,save,savelog,tol,file,fix)
 end
-estimate!(spec::X13spec{F}; kwargs...) where F = (spec.estimate = estimate(; kwargs...))
+estimate!(spec::X13spec{F}; kwargs...) where F = (spec.estimate = estimate(; kwargs...); spec)
 #TODO: Support for file argument (previous model)
 
 """
@@ -1292,8 +1325,8 @@ An optional spec for invoking options that allow users to force yearly totals of
 function force(;
     lambda::Union{Float64,X13default}=_X13default,
     mode::Union{Symbol,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:seasadjtot, :saround, :revsachanges, :rndsachanges],
-    save::Union{Vector{Symbol},X13default}=[:seasadjtot, :saround, :revsachanges, :rndsachanges, :revsachangespct, :rndsachangespct],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     rho::Union{Float64,X13default}=_X13default,
     round::Union{Bool,X13default}=_X13default,
     start::Union{Symbol, TimeSeriesEcon._FPConst, UnionAll, X13default}=_X13default,
@@ -1307,9 +1340,18 @@ function force(;
         throw(ArgumentError("rho must be between 0 and 1. Received: $(rho)."))
     end
 
+    _print_all = [:seasadjtot, :saround, :revsachanges, :rndsachanges]
+    _save_all = [:seasadjtot, :saround, :revsachanges, :rndsachanges, :revsachangespct, :rndsachangespct]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
+
     return X13force(lambda,mode,print,save,rho,round,start,target,type,usefcst,indforce)
 end
-force!(spec::X13spec{F}; kwargs...) where F = (spec.force = force(; kwargs...))
+force!(spec::X13spec{F}; kwargs...) where F = (spec.force = force(; kwargs...); spec)
 
 
 """
@@ -1351,14 +1393,23 @@ function forecast(;
     lognormal::Union{Bool,X13default}=_X13default,
     maxback::Union{Int64,X13default}=_X13default,
     maxlead::Union{Int64,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:transformed, :variances, :forecasts, :transformedbcst, :backcasts],
-    save::Union{Vector{Symbol},X13default}=[:transformed, :variances, :forecasts, :transformedbcst, :backcasts],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     probability::Union{Float64,X13default}=_X13default,
 )
     # checks and logic
+
+    _print_all = [:transformed, :variances, :forecasts, :transformedbcst, :backcasts]
+    _save_all = [:transformed, :variances, :forecasts, :transformedbcst, :backcasts]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
     return X13forecast(exclude,lognormal,maxback,maxlead,print,save,probability)
 end
-forecast!(spec::X13spec{F}; kwargs...) where F = (spec.forecast = forecast(; kwargs...))
+forecast!(spec::X13spec{F}; kwargs...) where F = (spec.forecast = forecast(; kwargs...); spec)
 
 """
 `history(; kwargs...)`
@@ -1536,8 +1587,8 @@ function history(;
     fixmdl::Union{Bool,X13default}=_X13default,
     fixreg::Union{Bool,X13default}=_X13default,
     fstep::Union{Int64,Vector{Int64},X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:header, :outlierhistory, :sarevisions, :sasummary, :chngrevisions, :chngsummary, :indsarevisions, :indsasummary, :trendrevisions, :trendsummary, :trendchngrevisions, :trendchngsummary, :sfrevisions, :sfsummary, :lkhdhistory, :fcsterrors, :armahistory, :tdhistory, :sfilterhistory, :saestimates, :chngestimates, :indsaestimates, :trendestimates, :trendchngestimates, :sfestimates, :fcsthistory],
-    save::Union{Vector{Symbol},X13default} =[:outlierhistory, :sarevisions, :chngrevisions, :indsarevisions, :trendrevisions, :trendchngrevisions, :sfrevisions, :lkhdhistory, :fcsterrors, :armahistory, :tdhistory, :sfilterhistory, :saestimates, :chngestimates, :indsaestimates, :trendestimates, :trendchngestimates, :sfestimates, :fcsthistory],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default} =_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default} =[:alldiagnostics],
     sadjlags::Union{Int64,Vector{Int64},X13default}=_X13default,
     start::Union{MIT,X13default}=_X13default,
@@ -1573,9 +1624,18 @@ function history(;
         throw(ArgumentError("sadjlags cannot be less than one. Received: $(sadjlags)."))
     end
 
+    _print_all = [:header, :outlierhistory, :sarevisions, :sasummary, :chngrevisions, :chngsummary, :indsarevisions, :indsasummary, :trendrevisions, :trendsummary, :trendchngrevisions, :trendchngsummary, :sfrevisions, :sfsummary, :lkhdhistory, :fcsterrors, :armahistory, :tdhistory, :sfilterhistory, :saestimates, :chngestimates, :indsaestimates, :trendestimates, :trendchngestimates, :sfestimates, :fcsthistory]
+    _save_all = [:outlierhistory, :sarevisions, :chngrevisions, :indsarevisions, :trendrevisions, :trendchngrevisions, :sfrevisions, :lkhdhistory, :fcsterrors, :armahistory, :tdhistory, :sfilterhistory, :saestimates, :chngestimates, :indsaestimates, :trendestimates, :trendchngestimates, :sfestimates, :fcsthistory]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
+
     return X13history(endtable,estimates,fixmdl,fixreg,fstep,print,save,savelog,sadjlags,start,target,trendlags,fixx11reg,outlier,outlierwin,refresh,transformfcst,x11outlier)
 end
-history!(spec::X13spec{F}; kwargs...) where F = (spec.history = history(; kwargs...))
+history!(spec::X13spec{F}; kwargs...) where F = (spec.history = history(; kwargs...); spec)
 
 """
 `identify(; kwargs...)`
@@ -1609,13 +1669,23 @@ function identify(;
     diff::Union{Vector{Int64},X13default}=_X13default,
     sdiff::Union{Vector{Int64},X13default}=_X13default,
     maxlag::Union{Int64,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:acf, :acfplot, :pacf, :pacfplot, :regcoefficients],
-    save::Union{Vector{Symbol},X13default}=[:acf, :pacf],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
 )
     # checks and logic
+
+    _print_all = [:acf, :acfplot, :pacf, :pacfplot, :regcoefficients]
+    _save_all = [:acf, :pacf]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
+
     return X13identify(diff,sdiff,maxlag,print,save)
 end
-identify!(spec::X13spec{F}; kwargs...) where F = (spec.identify = identify(; kwargs...))
+identify!(spec::X13spec{F}; kwargs...) where F = (spec.identify = identify(; kwargs...); spec)
 
 """
 `metadata(entries::Union{Pair{String,String}, Vector{Pair{String,String}}})`
@@ -1658,7 +1728,7 @@ function metadata(entries::Union{Pair{String,String}, Vector{Pair{String,String}
 
     return X13metadata(entries)
 end
-metadata!(spec::X13spec{F}, entries::Union{Pair{String,String}, Vector{Pair{String,String}}}) where F = (spec.metadata = metadata(entries))
+metadata!(spec::X13spec{F}, entries::Union{Pair{String,String}, Vector{Pair{String,String}}}) where F = (spec.metadata = metadata(entries); spec)
 
 """
 `outlier(; kwargs...)`
@@ -1746,8 +1816,8 @@ function outlier(;
     critical::Union{Float64,Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
     lsrun::Union{Int64,X13default}=_X13default,
     method::Union{Symbol,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:header, :iterations, :tests, :temporaryls, :finaltests],
-    save::Union{Vector{Symbol},X13default}= [:iterations, :finaltests],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:identified,
     span::Union{UnitRange{<:MIT},Span,X13default}=_X13default,
     types::Union{Symbol,Vector{Symbol},X13default}=_X13default,
@@ -1779,9 +1849,18 @@ function outlier(;
         end
     end
 
+    _print_all = [:header, :iterations, :tests, :temporaryls, :finaltests]
+    _save_all = [:iterations, :finaltests]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
+
     return X13outlier(critical,lsrun,method,print,save,savelog,span,types,almost,tcrate)
 end
-outlier!(spec::X13spec{F}; kwargs...) where F = (spec.outlier = outlier(; kwargs...))
+outlier!(spec::X13spec{F}; kwargs...) where F = (spec.outlier = outlier(; kwargs...); spec)
 
 """
 `pickmdl(; kwargs...)`
@@ -1874,7 +1953,7 @@ function pickmdl(models::Vector{ArimaModel};
     mode::Union{Symbol,X13default}=_X13default,
     outofsample::Union{Bool,X13default}=_X13default,
     overdiff::Union{Float64,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:pickmdlchoice, :header, :usermodels],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:automodel,
     qlim::Union{Int64,X13default}=_X13default,
 )
@@ -1911,13 +1990,18 @@ function pickmdl(models::Vector{ArimaModel};
         throw(ArgumentError("pickmdl can only have one model specified as a default, but $(num_defaults) of the provided models are flagged as defaults."))
     end
 
+    _print_all = [:pickmdlchoice, :header, :usermodels]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+
     # TODO: support for the file argument (model specs)
     return X13pickmdl(bcstlim,fcstlim,models,identify,method,mode,outofsample,overdiff,print,savelog,qlim)
 end
 pickmdl(models::ArimaModel...; kwargs...) = pickmdl([models...]; kwargs...)
 
-pickmdl!(spec::X13spec{F}, models::Vector{ArimaModel}; kwargs...) where F = (spec.pickmdl = pickmdl(models; kwargs...))
-pickmdl!(spec::X13spec{F}, models::ArimaModel...; kwargs...) where F = (spec.pickmdl = pickmdl([models...]; kwargs...))
+pickmdl!(spec::X13spec{F}, models::Vector{ArimaModel}; kwargs...) where F = (spec.pickmdl = pickmdl(models; kwargs...); spec)
+pickmdl!(spec::X13spec{F}, models::ArimaModel...; kwargs...) where F = (spec.pickmdl = pickmdl([models...]; kwargs...); spec)
 
 
 # pickmdl!(spec::X13spec{F}; kwargs...) where F = (spec.pickmdl = pickmdl(; kwargs...))
@@ -2110,8 +2194,8 @@ function regression(;
     data::Union{MVTSeries, X13default}=_X13default,
     file::Union{String,X13default}=_X13default,
     format::Union{String,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:regressionmatrix, :aictest, :outlier, :aoutlier, :levelshift, :seasonaloutlier, :transitory, :temporarychange, :tradingday, :holiday, :regseasonal, :userdef, :chi2test, :dailyweights],
-    save::Union{Vector{Symbol},X13default}=[:regressionmatrix, :outlier, :aoutlier, :levelshift, :seasonaloutlier, :transitory, :temporarychange, :tradingday, :holiday, :regseasonal, :userdef],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=[:aictest, :chi2test],
     pvaictest::Union{Float64,X13default}=_X13default,
     start::Union{MIT,X13default}=_X13default,
@@ -2227,10 +2311,18 @@ function regression(;
         end
     end
 
+    _print_all = [:regressionmatrix, :aictest, :outlier, :aoutlier, :levelshift, :seasonaloutlier, :transitory, :temporarychange, :tradingday, :holiday, :regseasonal, :userdef, :chi2test, :dailyweights]
+    _save_all = [:regressionmatrix, :outlier, :aoutlier, :levelshift, :seasonaloutlier, :transitory, :temporarychange, :tradingday, :holiday, :regseasonal, :userdef]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
 
     return X13regression(aicdiff,aictest,chi2test,chi2testcv,data,file,format,print,save,savelog,pvaictest,start,testalleaster,tlimit,user,usertype,_variables,b,fixb,centeruser,eastermeans,noapply,tcrate)
 end
-regression!(spec::X13spec{F}; kwargs...) where F = (spec.regression = regression(; kwargs...))
+regression!(spec::X13spec{F}; kwargs...) where F = (spec.regression = regression(; kwargs...); spec)
 
 """
 `seats(; kwargs...)`
@@ -2359,8 +2451,8 @@ function seats(;
     hpcycle::Union{Bool,X13default}=_X13default,
     noadmiss::Union{Bool,X13default}=_X13default,
     out::Union{Int64,X13default}=0, #set an actual default here as we want to save the tables
-    print::Union{Vector{Symbol},X13default}=_X13default, #set to nothing here because we want to save the tables...
-    save::Union{Vector{Symbol},X13default} =_X13default, # [:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:seriesfcstdecomp,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum, :cycle, :longtermtrend, :componentmodels,:filtersaconc,:filtersasym,:filtertrendconc,:filtertrendsym,:squaredgainsaconc,:squaredgainsasym,:squaredgaintrendconc,:squaredgaintrendsym,:timeshiftsaconc,:timeshifttrendconc,:wkendfilter,:seasonalpct,:irregularpct,:transitorypct,:adjustfacpct],
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default, #set to nothing here because we want to save the tables...
+    save::Union{Symbol,Vector{Symbol},X13default} =_X13default, # [:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:seriesfcstdecomp,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum, :cycle, :longtermtrend, :componentmodels,:filtersaconc,:filtersasym,:filtertrendconc,:filtertrendsym,:squaredgainsaconc,:squaredgainsasym,:squaredgaintrendconc,:squaredgaintrendsym,:timeshiftsaconc,:timeshifttrendconc,:wkendfilter,:seasonalpct,:irregularpct,:transitorypct,:adjustfacpct],
     savelog::Union{Symbol,Vector{Symbol},X13default} = [:seatsmodel,:x13model,:normalitytest,:overunderestimation,:totalssquarederror,:componentvariance,:concurrentesterror,:percentreductionse,:averageabsdiffannual,:seasonalsignif],
     printphtrf::Union{Bool,X13default}=_X13default,
     qmax::Union{Int64,X13default}=_X13default,
@@ -2390,9 +2482,19 @@ function seats(;
     # out = _X13default #this one can be safely left at zero
     savelog = _X13default # setting all four to X13default makes it work...
 
+    _save_all = [:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:seriesfcstdecomp,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum, :cycle, :longtermtrend, :componentmodels,:filtersaconc,:filtersasym,:filtertrendconc,:filtertrendsym,:squaredgainsaconc,:squaredgainsasym,:squaredgaintrendconc,:squaredgaintrendsym,:timeshiftsaconc,:timeshifttrendconc,:wkendfilter,:seasonalpct,:irregularpct,:transitorypct,:adjustfacpct]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        @warn "The print=:all option is not available for the Seats spec."
+        print = _X13default
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+        out = 0
+    end
+
     return X13seats(appendfcst,finite,hpcycle,noadmiss,out,print,save,savelog,printphtrf,qmax,statseas,tabtables,bias,epsiv,epsphi,hplan,imean,maxit,rmod,xl)
 end
-seats!(spec::X13spec{F}; kwargs...) where F = (spec.seats = seats(; kwargs...))
+seats!(spec::X13spec{F}; kwargs...) where F = (spec.seats = seats(; kwargs...); spec)
 
 """
 `slidingspans(; kwargs...)`
@@ -2540,8 +2642,8 @@ function slidingspans(;
     length::Union{Int64,X13default}=_X13default,
     numspans::Union{Int64,X13default}=_X13default,
     outlier::Union{Symbol,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:header, :ssftest, :factormeans, :percent, :summary, :yysummary, :indfactormeans, :indpercent, :indsummary,:yypercent, :sfspans, :chngspans, :saspans, :ychngspans, :tdspans,:indyypercent,:indyysummary,:indsfspans,:indchngspans,:indsaspans,:indychngspans],# print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}=[:sfspans, :chngspans, :saspans, :ychngspans, :tdspans,:indsfspans,:indchngspans,:indsaspans,:indychngspans],# save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:percents,
     start::Union{MIT,X13default}=_X13default,
     additivesa::Union{Symbol,X13default}=_X13default,
@@ -2555,10 +2657,18 @@ function slidingspans(;
     end
 
     #TODO: yysummary in save arg
+    _print_all = [:header, :ssftest, :factormeans, :percent, :summary, :yysummary, :indfactormeans, :indpercent, :indsummary,:yypercent, :sfspans, :chngspans, :saspans, :ychngspans, :tdspans,:indyypercent,:indyysummary,:indsfspans,:indchngspans,:indsaspans,:indychngspans]
+    _save_all = [:sfspans, :chngspans, :saspans, :ychngspans, :tdspans,:indsfspans,:indchngspans,:indsaspans,:indychngspans]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
 
     return X13slidingspans(cutchng,cutseas,cuttd,fixmdl,fixreg,length,numspans,outlier,print,save,savelog,start,additivesa,fixx11reg,x11outlier)
 end
-slidingspans!(spec::X13spec{F}; kwargs...) where F = (spec.slidingspans = slidingspans(; kwargs...))
+slidingspans!(spec::X13spec{F}; kwargs...) where F = (spec.slidingspans = slidingspans(; kwargs...); spec)
 
 """
 `spectrum(; kwargs...)`
@@ -2644,8 +2754,8 @@ quarterly version of a monthly series
 """
 function spectrum(; 
     logqs::Union{Bool,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:qcheck, :qs, :specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa,:tukeypeaks],# print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}=[:specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa],# save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:alldiagnostics,
     qcheck::Union{Bool,X13default}=_X13default,
     start::Union{MIT,X13default}=_X13default,
@@ -2660,12 +2770,21 @@ function spectrum(;
 )
     # checks and logic
     # TODO: for some reason :tukeyspecorig, :tukeyspecsa,  :tukeyspecirr,:tukeyspecseatssa,:tukeyspecseatsirr,:tukeyspecextresiduals,:tukeyspecresidual,:tukeyspeccomposite,:tukeyspecindirr,:tukeyspecindsa are not available in save spec
-    # save = [:specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa]# save::Union{Vector{Symbol},X13default}
+    # save = [:specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa]# save::Union{Symbol,Vector{Symbol},X13default}
     # tukey120=true
+
+    _print_all = [:qcheck, :qs, :specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa,:tukeypeaks]
+    _save_all = [:specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
 
     return X13spectrum(logqs,print,save,savelog,qcheck,start,tukey120,decibel,difference,maxar,peakwidth,series,siglevel,type)
 end
-spectrum!(spec::X13spec{F}; kwargs...) where F = (spec.spectrum = spectrum(; kwargs...))
+spectrum!(spec::X13spec{F}; kwargs...) where F = (spec.spectrum = spectrum(; kwargs...); spec)
 
 """
 `transform(; kwargs...)`
@@ -2788,8 +2907,8 @@ function transform(;
     name::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     power::Union{Float64,X13default}=_X13default,
     precision::Union{Int64,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:aictransform, :seriesconstant, :seriesconstantplot, :prior, :permprior, :tempprior, :prioradjusted, :permprioradjusted, :prioradjustedptd, :permprioradjustedptd, :transformed],# print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}=[:seriesconstant, :prior, :permprior, :tempprior, :prioradjusted, :permprioradjusted, :prioradjustedptd, :permprioradjustedptd, :transformed],# save::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:autotransform,
     start::Union{MIT,Vector{MIT},X13default}=_X13default,
     title::Union{String,X13default}=_X13default,
@@ -2847,9 +2966,18 @@ function transform(;
         end
     end
 
+    _print_all = [:aictransform, :seriesconstant, :seriesconstantplot, :prior, :permprior, :tempprior, :prioradjusted, :permprioradjusted, :prioradjustedptd, :permprioradjustedptd, :transformed]
+    _save_all = [:seriesconstant, :prior, :permprior, :tempprior, :prioradjusted, :permprioradjusted, :prioradjustedptd, :permprioradjustedptd, :transformed]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
+
     return X13transform(adjust,aicdiff,data,file,format,func,mode,name,power,precision,print,save,savelog,start,title,type,constant,trimzero)
 end
-transform!(spec::X13spec{F}; kwargs...) where F = (spec.transform = transform(; kwargs...))
+transform!(spec::X13spec{F}; kwargs...) where F = (spec.transform = transform(; kwargs...); spec)
 
 """
 `x11(; kwargs...)`
@@ -3023,8 +3151,8 @@ function x11(;
     appendfcst::Union{Bool,X13default}=_X13default,
     final::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     mode::Union{Symbol,X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt,:movseasrat,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:trend,:trendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot],# print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}=[:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:trendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct],# print::Union{Vector{Symbol},X13default}
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:alldiagnostics,
     seasonalma::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     sigmalim::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
@@ -3056,15 +3184,23 @@ function x11(;
 
     # TODO: add :totaladjustment to print if series contains values <= 0
     
-    # save = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:trendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct]# print::Union{Vector{Symbol},X13default}
+    # save = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:trendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct]# print::Union{Symbol,Vector{Symbol},X13default}
 
-    # print = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt,:movseasrat,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:trend,:tendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot]# print::Union{Vector{Symbol},X13default}
+    # print = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt,:movseasrat,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:trend,:tendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot]# print::Union{Symbol,Vector{Symbol},X13default}
     # print = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt]#,:moveseasrat]#,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:totaladjustment,:trend,:tendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot]
     # save = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi]#,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:tendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct]
+    _print_all = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt,:movseasrat,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:trend,:trendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot]
+    _save_all = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:trendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
 
     return X13x11(appendbcst,appendfcst,final,mode,print,save,savelog,seasonalma,sigmalim,title,trendma,type,calendarsigma,centerseasonal,keepholiday,print1stpass,sfshort,sigmavec,trendic,true7term)
 end
-x11!(spec::X13spec{F}; kwargs...) where F = (spec.x11 = x11(; kwargs...))
+x11!(spec::X13spec{F}; kwargs...) where F = (spec.x11 = x11(; kwargs...); spec)
 
 
 
@@ -3265,8 +3401,8 @@ function x11regression(;
     format::Union{String,X13default}=_X13default,
     outliermethod::Union{Symbol,X13default}=_X13default,
     outlierspan::Union{UnitRange{<:MIT}, Span, X13default}=_X13default,
-    print::Union{Vector{Symbol},X13default}=[:priortd, :extremeval, :x11reg, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :outlierhdr, :xaictest, :extremevalb, :x11regb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :outliertests, :xregressionmatrix, :xregressioncmatrix],# print::Union{Vector{Symbol},X13default}
-    save::Union{Vector{Symbol},X13default}=[:priortd, :extremeval, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :extremevalb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :xregressionmatrix, :xregressioncmatrix],# save::Union{Vector{Symbol},X13default},
+    print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
+    save::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:aictest, # savelog::Union{Symbol,Vector{Symbol},X13default}     
     prior::Union{Bool,X13default}=_X13default,
     sigma::Union{Float64,X13default}=_X13default,
@@ -3384,11 +3520,19 @@ function x11regression(;
     # savelog = _X13default
     # aictest = _X13default
     # aictest = [:td]
+    _print_all = [:priortd, :extremeval, :x11reg, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :outlierhdr, :xaictest, :extremevalb, :x11regb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :outliertests, :xregressionmatrix, :xregressioncmatrix]
+    _save_all = [:priortd, :extremeval, :tradingday, :combtradingday, :holiday, :calendar, :combcalendar, :extremevalb, :tradingdayb, :combtradingdayb, :holidayb, :calendarb, :combcalendarb, :outlieriter, :xregressionmatrix, :xregressioncmatrix]
+    if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
+        print = _print_all
+    end
+    if (save isa Symbol && save == :all) || (save isa Vector{Symbol} && save == [:all])
+        save = _save_all
+    end
 
 
     return X13x11regression(aicdiff,aictest,critical,data,file,format,outliermethod,outlierspan,print,save,savelog,prior,sigma,span,start,tdprior,user,usertype,_variables,almost,b,fixb,centeruser,eastermeans,forcecal,noapply,reweight,umdata,umfile,umformat,umname,umprecision,umstart,umtrimzero)
 end
-x11regression!(spec::X13spec{F}; kwargs...) where F = (spec.x11regression = x11regression(; kwargs...))
+x11regression!(spec::X13spec{F}; kwargs...) where F = (spec.x11regression = x11regression(; kwargs...); spec)
 
 
 function validateX13spec(spec::X13spec)
@@ -3493,7 +3637,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("td regressors can only be used with Monthly or Quarterly data."))
                 end
                 if length(intersect(types_used, Set([:tdnolpyear, :td1coef, :td1nolpyear, :lpyear, :lom, :loq, :tdstock, :tdstock1coef]))) > 0
-                    throw(ArgumentError("td cannot me used with tdnolpyear, td1coef, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
+                    throw(ArgumentError("td cannot be used with tdnolpyear, td1coef, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
                 end
                 if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
                     throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the regression spec."))
@@ -3504,7 +3648,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("tdnolpyear regressors can only be used with Monthly or Quarterly data."))
                 end
                 if length(intersect(types_used, Set([:td, :td1coef, :td1nolpyear, :tdstock, :tdstock1coef]))) > 0
-                    throw(ArgumentError("tdnolpyear cannot me used with td, td1coef, td1nolpyear, tdstock, or tdstock1coef regressors."))
+                    throw(ArgumentError("tdnolpyear cannot be used with td, td1coef, td1nolpyear, tdstock, or tdstock1coef regressors."))
                 end
             end
             if vtypesymbol == :td1coef
@@ -3512,7 +3656,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("td1coef regressors can only be used with Monthly or Quarterly data."))
                 end
                 if length(intersect(types_used, Set([:td, :tdnolpyear, :td1nolpyear, :lpyear, :lom, :loq, :tdstock, :tdstock1coef]))) > 0
-                    throw(ArgumentError("td1coef cannot me used with td, tdnolpyear, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
+                    throw(ArgumentError("td1coef cannot be used with td, tdnolpyear, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
                 end
                 if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
                     throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the regression spec."))
@@ -3523,7 +3667,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("td1nolpyear regressors can only be used with Monthly or Quarterly data."))
                 end
                 if length(intersect(types_used, Set([:td, :tdnolpyear, :td1coef, :tdstock, :tdstock1coef]))) > 0
-                    throw(ArgumentError("td1nolpyear cannot me used with td, tdnolpyear, td1coef, tdstock, or tdstock1coef regressors."))
+                    throw(ArgumentError("td1nolpyear cannot be used with td, tdnolpyear, td1coef, tdstock, or tdstock1coef regressors."))
                 end
             end
             if vtypesymbol == :lpyear
@@ -3531,7 +3675,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("lpyear regressors can only be used with Monthly or Quarterly data."))
                 end
                 if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
-                    throw(ArgumentError("lpyear cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                    throw(ArgumentError("lpyear cannot be used with td, td1coef, tdstock, or tdstock1coef regressors."))
                 end
             end
             if vtypesymbol == :lom
@@ -3539,7 +3683,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("lom regressors can only be used with Monthly or Quarterly data."))
                 end
                 if length(intersect(types_used, Set([:td,:td1coef,:tdstock, :tdstock1coef]))) > 0
-                    throw(ArgumentError("lom cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                    throw(ArgumentError("lom cannot be used with td, td1coef, tdstock, or tdstock1coef regressors."))
                 end
             end
             if vtypesymbol == :loq
@@ -3547,7 +3691,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("loq regressors can only be used with Monthly or Quarterly data."))
                 end
                 if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
-                    throw(ArgumentError("loq cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                    throw(ArgumentError("loq cannot be used with td, td1coef, tdstock, or tdstock1coef regressors."))
                 end
             end
             if vtypesymbol == :tdstock
@@ -3555,7 +3699,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("tdstock regressors can only be used with Monthly data."))
                 end
                 if length(intersect(types_used, Set([:tdstock1coef, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
-                    throw(ArgumentError("tdstock cannot me used with tdstock1coef, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                    throw(ArgumentError("tdstock cannot be used with tdstock1coef, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
                 end
             end
             if vtypesymbol == :tdstock1coef
@@ -3563,7 +3707,7 @@ function validateX13spec(spec::X13spec)
                     throw(ArgumentError("tdstock1coef regressors can only be used with Monthly data."))
                 end
                 if length(intersect(types_used, Set([:tdstock, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
-                    throw(ArgumentError("tdstock1coef cannot me used with tdstock, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                    throw(ArgumentError("tdstock1coef cannot be used with tdstock, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
                 end
             end
             if vtypesymbol == :labor
@@ -3637,7 +3781,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: td regressors can only be used with Monthly or Quarterly data."))
                     end
                     if length(intersect(types_used, Set([:lpyear, :lom, :loq]))) > 0
-                        throw(ArgumentError("aictest: td cannot me used with lpyear, lom, loq, regressors."))
+                        throw(ArgumentError("aictest: td cannot be used with lpyear, lom, loq, regressors."))
                     end
                 end
                 if aic == :tdnolpyear
@@ -3645,7 +3789,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: tdnolpyear regressors can only be used with Monthly or Quarterly data."))
                     end
                     if length(intersect(types_used, Set([:td, :td1coef, :td1nolpyear, :tdstock, :tdstock1coef]))) > 0
-                        throw(ArgumentError("aictest: tdnolpyear cannot me used with td, td1coef, td1nolpyear, tdstock, or tdstock1coef regressors."))
+                        throw(ArgumentError("aictest: tdnolpyear cannot be used with td, td1coef, td1nolpyear, tdstock, or tdstock1coef regressors."))
                     end
                 end
                 if aic == :td1coef
@@ -3653,7 +3797,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: td1coef regressors can only be used with Monthly or Quarterly data."))
                     end
                     if length(intersect(types_used, Set([:td, :tdnolpyear, :td1nolpyear, :lpyear, :lom, :loq, :tdstock, :tdstock1coef]))) > 0
-                        throw(ArgumentError("aictest: td1coef cannot me used with td, tdnolpyear, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
+                        throw(ArgumentError("aictest: td1coef cannot be used with td, tdnolpyear, td1nolpyear, lpyear, lom, loq, tdstock, or tdstock1coef regressors."))
                     end
                 end
                 if aic == :td1nolpyear
@@ -3661,7 +3805,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: td1nolpyear regressors can only be used with Monthly or Quarterly data."))
                     end
                     if length(intersect(types_used, Set([:td, :tdnolpyear, :td1coef, :tdstock, :tdstock1coef]))) > 0
-                        throw(ArgumentError("aictest: td1nolpyear cannot me used with td, tdnolpyear, td1coef, tdstock, or tdstock1coef regressors."))
+                        throw(ArgumentError("aictest: td1nolpyear cannot be used with td, tdnolpyear, td1coef, tdstock, or tdstock1coef regressors."))
                     end
                 end
                 if aic == :lpyear
@@ -3669,7 +3813,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: lpyear regressors can only be used with Monthly or Quarterly data."))
                     end
                     if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
-                        throw(ArgumentError("aictest: lpyear cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                        throw(ArgumentError("aictest: lpyear cannot be used with td, td1coef, tdstock, or tdstock1coef regressors."))
                     end
                 end
                 if aic == :lom
@@ -3677,7 +3821,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: lom regressors can only tested for with Monthly data."))
                     end
                     if length(intersect(types_used, Set([:td,:td1coef,:tdstock, :tdstock1coef]))) > 0
-                        throw(ArgumentError("aictest: lom cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                        throw(ArgumentError("aictest: lom cannot be used with td, td1coef, tdstock, or tdstock1coef regressors."))
                     end
                 end
                 if aic == :loq
@@ -3685,7 +3829,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: loq regressors can only be tested for with Quarterly data."))
                     end
                     if length(intersect(types_used, Set([:td, :td1coef, :tdstock, :tdstock1coef]))) > 0
-                        throw(ArgumentError("aictest: loq cannot me used with td, td1coef, tdstock, or tdstock1coef regressors."))
+                        throw(ArgumentError("aictest: loq cannot be used with td, td1coef, tdstock, or tdstock1coef regressors."))
                     end
                 end
                 if aic == :tdstock
@@ -3693,7 +3837,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: tdstock regressors can only be used with Monthly data."))
                     end
                     if length(intersect(types_used, Set([:tdstock1coef, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
-                        throw(ArgumentError("aictest: tdstock cannot me used with tdstock1coef, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                        throw(ArgumentError("aictest: tdstock cannot be used with tdstock1coef, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
                     end
                 end
                 if aic == :tdstock1coef
@@ -3701,7 +3845,7 @@ function validateX13spec(spec::X13spec)
                         throw(ArgumentError("aictest: tdstock1coef regressors can only be used with Monthly data."))
                     end
                     if length(intersect(types_used, Set([:tdstock, :td, :tdnolpyear, :td1coef, :td1nolpyear, :lom, :loq]))) > 0
-                        throw(ArgumentError("aictest: tdstock1coef cannot me used with tdstock, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
+                        throw(ArgumentError("aictest: tdstock1coef cannot be used with tdstock, td, tdnolpyear, td1coed, td1nolpyear, lom or loq regressors."))
                     end
                 end
                 if aic == :labor
@@ -3784,7 +3928,7 @@ function validateX13spec(spec::X13spec)
             end
 
             if ismonthly(spec.series.data) && spec.slidingspans.length < 36
-                throw(ArgumentError("The length argument of the slidingspans spec must cover at least 3 years. Current length is ≈$(spec.slidingspan.length / 12) years."))
+                throw(ArgumentError("The length argument of the slidingspans spec must cover at least 3 years. Current length is ≈$(spec.slidingspans.length / 12) years."))
             end
             if ismonthly(spec.series.data) && spec.slidingspans.length > 12*19
                 throw(ArgumentError("The length argument of the slidingspans spec can cover at most 19 years. Current length is ≈$(spec.slidingspan.length / 12) years."))
@@ -3967,3 +4111,8 @@ function collect_regvar_types(vars)
 end
 
 export X13spec
+
+function Base.show(io::IO, ::MIME"text/plain", ws::X13spec)
+    print(io, "X13 spec\n")
+
+end

@@ -6,10 +6,11 @@ function x13write(outfile::String, spec::X13spec; test=false)
     # println(join(s, "\n"))
 end
 
-function impose_line_length!(s::Vector{<:AbstractString}, limit=132, delve=true) #132
+function impose_line_length!(s::Vector{<:AbstractString}, limit=133-8, delve=true) #132
+    #TODO: how do you count tabs
     # return s
     counter = 1
-    while counter < length(s)
+    while counter <= length(s)
         line = s[counter]
         # check data lines
         if delve && occursin("\n", line)
@@ -35,7 +36,7 @@ function impose_line_length!(s::Vector{<:AbstractString}, limit=132, delve=true)
                 end
             end
             s1 = "$(join(splitstring[1:best_split_index], splitchar))$(splitchar)"
-            s2 = "\t$(join(splitstring[best_split_index+1:end], splitchar))"
+            s2 = "        $(join(splitstring[best_split_index+1:end], splitchar))"
             s[counter] = s1
             insert!(s,counter+1,s2)
         end
@@ -186,7 +187,7 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
     end
     impose_line_length!(s)
     if length(s) > 0
-        return "$(_spec_name_dict[spectype]) {\n\t$(join(s,"\n\t"))\n}"
+        return "$(_spec_name_dict[spectype]) {\n        $(join(s,"\n        "))\n}"
     else
         return "$(_spec_name_dict[spectype]) { }"
     end
@@ -208,7 +209,7 @@ function x13write(spec::X13series; test=false, outfolder::Union{String,X13defaul
         end
     end
     impose_line_length!(s)
-    return "series {\n\t$(join(s,"\n\t"))\n}"
+    return "series {\n        $(join(s,"\n        "))\n}"
 end
 
 function x13write(spec::X13metadata; test=false, outfolder::Union{String,X13default}=X13default())
@@ -221,12 +222,12 @@ function x13write(spec::X13metadata; test=false, outfolder::Union{String,X13defa
     else
         push!(s, "key = (")
         for key in keys_vector
-            push!(s, "\t\"$key\"")
+            push!(s, "        \"$key\"")
         end
         push!(s, ")")
         push!(s, "value = (")
         for val in values_vector
-            push!(s, "\t\"$val\"")
+            push!(s, "        \"$val\"")
         end
         push!(s, ")")
 
@@ -234,7 +235,7 @@ function x13write(spec::X13metadata; test=false, outfolder::Union{String,X13defa
     # push!(s, "key = $(x13write(keys_vector))")
     # push!(s, "value = $(x13write(values_vector))")
     impose_line_length!(s)
-    return "metadata {\n\t$(join(s,"\n\t"))\n}"
+    return "metadata {\n        $(join(s,"\n        "))\n}"
 end
 
 _fixed_val_dict = Dict{Bool,String}(
@@ -283,7 +284,7 @@ function x13write(val::MVTSeries)
         # println(val.values)
         for t in rangeof(val)
             # println(val[t])
-            push!(vals, join(val[t], "\t"))
+            push!(vals, join(val[t], "        "))
             # for key in colnames
             #     key == colnames[end] ? push!(vals, "$(cols[key][t])\n\t") : push!(vals, "$(cols[key][t])\t")
             #     # push!(vals, cols[key][t])
@@ -294,7 +295,7 @@ function x13write(val::MVTSeries)
         # println(join(vals, "\t"))
         # vals[end] = vals[end][1:end-1]
         # println(s2)
-        return "(\t$(join(vals, "\n\t"))\t)"
+        return "(        $(join(vals, "\n        "))        )"
     end
 end
 x13write(val::Number) = val
@@ -302,7 +303,7 @@ x13write(val::Symbol) = val
 x13write(val::Missing) = ""
 x13write(val::Vector{Union{Int64,Missing}}) = "($(join(x13write.(val), ", ")))"
 x13write(val::Vector{<:Any}) = "($(join(x13write.(val), ", ")))"
-x13write(val::Vector{String}) = "($(join(x13write.(val), "\n\t")))"
+x13write(val::Vector{String}) = "($(join(x13write.(val), "\n        ")))"
 x13write(val::Vector{<:Union{Symbol,X13var}}) = "($(join(x13write.(val), " ")))"
 x13write(val::X13.ao) = "ao$(x13write(val.mit))"
 x13write(val::X13.ls) = "ls$(x13write(val.mit))"
