@@ -633,6 +633,7 @@ Base.dotview(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where {F<:Frequency} = begi
 end
 
 
+Base.view(x::MVTSeries, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon=Colon()) = view(x, I, axes(x, 2))
 Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))
