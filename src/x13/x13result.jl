@@ -38,8 +38,9 @@ function Base.getproperty(w::X13ResultWorkspace, sym::Symbol)
 end
 
 
-function run(spec::X13spec{F}; verbose=true, errors=false, load) where F
+function run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none) where F
 
+    _load = load isa Symbol ? Set([load]) : Set(load)
     x13write(spec)
 
     gpath = joinpath(spec.folder, "graphics")
@@ -109,6 +110,7 @@ function run(spec::X13spec{F}; verbose=true, errors=false, load) where F
     freq = frequencyof(spec.series.data)
     for file in files
         ext = Symbol(splitext(file)[2][2:end])
+        load isa Symbol && load == :all && push!(_load, ext)
         # println(ext)
         if ext in _series_extensions
             res.series[ext] = X13lazy(file,ext,freq)
@@ -119,17 +121,12 @@ function run(spec::X13spec{F}; verbose=true, errors=false, load) where F
         elseif ext == :err
             x13read_err(file, res.warnings, res.notes, res.errors)
             res.out[ext] = read(file, String)
-        elseif ext == :OUT
-            # SEATS output files
-            if split(file, "/")[end] == "TABLE-S.OUT"
-                lines = split(read(file, String),"\n")
-                if length(lines) > 2
-                    res.series.s = x13read_seatsseries(lines, frequencyof(spec.series.data))
-                end
-            end
-        elseif ext ∈ _ignored_extensions
+        elseif ext == :tbs || (ext == :OUT && split(file, "/")[end] == "TABLE-S.OUT")
+            res.series.tbs = X13lazy(file,ext,freq)
+            load isa Symbol && load == :all && push!(_load, :tbs)
+        elseif ext ∈ _human_text_extensions
             res.out[ext] = X13lazy(file,ext,freq)
-        elseif ext ∉ _ignored_extensions && ext !== :txt && ext !== :log
+        elseif ext ∉ _human_text_extensions && ext !== :txt && ext !== :log
             println("=================================================================================================================")
             # println(ext)
             println(read(file, String))
@@ -137,9 +134,17 @@ function run(spec::X13spec{F}; verbose=true, errors=false, load) where F
         end
     end
 
-
-
-    
+    if load !== :none
+        for key in intersect(_load, keys(res.series))
+            res.series[key] = loadresult(res.series[key])
+        end
+        for key in intersect(_load, keys(res.tables))
+            res.tables[key] = loadresult(res.tables[key])
+        end
+        for key in intersect(_load, keys(res.other))
+            res.other[key] = loadresult(res.other[key])
+        end
+    end
 
     if verbose
         for w in warnings
@@ -165,11 +170,11 @@ function run(spec::X13spec{F}; verbose=true, errors=false, load) where F
         end
     end
 
-    # TODO: .tbs, .sum, .rog are special SEATS outputs
-
     return res
     
 end
+
+loadresult(val::X13lazy) = loadresult(val.file, val.ext, val.freq)
 
 function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
     if ext in _series_extensions
@@ -179,7 +184,7 @@ function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
         return x13read_workspace_table(lines, ext=ext)
     elseif ext == :udg
         #TODO: make this meaningful
-        res.other[ext] = x13read_udg(file)
+       return x13read_udg(file)
     elseif ext in _kv_list_extensions
         lines = split(read(file, String), "\n")
         return x13_read_key_values(lines,  r"\s+")
@@ -189,17 +194,15 @@ function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
         return x13read_model(file)
     elseif ext ∈ (:ipc, :iac)
         return x13read_identify(file)
-    elseif ext == :OUT
+    elseif ext == :tbs || (ext == :OUT && split(file, "/")[end] == "TABLE-S.OUT")
         # SEATS output files
-        if split(file, "/")[end] == "TABLE-S.OUT"
-            lines = split(read(file, String),"\n")
-            if length(lines) > 2
-                res.series.s = x13read_seatsseries(lines, freq)
-            end
+        lines = split(read(file, String),"\n")
+        if length(lines) > 2
+            return x13read_seatsseries(lines, freq)
         end
-    elseif ext ∈ _ignored_extensions
+    elseif ext ∈ _human_text_extensions
         return read(file, String)
-    elseif ext ∉ _ignored_extensions && ext !== :txt && ext !== :log
+    elseif ext ∉ _human_text_extensions && ext !== :txt && ext !== :log
         println("=================================================================================================================")
         # println(ext)
         println(read(file, String))
@@ -221,13 +224,14 @@ _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct,
     :td, :ao, :ls, :hol, :chl, :tc, :usr,) # these have dates
 # _table_extensions = (, ) #TODO: maybe make these tables...
 _table_extensions = (:pcf,:acf,:ac2,:itr,:spr,:sp0, :sp1, :sp2, :str, :st0, :st1, :st2, :rts, :acm, :rcm, :d8b, :oit, :rot, :xoi,
-    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf, 
+    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf, :rog
     )
 _kv_list_extensions = (:lks, :mdc,)
-_ignored_extensions = (
+_human_text_extensions = (
     :spc, # the input spec file
     :gmt, # a list of files in the graphics folder
     :out, # TODO: the output of the print command
+    :sum, # a summary file from the SEATS spec
     # :OUT, # SEATS has a separate out file...
 )
 
@@ -372,18 +376,24 @@ function x13read_workspace_table(lines::Vector{<:AbstractString}; ext=:nospecial
         lines=lines[1:end-1]
     end
     # println(lines)
+    # for line in lines
+    #     println(line)
+    # end
     # println(read(file, String))
     ws = WorkspaceTable()
     headers = _sanitize_colname.(split(strip(lines[1]), "\t"))
     if ext == :acm
         # this table is missing a header...
         insert!(headers, 2, "lag")
+    elseif ext == :rog
+        lines = map(l -> strip(replace(l, r"\s+:"=>":", r"\s\s+" => "\t")), lines[2:end])
+        headers = [:measure, _sanitize_colname.(split(strip(lines[1]), "\t"))...]
     end
 
     vectors = Vector{Any}()
     numvals =  length(lines)-2
     for h in 1:length(headers)
-        push!(vectors, Vector{String}(undef, numvals))
+        push!(vectors, fill("", numvals))
     end
     # vectors = repeat([Vector{String}(undef, length(lines)-2)], length(header))
     # vals = Matrix{Float64}(undef, (length(lines)-3, length(headers)))
@@ -393,7 +403,7 @@ function x13read_workspace_table(lines::Vector{<:AbstractString}; ext=:nospecial
             continue
         end
         for (j,val) in enumerate(split(line, "\t"))
-            j > length(headers) && val == "" && continue
+            j > length(headers) && strip(val) == "" && continue
             vectors[j][i] = val
         end
         # # println("line: ", line)
@@ -464,7 +474,7 @@ function x13read_series(file, F::Type{<:Frequency})
     # check first line
     _s = split(lines[3], "\t")
     lastcol = length(_s)
-    if lastcol > length(headers) + 1 && _s[end] == ""
+    if lastcol > length(headers) + 1 && strip(_s[end]) == ""
         lastcol = lastcol - 1
     end
     for (i, line) in enumerate(lines[3:end-1])
