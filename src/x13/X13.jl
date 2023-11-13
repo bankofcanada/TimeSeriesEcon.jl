@@ -16,6 +16,18 @@ MacroTools.@forward WorkspaceTable._c (Base.isempty, Base.keys, Base.haskey, Bas
 MacroTools.@forward WorkspaceTable._c (Base.iterate, Base.get, Base.get!,)
 export WorkspaceTable
 
+struct X13ResultWorkspace <: AbstractWorkspace
+    _c::OrderedDict{Symbol,Any}
+    # punt construction to container
+    X13ResultWorkspace(args...; kwargs...) = new(OrderedDict{Symbol,Any}(args...; kwargs...))
+    # Allow construction like this: Workspace(; var1=val1, var2=val2, ...)
+    X13ResultWorkspace(; kw...) = new(OrderedDict{Symbol,Any}(kw))
+end
+MacroTools.@forward X13ResultWorkspace._c (Base.setindex!,)
+MacroTools.@forward X13ResultWorkspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
+MacroTools.@forward X13ResultWorkspace._c (Base.iterate, Base.get, Base.get!,)
+export WorkspaceTable, X13ResultWorkspace
+
 include("x13consts.jl")
 include("x13spec.jl")
 include("x13print.jl")

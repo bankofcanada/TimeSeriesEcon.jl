@@ -46,7 +46,7 @@ end
 
 function x13write(spec::X13spec; test=false, outfolder::Union{String,X13default}=spec.folder)
     if !test && outfolder isa X13default
-        spec.folder = mktempdir(; prefix="x13_", cleanup=true)
+        spec.folder = mktempdir(; prefix="x13_", cleanup=true) # will be deleted when process exits
         outfolder = spec.folder
     end
     # @show outfolder

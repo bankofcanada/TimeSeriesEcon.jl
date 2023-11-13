@@ -11,16 +11,34 @@ mutable struct X13result
     spec::X13spec
     outfolder::String
     stdout::String
-    series::Workspace
-    tables::Workspace
-    other::Workspace
+    series::X13ResultWorkspace
+    tables::X13ResultWorkspace
+    other::X13ResultWorkspace
     errors::Vector{String}
     warnings::Vector{String}
     notes::Vector{String}
-    out::Workspace
+    out::X13ResultWorkspace
+
+    X13.X13result(spec::X13spec, outfolder::String, stdout::String) = new(spec, outfolder, stdout, X13ResultWorkspace(), X13ResultWorkspace(), X13ResultWorkspace(), Vector{String}(), Vector{String}(), Vector{String}(), X13ResultWorkspace())
 end
 
-function run(spec::X13spec{F}; verbose=true, errors=false) where F
+struct X13lazy
+    file::String
+    ext::Symbol
+    freq::Type
+end
+
+function Base.getproperty(w::X13ResultWorkspace, sym::Symbol) 
+    val =  sym === :_c ? getfield(w, :_c) : getindex(w, sym)
+    if val isa X13lazy
+        val = X13.loadresult(val.file, val.ext, val.freq)
+        setindex!(w, val, sym)
+    end
+    return val
+end
+
+
+function run(spec::X13spec{F}; verbose=true, errors=false, load) where F
 
     x13write(spec)
 
@@ -73,7 +91,7 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
         end
     end
     
-    res = X13.X13result(spec, spec.folder, stdout, Workspace(), Workspace(), Workspace(), Vector{String}(), Vector{String}(), Vector{String}(), Workspace())
+    res = X13.X13result(spec, spec.folder, stdout)
 
     main_objects = readdir(spec.folder, join=true)
     files = filter(obj -> !isdir(obj), main_objects)
@@ -88,30 +106,19 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
     # warnings = Vector{String}()
     # notes = Vector{String}()
 
+    freq = frequencyof(spec.series.data)
     for file in files
         ext = Symbol(splitext(file)[2][2:end])
         # println(ext)
         if ext in _series_extensions
-            res.series[ext] = x13read_series(file, frequencyof(spec.series.data))
+            res.series[ext] = X13lazy(file,ext,freq)
         elseif ext in _table_extensions
-            lines = split(read(file, String),"\n")
-            # println(read(file, String))
-            res.tables[ext] = x13read_workspace_table(lines, ext=ext)
-        elseif ext == :udg
-            #TODO: make this meaningful
-            res.other[ext] = x13read_udg(file)
-        elseif ext in _kv_list_extensions
-            lines = split(read(file, String), "\n")
-            res.other[ext] = x13_read_key_values(lines,  r"\s+")
-        elseif ext == :est
-            res.other[ext] = x13read_estimates(file)
-        elseif ext == :mdl
-            res.other[ext] = x13read_model(file)
+            res.tables[ext] = X13lazy(file,ext,freq)
+        elseif ext in [:udg, _kv_list_extensions..., :est, :mdl, :ipc, :iac]
+            res.other[ext] = X13lazy(file,ext,freq)
         elseif ext == :err
             x13read_err(file, res.warnings, res.notes, res.errors)
             res.out[ext] = read(file, String)
-        elseif ext ∈ (:ipc, :iac)
-            res.other[ext] = x13read_identify(file)
         elseif ext == :OUT
             # SEATS output files
             if split(file, "/")[end] == "TABLE-S.OUT"
@@ -121,7 +128,7 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
                 end
             end
         elseif ext ∈ _ignored_extensions
-            res.out[ext] = read(file, String)
+            res.out[ext] = X13lazy(file,ext,freq)
         elseif ext ∉ _ignored_extensions && ext !== :txt && ext !== :log
             println("=================================================================================================================")
             # println(ext)
@@ -163,6 +170,43 @@ function run(spec::X13spec{F}; verbose=true, errors=false) where F
     return res
     
 end
+
+function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
+    if ext in _series_extensions
+        return x13read_series(file, freq)
+    elseif ext in _table_extensions
+        lines = split(read(file, String),"\n")
+        return x13read_workspace_table(lines, ext=ext)
+    elseif ext == :udg
+        #TODO: make this meaningful
+        res.other[ext] = x13read_udg(file)
+    elseif ext in _kv_list_extensions
+        lines = split(read(file, String), "\n")
+        return x13_read_key_values(lines,  r"\s+")
+    elseif ext == :est
+        return x13read_estimates(file)
+    elseif ext == :mdl
+        return x13read_model(file)
+    elseif ext ∈ (:ipc, :iac)
+        return x13read_identify(file)
+    elseif ext == :OUT
+        # SEATS output files
+        if split(file, "/")[end] == "TABLE-S.OUT"
+            lines = split(read(file, String),"\n")
+            if length(lines) > 2
+                res.series.s = x13read_seatsseries(lines, freq)
+            end
+        end
+    elseif ext ∈ _ignored_extensions
+        return read(file, String)
+    elseif ext ∉ _ignored_extensions && ext !== :txt && ext !== :log
+        println("=================================================================================================================")
+        # println(ext)
+        println(read(file, String))
+        println(file)
+    end
+end
+
 _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct, 
     :a1, :a2, :a3, :a4, :a10, :a18, :a18, :a19, 
     :b1, :b2, :b3, :b5, :b6, :b7, :b8, :b10, :b11, :b13, :b14, :b16, :b17, :b19, :b20,
@@ -850,4 +894,33 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
     #     print(io, "\n  ", lpad(sk, max_align), " ⇒ ", sv)
     # end
 
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ws::X13lazy)
+    print(io, ws.file)
+end
+
+"""
+`cleanup()`
+
+By default, the folders created by the x13 runs are automatically removed when the process exits. However, if the julia process was forcefully closed some folders may
+remain. This function will remove all folders in the system's temporary directory (the default directory for `mktempdir`) who (1) have names starting with "x13_", 
+and (2) are owned by the current user.
+"""
+function cleanup()
+    folder = mktempdir(; prefix="x13_", cleanup=true)
+    parent = joinpath(splitpath(folder)[1:end-1])
+    all_folders_and_files = readdir(parent, join=false)
+    removed_folders = Vector{String}()
+    for f in all_folders_and_files
+        if findfirst("x13_", f) == 1:4 && isdir(joinpath(parent, f))
+            stats = stat(joinpath(parent,f))
+            if stats.uid == Libc.getuid()
+                path = joinpath(parent,f)
+                rm(path; recursive=true)
+                push!(removed_folders, path)
+            end
+        end
+    end
+    println("Removed $(length(removed_folders)) temporary x13 folders.")
 end
