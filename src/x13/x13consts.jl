@@ -436,7 +436,7 @@ _output_alt_names = Dict{Symbol,Dict{Symbol,Symbol}}(
 _output_save_tables = Dict{Symbol, Vector{Symbol}}(
     :arima => Vector{Symbol}(),
     :automdl => Vector{Symbol}(),
-    :check => [:act, :pcf, :ac2],
+    :check => [:acf, :pcf, :ac2],
     :estimate => [:mdl, :est, :lks, :itr, :rcm, :acm, :rts, :ref, :rrs, :rsd],
     :force => [:saa, :rnd, :e6a, :e6r, :p6a, :p6r],
     :forecast => [:ftr, :fvr, :fct, :btr, :bct],
@@ -452,7 +452,7 @@ _output_save_tables = Dict{Symbol, Vector{Symbol}}(
     :spectrum => [:is1, :sp2, :sp0, :s1s, :st2, :is2, :it0, :s2s, :it1, :sp1, :str, :ser, :ter, :st0, :is0, :it2, :spr, :st1],
     :transform => [:a2, :a2t, :a4d, :a3, :trn, :a4p, :a2p, :a3p, :a1c],
     :x11 => [:d4, :tad, :d8b, :e1, :d6, :b5, :d9, :d2, :d1, :tac, :c2, :b20, :e7, :c9, :b17, :c7, :c13, :b10, :f1, :c11, :e2, :d12, :c19, :e11, :c6, :b3, :tal, :e5, :b7, :b19, :c4, :ira, :e3, :fsd, :b2, :e18, :d10, :b11, :c1, :c17, :e6, :d11, :c10, :d5, :b8, :d16, :fad, :b6, :d8, :d18, :d13, :sac, :d7, :e8, :chl, :c5, :b13, :c20, :paf, :pe8, :pir, :pe5, :pe6, :psf, :pe7],
-    :x11regression => [:a4, :c14, :c16, :c18, :xhl, :xca, :xcc, :b14, :b16, :b18, :bxh, :hxc, :bcc, :xoi, :xrm, :xrc],
+    :x11regression => [:a4, :c14, :c16, :c18, :xhl, :xca, :xcc, :b14, :b16, :b18, :bxh, :bxc, :bcc, :xoi, :xrm, :xrc],
 )
 
 _output_descriptions = Dict{Symbol,Dict{Symbol,String}}(

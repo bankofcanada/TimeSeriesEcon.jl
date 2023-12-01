@@ -2482,7 +2482,7 @@ function seats(;
     # out = _X13default #this one can be safely left at zero
     savelog = _X13default # setting all four to X13default makes it work...
 
-    _save_all = [:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:seriesfcstdecomp,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum, :cycle, :longtermtrend, :componentmodels,:filtersaconc,:filtersasym,:filtertrendconc,:filtertrendsym,:squaredgainsaconc,:squaredgainsasym,:squaredgaintrendconc,:squaredgaintrendsym,:timeshiftsaconc,:timeshifttrendconc,:wkendfilter,:seasonalpct,:irregularpct,:transitorypct,:adjustfacpct]
+    _save_all = [:trend, :seasonal, :irregular, :seasonaladj, :transitory, :adjustfac, :adjustmentratio,:trendfcstdecomp,:seasonalfcstdecomp,:ofd,:seasonaladjfcstdecomp,:transitoryfcstdecomp,:seasadjconst, :trendconst,:totaladjustment,:difforiginal,:diffseasonaladj,:difftrend,:seasonalsum, :cycle, :longtermtrend, :componentmodels,:filtersaconc,:filtersasym,:filtertrendconc,:filtertrendsym,:squaredgainsaconc,:squaredgainsasym,:squaredgaintrendconc,:squaredgaintrendsym,:timeshiftsaconc,:timeshifttrendconc,:wkendfilter,:seasonalpct,:irregularpct,:transitorypct,:adjustfacpct]
     if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
         @warn "The print=:all option is not available for the Seats spec."
         print = _X13default

@@ -121,9 +121,12 @@ function run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Uni
         elseif ext == :err
             x13read_err(file, res.warnings, res.notes, res.errors)
             res.out[ext] = read(file, String)
-        elseif ext == :tbs || (ext == :OUT && split(file, "/")[end] == "TABLE-S.OUT")
-            res.series.tbs = X13lazy(file,ext,freq)
+        elseif ext == :tbs || (ext == :OUT && split(file, "/")[end] ∈ ("TABLE-S.OUT","\\\\TABLE-S.OUT"))
+            res.series.tbs = X13lazy(file,:tbs,freq)
             load isa Symbol && load == :all && push!(_load, :tbs)
+        elseif ext == :rog || (ext == :OUT && split(file, "/")[end] ∈ ("ROGTABLE.OUT","\\\\ROGTABLE.OUT"))
+            res.tables.rog = X13lazy(file,:rog,freq)
+            load isa Symbol && load == :all && push!(_load, :rog)
         elseif ext ∈ _human_text_extensions
             res.out[ext] = X13lazy(file,ext,freq)
         elseif ext ∉ _human_text_extensions && ext !== :txt && ext !== :log
@@ -194,12 +197,16 @@ function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
         return x13read_model(file)
     elseif ext ∈ (:ipc, :iac)
         return x13read_identify(file)
-    elseif ext == :tbs || (ext == :OUT && split(file, "/")[end] == "TABLE-S.OUT")
-        # SEATS output files
+    elseif ext == :tbs #|| (ext == :OUT && split(file, "/")[end] == "TABLE-S.OUT")
+        # SEATS output file
         lines = split(read(file, String),"\n")
         if length(lines) > 2
             return x13read_seatsseries(lines, freq)
         end
+    elseif ext == :rog #|| (ext == :OUT && split(file, "/")[end] == "ROGTABLE.OUT")
+        # SEATS output file
+        lines = split(read(file, String),"\n")
+        return x13read_workspace_table(lines, ext=ext)
     elseif ext ∈ _human_text_extensions
         return read(file, String)
     elseif ext ∉ _human_text_extensions && ext !== :txt && ext !== :log
@@ -208,6 +215,7 @@ function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
         println(read(file, String))
         println(file)
     end
+    return nothing
 end
 
 _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct, 
@@ -222,9 +230,56 @@ _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct,
     :a2p, :a1c, :a2t, :xrm, :a4d, :xhl, :bxh, :xca, :xcc,
     :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, :pss, :psi, :psc, :ltt, :cyc,
     :td, :ao, :ls, :hol, :chl, :tc, :usr,) # these have dates
+_probably_series_extensions = (:sas, :ais, :so, :a13, :sec, :stc, :sta, :ser, :ter, :b18, :bxc, :bcc, :a3p, :a4p, :chr, :iar,
+    :tcr, :sfr, :che, :iae, :tce, :sfe, :mva, :sac, :ofd)
+untreated = [
+    :smy, # Slidingspans. Sounds like a complex text file
+    # :sas, # sliding spans, sounds like a series or list of them
+    :sis, # sliding spans
+    :cis, # sliding spans
+    :ais, # sliding spans, sounds like a series
+    :yis, # sliding spans
+    # :so,  # regression # TODO: get this one
+    # :a13, 
+    # :sec, # seats
+    # :ofd, #seats
+    # :stc, #seats
+    # :sta, #seats
+    :psa, # seats
+    :is1, # spectrum (plot?)
+    :is2, # spectrum (plot)
+    :it0, # spectrum, tukey spectrum
+    :it1, # spectrum, tukey spectrum?
+    # :ser, # spectrum, residuals
+    # :ter, # spectrum tukey residuals?
+    :is0, # spectrum (plot?)
+    :it2, # spectrum, tukey spectrum?
+    # :b18, #x11 regression
+    # :bxc, #x11 regression
+    # :bcc, #x11 regression
+    :xrc, # correlation matrix
+    # :a4p, # transfrom
+    # :a3p, # transfrom
+    # :chr, # history
+    # :iar, # history
+    # :tcr, # history
+    # :sfr, # history
+    :lkh, # history (of AICC and likelihood values)
+    :tdh, # history, trading day coefficients
+    :sfh, # history
+    # :che, # history
+    # :iae, # history
+    # :tce, # history
+    # :sfe, # history
+    # :mva, # series
+    :c9,  # x11
+    :fsd, # x11
+    :fad, # x11
+    # :sac, # x11
+]
 # _table_extensions = (, ) #TODO: maybe make these tables...
 _table_extensions = (:pcf,:acf,:ac2,:itr,:spr,:sp0, :sp1, :sp2, :str, :st0, :st1, :st2, :rts, :acm, :rcm, :d8b, :oit, :rot, :xoi,
-    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf, :rog
+    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf
     )
 _kv_list_extensions = (:lks, :mdc,)
 _human_text_extensions = (
