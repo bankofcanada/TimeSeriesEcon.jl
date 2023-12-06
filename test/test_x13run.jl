@@ -1906,6 +1906,15 @@ end
         @test res.other[key] isa AbstractWorkspace
     end
     
+    # example with some pseudoadd output output
+    ts = TSeries(1976M1, mvsales[1:250])
+    spec = X13.newspec(ts)
+    X13.x11!(spec; save=[:fsd, :fad], mode=:pseudoadd)
+    res = X13.run(spec; verbose=false, load=:all);
+    for key in (:fsd, :fad)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    
 end
 
 @testset "X13 x11regression run" begin

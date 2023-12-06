@@ -47,20 +47,24 @@ function run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Uni
     if !ispath(gpath)
         mkdir(gpath)
     end
-    # println(gpath)
-
-    c = `x13as -I "$(joinpath(spec.folder,"spec"))" -G "$(gpath)" -S`
 
     stdin_buffer = IOBuffer()
     stdout_buffer = IOBuffer()
     stderr_buffer = IOBuffer()
     try
+        if Sys.iswindows() || TimeSeriesEcon.getoption(:x13path) !== "x13as_ascii.exe"
+            c = `$(TimeSeriesEcon.getoption(:x13path)) -I "$(joinpath(spec.folder,"spec"))" -G "$(gpath)" -S`
+        else
+            x13as_ascii() do x13
+                c = `$x13 -I "$(joinpath(spec.folder,"spec"))" -G "$(gpath)" -S`
+            end
+        end
         cmdout = Base.run(c, stdin_buffer, stdout_buffer, stderr_buffer)
     catch err
         if err isa ProcessFailedException
             # just ignore this for now, catch it when reading the errors file or stderr.
         else
-            throw(err) #TODO: maybe rethrow? investigate
+            rethrow()
         end
     end
     stdin = String(take!(stdin_buffer))
@@ -114,6 +118,20 @@ function run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Uni
         # println(ext)
         if ext in _series_extensions
             res.series[ext] = X13lazy(file,ext,freq)
+        elseif ext in _probably_series_extensions
+            try
+                lazy = X13lazy(file,ext,freq)
+                ts = loadresult(lazy)
+                res.series[ext] = ts
+            catch err
+                @warn "Encountered an unknown output type: $(ext). Attempted to load it as a series but failed.
+                
+                Informing the developers of the TimeSeriesEcon package of this output type could help them improve the X13 module."
+                continue
+            end
+            @warn "Encountered an unknown output type: $(ext). Loaded it as a series.
+                
+                Informing the developers of the TimeSeriesEcon package of this output type could help them improve the X13 module."
         elseif ext in _table_extensions
             res.tables[ext] = X13lazy(file,ext,freq)
         elseif ext in [:udg, _kv_list_extensions..., :est, :mdl, :ipc, :iac]
@@ -229,9 +247,9 @@ _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct,
     :rnd, :fts, :btr, :bct, :fch, :fce, :amh, :tre, :sae, :trr, :sar, :tal, :ycs, :sfs, :chs, :tds, :ads, 
     :a2p, :a1c, :a2t, :xrm, :a4d, :xhl, :bxh, :xca, :xcc,
     :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, :pss, :psi, :psc, :ltt, :cyc,
-    :td, :ao, :ls, :hol, :chl, :tc, :usr,) # these have dates
+    :td, :ao, :ls, :hol, :chl, :tc, :usr, :fsd, :fad) # these have dates
 _probably_series_extensions = (:sas, :ais, :so, :a13, :sec, :stc, :sta, :ser, :ter, :b18, :bxc, :bcc, :a3p, :a4p, :chr, :iar,
-    :tcr, :sfr, :che, :iae, :tce, :sfe, :mva, :sac, :ofd)
+    :tcr, :sfr, :che, :iae, :tce, :sfe, :mva, :sac, :ofd, :xrc, :c9)
 untreated = [
     :smy, # Slidingspans. Sounds like a complex text file
     # :sas, # sliding spans, sounds like a series or list of them
@@ -239,45 +257,18 @@ untreated = [
     :cis, # sliding spans
     :ais, # sliding spans, sounds like a series
     :yis, # sliding spans
-    # :so,  # regression # TODO: get this one
-    # :a13, 
-    # :sec, # seats
-    # :ofd, #seats
-    # :stc, #seats
-    # :sta, #seats
     :psa, # seats
     :is1, # spectrum (plot?)
     :is2, # spectrum (plot)
     :it0, # spectrum, tukey spectrum
     :it1, # spectrum, tukey spectrum?
-    # :ser, # spectrum, residuals
-    # :ter, # spectrum tukey residuals?
     :is0, # spectrum (plot?)
     :it2, # spectrum, tukey spectrum?
-    # :b18, #x11 regression
-    # :bxc, #x11 regression
-    # :bcc, #x11 regression
-    :xrc, # correlation matrix
-    # :a4p, # transfrom
-    # :a3p, # transfrom
-    # :chr, # history
-    # :iar, # history
-    # :tcr, # history
-    # :sfr, # history
     :lkh, # history (of AICC and likelihood values)
     :tdh, # history, trading day coefficients
     :sfh, # history
-    # :che, # history
-    # :iae, # history
-    # :tce, # history
-    # :sfe, # history
-    # :mva, # series
-    :c9,  # x11
-    :fsd, # x11
-    :fad, # x11
-    # :sac, # x11
+    :c9,  # x11, same as b9, which cannot be saved...
 ]
-# _table_extensions = (, ) #TODO: maybe make these tables...
 _table_extensions = (:pcf,:acf,:ac2,:itr,:spr,:sp0, :sp1, :sp2, :str, :st0, :st1, :st2, :rts, :acm, :rcm, :d8b, :oit, :rot, :xoi,
     :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf
     )
@@ -379,7 +370,7 @@ function x13_read_key_values(lines::Vector{<:AbstractString}, separator=r"[\t\:]
     return ws
 end
 
-#TODO: deal with thins like k.other.udf.roots.ar.nonseaonal.01 which can't be accessed without Symbol("01")
+#TODO: deal with things like k.other.udf.roots.ar.nonseaonal.01 which can't be accessed without Symbol("01")
 
 """Replaces keys with periods in them with workspaces"""
 function _add_layers!(ws::Workspace)
@@ -651,32 +642,6 @@ function x13read_err(file::AbstractString, warnings::Vector{String}, notes::Vect
             push!(notes, line[8:end])
         end
     end
-    # println(lines)
-    
-    # for i in 2:length(lines)
-    #     line = strip(lines[i])
-    #     # println(line)
-    #     if length(strip(line)) <= 1
-    #         continue
-    #     end
-    #     if line[1:8] == "WARNING:"
-    #         push!(warnings, line[9:end])
-    #     elseif line[1:5] == "NOTE:"
-    #        push!(notes, line[6:end])
-    #     elseif line[1:6] == "ERROR:"
-    #         push!(errors, line[7:end])
-    #     elseif line[1:6] == "*-*-*-"
-    #         # log file splitter
-    #         #TODO: maybe store this information...
-    #         continue
-    #     elseif i + 1 <= length(lines) && length(strip(lines[i+1])) !== 1 # looking for an arrow on th enext line
-    #         println("OBS! unknown entry in error file: $line")
-    #         # println(read(file, String))
-    #     end
-    #     # i = i + 1
-    # end
-
-    # return warnings, notes
 end
 function find_next_empty_line(v::Vector{<:AbstractString})
     for i in 1:length(v)

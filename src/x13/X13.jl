@@ -3,6 +3,7 @@ module X13
 using TimeSeriesEcon
 using MacroTools
 using OrderedCollections
+using X13as_jll
 
 struct WorkspaceTable <: AbstractWorkspace
     _c::OrderedDict{Symbol,Any}
