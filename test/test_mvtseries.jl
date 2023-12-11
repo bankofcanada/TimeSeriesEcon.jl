@@ -110,6 +110,10 @@ end
     @test a[1, 1] == 22
     @test_throws BoundsError a.c
     @test (a.a = TSeries(20Q1, 1:10); a.values[:, 1] == collect(1:10))
+    @test (a.a = 1; a.values[:, 1] == ones(10))
+    b = MVTSeries(rangeof(a), (:a, ), rand)
+    @test (a.a = b; a.values[:, 1] == b.values[:,1])
+    @test (a[:,:] .= 6ones(size(a)...); all(a.values .== 6))
 end
 
 @testset "MV" begin
@@ -269,7 +273,6 @@ end
         @test (sd[nms] = sd2; sd[rangeof(sd2),:].values == sd2.values)
         rand!(sd)
         @test (sd[nms] .= sd2; sd[rangeof(sd2),:].values == sd2.values)
-        
     end
 end
 
