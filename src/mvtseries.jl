@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 using OrderedCollections
@@ -411,8 +411,12 @@ function Base.setproperty!(x::MVTSeries, name::Symbol, val)
         return copyto!(col, rng, val)
     elseif val isa Number
         return fill!(col.values, val)
+    elseif val isa MVTSeries
+        vcol = _col(val, name)
+        rng = intersect(rangeof(col), rangeof(vcol))
+        return copyto!(col, rng, vcol)
     else
-        return copyto!(col.values, val)
+        return col.values[:] = val
     end
 end
 
@@ -484,6 +488,13 @@ end
 @inline function Base.setindex!(x::MVTSeries, val, cols::_MVTSAxes2)
     inds = _colind(x, cols)
     setindex!(x.values, val, :, inds)
+end
+
+@inline function Base.setindex!(x::MVTSeries, val::MVTSeries, cols::_MVTSAxes2)
+    colinds = _colind(x, cols)
+    rng = intersect(rangeof(x), rangeof(val))
+    start, stop = _ind_range_check(x, rng)
+    setindex!(x.values, view(val, rng, cols), start:stop, colinds)
 end
 
 # ---- two arguments indexing
@@ -633,6 +644,7 @@ Base.dotview(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where {F<:Frequency} = begi
 end
 
 
+Base.view(x::MVTSeries, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon=Colon()) = view(x, I, axes(x, 2))
 Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))

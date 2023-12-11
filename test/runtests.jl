@@ -4,6 +4,7 @@
 using Test
 using TimeSeriesEcon
 using Statistics
+using Random
 using Suppressor
 
 include("test_mit.jl")
