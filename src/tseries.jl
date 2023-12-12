@@ -156,6 +156,7 @@ _to_unitrange(x::TSeries) = rangeof(x)
 Base.size(t::TSeries) = size(t.values)
 Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
 Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
+Base.parent(t::TSeries) = t.values
 
 # Base.keys(t::TSeries) = rangeof(t)
 Base.findall(t::TSeries{F,Bool}) where {F<:Frequency} = firstdate(t) - 1 .+ findall(t.values)
