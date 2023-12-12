@@ -59,24 +59,15 @@ end
 # This "user"-type recipe is for plotting multiple TSeries.
 # It calls the one_tseries recipe in a loop
 @recipe function many_tseries(ts::TSeries...)
+    # populate x with the range and y with t itself.
+    # divert to seriestype=:tseries (done in one_tseries() above), but
+    # keep track of the original seriestype, so we can restore it
     _org_st = get(plotattributes, :seriestype, :path)
-    if _org_st == :histogram
-        # histogram uses only the values
-        for t in ts
-            @series begin
-                values(t)
-            end
-        end
-    else
-        # populate x with the range and y with t itself.
-        # divert to seriestype=:tseries (done in one_tseries() above), but
-        # keep track of the original seriestype, so we can restore it
-        for t = ts
-            @series begin
-                seriestype := :tseries
-                _org_st := _org_st
-                (rangeof(t), t)
-            end
+    for t = ts
+        @series begin
+            seriestype := :tseries
+            _org_st := _org_st
+            (rangeof(t), t)
         end
     end
 end
