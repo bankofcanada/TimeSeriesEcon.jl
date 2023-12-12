@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 # -------------------------------------------------------------------------------
@@ -155,6 +155,7 @@ rangeof(t::TSeries) = firstdate(t) .+ (0:size(t.values, 1)-1)
 Base.size(t::TSeries) = size(t.values)
 Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
 Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
+Base.parent(t::TSeries) = t.values
 
 # the following are needed for copy() and copyto!() (and a bunch of Julia internals that use them)
 Base.IndexStyle(::TSeries) = IndexLinear()
