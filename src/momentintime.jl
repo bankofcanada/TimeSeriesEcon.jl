@@ -768,6 +768,8 @@ Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)
 # In the special case of YPFrequency we want the year to be the whole part and the period to be the fractional part. 
 (T::Type{<:AbstractFloat})(x::MIT{<:YPFrequency{N}}) where {N} = convert(T, ((y, p) = mit2yp(x); y + (p - 1) / N))
 Base.promote_rule(::Type{<:MIT}, ::Type{T}) where {T<:AbstractFloat} = T
+(T::Type{<:AbstractFloat})(x::Duration) = convert(T, Int(x))
+(T::Type{<:AbstractFloat})(x::Duration{<:YPFrequency{N}}) where {N} = convert(T, Int(x) / N)
 
 # frequency comparisons
 Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) = isless(ppy(x), ppy(y))
@@ -862,6 +864,8 @@ Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = mi
 
 # Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
 # Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)
+
+Base.float(rng::UnitRange{MIT{F}}) where {F} = float(first(rng)):float(Duration{F}(1)):float(last(rng))
 
 #------------------------------
 # sort!() a list of MITs
