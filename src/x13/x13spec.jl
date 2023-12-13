@@ -1,12 +1,7 @@
 # https://www2.census.gov/software/x-13arima-seats/x-13-data/documentation/docx13as.pdf
 # pg 175
 
-# TODO:
-# estimate file argument
-# pickmdl file argument
 
-# Make a default type,
-# Make all types unions of default and the actual type...
 
 struct X13default end
 _X13default = X13default()
@@ -355,7 +350,7 @@ end
 mutable struct X13pickmdl
     bcstlim::Union{Int64,X13default}
     fcstlim::Union{Int64,X13default}
-    models::Union{Vector{ArimaModel}}
+    models::Union{Vector{ArimaModel}, X13default}
     identify::Union{Symbol,X13default}
     method::Union{Symbol,X13default}
     mode::Union{Symbol,X13default}
@@ -364,6 +359,7 @@ mutable struct X13pickmdl
     print::Union{Symbol,Vector{Symbol},X13default}
     savelog::Union{Symbol,Vector{Symbol},X13default}
     qlim::Union{Int64,X13default}
+    file::Union{String,X13default}
 end
 
 
@@ -1195,7 +1191,7 @@ trading-day effects, and the set of user-defined regression effects.
 
 ### Rarely used keyword arguments:
 
-* **file** (String) - See the manual.
+* **file** (String) - The full path to a file containing the `.mdl` output from another estimation.
 
 * **fix** (Symbol) - Specifies whether certain coefficients found in the model file specified in the file argument
     are to be held fixed instead of being used as initializing values for further estimation. If
@@ -1866,11 +1862,18 @@ outlier!(spec::X13spec{F}; kwargs...) where F = (spec.outlier = outlier(; kwargs
 `pickmdl(; kwargs...)`
 
 `pickmdl!(spec::X13spec{F}; kwargs...)`
+`pickmdl!(spec::X13spec{F}, models::Vector{ArimaModel}; kwargs...)`
+`pickmdl!(spec::X13spec{F}, model::ArimaModel... ; kwargs...)`
 
 Specifies that the ARIMA part of the regARIMA model will be sought using an automatic model selection
 procedure similar to the one used by X-11-ARIMA/88 (see Dagum 1988). The user can specify which types
 of models are to be fitted to the time series in the procedure and can change the thresholds for the selection
 criteria.
+
+### Positional arguments:
+
+A vector or series of ArimaModel instances can be passed to the `pickmdl!` function. If present, these will be used in 
+place of the "file" argument. Note that only one of the passed ArimaModels can have its `default` field set to `true`.
 
 ### Main keyword arguments:
 
@@ -1887,7 +1890,7 @@ criteria.
     The value entered for this argument must not be less than zero, or greater than 100. The
     default is `fcstlim=15` percent.
 
-* **file** (String) - See the manual.
+* **file** (String) - The full path to a file containing a series of Arima specifications. Please see the manual for details.
 
 * **identify** (Symbol) - Determines how automatic identification of outliers (via the `outlier` spec) and/or 
     automatic trading day regressor identification (via the `aictest` argument of the `regression`
@@ -1944,10 +1947,9 @@ criteria.
     percent.
 
 """
-function pickmdl(models::Vector{ArimaModel}; 
+function pickmdl(models::Union{Vector{ArimaModel},X13default}; 
     bcstlim::Union{Int64,X13default}=_X13default,
     fcstlim::Union{Int64,X13default}=_X13default,
-    # file::Union{String,X13default}=_X13default,
     identify::Union{Symbol,X13default}=_X13default,
     method::Union{Symbol,X13default}=_X13default,
     mode::Union{Symbol,X13default}=_X13default,
@@ -1956,6 +1958,7 @@ function pickmdl(models::Vector{ArimaModel};
     print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     savelog::Union{Symbol,Vector{Symbol},X13default}=:automodel,
     qlim::Union{Int64,X13default}=_X13default,
+    file::Union{String,X13default}=_X13default,
 )
     # TODO: file argument MUST BE SPECIFIED
     # checks and logic
@@ -1977,31 +1980,37 @@ function pickmdl(models::Vector{ArimaModel};
         end
     end
 
-    if length(models) < 2
-        throw(ArgumentError("pickmdl spec must be provided with at least two candidate models. Received: $(length(models)). $(models)"))
-    end
-    num_defaults = 0
-    for m in models
-        if m.default == true
-            num_defaults += 1
+    if !(models isa X13default)
+        if length(models) < 2
+            throw(ArgumentError("pickmdl spec must be provided with at least two candidate models. Received: $(length(models)). $(models)"))
         end
-    end
-    if num_defaults > 1
-        throw(ArgumentError("pickmdl can only have one model specified as a default, but $(num_defaults) of the provided models are flagged as defaults."))
+        num_defaults = 0
+        for m in models
+            if m.default == true
+                num_defaults += 1
+            end
+        end
+        if num_defaults > 1
+            throw(ArgumentError("pickmdl can only have one model specified as a default, but $(num_defaults) of the provided models are flagged as defaults."))
+        end
     end
 
     _print_all = [:pickmdlchoice, :header, :usermodels]
     if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
         print = _print_all
     end
-
-    # TODO: support for the file argument (model specs)
-    return X13pickmdl(bcstlim,fcstlim,models,identify,method,mode,outofsample,overdiff,print,savelog,qlim)
+    if (models isa X13default) && (file isa X13default)
+        throw(ArgumentError("pickmdl spec must either be constructed with a vector of ArimaModels or with the file keyword argument specified."))
+    end
+    
+    return X13pickmdl(bcstlim,fcstlim,models,identify,method,mode,outofsample,overdiff,print,savelog,qlim,file)
 end
 pickmdl(models::ArimaModel...; kwargs...) = pickmdl([models...]; kwargs...)
+pickmdl(; kwargs...) = pickmdl(_X13default; kwargs...)
 
 pickmdl!(spec::X13spec{F}, models::Vector{ArimaModel}; kwargs...) where F = (spec.pickmdl = pickmdl(models; kwargs...); spec)
 pickmdl!(spec::X13spec{F}, models::ArimaModel...; kwargs...) where F = (spec.pickmdl = pickmdl([models...]; kwargs...); spec)
+pickmdl!(spec::X13spec{F}; kwargs...) where F = (spec.pickmdl = pickmdl(; kwargs...); spec)
 
 
 # pickmdl!(spec::X13spec{F}; kwargs...) where F = (spec.pickmdl = pickmdl(; kwargs...))
@@ -4064,9 +4073,6 @@ function validateX13spec(spec::X13spec)
     if !(spec.x11regression isa X13default) && !(spec.regression isa X13default)
         # TODO: When trading day and/or holiday adjustments are estimated from both the regression and x11regression specs, then the noapply option must be used to ensure that only one set of factors is used in the adjustment...
     end
-    
-
-   
     
 end
 
