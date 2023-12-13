@@ -453,7 +453,7 @@ mutable struct X13transform
     data::Any
     file::Union{String,X13default}
     format::Union{String,X13default}
-    func::Union{Symbol,X13default} #TODO should be function
+    func::Union{Symbol,X13default}
     mode::Union{Symbol,Vector{Symbol},X13default}
     name::Union{Symbol,Vector{Symbol},X13default}
     power::Union{Float64,X13default}
@@ -1226,7 +1226,6 @@ function estimate(;
     return X13estimate(exact,maxiter,outofsample,print,save,savelog,tol,file,fix)
 end
 estimate!(spec::X13spec{F}; kwargs...) where F = (spec.estimate = estimate(; kwargs...); spec)
-#TODO: Support for file argument (previous model)
 
 """
 `force(; kwargs...)`
@@ -1960,7 +1959,6 @@ function pickmdl(models::Union{Vector{ArimaModel},X13default};
     qlim::Union{Int64,X13default}=_X13default,
     file::Union{String,X13default}=_X13default,
 )
-    # TODO: file argument MUST BE SPECIFIED
     # checks and logic
     if !(bcstlim isa X13default) && (bcstlim < 0 || bcstlim > 100)
         throw(ArgumentError("bcstlim must be a value between 0 and 100 (inclusive). Received: $(bcstlim)."))
@@ -3613,18 +3611,7 @@ function validateX13spec(spec::X13spec)
 
         types_used = Set(collect_regvar_types(vars))
         series_range = rangeof(spec.series.data)
-        span_range = rangeof(spec.series.data)
-        if spec.series.span isa UnitRange
-            span_range = spec.series.span
-        elseif spec.series.span isa Span
-            if spec.series.span.b isa MIT
-                span_range = spec.series.span.b:last(span_range)
-            end
-            if spec.series.span.e isa MIT
-                span_range = first(span_range):spec.series.span.e
-            end
-            ## TODO: treatment of 0.per ranges here
-        end
+        span_range = effective_span(spec.series)
         for v in vars
             vtypesymbol = v
             if !(vtypesymbol isa Symbol)
@@ -3874,19 +3861,7 @@ function validateX13spec(spec::X13spec)
     if !(spec.regression isa X13default) && !(spec.regression.data isa X13default)
         if !(spec.regression.data isa X13default)
             datarange = rangeof(spec.regression.data)
-            series_range = rangeof(spec.series.data)
-            required_range = rangeof(spec.series.data)
-            if spec.series.span isa UnitRange
-                required_range = spec.series.span
-            elseif spec.series.span isa Span
-                if spec.series.span.b isa MIT
-                    required_range = spec.series.span.b:last(required_range)
-                end
-                if spec.series.span.e isa MIT
-                    required_range = first(required_range):spec.series.span.e
-                end
-                ## TODO: treatment of 0.per ranges here
-            end
+            required_range = effective_span(spec.series)
             if !(spec.forecast isa X13default)
                 if !(spec.forecast.maxback isa X13default)
                     required_range = first(required_range)-spec.forecast.maxback:last(required_range)
@@ -3968,25 +3943,13 @@ function validateX13spec(spec::X13spec)
     end
 
     if !(spec.x11regression isa X13default)
-        #TODO:
         if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
             throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the x11regression spec."))
         end
 
         if !(spec.x11regression.data isa X13default)
             data_range = rangeof(spec.x11regression.data)
-            required_range = rangeof(spec.series.data)
-            if spec.series.span isa UnitRange
-                required_range = spec.series.span
-            elseif spec.series.span isa Span
-                if spec.series.span.b isa MIT
-                    required_range = spec.series.span.b:last(required_range)
-                end
-                if spec.series.span.e isa MIT
-                    required_range = first(required_range):spec.series.span.e
-                end
-                ## TODO: treatment of 0.per ranges here
-            end
+            required_range = effective_span(spec.series)
             if !(spec.forecast isa X13default)
                 if !(spec.forecast.maxback isa X13default)
                     required_range = first(required_range)-spec.forecast.maxback:last(required_range)
@@ -4001,18 +3964,7 @@ function validateX13spec(spec::X13spec)
         end
         if !(spec.x11regression.umdata isa X13default)
             data_range = rangeof(spec.x11regression.umdata)
-            required_range = rangeof(spec.series.data)
-            if spec.series.span isa UnitRange
-                required_range = spec.series.span
-            elseif spec.series.span isa Span
-                if spec.series.span.b isa MIT
-                    required_range = spec.series.span.b:last(required_range)
-                end
-                if spec.series.span.e isa MIT
-                    required_range = first(required_range):spec.series.span.e
-                end
-                ## TODO: treatment of 0.per ranges here
-            end
+            required_range = effective_span(spec.series)
             if !(spec.forecast isa X13default)
                 if !(spec.forecast.maxback isa X13default)
                     required_range = first(required_range)-spec.forecast.maxback:last(required_range)
@@ -4032,20 +3984,33 @@ function validateX13spec(spec::X13spec)
             end
         end
         if !(spec.x11regression.span isa X13default)
-            required_range = rangeof(spec.series.data)
-            if spec.series.span isa UnitRange
-                required_range = spec.series.span
-            elseif spec.series.span isa Span
-                if spec.series.span.b isa MIT
-                    required_range = spec.series.span.b:last(required_range)
+            required_range = effective_span(spec.series.data)
+            reg_range = copy(required_range)
+            if (spec.x11regression.span isa UnitRange)
+                reg_range = spec.x11regression.span
+            elseif spec.x11regression.span isa Span
+                if spec.x11regression.span.b isa MIT
+                    reg_range = sspec.x11regression.span.b:last(required_range)
                 end
-                if spec.series.span.e isa MIT
-                    required_range = first(required_range):spec.series.span.e
+                if spec.x11regression.span.e isa MIT
+                    reg_range = first(required_range):spec.x11regression.span.e
                 end
-                ## TODO: treatment of 0.per ranges here
+                # 0.per
+                if (spec.x11regression.span.b isa Missing) && spec.x11regression.span.e ∈ (M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,Q1,Q2,Q3,Q4,H1,H2)
+                    last_period = period(last(reg_range))
+                    last_period_span = period(1*spec.x11regression.span.e)
+                    if last_period == last_period_span
+                        # do nothing, span range is series range
+                    elseif last_period > last_period_span
+                        reg_range = first(reg_range):last(reg_range) - (last_period - last_period_span)
+                    elseif last_period < last_period_span
+                        reg_range = first(reg_range):last(reg_range) - (ppy(reg_range) - (last_period_span - last_period))
+                    end
+                end
             end
-            if intersect(spec.x11regression.span, required_range) !== spec.x11regression.span
-                throw(ArgumentError("The span argument of the x11regression spec must lie within the range of the provided data ($(required_range))). Received: $(spec.x11regression.span)."))
+            
+            if intersect(reg_range, required_range) !== reg_range
+                throw(ArgumentError("The span argument of the x11regression spec must lie within the range of the provided data ($(required_range))). Received: $(reg_range)."))
             end
         end
 
@@ -4116,9 +4081,45 @@ function collect_regvar_types(vars)
     return types_used
 end
 
-export X13spec
+function effective_span(s::X13Series)
+    span = rangeof(s.data)
+    if s.span isa UnitRange
+        span = spec.series.span
+    elseif spec.series.span isa Span
+        if spec.series.span.b isa MIT
+            span = spec.series.span.b:last(span)
+        end
+        if spec.series.span.e isa MIT
+            span = first(span):spec.series.span.e
+        end
+    elseif spec.series.modelspan isa UnitRange
+        span = spec.series.span
+    elseif spec.series.modelspan isa Span
+        if spec.series.span.b isa MIT
+            span = spec.series.modelspan.b:last(span)
+        end
+        if spec.series.modelspan.e isa MIT
+            span = first(span):spec.series.modelspan.e
+        end
+        # 0.per
+        if (spec.series.modelspan.b isa Missing) && spec.series.modelspan.e ∈ (M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,Q1,Q2,Q3,Q4,H1,H2)
+            last_period = period(last(rangeof(s.data)))
+            last_period_span = period(1*spec.series.modelspan.e)
+            if last_period == last_period_span
+                # do nothing, span range is series range
+            elseif last_period > last_period_span
+                span = first(span):last(span) - (last_period - last_period_span)
+            elseif last_period < last_period_span
+                span = first(span):last(span) - (ppy(span) - (last_period_span - last_period))
+            end
+        end
+    end
+    return span
+end
 
 function Base.show(io::IO, ::MIME"text/plain", ws::X13spec)
     print(io, "X13 spec\n")
-
+    
 end
+
+export X13spec
