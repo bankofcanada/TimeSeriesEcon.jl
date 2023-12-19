@@ -5,6 +5,7 @@ using MacroTools
 using OrderedCollections
 using X13as_jll
 
+"""A workspace which displays assuming its entries are equal-length vectors."""
 struct WorkspaceTable <: AbstractWorkspace
     _c::OrderedDict{Symbol,Any}
     # punt construction to container
@@ -17,6 +18,7 @@ MacroTools.@forward WorkspaceTable._c (Base.isempty, Base.keys, Base.haskey, Bas
 MacroTools.@forward WorkspaceTable._c (Base.iterate, Base.get, Base.get!,)
 export WorkspaceTable
 
+"""A workspace which supports lazy-loading of X13 results."""
 struct X13ResultWorkspace <: AbstractWorkspace
     _c::OrderedDict{Symbol,Any}
     # punt construction to container
@@ -31,7 +33,7 @@ export WorkspaceTable, X13ResultWorkspace
 
 include("x13consts.jl")
 include("x13spec.jl")
-include("x13print.jl")
+include("x13write.jl")
 include("x13result.jl")
 
 """
@@ -61,21 +63,38 @@ remain. This function will remove all folders in the system's temporary director
 and (2) are owned by the current user.
 """
 function cleanup()
+    folders = get_cleanup_folders()
+    for f in folders
+        rm(f; recursive=true)
+    end
+    println("Removed $(length(folders)) temporary x13 folders.")
+end
+
+function get_cleanup_folders()
     folder = mktempdir(; prefix="x13_", cleanup=true)
     parent = joinpath(splitpath(folder)[1:end-1])
     all_folders_and_files = readdir(parent, join=false)
-    num_removed_folders = 0
+    folders_to_remove = Vector{String}()
     for f in all_folders_and_files
         if findfirst("x13_", f) == 1:4 && isdir(joinpath(parent, f))
             stats = stat(joinpath(parent,f))
             if stats.uid == Libc.getuid()
                 path = joinpath(parent,f)
-                rm(path; recursive=true)
-                num_removed_folders += 1
+                push!(folders_to_remove, path)
             end
         end
     end
-    println("Removed $(num_removed_folders) temporary x13 folders.")
+    
+    return folders_to_remove
 end
+
+function __init__()
+    tmpfolders = get_cleanup_folders()
+    if length(tmpfolders) > 5
+        @warn "There are $(length(tmpfolders)) temporary X13 folders created by this user which have not been automatically removed.
+         Call X13.cleanup() to remove these."
+    end
+end
+
 
 end # module end

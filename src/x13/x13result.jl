@@ -1,5 +1,5 @@
 import Dates
-
+# TODO: Show for results object
 
 """ A structure for holding the results of an X13 run."""
 mutable struct X13result
@@ -14,7 +14,11 @@ mutable struct X13result
     notes::Vector{String}
     out::X13ResultWorkspace
 
-    X13.X13result(spec::X13spec, outfolder::String, stdout::String) = new(spec, outfolder, stdout, X13ResultWorkspace(), X13ResultWorkspace(), X13ResultWorkspace(), Vector{String}(), Vector{String}(), Vector{String}(), X13ResultWorkspace())
+    function X13.X13result(spec::X13spec, outfolder::String, stdout::String)
+        res = new(spec, outfolder, stdout, X13ResultWorkspace(), X13ResultWorkspace(), X13ResultWorkspace(), Vector{String}(), Vector{String}(), Vector{String}(), X13ResultWorkspace())
+        f(t) = @async rm(outfolder; recursive=true)
+        finalizer(f, res)
+    end
 end
 
 """ A structure to hold location information for unloaded results."""
@@ -243,6 +247,7 @@ function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
     elseif ext ∈ _human_text_extensions
         return read(file, String)
     elseif ext ∉ _human_text_extensions && ext !== :txt && ext !== :log
+        @warn "Encountered unknown output file. Contents and path below."
         println("=================================================================================================================")
         # println(ext)
         println(read(file, String))
@@ -279,7 +284,7 @@ function x13read_err(file::AbstractString, warnings::Vector{String}, notes::Vect
     end
 end
 
-""" Reads an X13 key/value output file """
+""" Read an X13 key/value output file """
 function x13read_key_values(lines::Vector{<:AbstractString}, separator=r"[\t\:]")
     ws = Workspace()
     for line in lines
@@ -691,10 +696,12 @@ function _add_layers!(ws::Workspace)
     end
 end
 
+"""Removes spaces and some characters from column names."""
 function _sanitize_colname(s::AbstractString)
     return replace(s, r"[\s\-\.]+" => "_")
 end
 
+"""tryparse, but with a default"""
 function _tryparse(t::Type, s::AbstractString, default) 
     v = tryparse(t, s)
     v === nothing && return default
