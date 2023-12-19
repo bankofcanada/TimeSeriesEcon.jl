@@ -1,14 +1,10 @@
-
-
-
-function x13write(outfile::String, spec::X13spec; test=false)
-    s = x13write(spec; test)
-    # println(join(s, "\n"))
-end
+"""
+This file contains functions for writing a X13spec object into a String 
+    in the format expected by X13-ARIMA-Seats.
+"""
 
 function impose_line_length!(s::Vector{<:AbstractString}, limit=133-8, delve=true) #132
     #TODO: how do you count tabs
-    # return s
     counter = 1
     while counter <= length(s)
         line = s[counter]
