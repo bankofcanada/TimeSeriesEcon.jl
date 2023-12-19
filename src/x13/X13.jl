@@ -53,4 +53,29 @@ end
 deseasonalize(ts::TSeries; kwargs...) = deseasonalize!(copy(ts), kwargs...)
 export deseasonalize, deseasonalize!
 
+"""
+`cleanup()`
+
+By default, the folders created by the x13 runs are automatically removed when the process exits. However, if the julia process was forcefully closed some folders may
+remain. This function will remove all folders in the system's temporary directory (the default directory for `mktempdir`) who (1) have names starting with "x13_", 
+and (2) are owned by the current user.
+"""
+function cleanup()
+    folder = mktempdir(; prefix="x13_", cleanup=true)
+    parent = joinpath(splitpath(folder)[1:end-1])
+    all_folders_and_files = readdir(parent, join=false)
+    num_removed_folders = 0
+    for f in all_folders_and_files
+        if findfirst("x13_", f) == 1:4 && isdir(joinpath(parent, f))
+            stats = stat(joinpath(parent,f))
+            if stats.uid == Libc.getuid()
+                path = joinpath(parent,f)
+                rm(path; recursive=true)
+                num_removed_folders += 1
+            end
+        end
+    end
+    println("Removed $(num_removed_folders) temporary x13 folders.")
+end
+
 end # module end

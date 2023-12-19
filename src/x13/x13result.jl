@@ -1,12 +1,7 @@
 import Dates
 
 
-# NEW PLAN: make a type for results with tables, then specify a print type for those... I think
-
-# struct WorkspaceTable <: AbstractWorkspace end
-
-
-
+""" A structure for holding the results of an X13 run."""
 mutable struct X13result
     spec::X13spec
     outfolder::String
@@ -22,12 +17,14 @@ mutable struct X13result
     X13.X13result(spec::X13spec, outfolder::String, stdout::String) = new(spec, outfolder, stdout, X13ResultWorkspace(), X13ResultWorkspace(), X13ResultWorkspace(), Vector{String}(), Vector{String}(), Vector{String}(), X13ResultWorkspace())
 end
 
+""" A structure to hold location information for unloaded results."""
 struct X13lazy
     file::String
     ext::Symbol
     freq::Type
 end
 
+""" A worksplace structure which supports lazy-loading. """
 function Base.getproperty(w::X13ResultWorkspace, sym::Symbol) 
     val =  sym === :_c ? getfield(w, :_c) : getindex(w, sym)
     if val isa X13lazy
@@ -38,7 +35,22 @@ function Base.getproperty(w::X13ResultWorkspace, sym::Symbol)
 end
 
 
-function run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none) where F
+
+"""
+`X13.run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none)`
+
+Run X13-ARIMA-SEATS with the provided spec structure. By default the results will not contain the actual TSeries and other objects,
+but will contain X13laxy instances which will read the output and convert to the final object when accessed.
+
+Keyword arguments:
+* **verbose** (Bool) - Print any warnings and notes from the X13 log and err files to the REPL. Default is `true`.
+
+* **allow_errors** (Bool) - When true, the process will not throw an error when encountering error messages in the X13 err file. Default is `false`.
+
+* **load** (Symbol or Vector{Symbol}) - Specifies one or more result objects to load immediately. Valid entries are keys in the entries of `X13._output_descriptions`.
+Passing `:all` will load all results immediately. Default is `:none`.
+"""
+function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none) where F
 
     _load = load isa Symbol ? Set([load]) : Set(load)
     x13write(spec)
@@ -88,7 +100,7 @@ function run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Uni
                     break
                 end
             end
-            if errors
+            if allow_errors
                 @error error_msg
             else
                 throw(error(error_msg))
@@ -181,22 +193,25 @@ function run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Uni
         for err in res.errors
             @error err
         end
-        if errors
+        if allow_errors
             @warn "There were errors in the specification file."
         else #if length(res.errors) > 1 || findfirst("span of data end date", res.errors[1]) !== 1:21
             error("There were errors in the specification file.")
-            # println(findfirst("span of data end date", res.errors[1]))
-            # @assert length(res.errors) == 0 "There were errors in the specification file."
-            # TODO: just throw an errorexception
         end
     end
 
     return res
     
 end
+export run
 
+""" 
+`loadresult(val::X13lazy)`
+`loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})`
+
+Replaces an X13laxy object with the loaded data structure.
+"""
 loadresult(val::X13lazy) = loadresult(val.file, val.ext, val.freq)
-
 function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
     if ext in _series_extensions
         return x13read_series(file, freq)
@@ -208,7 +223,7 @@ function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
        return x13read_udg(file)
     elseif ext in _kv_list_extensions
         lines = split(read(file, String), "\n")
-        return x13_read_key_values(lines,  r"\s+")
+        return x13read_key_values(lines,  r"\s+")
     elseif ext == :est
         return x13read_estimates(file)
     elseif ext == :mdl
@@ -236,70 +251,36 @@ function loadresult(file::String, ext::Symbol, freq::Type{<:Frequency})
     return nothing
 end
 
-_series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct, 
-    :a1, :a2, :a3, :a4, :a10, :a18, :a18, :a19, 
-    :b1, :b2, :b3, :b5, :b6, :b7, :b8, :b10, :b11, :b13, :b14, :b16, :b17, :b19, :b20,
-    :c1, :c2, :c4, :c5, :c6, :c7, :c10, :c11, :c13, :c14, :c16, :c17, :c18, :c19, :c20,
-    :d1, :d2, :d4, :d5, :d6, :d7, :d8, :d9, :d12, :d10, :d11, :d13, :d16, :d18,
-    :e1, :e2, :e3, :e5, :e6, :e7, :e8, :e11, :e18, 
-    :s10, :s11, :s12, :s13, :s14, :s16, :s18, 
-    :tad, :psf, :pir, :pe5, :pe6, :pe7, :pe8, :paf, :f1, :otl, :ftr, :ira, :fvr, :p6a, :p6r, :e6a, :e6r, :saa, :ffc, 
-    :rnd, :fts, :btr, :bct, :fch, :fce, :amh, :tre, :sae, :trr, :sar, :tal, :ycs, :sfs, :chs, :tds, :ads, 
-    :a2p, :a1c, :a2t, :xrm, :a4d, :xhl, :bxh, :xca, :xcc,
-    :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, :pss, :psi, :psc, :ltt, :cyc,
-    :td, :ao, :ls, :hol, :chl, :tc, :usr, :fsd, :fad) # these have dates
-_probably_series_extensions = (:sas, :ais, :so, :a13, :sec, :stc, :sta, :ser, :ter, :b18, :bxc, :bcc, :a3p, :a4p, :chr, :iar,
-    :tcr, :sfr, :che, :iae, :tce, :sfe, :mva, :sac, :ofd, :xrc, :c9)
-untreated = [
-    :smy, # Slidingspans. Sounds like a complex text file
-    # :sas, # sliding spans, sounds like a series or list of them
-    :sis, # sliding spans
-    :cis, # sliding spans
-    :ais, # sliding spans, sounds like a series
-    :yis, # sliding spans
-    :psa, # seats
-    :is1, # spectrum (plot?)
-    :is2, # spectrum (plot)
-    :it0, # spectrum, tukey spectrum
-    :it1, # spectrum, tukey spectrum?
-    :is0, # spectrum (plot?)
-    :it2, # spectrum, tukey spectrum?
-    :lkh, # history (of AICC and likelihood values)
-    :tdh, # history, trading day coefficients
-    :sfh, # history
-    :c9,  # x11, same as b9, which cannot be saved...
-]
-_table_extensions = (:pcf,:acf,:ac2,:itr,:spr,:sp0, :sp1, :sp2, :str, :st0, :st1, :st2, :rts, :acm, :rcm, :d8b, :oit, :rot, :xoi,
-    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf
-    )
-_kv_list_extensions = (:lks, :mdc,)
-_human_text_extensions = (
-    :spc, # the input spec file
-    :gmt, # a list of files in the graphics folder
-    :out, # TODO: the output of the print command
-    :sum, # a summary file from the SEATS spec
-    # :OUT, # SEATS has a separate out file...
-)
+function x13read_err(file::AbstractString, warnings::Vector{String}, notes::Vector{String}, errors::Vector{String})
+    # println(read(file, String))
 
-# check what we haven't seen:
-all_treated_outputs = [_series_extensions..., _table_extensions..., _kv_list_extensions..., :iac, :ipc, :mdl, :est]
-non_treaded_output_keys = Vector{Symbol}()
-for spec in keys(_output_save_tables)
-    for sym in _output_save_tables[spec]
-        if sym ∉ all_treated_outputs
-            push!(non_treaded_output_keys, sym)
+    lines = split(read(file, String), r"\n")
+    collected_lines = Vector{String}()
+    for line in lines[1:end]
+        if length(line) >= 11
+            if line[1:9] == " WARNING:" || line[1:7] == " ERROR:" || line[1:6] == " NOTE:"
+                push!(collected_lines, line)
+            elseif length(collected_lines) > 0
+                collected_lines[end] = collected_lines[end]*"\n$line"
+            end
+        elseif length(collected_lines) > 0
+            collected_lines[end] = collected_lines[end]*"\n$line"
+        end
+    end
+
+    for line in collected_lines
+        if line[1:9] == " WARNING:"
+            push!(warnings, line[11:end])
+        elseif line[1:7] == " ERROR:"
+            push!(errors, line[9:end])
+        elseif line[1:6] == " NOTE:"
+            push!(notes, line[8:end])
         end
     end
 end
-@showall non_treaded_output_keys
-# [:iac, :ipc, :smv, :sas, :sis, :cis, :ais, :yis, :so, :a13, :sec, :ofd, :stc, :wkf, :sta, :cyc, :mdc, :ltt, :pss, :psi, :psc, :psa, :is1, :is2, :it0, :it1, :ser, :ter, :is0, :it2, :b18, :hxc, :bcc, :xrc, :a4p, :a3p, :chr, :iar, :tcr, :sfr, :lkh, :tdh, :sfh, :che, :iae, :tce, :sfe, :mva, :c9, :fsd, :fad, :sac, :act]
 
-
-function x13read_udg(file)
-    lines = split(read(file, String),"\n")
-    return x13_read_key_values(lines, ": ")
-end
-function x13_read_key_values(lines::Vector{<:AbstractString}, separator=r"[\t\:]")
+""" Reads an X13 key/value output file """
+function x13read_key_values(lines::Vector{<:AbstractString}, separator=r"[\t\:]")
     ws = Workspace()
     for line in lines
         if length(strip(line)) == 0
@@ -360,72 +341,23 @@ function x13_read_key_values(lines::Vector{<:AbstractString}, separator=r"[\t\:]
         # end
 
         ws[key] = val
-
-        # sline = split(line, [" ", "\t"])
     end
 
     _add_layers!(ws)
 
-    # println(ws)
     return ws
 end
 
-#TODO: deal with things like k.other.udf.roots.ar.nonseaonal.01 which can't be accessed without Symbol("01")
-
-"""Replaces keys with periods in them with workspaces"""
-function _add_layers!(ws::Workspace)
-    keys_added = Vector{Symbol}()
-    for key in collect(keys(ws))
-        dotindex = findfirst('.', string(key))
-        if dotindex isa Int64
-            trunk = Symbol(string(key)[1:dotindex-1])
-            leaf = Symbol(string(key)[dotindex+1:end])
-            if trunk ∉ keys(ws)
-                ws[trunk] = Workspace()
-                push!(keys_added, trunk)
-            elseif !(ws[trunk] isa Workspace)
-                trunk = Symbol("$(string(trunk))_")
-                ws[trunk] = Workspace()
-                push!(keys_added, trunk)
-            end
-            # @show trunk
-            # @show leaf
-            # @show ws[key]
-            # @show ws[trunk]
-            ws[trunk][leaf] = ws[key]
-            delete!(ws, key)
-        end
-    end
-    for key in keys_added
-        _add_layers!(ws[key])
-    end
-end
-
-function _sanitize_colname(s::AbstractString)
-    return replace(s, r"[\s\-\.]+" => "_")
-end
-
-function x13read_table(file)
+function x13read_udg(file)
     lines = split(read(file, String),"\n")
-    headers = _sanitize_colname.(split(strip(lines[1]), "\t"))
-    vals = Matrix{Float64}(undef, (length(lines)-3, length(headers)))
-    for (i,line) in enumerate(lines[3:end-1])
-        # println("line: ", line)
-        vals[i,:] = [parse(Float64, v) for v in split(strip(line), "\t")]
-    end
-    res = MVTSeries(1U, Symbol.(headers), vals)
-    return res
+    return x13read_key_values(lines, ": ")
 end
+#TODO: deal with things like k.other.udf.roots.ar.nonseaonal.01 which can't be accessed without Symbol("01")
 
 function x13read_workspace_table(lines::Vector{<:AbstractString}; ext=:nospecialrules)
     if strip(lines[end]) == ""
         lines=lines[1:end-1]
     end
-    # println(lines)
-    # for line in lines
-    #     println(line)
-    # end
-    # println(read(file, String))
     ws = WorkspaceTable()
     headers = _sanitize_colname.(split(strip(lines[1]), "\t"))
     if ext == :acm
@@ -441,8 +373,7 @@ function x13read_workspace_table(lines::Vector{<:AbstractString}; ext=:nospecial
     for h in 1:length(headers)
         push!(vectors, fill("", numvals))
     end
-    # vectors = repeat([Vector{String}(undef, length(lines)-2)], length(header))
-    # vals = Matrix{Float64}(undef, (length(lines)-3, length(headers)))
+
     # put values in vectors
     for (i,line) in enumerate(lines[3:end])
         if length(strip(line)) == 0
@@ -452,9 +383,8 @@ function x13read_workspace_table(lines::Vector{<:AbstractString}; ext=:nospecial
             j > length(headers) && strip(val) == "" && continue
             vectors[j][i] = val
         end
-        # # println("line: ", line)
-        # vals[i,:] = [parse(Float64, v) for v in split(strip(line), "\t")]
     end
+    
     # attempt to parse the vectors
     for (i,v) in enumerate(vectors)
         foundval = false
@@ -481,34 +411,6 @@ function x13read_workspace_table(lines::Vector{<:AbstractString}; ext=:nospecial
     return ws
 end
 
-
-
-
-
-
-function x13read_series(file, F::Type{<:Frequency}, start::MIT)
-    lines = split(read(file, String),"\n")
-    vals = Vector{Float64}(undef, length(lines)-3)
-    for (i, line) in enumerate(lines[3:end-1])
-        # println(line)
-        vals[i] = parse(Float64, split(line, "\t")[2])
-    end
-    period_string = split(lines[3], "\t")[1]
-    if length(period_string) > 2
-        p = parse(Int64, period_string[end-1:end])
-        y = parse(Int64, period_string[1:end-2])
-        return TSeries(MIT{F}(y,p), vals)
-    else
-        throw(ArgumentError("Period string has an unexpected format: $(period_string)."))
-    end
-
-    println(vals)
-end
-function _tryparse(t::Type, s::AbstractString, default) 
-    v = tryparse(t, s)
-    v === nothing && return default
-    return v
-end
 function x13read_series(file, F::Type{<:Frequency})
     # println(read(file, String))
     lines = split(read(file, String),"\n")
@@ -524,23 +426,11 @@ function x13read_series(file, F::Type{<:Frequency})
         lastcol = lastcol - 1
     end
     for (i, line) in enumerate(lines[3:end-1])
-        # # println(line)
-        # _vals =
-        # println(_vals)
-        # println((length(lines)-3, length(headers)))
-        # # pad with NaNs
-        # for val in 1:(size(vals)[2] - length(_vals))
-        #     push!(_vals, NaN)
-        # end
-        # println(line)
         vals[i,:] =  [_tryparse(Float64, v, NaN) for v in split(line, "\t")[2:lastcol]]
-        # vals[i, vals[i,:] .== undef] .= NaN
     end
     
     period_string = split(lines[3], "\t")[1]
-    # @show lines[3]
     if length(period_string) > 2
-        # @show period_string
         if lowercase(period_string[1:3]) in keys(_months_and_quarters)
             p = _months_and_quarters[lowercase(period_string[1:3])]
             y = 1
@@ -548,7 +438,7 @@ function x13read_series(file, F::Type{<:Frequency})
             p = parse(Int64, period_string[end-1:end])
             y = parse(Int64, period_string[1:end-2])
         end
-        # println(vals)
+        
         if length(headers) > 1
             return MVTSeries(MIT{F}(y,p), headers, vals)
         elseif length(headers) == 0
@@ -569,11 +459,6 @@ function x13read_seatsseries(lines::Vector{<:AbstractString}, F::Type{<:Frequenc
         headers_line = headers_line + 1
     end
     headers = split(lines[headers_line], delim)[3:end]
-    # println(headers)
-    # if headers[1] == ""
-    #     headers = headers[2:end]
-    # end
-    # println(headers)
     headers = _sanitize_colname.(headers)
     vals = Matrix{Float64}(undef, (length(lines)-headers_line-2, length(headers)))
 
@@ -586,19 +471,11 @@ function x13read_seatsseries(lines::Vector{<:AbstractString}, F::Type{<:Frequenc
     for (i, line) in enumerate(lines[headers_line+1:end-2])
         vals[i,:] =  [_tryparse(Float64, v, NaN) for v in split(line, delim)[2:lastcol]]
     end
-    # for i in 1:5
-    #     println("-"*lines[i]*"-")
-    # end
-    # println(lines[1:3])
-    
-    # println(split(lines[headers_line+1], delim))
     date = split(split(lines[headers_line+1], delim)[1], "-")
     if length(date) > 1
-        # @show period_string
         p = parse(Int64, strip(date[1]))
         y = parse(Int64, strip(date[2]))
     
-        # println(vals)
         if length(headers) > 1
             return MVTSeries(MIT{F}(y,p), headers, vals)
         elseif length(headers) == 0
@@ -609,47 +486,6 @@ function x13read_seatsseries(lines::Vector{<:AbstractString}, F::Type{<:Frequenc
     else
         throw(ArgumentError("Period string has an unexpected format: $(period_string)."))
     end
-end
-
-
-
-export run
-
-
-function x13read_err(file::AbstractString, warnings::Vector{String}, notes::Vector{String}, errors::Vector{String})
-    # println(read(file, String))
-
-    lines = split(read(file, String), r"\n")
-    collected_lines = Vector{String}()
-    for line in lines[1:end]
-        if length(line) >= 11
-            if line[1:9] == " WARNING:" || line[1:7] == " ERROR:" || line[1:6] == " NOTE:"
-                push!(collected_lines, line)
-            elseif length(collected_lines) > 0
-                collected_lines[end] = collected_lines[end]*"\n$line"
-            end
-        elseif length(collected_lines) > 0
-            collected_lines[end] = collected_lines[end]*"\n$line"
-        end
-    end
-
-    for line in collected_lines
-        if line[1:9] == " WARNING:"
-            push!(warnings, line[11:end])
-        elseif line[1:7] == " ERROR:"
-            push!(errors, line[9:end])
-        elseif line[1:6] == " NOTE:"
-            push!(notes, line[8:end])
-        end
-    end
-end
-function find_next_empty_line(v::Vector{<:AbstractString})
-    for i in 1:length(v)
-        if length(strip(v[i])) == 0
-            return i
-        end
-    end
-    return length(v)
 end
 
 function x13read_estimates(file)
@@ -673,12 +509,65 @@ function x13read_estimates(file)
     if :arima ∈ keys(indices)
         # res.arima = Workspace()
         res.arima = x13read_workspace_table(lines[indices.arimaestimates+1:indices.variance-1])
-        res.variance = x13_read_key_values(lines[indices.variance+1:end])
+        res.variance = x13read_key_values(lines[indices.variance+1:end])
     elseif :regression ∈ keys(indices)
         # res.regression = Workspace()
         res.regression = x13read_workspace_table(lines[indices.regressionestimates+1:indices.variance-1])
-        res.variance = x13_read_key_values(lines[indices.variance+1:end])
+        res.variance = x13read_key_values(lines[indices.variance+1:end])
     end
+    return res
+end
+
+function x13read_identify(file)
+    res = Workspace()
+    lines = split(read(file, String),"\n")
+    
+    # first two lines are diff/sdiff
+    page_switches = findall(s -> length(s) > 4 && s[1:5] == "\$diff", lines)
+    
+    for (i, loc) in enumerate(page_switches)
+        # loc2 = i < length(page_switches)
+        sym = Symbol("$(replace(lines[loc], "\$" => "", "= " => ""))$(replace(lines[loc+1], "\$" => "", "= " => ""))")
+        table_lines_end = i < length(page_switches) ? page_switches[i+1] - 1 : length(lines)
+        res[sym] = x13read_workspace_table(lines[loc+2:table_lines_end])
+    end
+    
+    return res
+end
+
+function x13read_model(file)
+    # TODO: make sure we can read all model specs.
+    # println(read(file, String))
+    lines = split(read(file, String),"\n")
+    res = Workspace()
+    indices = Workspace()
+    
+    # find arima and regression
+    for (i,l) in enumerate(lines)
+        line = strip(l)
+        if line == "arima{model=" || line =="arima{"
+            indices.arima = i
+        elseif line == "regression{"
+            indices.regression = i
+        end
+    end
+
+    if :arima in keys(indices)
+        end_line = length(lines)
+        if :regression in keys(indices)
+            end_line = indices.arima > indices.regression ? length(lines) : indices.regression - 1
+        end
+        res.arima = _x13read_model(lines[indices.arima:end_line])
+    end
+
+    if :regression in keys(indices)
+        end_line = length(lines)
+        if :arima in keys(indices)
+            end_line = indices.regression > indices.arima ? length(lines) : indices.arima - 1
+        end
+        res.regression = _x13read_model(lines[indices.regression:end_line])
+    end
+
     return res
 end
 
@@ -773,58 +662,49 @@ function _x13read_model(lines::Vector{<:AbstractString})
     return res
 end
 
-function x13read_identify(file)
-    res = Workspace()
-    lines = split(read(file, String),"\n")
-    
-    # first two lines are diff/sdiff
-    page_switches = findall(s -> length(s) > 4 && s[1:5] == "\$diff", lines)
-    
-    for (i, loc) in enumerate(page_switches)
-        # loc2 = i < length(page_switches)
-        sym = Symbol("$(replace(lines[loc], "\$" => "", "= " => ""))$(replace(lines[loc+1], "\$" => "", "= " => ""))")
-        table_lines_end = i < length(page_switches) ? page_switches[i+1] - 1 : length(lines)
-        res[sym] = x13read_workspace_table(lines[loc+2:table_lines_end])
+"""Replaces keys with periods in them with workspaces"""
+function _add_layers!(ws::Workspace)
+    keys_added = Vector{Symbol}()
+    for key in collect(keys(ws))
+        dotindex = findfirst('.', string(key))
+        if dotindex isa Int64
+            trunk = Symbol(string(key)[1:dotindex-1])
+            leaf = Symbol(string(key)[dotindex+1:end])
+            if trunk ∉ keys(ws)
+                ws[trunk] = Workspace()
+                push!(keys_added, trunk)
+            elseif !(ws[trunk] isa Workspace)
+                trunk = Symbol("$(string(trunk))_")
+                ws[trunk] = Workspace()
+                push!(keys_added, trunk)
+            end
+            # @show trunk
+            # @show leaf
+            # @show ws[key]
+            # @show ws[trunk]
+            ws[trunk][leaf] = ws[key]
+            delete!(ws, key)
+        end
     end
-    
-    return res
+    for key in keys_added
+        _add_layers!(ws[key])
+    end
 end
 
-function x13read_model(file)
-    # TODO: make sure we can read all model specs.
-    # println(read(file, String))
-    lines = split(read(file, String),"\n")
-    res = Workspace()
-    indices = Workspace()
-    
-    # find arima and regression
-    for (i,l) in enumerate(lines)
-        line = strip(l)
-        if line == "arima{model=" || line =="arima{"
-            indices.arima = i
-        elseif line == "regression{"
-            indices.regression = i
-        end
-    end
-
-    if :arima in keys(indices)
-        end_line = length(lines)
-        if :regression in keys(indices)
-            end_line = indices.arima > indices.regression ? length(lines) : indices.regression - 1
-        end
-        res.arima = _x13read_model(lines[indices.arima:end_line])
-    end
-
-    if :regression in keys(indices)
-        end_line = length(lines)
-        if :arima in keys(indices)
-            end_line = indices.regression > indices.arima ? length(lines) : indices.arima - 1
-        end
-        res.regression = _x13read_model(lines[indices.regression:end_line])
-    end
-
-    return res
+function _sanitize_colname(s::AbstractString)
+    return replace(s, r"[\s\-\.]+" => "_")
 end
+
+function _tryparse(t::Type, s::AbstractString, default) 
+    v = tryparse(t, s)
+    v === nothing && return default
+    return v
+end
+
+
+
+
+
 
 function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
     # we are going to print everything...
@@ -928,29 +808,4 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", ws::X13lazy)
     print(io, ws.file)
-end
-
-"""
-`cleanup()`
-
-By default, the folders created by the x13 runs are automatically removed when the process exits. However, if the julia process was forcefully closed some folders may
-remain. This function will remove all folders in the system's temporary directory (the default directory for `mktempdir`) who (1) have names starting with "x13_", 
-and (2) are owned by the current user.
-"""
-function cleanup()
-    folder = mktempdir(; prefix="x13_", cleanup=true)
-    parent = joinpath(splitpath(folder)[1:end-1])
-    all_folders_and_files = readdir(parent, join=false)
-    removed_folders = Vector{String}()
-    for f in all_folders_and_files
-        if findfirst("x13_", f) == 1:4 && isdir(joinpath(parent, f))
-            stats = stat(joinpath(parent,f))
-            if stats.uid == Libc.getuid()
-                path = joinpath(parent,f)
-                rm(path; recursive=true)
-                push!(removed_folders, path)
-            end
-        end
-    end
-    println("Removed $(length(removed_folders)) temporary x13 folders.")
 end

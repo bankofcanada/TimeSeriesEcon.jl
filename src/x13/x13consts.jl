@@ -1,3 +1,48 @@
+_series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct, 
+    :a1, :a2, :a3, :a4, :a10, :a18, :a18, :a19, 
+    :b1, :b2, :b3, :b5, :b6, :b7, :b8, :b10, :b11, :b13, :b14, :b16, :b17, :b19, :b20,
+    :c1, :c2, :c4, :c5, :c6, :c7, :c10, :c11, :c13, :c14, :c16, :c17, :c18, :c19, :c20,
+    :d1, :d2, :d4, :d5, :d6, :d7, :d8, :d9, :d12, :d10, :d11, :d13, :d16, :d18,
+    :e1, :e2, :e3, :e5, :e6, :e7, :e8, :e11, :e18, 
+    :s10, :s11, :s12, :s13, :s14, :s16, :s18, 
+    :tad, :psf, :pir, :pe5, :pe6, :pe7, :pe8, :paf, :f1, :otl, :ftr, :ira, :fvr, :p6a, :p6r, :e6a, :e6r, :saa, :ffc, 
+    :rnd, :fts, :btr, :bct, :fch, :fce, :amh, :tre, :sae, :trr, :sar, :tal, :ycs, :sfs, :chs, :tds, :ads, 
+    :a2p, :a1c, :a2t, :xrm, :a4d, :xhl, :bxh, :xca, :xcc,
+    :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, :pss, :psi, :psc, :ltt, :cyc,
+    :td, :ao, :ls, :hol, :chl, :tc, :usr, :fsd, :fad) # these have dates
+_probably_series_extensions = (:sas, :ais, :so, :a13, :sec, :stc, :sta, :ser, :ter, :b18, :bxc, :bcc, :a3p, :a4p, :chr, :iar,
+    :tcr, :sfr, :che, :iae, :tce, :sfe, :mva, :sac, :ofd, :xrc, :c9)
+untreated = [
+    :smy, # Slidingspans. Sounds like a complex text file
+    # :sas, # sliding spans, sounds like a series or list of them
+    :sis, # sliding spans
+    :cis, # sliding spans
+    :ais, # sliding spans, sounds like a series
+    :yis, # sliding spans
+    :psa, # seats
+    :is1, # spectrum (plot?)
+    :is2, # spectrum (plot)
+    :it0, # spectrum, tukey spectrum
+    :it1, # spectrum, tukey spectrum?
+    :is0, # spectrum (plot?)
+    :it2, # spectrum, tukey spectrum?
+    :lkh, # history (of AICC and likelihood values)
+    :tdh, # history, trading day coefficients
+    :sfh, # history
+    :c9,  # x11, same as b9, which cannot be saved...
+]
+_table_extensions = (:pcf,:acf,:ac2,:itr,:spr,:sp0, :sp1, :sp2, :str, :st0, :st1, :st2, :rts, :acm, :rcm, :d8b, :oit, :rot, :xoi,
+    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf
+    )
+_kv_list_extensions = (:lks, :mdc,)
+_human_text_extensions = (
+    :spc, # the input spec file
+    :gmt, # a list of files in the graphics folder
+    :out, # TODO: the output of the print command
+    :sum, # a summary file from the SEATS spec
+    # :OUT, # SEATS has a separate out file...
+)
+
 _months_and_quarters = Dict{String,Int64}(
     "jan" => 1,
     "feb" => 2,
@@ -11,23 +56,6 @@ _months_and_quarters = Dict{String,Int64}(
     "oct" => 10,
     "nov" => 11,
     "dec" => 12,
-)
-
-_series_alt_names = Dict{Symbol,Symbol}(
-    :a1 => :span, #series
-    :b1 => :adjoriginal, #series
-    :rrs => :regressionresiduals, #estimate
-    :rsd => :residuals, #estimate
-    :ref => :regressioneffects, #estimate
-    :a3 => :prioradjusted, #transform
-)
-_series_descriptions = Dict{Symbol,String}(
-    :a1 => "Original series (adjusted for span)",
-    :b1 => "Original series (adjusted for prior effects and forcast extended)",
-    :ref => "x*beta matrix of regression variables multiplied by the vector of estimated regression coefficients",
-    :rrs => "Residuals from regression effects",
-    :rsd => "Model residuals",
-    :a3 => "Prior-adjusted series",
 )
 
 _output_alt_names = Dict{Symbol,Dict{Symbol,Symbol}}(
@@ -860,6 +888,8 @@ _output_descriptions = Dict{Symbol,Dict{Symbol,String}}(
     ),
 )
 
+_output_descriptions_flat = collect(Iterators.flatten([pairs(d) for d in values(_output_descriptions)]))
+
 _output_udm_description = Dict{Symbol,String}(
     :acf => "residual autocorrelations",
     :acf2 => "squared residual autocorrelations",
@@ -1012,3 +1042,14 @@ _output_udm_description = Dict{Symbol,String}(
     :trancmp => "regARIMA transitory component",
     :tranfcd => "final transitory component forecast decomposition (SEATS)",
 )
+
+# # check what we haven't seen:
+# all_treated_outputs = [_series_extensions..., _table_extensions..., _kv_list_extensions..., :iac, :ipc, :mdl, :est]
+# non_treaded_output_keys = Vector{Symbol}()
+# for spec in keys(_output_save_tables)
+#     for sym in _output_save_tables[spec]
+#         if sym ∉ all_treated_outputs
+#             push!(non_treaded_output_keys, sym)
+#         end
+#     end
+# end

@@ -1,5 +1,6 @@
 # https://www2.census.gov/software/x-13arima-seats/x-13-data/documentation/docx13as.pdf
-# pg 175
+
+# TODO: result names
 
 
 
@@ -2778,7 +2779,6 @@ function spectrum(;
     # checks and logic
     # TODO: for some reason :tukeyspecorig, :tukeyspecsa,  :tukeyspecirr,:tukeyspecseatssa,:tukeyspecseatsirr,:tukeyspecextresiduals,:tukeyspecresidual,:tukeyspeccomposite,:tukeyspecindirr,:tukeyspecindsa are not available in save spec
     # save = [:specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa]# save::Union{Symbol,Vector{Symbol},X13default}
-    # tukey120=true
 
     _print_all = [:qcheck, :qs, :specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa,:tukeypeaks]
     _save_all = [:specorig, :specsa, :specirr, :specseatssa, :specseatsirr,:specextresiduals,:specresidual,:speccomposite,:specindirr,:specindsa]
@@ -3187,15 +3187,9 @@ function x11(;
             throw(ArgumentError("The sigmavec argument can only be specified when calendarsigma=:select."))
         end
     end
-    # not in save: :residualseasf
-
+   
     # TODO: add :totaladjustment to print if series contains values <= 0
     
-    # save = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:trendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct]# print::Union{Symbol,Vector{Symbol},X13default}
-
-    # print = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt,:movseasrat,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:trend,:tendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot]# print::Union{Symbol,Vector{Symbol},X13default}
-    # print = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt]#,:moveseasrat]#,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:totaladjustment,:trend,:tendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot]
-    # save = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi]#,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:tendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct]
     _print_all = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:ftestd8,:irregular,:irrwt,:movseasrat,:origchanges,:qstat,:replacsi,:residualseasf,:sachanges,:seasadj,:seasonal,:seasonaldiff,:tdaytype,:trend,:trendchanges,:unmodsi,:unmodsiox,:x11diag,:yrtotals,:adjoriginalc,:adjoriginald,:autosf,:extreme,:extremeb,:ftestb1,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsib4,:replacsib9,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:irregularplot,:origwsaplot,:ratioplotorig,:ratioplotsa,:seasadjplot,:seasonalplot,:trendplot]
     _save_all = [:adjustdiff, :adjustfac,:adjustmentratio,:calendar,:calendaradjchanges,:combholiday,:irregular,:irrwt,:origchanges,:replacsi,:sachanges,:seasadj,:seasonal,:seasonaldiff,:totaladjustment,:trend,:trendchanges,:unmodsi,:unmodsiox,:adjoriginalc,:adjoriginald,:extreme,:extremeb,:irregularadjao,:irregularb,:irregularc,:irrwtb,:mcdmovavg,:modirregular,:modoriginal,:modseasadj,:modsic4,:modsid4,:replacsic9,:robustsa,:seasadjb11,:seasadjb6,:seasadjc11,:seasadjc6,:seasadjconst,:seasadjd6,:seasonalb10,:seasonalb5,:seasonalc10,:seasonalc5,:seasonald5,:sib3,:sib8,:tdadjorig,:tdadjorigb,:trendadjls,:trendb2,:trendb7,:trendc2,:trendc7,:trendconst,:trendd2,:trendd7,:adjustfacpct,:calendaradjchangespct,:irregularpct,:origchangespct,:sachangespct,:seasonalpct,:trendchangespct]
     if (print isa Symbol && print == :all) || (print isa Vector{Symbol} && print == [:all])
@@ -4081,30 +4075,30 @@ function collect_regvar_types(vars)
     return types_used
 end
 
-function effective_span(s::X13Series)
+function effective_span(s::X13series)
     span = rangeof(s.data)
     if s.span isa UnitRange
-        span = spec.series.span
-    elseif spec.series.span isa Span
-        if spec.series.span.b isa MIT
-            span = spec.series.span.b:last(span)
+        span = s.span
+    elseif s.span isa Span
+        if s.span.b isa MIT
+            span = s.span.b:last(span)
         end
-        if spec.series.span.e isa MIT
-            span = first(span):spec.series.span.e
+        if s.span.e isa MIT
+            span = first(span):s.span.e
         end
-    elseif spec.series.modelspan isa UnitRange
-        span = spec.series.span
-    elseif spec.series.modelspan isa Span
-        if spec.series.span.b isa MIT
-            span = spec.series.modelspan.b:last(span)
+    elseif s.modelspan isa UnitRange
+        span = s.span
+    elseif s.modelspan isa Span
+        if s.modelspan.b isa MIT
+            span = s.modelspan.b:last(span)
         end
-        if spec.series.modelspan.e isa MIT
-            span = first(span):spec.series.modelspan.e
+        if s.modelspan.e isa MIT
+            span = first(span):s.modelspan.e
         end
         # 0.per
-        if (spec.series.modelspan.b isa Missing) && spec.series.modelspan.e ∈ (M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,Q1,Q2,Q3,Q4,H1,H2)
+        if (s.modelspan.b isa Missing) && s.modelspan.e ∈ (M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,Q1,Q2,Q3,Q4,H1,H2)
             last_period = period(last(rangeof(s.data)))
-            last_period_span = period(1*spec.series.modelspan.e)
+            last_period_span = period(1*s.modelspan.e)
             if last_period == last_period_span
                 # do nothing, span range is series range
             elseif last_period > last_period_span
