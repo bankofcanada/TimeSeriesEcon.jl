@@ -45,8 +45,7 @@ function x13write(spec::X13spec; test=false, outfolder::Union{String,X13default}
         spec.folder = mktempdir(; prefix="x13_", cleanup=true) # will be deleted when process exits
         outfolder = spec.folder
     end
-    # @show outfolder
-
+    
     s = Vector{String}()
 
     # check spec consistency
@@ -64,7 +63,7 @@ function x13write(spec::X13spec; test=false, outfolder::Union{String,X13default}
         end
     end
     spec.string = join(s, "\n")
-    # println(spec.string )
+    
     if test
         return spec.string
     end
@@ -112,12 +111,10 @@ _per_quarterly_strings_dict = Dict{UnionAll, String}(
 )
 
 function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,X13forecast,X13history,X13identify,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression}; test=false, outfolder::Union{String,X13default}=X13default())
-    # println(typeof(spec))
     s = Vector{String}()
     spectype = typeof(spec)
     keys_at_end = Vector{Symbol}()
     for key in fieldnames(spectype)
-        # println("  $key")
         if test && key ∈ (:print,:save,:savelog)
             continue
         end
@@ -128,24 +125,6 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
         if !(val isa X13default)
             if key == :func
                 key = :function
-            # elseif key == :data && spec isa X13regression
-            #     # get file string
-            #     if val isa MVTSeries
-            #         ts = first(columns(val))[2]
-            #         println(ts)
-            #         _s = Vector{String}()
-            #         for t in rangeof(ts)
-            #             y,p = mit2yp(t)
-            #             push!(_s, "$y\t$p\t$(ts[t])")
-            #         end
-            #         filepath = joinpath(outfolder, "regdata.edt")
-            #         open(filepath, "w") do f
-            #             println(f, join(_s, "\n"))
-            #         end
-            #         push!(s, "file = \"$(filepath)\"" )
-            #         push!(s, "format = \"DATEVALUE\"" )
-            #         continue
-            #     end
             elseif key ∈ (:printphtrf, :tabtables,)
                 push!(s, "$key = $(x13write_alt(val))")
                 continue
@@ -173,9 +152,8 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
         end
     end
     for key in keys_at_end
-        # println("    $key")
         val = getfield(spec,key)
-       if key ∈ (:ma, :ar, :b)
+        if key ∈ (:ma, :ar, :b)
             push!(s, "$key = $(x12write_fixed_values(spec, key, val))")
             continue
         end
@@ -228,8 +206,6 @@ function x13write(spec::X13metadata; test=false, outfolder::Union{String,X13defa
         push!(s, ")")
 
     end
-    # push!(s, "key = $(x13write(keys_vector))")
-    # push!(s, "value = $(x13write(values_vector))")
     impose_line_length!(s)
     return "metadata {\n        $(join(s,"\n        "))\n}"
 end
@@ -277,20 +253,9 @@ function x13write(val::MVTSeries)
     else
         # loop though all columns for time period 1, then for time period 2, etc.
         vals = Vector{String}()
-        # println(val.values)
         for t in rangeof(val)
-            # println(val[t])
             push!(vals, join(val[t], "        "))
-            # for key in colnames
-            #     key == colnames[end] ? push!(vals, "$(cols[key][t])\n\t") : push!(vals, "$(cols[key][t])\t")
-            #     # push!(vals, cols[key][t])
-            # end
-            # vals[end] = vals[end]*"\n"
         end
-        # vals = vals[begin:end-13]
-        # println(join(vals, "\t"))
-        # vals[end] = vals[end][1:end-1]
-        # println(s2)
         return "(        $(join(vals, "\n        "))        )"
     end
 end
@@ -329,17 +294,16 @@ x13write(val::loq)          = val.regimechange == :neither ? "loq" : "loq$(_regi
 x13write(val::seasonal)     = val.regimechange == :neither ? "seasonal" : "seasonal$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
 x13write(val::Span)         = val.e isa TimeSeriesEcon._FPConst || val.e isa UnionAll ? "($(x13write(val.b)), 0.$(x13write(val.e)))" : "($(x13write(val.b)), $(x13write(val.e)))"
 x13write(val::UnionAll) = _quarterly_strings_dict[val]
-x13write(val::TimeSeriesEcon._FPConst{Monthly, N}) where N = _months[N]
+x13write(val::TimeSeriesEcon._FPConst{Monthly, N}) where N = _ordered_month_names[N]
 
 
 function x13write(val::MIT)
     y,p = mit2yp(val)
     return "$y.$p"
 end
-_months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]
 function x13write(val::MIT{Monthly})
     y,p = mit2yp(val)
-    return "$y.$(_months[p])"
+    return "$y.$(_ordered_month_names[p])"
 end
 x13write(val::UnitRange{<:MIT}) = "($(x13write(first(val))), $(x13write(last(val))))"
 x13write(val::MIT{<:Yearly}) = year(val)

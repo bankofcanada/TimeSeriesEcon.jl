@@ -4111,9 +4111,5 @@ function effective_span(s::X13series)
     return span
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ws::X13spec)
-    print(io, "X13 spec\n")
-    
-end
 
 export X13spec

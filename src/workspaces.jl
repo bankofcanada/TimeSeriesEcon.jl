@@ -133,6 +133,7 @@ function Base.summary(io::IO, w::Workspace)
     return print(io, "Workspace with ", nvar, " variable", nvar == 1 ? "" : "s")
 end
 
+Base.show(io::IO, x::AbstractWorkspace) = show(io, MIME"text/plain"(), x)
 function Base.show(io::IO, ::MIME"text/plain", w::AbstractWorkspace)
 
     summary(io, w)

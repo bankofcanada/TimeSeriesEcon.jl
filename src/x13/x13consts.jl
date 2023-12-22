@@ -43,6 +43,7 @@ _human_text_extensions = (
     # :OUT, # SEATS has a separate out file...
 )
 
+_ordered_month_names = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]
 _months_and_quarters = Dict{String,Int64}(
     "jan" => 1,
     "feb" => 2,
@@ -890,7 +891,7 @@ _output_descriptions = Dict{Symbol,Dict{Symbol,String}}(
 
 _output_descriptions_flat = collect(Iterators.flatten([pairs(d) for d in values(_output_descriptions)]))
 
-_output_udm_description = Dict{Symbol,String}(
+_output_udg_description = Dict{Symbol,String}(
     :acf => "residual autocorrelations",
     :acf2 => "squared residual autocorrelations",
     :adjcori => "composite series (prior adjusted)",

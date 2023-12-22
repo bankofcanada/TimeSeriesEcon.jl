@@ -1,21 +1,36 @@
 import Dates
-# TODO: Show for results object
 
-""" A structure for holding the results of an X13 run."""
+""" A structure for holding the results of an X13 run.
+
+It contains the following fields:
+
+* **spec** - The original spec file.
+* **outfolder** - The output folder for the X13 run.
+* **series** - TSeries and MVTSeries from the X13 output.
+* **tables** - Workspace of outputs containing table data from the X13 output.
+* **text** - Workspace of outputs with other structured data such as key/value pairs and model specifications.
+* **other** - Workspace of outputs with other structured data such as key/value pairs and model specifications.
+* **stdout** - A String containing the console output from calling X13 with the given spec.
+* **errors** - A vector of error strings from the X13 output.
+* **warnings** - A vector of warning strings from the X13 output.
+* **notes** - A vector of note strings from the X13 output.
+
+Descriptions of the series and tables can be found by calling `X13.descritions(res::X13result)`.
+"""
 mutable struct X13result
     spec::X13spec
     outfolder::String
-    stdout::String
     series::X13ResultWorkspace
     tables::X13ResultWorkspace
+    text::X13ResultWorkspace
     other::X13ResultWorkspace
+    stdout::String
     errors::Vector{String}
     warnings::Vector{String}
     notes::Vector{String}
-    out::X13ResultWorkspace
 
     function X13.X13result(spec::X13spec, outfolder::String, stdout::String)
-        res = new(spec, outfolder, stdout, X13ResultWorkspace(), X13ResultWorkspace(), X13ResultWorkspace(), Vector{String}(), Vector{String}(), Vector{String}(), X13ResultWorkspace())
+        res = new(spec, outfolder, X13ResultWorkspace(), X13ResultWorkspace(), X13ResultWorkspace(),  X13ResultWorkspace(), stdout, Vector{String}(), Vector{String}(), Vector{String}())
         f(t) = @async rm(outfolder; recursive=true)
         finalizer(f, res)
     end
@@ -154,7 +169,7 @@ function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, loa
             res.other[ext] = X13lazy(file,ext,freq)
         elseif ext == :err
             x13read_err(file, res.warnings, res.notes, res.errors)
-            res.out[ext] = read(file, String)
+            res.text[ext] = read(file, String)
         elseif ext == :tbs || (ext == :OUT && split(file, "/")[end] ∈ ("TABLE-S.OUT","\\\\TABLE-S.OUT"))
             res.series.tbs = X13lazy(file,:tbs,freq)
             load isa Symbol && load == :all && push!(_load, :tbs)
@@ -162,7 +177,7 @@ function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, loa
             res.tables.rog = X13lazy(file,:rog,freq)
             load isa Symbol && load == :all && push!(_load, :rog)
         elseif ext ∈ _human_text_extensions
-            res.out[ext] = X13lazy(file,ext,freq)
+            res.text[ext] = X13lazy(file,ext,freq)
         elseif ext ∉ _human_text_extensions && ext !== :txt && ext !== :log
             println("=================================================================================================================")
             # println(ext)
@@ -708,16 +723,23 @@ function _tryparse(t::Type, s::AbstractString, default)
     return v
 end
 
-
-
-
-
-
 function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
     # we are going to print everything...
+    # TODO: account for REPL window width
     colwidths = [length(string(k)) + 1 for k in keys(ws)]
     numrows = maximum(length.(values(ws)))
     types = [typeof(v) for v in values(ws)]
+
+    limit = get(io, :limit, true)
+    dheight, dwidth = displaysize(io)
+
+    if limit && numrows + 5 > dheight
+        # we're printing some but not all rows (no room on the screen)
+        top = div(dheight - 5, 2)
+        bot = numrows - dheight + 7 + top
+    else
+        top, bot = numrows + 1, numrows + 1
+    end
 
     stringvals = Vector{Vector{String}}()
     for (i,v) in enumerate(values(ws))
@@ -730,7 +752,7 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
     for (i,v) in enumerate(stringvals)
         colwidths[i] = max(colwidths[i], maximum(length.(v)))
     end
-    
+
     # now print the thing
     for (i,h) in enumerate(keys(ws))
         print(io, rpad(h,colwidths[i]+1, " "))
@@ -741,7 +763,18 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
         print(io, " ")
     end
     print(io, "\n")
+    printed_filler_row = false
     for i in 1:numrows
+        top < i < bot && printed_filler_row && continue
+        if top < i < bot
+            for (j,vec) in enumerate(stringvals)
+                print(io, lpad("⋮", colwidths[j], " "))
+                print(io, " ")
+            end
+            print(io, "\n")
+            printed_filler_row = true
+            continue
+        end
         for (j,vec) in enumerate(stringvals)
             if length(vec) >= i
                 if types[j] == Vector{String}
@@ -757,62 +790,163 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
         end
         print(io, "\n")
     end
-
-
-    
-    # summary(io, w)
-
-    # nvars = length(w)
-    # nvars == 0 && return
-
-    # limit = get(io, :limit, true)
-    # io = IOContext(io, :SHOWN_SET => _c(w),
-    #     :typeinfo => eltype(w),
-    #     :compact => get(io, :compact, true),
-    #     :limit => limit)
-
-
-    # dheight, dwidth = displaysize(io)
-
-    # if limit && nvars + 5 > dheight
-    #     # we're printing some but not all rows (no room on the screen)
-    #     top = div(dheight - 5, 2)
-    #     bot = nvars - dheight + 7 + top
-    # else
-    #     top, bot = nvars + 1, nvars + 1
-    # end
-
-    # max_align = 0
-    # prows = Vector{String}[]
-    # for (i, (k, v)) ∈ enumerate(w)
-    #     top < i < bot && continue
-
-    #     sk = sprint(print, k, context=io, sizehint=0)
-    #     if v isa Union{AbstractString,Symbol,AbstractRange,Dates.Date,Dates.DateTime}
-    #         # It's a string or a Symbol
-    #         sv = sprint(show, v, context=io, sizehint=0)
-    #     elseif typeof(v) == eltype(v) || typeof(v) isa Type{<:DataType}
-    #         #  it's a scalar value
-    #         sv = sprint(print, v, context=io, sizehint=0)
-    #     else
-    #         sv = sprint(summary, v, context=io, sizehint=0)
-    #     end
-    #     max_align = max(max_align, length(sk))
-
-    #     push!(prows, [sk, sv])
-    #     i == top && push!(prows, ["⋮", "⋮"])
-    # end
-
-    # cutoff = dwidth - 5 - max_align
-
-    # for (sk, sv) ∈ prows
-    #     lv = length(sv)
-    #     sv = lv <= cutoff ? sv : sv[1:cutoff-1] * "…"
-    #     print(io, "\n  ", lpad(sk, max_align), " ⇒ ", sv)
-    # end
-
 end
 
-function Base.show(io::IO, ::MIME"text/plain", ws::X13lazy)
-    print(io, ws.file)
+Base.show(io::IO, x::X13lazy) = show(io, MIME"text/plain"(), x)
+function Base.show(io::IO, ::MIME"text/plain", x::X13lazy)
+    print(io, x.file)
+end
+
+Base.show(io::IO, r::X13result) = show(io, MIME"text/plain"(), r)
+function Base.show(io::IO, ::MIME"text/plain", r::X13result)
+    print(io, "X13 results")
+
+    limit = get(io, :limit, true)
+    io = IOContext(io, :SHOWN_SET => r,
+        :typeinfo => eltype(r),
+        :compact => get(io, :compact, true),
+        :limit => limit)
+
+
+    dheight, dwidth = displaysize(io)
+    nfields = 10
+
+    if limit && nfields + 5 > dheight
+        # we're printing some but not all rows (no room on the screen)
+        top = div(dheight - 5, 2)
+        bot = nfields - dheight + 7 + top
+    else
+        top, bot = nfields + 1, nfields + 1
+    end
+
+    max_align = 0
+    prows = Vector{String}[]
+    for (i, k) ∈ enumerate(fieldnames(X13result))
+        v = getfield(r, k)
+        top < i < bot && continue
+
+        sk = sprint(print, k, context=io, sizehint=0)
+        if k == :series
+            # count series
+            sv = "X13ResultWorkspace with $(length(keys(v))) TSeries/MVTSeries"
+        elseif k == :tables
+            # count series
+            sv = "X13ResultWorkspace with $(length(keys(v))) tables"
+        elseif k == :text || k == :other
+            # count series
+            sv = "X13ResultWorkspace with $(length(keys(v))) entries"
+        elseif v isa Union{AbstractString,Symbol,AbstractRange,Dates.Date,Dates.DateTime}
+            # It's a string or a Symbol
+            sv = sprint(show, v, context=io, sizehint=0)
+        elseif typeof(v) == eltype(v) || typeof(v) isa Type{<:DataType}
+            #  it's a scalar value
+            sv = sprint(print, v, context=io, sizehint=0)
+        else
+            sv = sprint(summary, v, context=io, sizehint=0)
+        end
+        max_align = max(max_align, length(sk))
+
+        push!(prows, [sk, sv])
+        i == top && push!(prows, ["⋮", "⋮"])
+    end
+
+    cutoff = dwidth - 5 - max_align
+
+    for (sk, sv) ∈ prows
+        lv = length(sv)
+        sv = lv <= cutoff ? sv : sv[1:cutoff-1] * "…"
+        print(io, "\n  ", lpad(sk, max_align), " ⇒ ", sv)
+    end
+end
+
+function descriptions(res::X13result)
+    desc = Workspace()
+    desc.series = Workspace()
+    desc.tables = Workspace()
+    _spec = res.spec
+    for key ∈ keys(res.series)
+        for spec in keys(_output_descriptions)
+            if getfield(_spec, spec) isa X13default 
+                continue
+            end
+            if key ∈ keys(_output_descriptions[spec])
+                desc.series[key] = "$(uppercase(string(spec))): " * _output_descriptions[spec][key]
+            end
+        end
+    end 
+    for key ∈ keys(res.tables)
+        for spec in keys(_output_descriptions)
+            if getfield(_spec, spec) isa X13default 
+                continue
+            end
+            if key ∈ keys(_output_descriptions[spec])
+                desc.tables[key] = "$(uppercase(string(spec))): " * _output_descriptions[spec][key]
+            end
+        end
+    end 
+    if :udg in keys(res.other)
+        desc.other = Workspace()
+        desc.other.udg = Workspace()
+        for key in res.other.udg
+            if key ∈ keys(_output_udg_description)
+                desc.other.udg[key]  = _output_udg_description[key]
+            end
+        end
+        if length(keys(desc.other.udg)) == 0
+            delete!(desc.other, :udg)
+        end
+        if length(keys(desc.other)) == 0
+            delete!(desc, :other)
+        end
+    end
+    return desc
+end
+
+Base.show(io::IO, x::Union{X13arima,X13automdl,X13check,X13default,X13estimate,X13force,X13forecast,X13history,X13identify,X13metadata,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression}) = show(io, MIME"text/plain"(), x)
+function Base.show(io::IO, ::MIME"text/plain", spec::Union{X13arima,X13automdl,X13check,X13default,X13estimate,X13force,X13forecast,X13history,X13identify,X13metadata,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression})
+    print(io, "\n$(replace(string(typeof(spec)), "TimeSeriesEcon.X13."=>"", "X13" =>"")):")
+    fields = collect(fieldnames(typeof(spec)))
+    longest = maximum([length(string(x)) for x in fields])
+    for field in fields
+        v = getfield(spec, field)
+        if v isa X13default
+            continue
+        end
+        if v isa TSeries || v isa MVTSeries
+            data = sprint(summary, v, context=io, sizehint=0)
+            print(io, "\n    $(rpad(field, longest, " ")) => $(data)")
+        else
+            print(io, "\n    $(rpad(field, longest, " ")) => $(v)")
+        end
+
+    end
+end
+Base.show(io::IO, x::X13series) = show(io, MIME"text/plain"(), x)
+function Base.show(io::IO, ::MIME"text/plain", spec::X13series)
+    print(io, "\nseries:")
+    data = sprint(summary, spec.data, context=io, sizehint=0)
+    print(io, "\n    data: => $(data)")
+    for field in fieldnames(X13series)
+        v = getfield(spec, field)
+        if v isa X13default || field == :data
+            continue
+        end
+        print(io, "\n    $(field): => $(v)")
+    end
+end
+
+Base.show(io::IO, x::X13spec) = show(io, MIME"text/plain"(), x)
+function Base.show(io::IO, ::MIME"text/plain", spec::X13spec)
+    print(io, "X13 spec")
+    # series
+    if !(spec.series isa X13default)
+        show(io, spec.series)
+    end
+    #everything else
+    for subspecname in fieldnames(X13spec)
+        subspec = getfield(spec, subspecname)
+        if !(subspec isa X13default) && subspecname ∉ (:series, :string, :folder)
+            show(io, subspec)
+        end
+    end
 end
