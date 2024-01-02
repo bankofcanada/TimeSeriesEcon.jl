@@ -654,6 +654,21 @@ function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     start, stop = _ind_range_check(x, I)
     i1 = start:stop
     i2 = _colind(x, J)
+    if I isa MIT
+        return view(_vals(x), i1, i2)
+    elseif J isa Symbol
+        return TSeries(first(I), view(_vals(x), i1, i2))
+    else
+        return MVTSeries(first(I), axes(x, 2)[i2], view(_vals(x), i1, i2))
+    end
+end
+
+function Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
+    @boundscheck checkbounds(x, I)
+    @boundscheck checkbounds(x, J)
+    start, stop = _ind_range_check(x, I)
+    i1 = start:stop
+    i2 = _colind(x, J)
     return MVTSeries(first(I), axes(x, 2)[i2], view(_vals(x), i1, i2))
 end
 
