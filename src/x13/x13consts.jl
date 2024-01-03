@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2024, Bank of Canada
+# All rights reserved.
+
 _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct, 
     :a1, :a2, :a3, :a4, :a10, :a18, :a18, :a19, 
     :b1, :b2, :b3, :b5, :b6, :b7, :b8, :b10, :b11, :b13, :b14, :b16, :b17, :b19, :b20,

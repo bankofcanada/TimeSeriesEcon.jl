@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2024, Bank of Canada
+# All rights reserved.
+
 """
 This file contains functions for writing a X13spec object into a String 
     in the format expected by X13-ARIMA-Seats.

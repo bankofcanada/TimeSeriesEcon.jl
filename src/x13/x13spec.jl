@@ -1,8 +1,5 @@
-# https://www2.census.gov/software/x-13arima-seats/x-13-data/documentation/docx13as.pdf
-
-# TODO: result names
-
-
+# Copyright (c) 2020-2024, Bank of Canada
+# All rights reserved.
 
 struct X13default end
 _X13default = X13default()
@@ -616,9 +613,9 @@ newspec(ts::TSeries; kwargs...) = newspec(X13.series(ts); kwargs...)
 
 
 """
-`series(model::ArimaSpec; kwargs...)`
+`series(ts::TSeries; kwargs...)`
 
-`series!(spec::X13spec{F}, model::ArimaSpec; kwargs...)`
+`series!(spec::X13spec{F}, ts::TSeries; kwargs...)`
 
 ### Main keyword arguments:
 

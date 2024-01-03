@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2024, Bank of Canada
+# All rights reserved.
+
 import Dates
 
 """ A structure for holding the results of an X13 run.
@@ -43,7 +46,6 @@ struct X13lazy
     freq::Type
 end
 
-""" A worksplace structure which supports lazy-loading. """
 function Base.getproperty(w::X13ResultWorkspace, sym::Symbol) 
     val =  sym === :_c ? getfield(w, :_c) : getindex(w, sym)
     if val isa X13lazy
@@ -199,11 +201,11 @@ function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, loa
     end
 
     if verbose
-        for w in warnings
+        for w in res.warnings
             @warn w
         end
 
-        for n in notes
+        for n in res.notes
             @info n
         end
     end
@@ -306,8 +308,16 @@ function x13read_key_values(lines::Vector{<:AbstractString}, separator=r"[\t\:]"
         if length(strip(line)) == 0
             continue
         end
-        # println(line)
-        split_point = findfirst(separator, line)[begin]
+        split_range = findfirst(separator, line)
+        if split_range === nothing && separator == ": "
+            split_range = findfirst(":", line)
+        end
+        if split_range === nothing
+            @warn "Could not parse: $line"
+            continue
+        end
+        split_point = split_range[begin]
+        # split_point = findfirst(separator, line)[begin]
         if line[split_point] ∉ (':', '\t', ' ')
             println("OBS! ", line[split_point-1], ", ", line)
         end
@@ -682,7 +692,7 @@ function _x13read_model(lines::Vector{<:AbstractString})
     return res
 end
 
-"""Replaces keys with periods in them with workspaces"""
+# Replaces keys with periods in them with workspaces
 function _add_layers!(ws::Workspace)
     keys_added = Vector{Symbol}()
     for key in collect(keys(ws))
@@ -711,12 +721,12 @@ function _add_layers!(ws::Workspace)
     end
 end
 
-"""Removes spaces and some characters from column names."""
+# Removes spaces and some characters from column names.
 function _sanitize_colname(s::AbstractString)
     return replace(s, r"[\s\-\.]+" => "_")
 end
 
-"""tryparse, but with a default"""
+# tryparse, but with a default.
 function _tryparse(t::Type, s::AbstractString, default) 
     v = tryparse(t, s)
     v === nothing && return default
