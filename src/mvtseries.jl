@@ -655,7 +655,7 @@ function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     i1 = start:stop
     i2 = _colind(x, J)
     if I isa MIT
-        return view(_vals(x), i1, i2)
+        return view(_vals(x), first(i1), i2)
     elseif J isa Symbol
         return TSeries(first(I), view(_vals(x), i1, i2))
     else
@@ -663,6 +663,9 @@ function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     end
 end
 
+Base.Broadcast.dotview(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = Base.Broadcast.dotview(x, axes(x, 1), J)
+Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrRange, ::Colon) = Base.Broadcast.dotview(x, I, axes(x, 2))
+Base.Broadcast.dotview(x::MVTSeries, ::Colon, ::Colon) = Base.Broadcast.dotview(x, axes(x, 1), axes(x, 2))
 function Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     @boundscheck checkbounds(x, I)
     @boundscheck checkbounds(x, J)
