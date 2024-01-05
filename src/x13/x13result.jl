@@ -84,15 +84,18 @@ function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, loa
     stdin_buffer = IOBuffer()
     stdout_buffer = IOBuffer()
     stderr_buffer = IOBuffer()
+    process = nothing
     try
-        if Sys.iswindows() || TimeSeriesEcon.getoption(:x13path) !== "x13as_ascii.exe"
+        if TimeSeriesEcon.getoption(:x13path) !== ""
             c = `$(TimeSeriesEcon.getoption(:x13path)) -I "$(joinpath(spec.folder,"spec"))" -G "$(gpath)" -S`
         else
             x13as_ascii() do x13
-                c = `$x13 -I "$(joinpath(spec.folder,"spec"))" -G "$(gpath)" -S`
+                c = `$x13 -I "spec"  -G "graphics" -S`
             end
         end
-        cmdout = Base.run(c, stdin_buffer, stdout_buffer, stderr_buffer)
+        cd(spec.folder) do
+           process = Base.run(pipeline(c, stdout=stdout_buffer, stderr=stderr_buffer))
+        end
     catch err
         if err isa ProcessFailedException
             # just ignore this for now, catch it when reading the errors file or stderr.
@@ -100,10 +103,9 @@ function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, loa
             rethrow()
         end
     end
-    stdin = String(take!(stdin_buffer))
     stdout = String(take!(stdout_buffer))
     stderr = String(take!(stderr_buffer))
-
+    
     if length(stderr) > 0
         println(stderr)
         error("running X13 failed. See above. Additional information may be available in $(spec.folder)")
@@ -138,11 +140,7 @@ function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, loa
          sub_folder_objects = readdir(folder, join=true)
          files = [files..., filter(obj -> !isdir(obj), sub_folder_objects)...]
     end
-    # @show files
-
-    # errors = Vector{String}()
-    # warnings = Vector{String}()
-    # notes = Vector{String}()
+  
 
     freq = frequencyof(spec.series.data)
     for file in files

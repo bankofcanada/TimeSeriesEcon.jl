@@ -312,7 +312,6 @@ end
     X13.transform!(spec; func=:log, save=:all)
     X13.estimate!(spec, file=abspath(pathof(TimeSeriesEcon),"..","..", "data","reg1.mdl"), save=:all, fix=:all)
     res = X13.run(spec; verbose=false, load=:all);
-    res = X13.run(spec; verbose=false, load=:all);
     for key in (:a1, :b1, :ref, :a3)
         @test res.series[key] isa Union{TSeries,MVTSeries}
     end
@@ -1755,7 +1754,7 @@ end
     end
 
     # Manual example 2
-    ts = TSeries(1976M1, mvsales[1:500]) 
+    ts = TSeries(1976M1, mvsales[201:450]) 
     xts = X13.series(ts, title="Klaatu")
     spec = X13.newspec(xts)
     X13.x11!(spec, seasonalma=:s3x9, trendma=23, save=:all)
@@ -1808,12 +1807,16 @@ end
     end
 
     # Manual example 5
-    ts = TSeries(1985M1, mvsales[251:550])
+    ts = TSeries(1985M1, mvsales[201:450])
     xts = X13.series(ts, title="Unit Auto Sales")
     spec = X13.newspec(xts)
     X13.transform!(spec, func=:log, save=:all)
+    sale88 = TSeries(1984M1, zeros(length(ts) + 24))
+    sale88[1988M3:1988M11] .= 1.0
+    sale90 = TSeries(1984M1, zeros(length(ts) + 24))
+    sale90[1990M2:1990M7] .= 1.0
     X13.regression!(spec, variables=[:const, :td], 
-        data=MVTSeries(1975M1, [:sale88, :sale90], hcat(collect(1.0:0.1:44.1) .^ 3,collect(3.0:0.3:132.3) .^ (1/2) )), save=:all
+        data=MVTSeries(; sale88 = sale88, sale90 = sale90), save=:all
     )
     X13.arima!(spec, X13.ArimaSpec(3,1,0), X13.ArimaSpec(0,1,1,12))
     X13.forecast!(spec, maxlead=12, maxback=12, save=:all)

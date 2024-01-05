@@ -35,7 +35,7 @@ untreated = [
     :c9,  # x11, same as b9, which cannot be saved...
 ]
 _table_extensions = (:pcf,:acf,:ac2,:itr,:spr,:sp0, :sp1, :sp2, :str, :st0, :st1, :st2, :rts, :acm, :rcm, :d8b, :oit, :rot, :xoi,
-    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf
+    :t1s, :t2s, :s1s, :s2s, :ttc, :tac, :gtf, :gtc, :gaf, :gac, :ftf, :ftc, :faf, :fac, :wkf, Symbol(13)
     )
 _kv_list_extensions = (:lks, :mdc,)
 _human_text_extensions = (
