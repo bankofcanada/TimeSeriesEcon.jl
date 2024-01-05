@@ -59,8 +59,9 @@ end
 
 """
 `X13.run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none)`
+`X13.run(specstring::String; verbose::Bool=true, errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none)`
 
-Run X13-ARIMA-SEATS with the provided spec structure. By default the results will not contain the actual TSeries and other objects,
+Run X13-ARIMA-SEATS with the provided spec structure or spec string. By default the results will not contain the actual TSeries and other objects,
 but will contain X13laxy instances which will read the output and convert to the final object when accessed.
 
 Keyword arguments:
@@ -69,12 +70,25 @@ Keyword arguments:
 * **allow_errors** (Bool) - When true, the process will not throw an error when encountering error messages in the X13 err file. Default is `false`.
 
 * **load** (Symbol or Vector{Symbol}) - Specifies one or more result objects to load immediately. Valid entries are keys in the entries of `X13._output_descriptions`.
-Passing `:all` will load all results immediately. Default is `:none`.
+
+    Passing `:all` will load all results immediately. Default is `:none`.
 """
 function run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none) where F
+    x13write(spec)
+    _run(spec; verbose=verbose, allow_errors=allow_errors, load=load)
+end
+function run(specstring::String, freq::Type{F}; verbose::Bool=true, allow_errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none) where F <: Frequency
+    spec = newspec(TSeries(MIT{sanitize_frequency(freq)}(1)))
+    spec.string= specstring
+    spec.folder = mktempdir(; prefix="x13_", cleanup=true) # will be deleted when process exits
+    open(joinpath(spec.folder, "spec.spc"), "w") do f
+        println(f, spec.string)
+    end
+    _run(spec; verbose=verbose, allow_errors=allow_errors, load=load)
+end
+function _run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none) where F
 
     _load = load isa Symbol ? Set([load]) : Set(load)
-    x13write(spec)
 
     gpath = joinpath(spec.folder, "graphics")
     if !ispath(gpath)

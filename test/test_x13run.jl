@@ -2115,3 +2115,20 @@ end
     @suppress @test_throws ErrorException res = X13.run(spec; verbose=false, load=:all);
 
 end
+
+@testset "X13 using a string" begin
+    ts = TSeries(1950Q1, mvsales[1:150])
+    xts = X13.series(ts, title="Quarterly Grape Harvest")
+    spec = X13.newspec(xts)
+    X13.arima!(spec, X13.ArimaModel(0,1,1))
+    X13.estimate!(spec; save=:all)
+    X13.x13write(spec)
+    res = X13.run(spec.string, Quarterly; verbose=false, load=:all);
+    @test res isa X13.X13result
+    for key in (:a1, :a3, :b1, :ref, :rrs, :rsd)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    for key in (:itr, :ac2, :acf, :pcf)
+        @test res.tables[key] isa X13.WorkspaceTable
+    end
+end
