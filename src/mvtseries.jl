@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 using OrderedCollections
@@ -275,6 +275,8 @@ _vals(a) = a
 const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex,AbstractArray{<:CartesianIndex}}
 Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), _vals.(i1)...)
 Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, _vals.(i1)...)
+
+Base.getindex(x::MVTSeries, ::Colon, ::Colon) = x
 
 # -------------------------------------------------------------
 # Some other constructors

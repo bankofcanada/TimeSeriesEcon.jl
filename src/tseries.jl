@@ -184,6 +184,8 @@ Base.hash(t::TSeries, h::UInt) = hash((t.values, t.firstdate), h)
 # -------------------------------------------------------------------------------
 # Indexing with integers and booleans - same as vectors
 
+Base.getindex(x::TSeries, ::Colon) = x
+
 # indexing with integers is plain and simple
 Base.getindex(t::TSeries, i::Int) = getindex(t.values, i)
 Base.setindex!(t::TSeries, v::Number, i::Int) = (setindex!(t.values, v, i); t)
@@ -476,6 +478,8 @@ end
     fi = firstindex(t.values)
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
+
+Base.view(t::TSeries, ::Colon) = view(t, Base.axes1(t))
 
 """
     diff(x::TSeries)
