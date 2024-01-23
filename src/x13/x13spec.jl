@@ -226,8 +226,8 @@ export ArimaModel
 mutable struct X13arima
     model::ArimaModel
     title::Union{String,X13default}
-    ar::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default} #default values are 0.1, must be length of AR component
-    ma::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default} #default values are 0.1, must be length of MA component
+    ar::Union{Vector{<:Union{Float64,Missing}},Vector{Float64},X13default} #default values are 0.1, must be length of AR component
+    ma::Union{Vector{<:Union{Float64,Missing}},Vector{Float64},X13default} #default values are 0.1, must be length of MA component
     fixar::Union{Vector{Bool},X13default} 
     fixma::Union{Vector{Bool},X13default} 
 end
@@ -237,8 +237,8 @@ mutable struct X13automdl
     acceptdefault::Union{Bool,X13default}
     checkmu::Union{Bool,X13default}
     ljungboxlimit::Union{Float64,X13default}
-    maxorder::Union{Vector{Union{Int64,Missing}},X13default}
-    maxdiff::Union{Vector{Union{Int64,Missing}},X13default}
+    maxorder::Union{Vector{<:Union{Int64,Missing}},X13default}
+    maxdiff::Union{Vector{<:Union{Int64,Missing}},X13default}
     mixed::Union{Bool,X13default}
     print::Union{Symbol,Vector{Symbol},X13default} #This should just be everything
     savelog::Union{Symbol,Vector{Symbol},X13default}
@@ -333,7 +333,7 @@ mutable struct X13metadata
 end
 
 mutable struct X13outlier
-    critical::Union{Float64,Vector{Union{Missing,Float64}},Vector{Float64},X13default}
+    critical::Union{Float64,Vector{<:Union{Missing,Float64}},Vector{Float64},X13default}
     lsrun::Union{Int64,X13default}
     method::Union{Symbol,X13default}
     print::Union{Symbol,Vector{Symbol},X13default}
@@ -362,7 +362,7 @@ end
 
 
 mutable struct X13regression
-    aicdiff::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}
+    aicdiff::Union{Vector{<:Union{Float64,Missing}},Vector{Float64},X13default}
     aictest::Union{Symbol,Vector{Symbol},X13default}
     chi2test::Union{Bool,X13default}
     chi2testcv::Union{Float64,X13default}
@@ -378,7 +378,7 @@ mutable struct X13regression
     tlimit::Union{Float64,X13default}
     user::Union{Symbol,Vector{Symbol},X13default}
     usertype::Union{Symbol,Vector{Symbol},X13default}
-    variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}
+    variables::Union{Symbol,X13var,Vector{<:Union{Symbol,X13var}},X13default}
     b::Union{Vector{Float64},X13default}
     fixb::Union{Vector{Bool},X13default}
     centeruser::Union{Symbol,X13default}
@@ -509,7 +509,7 @@ mutable struct X13x11regression
     tdprior::Union{Vector{Float64},X13default}
     user::Union{Symbol,Vector{Symbol},X13default}
     usertype::Union{Symbol,Vector{Symbol},X13default}
-    variables::Union{Symbol,X13var,Vector{Union{Symbol,X13var}},X13default}
+    variables::Union{Symbol,X13var,Vector{<:Union{Symbol,X13var}},X13default}
     almost::Union{Float64,X13default}
     b::Union{Vector{Float64},X13default}
     fixb::Union{Vector{Bool},X13default}
@@ -847,8 +847,8 @@ of the parameters are estimated
 """
 function arima(model::ArimaModel; 
     title::Union{String,X13default}=_X13default,
-    ar::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
-    ma::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    ar::Union{Vector{<:Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    ma::Union{Vector{<:Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
     fixar::Union{Vector{Bool},X13default}=_X13default,
     fixma::Union{Vector{Bool},X13default}=_X13default,
 )
@@ -1011,8 +1011,8 @@ function automdl(;
     acceptdefault::Union{Bool,X13default}=_X13default,
     checkmu::Union{Bool,X13default}=_X13default,
     ljungboxlimit::Union{Float64,X13default}=_X13default,
-    maxorder::Union{Vector{Union{Int64,Missing}},X13default}=_X13default,
-    maxdiff::Union{Vector{Union{Int64,Missing}},X13default}=_X13default,
+    maxorder::Union{Vector{<:Union{Int64,Missing}},X13default}=_X13default,
+    maxdiff::Union{Vector{<:Union{Int64,Missing}},X13default}=_X13default,
     mixed::Union{Bool,X13default}=_X13default,
     print::Union{Symbol,Vector{Symbol},X13default}=[:autochoice, :autochoicemdl, :autodefaulttests, :autofinaltests, :autoljungboxtest, :bestfivemdl, :header, :unitroottest, :unitroottestmdl],
     savelog::Union{Symbol,Vector{Symbol},X13default}=:alldiagnostics,
@@ -1806,7 +1806,7 @@ each run of two or more successive level shifts cancels to form a temporary leve
 
 """
 function outlier(; 
-    critical::Union{Float64,Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    critical::Union{Float64,Vector{<:Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
     lsrun::Union{Int64,X13default}=_X13default,
     method::Union{Symbol,X13default}=_X13default,
     print::Union{Symbol,Vector{Symbol},X13default}=_X13default,
@@ -2192,7 +2192,7 @@ Specification for including regression variables in a regARIMA model, or for spe
 
 """
 function regression(; 
-    aicdiff::Union{Vector{Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
+    aicdiff::Union{Vector{<:Union{Float64,Missing}},Vector{Float64},X13default}=_X13default,
     aictest::Union{Symbol,Vector{Symbol},X13default}=_X13default,
     chi2test::Union{Bool,X13default}=_X13default,
     chi2testcv::Union{Float64,X13default}=_X13default,
