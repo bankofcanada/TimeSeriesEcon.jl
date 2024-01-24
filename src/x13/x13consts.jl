@@ -12,7 +12,7 @@ _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct,
     :rnd, :fts, :btr, :bct, :fch, :fce, :amh, :tre, :sae, :trr, :sar, :tal, :ycs, :sfs, :chs, :tds, :ads, 
     :a2p, :a1c, :a2t, :xrm, :a4d, :xhl, :bxh, :xca, :xcc,
     :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, :pss, :psi, :psc, :ltt, :cyc,
-    :td, :ao, :ls, :hol, :chl, :tc, :usr, :fsd, :fad) # these have dates
+    :td, :ao, :ls, :hol, :chl, :tc, :usr, :fsd, :fad, :mv) # these have dates
 _probably_series_extensions = (:sas, :ais, :so, :a13, :sec, :stc, :sta, :ser, :ter, :b18, :bxc, :bcc, :a3p, :a4p, :chr, :iar,
     :tcr, :sfr, :che, :iae, :tce, :sfe, :mva, :sac, :ofd, :xrc, :c9)
 untreated = [
