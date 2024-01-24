@@ -5,8 +5,7 @@
 This file contains functions for writing a X13spec object into a String 
     in the format expected by X13-ARIMA-Seats.
 """
-
-function impose_line_length!(s::Vector{<:AbstractString}, limit=133-8, delve=true) #132
+function impose_line_length!(s::Vector{<:AbstractString}, limit=132-8, delve=true) # the -8 is to account for the initial tab within each spec block
     #TODO: how do you count tabs
     counter = 1
     while counter <= length(s)
@@ -19,7 +18,7 @@ function impose_line_length!(s::Vector{<:AbstractString}, limit=133-8, delve=tru
             counter += 1
             continue
         end
-        if length(line) > limit
+        if _length(line) > limit
             splitchar = " "
             if occursin(" + ", line)
                 splitchar = " + "
@@ -28,7 +27,7 @@ function impose_line_length!(s::Vector{<:AbstractString}, limit=133-8, delve=tru
             best_split_index = 2
             cum_length = 0
             for (i, _s) in enumerate(splitstring)
-                cum_length = cum_length + length(_s) + length(splitchar)
+                cum_length = cum_length + _length(_s) + _length(splitchar)
                 if cum_length > limit
                     best_split_index = i - 1
                     break
@@ -42,6 +41,7 @@ function impose_line_length!(s::Vector{<:AbstractString}, limit=133-8, delve=tru
         counter += 1
     end
 end
+_length(s::AbstractString) = length(s) + 7*count('\t',s)
 
 function x13write(spec::X13spec; test=false, outfolder::Union{String,X13default}=spec.folder)
     if !test && outfolder isa X13default
