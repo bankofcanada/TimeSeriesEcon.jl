@@ -58,8 +58,8 @@ end
 
 
 """
-`X13.run(spec::X13spec{F}; verbose::Bool=true, errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none)`
-`X13.run(specstring::String; verbose::Bool=true, errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none)`
+`X13.run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none)`
+`X13.run(specstring::String; verbose::Bool=true, allow_errors::Bool=false, load::Union{Symbol, Vector{Symbol}}=:none)`
 
 Run X13-ARIMA-SEATS with the provided spec structure or spec string. By default the results will not contain the actual TSeries and other objects,
 but will contain X13laxy instances which will read the output and convert to the final object when accessed.
