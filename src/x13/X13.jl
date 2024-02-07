@@ -94,7 +94,7 @@ end
 function __init__()
     tmpfolders = get_cleanup_folders()
     if length(tmpfolders) > 5
-        @warn "There are $(length(tmpfolders)) temporary X13 folders created by this user which have not been automatically removed.
+        @info "There are $(length(tmpfolders)) temporary X13 folders created by this user which have not been automatically removed.
          Call X13.cleanup() to remove these."
     end
 end
