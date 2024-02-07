@@ -54,19 +54,23 @@ Base.setproperty!(w::AbstractWorkspace, sym::Symbol, val) = setindex!(w, val, sy
 # MacroTools.@forward Workspace._c (Base.getindex,)
 Base.getindex(w::AbstractWorkspace, sym) = getindex(_c(w), convert(Symbol, sym))
 Base.getindex(w::AbstractWorkspace, sym, syms...) = getindex(w, (sym, syms...,))
-Base.getindex(w::AbstractWorkspace, syms::Vector) = getindex(w, (syms...,))
-Base.getindex(w::AbstractWorkspace, syms::Tuple) = typeof(w)(convert(Symbol, s) => w[s] for s in syms)
+Base.getindex(w::AbstractWorkspace, syms::Vector) = Workspace(convert(Symbol, s) => w[s] for s in syms)
+Base.getindex(w::AbstractWorkspace, syms::Tuple) = Workspace(convert(Symbol, s) => w[s] for s in syms)
 
 MacroTools.@forward Workspace._c (Base.setindex!,)
 MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.values, Base.length)
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
 
 function Base.eltype(w::AbstractWorkspace)
-    ET = isempty(w) ? Any : try Base.promote_typeof(values(w)...) catch; Any; end
-    return Pair{Symbol, ET}
+    ET = isempty(w) ? Any : try
+        Base.promote_typeof(values(w)...)
+    catch
+        Any
+    end
+    return Pair{Symbol,ET}
 end
 
-Base.push!(w::AbstractWorkspace, args...; kwargs...) = (push!(_c(w), args...; kwargs...); w)
+Base.push!(w::AbstractWorkspace, args...; kwargs...) = (push!(_c(w), args..., (k => v for (k,v) in kwargs)...); w)
 Base.delete!(w::AbstractWorkspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
 @inline Base.in(name, w::AbstractWorkspace) = convert(Symbol, name) ∈ keys(_c(w))
@@ -244,9 +248,19 @@ end
 export @weval
 
 
-function Base.copyto!(x::MVTSeries, w::AbstractWorkspace; range::AbstractUnitRange{<:MIT}=rangeof(x))
+Base.copyto!(x::MVTSeries, w::AbstractWorkspace; verbose=false, trange=rangeof(x)) = copyto!(x, trange, w; verbose)
+function Base.copyto!(x::MVTSeries, range::AbstractUnitRange{<:MIT}, w::AbstractWorkspace; verbose=false)
+    missing = []
     for (key, value) in pairs(x)
-        copyto!(value, range, w[key])
+        w_val = get(w, key, nothing)
+        if !isnothing(w_val)
+            copyto!(value, range, w_val)
+        else
+            verbose && push!(missing, key)
+        end
+    end
+    if verbose
+        @warn "Variables not copied (missing from Workspace): $(join(missing, ", "))"
     end
     return x
 end

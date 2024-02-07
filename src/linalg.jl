@@ -7,7 +7,7 @@
 import Base: *, \, /
 
 for op in (:*, :\, :/)
-    for AT in (AbstractMatrix, AbstractVector)
+    for AT in (AbstractMatrix, AbstractVector, Adjoint{<:Any, <:AbstractMatrix{T}} where {T})
         for ST in (MVTSeries, TSeries)
             eval(quote
                 $op(A::$AT, B::$ST) = $op(A, _vals(B))
