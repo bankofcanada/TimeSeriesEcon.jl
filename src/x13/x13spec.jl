@@ -783,6 +783,15 @@ function series(t::TSeries{F};
         end
     end
 
+    # missing code
+    if any(isnan.(values(data))) 
+        if missingcode isa X13default
+            throw(ArgumentError("The provided tseries has NaN values but no `missingcode` was specified. Please specify a missingcode for your Series argument. I.e. missingcode = -99999.0."))
+        else
+            replace!(x -> (isnan(x) ? missingcode : x), data)
+        end
+    end
+    
     _print_all = [:default, :adjoriginal, :adjorigplot, :calendaradjorig, :outlieradjorig, :seriesplot]
     _save_all = [:span, :specfile, :adjoriginal, :calendaradjorig, :outlieradjorig, :seriesmvadj]
 

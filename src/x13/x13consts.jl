@@ -14,7 +14,7 @@ _series_extensions = ( :rrs, :rmx, :rsd, :ref, :trn, :fct,
     :yfd, :tse, :tfd, :ssm, :sse, :sfd, :se3, :se2, :dtr, :dsa, :dor, :cse, :ase, :afd, :pss, :psi, :psc, :ltt, :cyc,
     :td, :ao, :ls, :hol, :chl, :tc, :usr, :fsd, :fad, :mv) # these have dates
 _probably_series_extensions = (:sas, :ais, :so, :a13, :sec, :stc, :sta, :ser, :ter, :b18, :bxc, :bcc, :a3p, :a4p, :chr, :iar,
-    :tcr, :sfr, :che, :iae, :tce, :sfe, :mva, :sac, :ofd, :xrc, :c9)
+    :tcr, :sfr, :che, :iae, :tce, :sfe, :sac, :ofd, :xrc, :c9)
 untreated = [
     :smy, # Slidingspans. Sounds like a complex text file
     # :sas, # sliding spans, sounds like a series or list of them
@@ -258,7 +258,7 @@ _output_alt_names = Dict{Symbol,Dict{Symbol,Symbol}}(
         :spc => :specfile,
         :sav => :savefile,
         :sp0 => :specorig,
-        :mva => :missingvaladj,
+        :mv => :missingvaladj,
         :a18 => :calendaradjorig,
         :a19 => :outlieradjorig,
         :b1 => :adjoriginal,
