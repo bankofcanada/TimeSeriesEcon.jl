@@ -49,10 +49,20 @@ macro rec(arg_rng, arg_eqn)
     if !isa(ind, Symbol)
         ind = :t
     end
-    return esc(quote
-        for $(ind) in $(rng)
-            $(arg_eqn)
+    arg_eqn = MacroTools.prewalk(arg_eqn) do e
+        if MacroTools.isexpr(e, :macrocall)
+            try
+                return Core.eval(__module__, e)
+            catch
+                return e
+            end
         end
-    end)
+        return e
+    end
+    # for loop with empty body
+    ret = :(for $(ind) in $(rng) end)  
+    # replace body with arg_eqn, keeping the original source line
+    ret.args[end] = Expr(:block, __source__, arg_eqn)
+    return esc(ret)
 end
 

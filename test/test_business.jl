@@ -222,7 +222,19 @@ repo v39055, shift(v39055, 1), diff(v39055), shift(v39055, -1), pct(v39055)
     # reset
     TimeSeriesEcon.clear_holidays_map()
 
-    
+    ## MIT ranges
+    @test fconvert(Monthly, bd"2022-01-01:2022-03-31") == 2022M1:2022M3
+    @test fconvert(Monthly, bd"2022-01-04:2022-03-31") == 2022M2:2022M3
+    tsbd3 = TSeries(bd"2022-01-04", collect(1.:70.))
+    tsbd3[bd"2022-01-04"] = NaN
+    tsm = fconvert(Monthly, tsbd3; skip_all_nans=true)
+    @test rangeof(tsm) == 2022M2:2022M3
+    TimeSeriesEcon.set_holidays_map("CA", "ON")
+    @test fconvert(Monthly, bd"2022-01-04:2022-03-31"; skip_holidays=true) == 2022M1:2022M3
+    tsm2 = fconvert(Monthly, tsbd3; skip_all_nans=true)
+    @test rangeof(tsm2) == 2022M1:2022M3
+    TimeSeriesEcon.clear_holidays_map()
+
     # coverage tests
     @test TimeSeriesEcon.bdvalues(tsbd) ≈ tsbd.values nans=true
     @test_throws ArgumentError TimeSeriesEcon.bdvalues(tsbd; holidays_map=:something) == tsbd.values

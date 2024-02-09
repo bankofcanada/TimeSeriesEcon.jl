@@ -567,49 +567,6 @@ end
     @test (C = overlay(A,B); overlay(C,A).values == C.values)
 end
 
-@testset "fconvert" begin
-    t = TSeries(5U, collect(1:10))
-    @test fconvert(Unit, t) === t
-    @test_throws ErrorException fconvert(Quarterly, t) 
-    
-    q = TSeries(5Q1, 1.0collect(1:10))
-    @test_throws ErrorException  fconvert(Unit, q)
-    mq = fconvert(Monthly, q)
-    @test typeof(mq) === TSeries{Monthly, Float64, Vector{Float64}}
-    @test fconvert(Monthly, q, method=:const).values == repeat(1.0:10, inner=3)
-
-    yq = fconvert(Yearly, q)
-    @test typeof(yq) === TSeries{Yearly{12}, Float64, Vector{Float64}}
-    @test fconvert(Yearly, q, method=:mean).values == [2.5, 6.5]
-    @test fconvert(Yearly, q, method=:end).values == [4.0, 8.0]
-    @test fconvert(Yearly, q, method=:begin).values == [1.0, 5.0]
-    @test fconvert(Yearly, q, method=:sum).values == [10.0, 26.0]
-
-
-    for i = 1:11
-        @test rangeof(fconvert(Yearly, TSeries(1M1 .+ (i:50)))) == 2Y:4Y
-        @test rangeof(fconvert(Yearly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y
-    end
-    for i = 1:3
-        @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (i:50)))) == 2Y:12Y
-        # @test rangeof(fconvert(Yearly, TSeries(1Q1 .+ (0:47+i)))) == 1Y:12Y 
-    end
-    for i = 1:11
-        @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (i:50)))) == 1Q2+div(i-1,3):5Q1
-        # @test rangeof(fconvert(Quarterly, TSeries(1M1 .+ (0:47+i)))) == 1Y:4Y #current output is 1Q1:4Q4
-    end
-
-    #non-user called functions
-    @test_throws ArgumentError TimeSeriesEcon._to_lower(Monthly, q)
-    @test_throws ArgumentError TimeSeriesEcon._to_higher(Yearly, q)
-
-    #wrong method for conversion direction
-    @test_throws ArgumentError fconvert(Monthly, q, method=:mean)
-    @test_throws ArgumentError fconvert(Yearly, q, method=:const)
-
-
-end
-
 @testset "strip" begin
     let rng_x = 2000Y:2010Y, x = TSeries(rng_x, ones)
         x[2011Y:2015Y] .= NaN
@@ -619,6 +576,9 @@ end
     end
 end
 
+macro _addone(expr)
+    return QuoteNode(Expr(:call, :+, 1, expr))
+end
 @testset "recursive" begin
     ts = TSeries(1U, zeros(0))
     ts[1U] = ts[2U] = 1.0
@@ -643,6 +603,10 @@ end
     @rec firstdate(s)+1:2022Q3 s[t+1] = 2.0 * s[t] + s[t-1]
     @test rangeof(s) == 2020Q1:2022Q4
     @test values(s) == Float64[0,1,2,5,12,29,70,169,408,985,2378,5741]
+    
+        tt = TSeries(0U, ones(4))
+        @rec 1U:10U tt[t] = @_addone tt[t-1]
+        @test tt == TSeries(0U, 1:11)
 end
 
 @testset "various" begin
@@ -662,6 +626,15 @@ end
     e = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
     @test TimeSeriesEcon.compare(d, e, nans=true, quiet=true) == true
     
+    # compare with different ranges
+    A = TSeries(2020Q1, rand(20))
+    B = A[begin+4:end-4]
+    @test false == @compare A B quiet
+    @test true  == @compare A B quiet ignoremissing
+    @test false == @compare A B quiet trange=2019Q1:2025Q4
+    @test true  == @compare A B quiet trange=2019Q1:2025Q4 ignoremissing
+    @test true  == @compare A B quiet trange=2000Q1:2000Q4
+    @test true  == @compare A B quiet trange=2000Q1:2000Q4 ignoremissing
        
     #reindexing
     ts = TSeries(2020Q1,randn(10))

@@ -1,24 +1,38 @@
 name = "TimeSeriesEcon"
 uuid = "8b6756d2-c55c-11ea-2998-5f67ea17da60"
 authors = ["Atai Akunov <aakunov@bankofcanada.ca>", "Boyan Bejanov <bbejanov@bankofcanada.ca>", "Nicholas Labelle St-Pierre <labs@bankofcanada.ca>"]
-version = "0.5.1"
+version = "0.6.3"
 
 [deps]
+CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
+DataEcon_jll = "aa99b8ca-138a-5374-9557-0d35fbf901d4"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
+CEnum = "0.4"
+DataEcon_jll = "0.3.1"
+Dates = "1.7"
+Distributed = "1.7"
+LinearAlgebra = "1.7"
 MacroTools = "0.5"
 OrderedCollections = "1.4"
+Random = "1.7"
 RecipesBase = "1.0"
-julia = "1.0"
+Serialization = "1.7"
+Statistics = "1.7"
+Suppressor = "0.2"
+TOML = "1.0"
+julia = "1.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

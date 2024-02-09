@@ -188,6 +188,7 @@ MIT, Duration
 # --------------------------
 # conversions with Int
 MIT{F}(x::Int) where {F<:Frequency} = reinterpret(MIT{F}, x)
+MIT{F}(x::Base.BitInteger) where {F<:Frequency} = MIT{F}(Int(x))
 MIT{Yearly}(x::Int) = MIT{Yearly{12}}(x)
 MIT{Quarterly}(x::Int) = MIT{Quarterly{3}}(x)
 MIT{HalfYearly}(x::Int) = MIT{HalfYearly{6}}(x)
@@ -247,19 +248,19 @@ MIT{Yearly}(y::Integer, p::Integer) = MIT{Yearly{12}}(y, p)
 MIT{Quarterly}(y::Integer, p::Integer) = MIT{Quarterly{3}}(y, p)
 MIT{HalfYearly}(y::Integer, p::Integer) = MIT{HalfYearly{6}}(y, p)
 function _weekly_from_yp(F::Type{<:Weekly{end_day}}, y, p) where {end_day}
-    first_day_of_year = Dates.Date("$y-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     d = first_day_of_year + Day(7 * (p - 1))
     return weekly(d, end_day)
 end
 function MIT{F}(y::Integer, p::Integer) where {F<:BDaily}
-    first_day_of_year = Dates.Date("$y-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     first_day = dayofweek(first_day_of_year)
     days_diff = first_day > 5 ? 8 - first_day : 0
     d = first_day_of_year + Day(days_diff)
     return bdaily(d) + p - 1
 end
 function MIT{F}(y::Integer, p::Integer) where {F<:Daily}
-    first_day_of_year = Dates.Date("$y-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     return daily(first_day_of_year) + p - 1
 end
 
@@ -341,7 +342,7 @@ Construct an `MIT{Yearly}` from an year and a period.
 yy(y::Integer, p::Integer=1) = MIT{Yearly{12}}(y, p)
 
 
-_d0 = Date("0001-01-01") - Day(1)
+_d0 = Date(1, 1, 1) - Day(1)
 """
     daily(d::Date)
 
@@ -387,6 +388,7 @@ is `true`, meaning that the preceding Friday is returned.
 """
 function bdaily(d::Date; bias::Symbol=getoption(:bdaily_creation_bias))
     num_weekends, rem = divrem(Dates.value(d - _d0), 7)
+    (rem < 0) && ((num_weekends, rem) = (num_weekends - 1, rem + 7))
     adjustment = 0
     if rem == 0 # Sunday
         if bias ∈ (:next, :nearest)
@@ -424,7 +426,11 @@ macro bd_str(d)
         end
         return rng
     end
-    return bdaily(d)
+    return try
+        bdaily(d)
+    catch e
+        :(throw($e))
+    end
 end;
 
 """
@@ -448,25 +454,27 @@ Example:
     second_week_of_april = bd"2022-04-04:2022-04-08"
 """
 macro bd_str(d, bias)
-    if findfirst(":", d) !== nothing
-        throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
-    end
-    if bias ∉ ("n", "next", "p", "previous", "s", "strict", "near", "nearest")
-        throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous", "s", "strict", "near", "nearest")."""))
+    if contains(d, ":")
+        return :(
+            throw(ArgumentError("Additional arguments are not supported when passing a range to bd\"\"."))
+        )
     end
     if bias == ""
         return bdaily(d)
     elseif bias == "n" || bias == "next"
         return bdaily(d, bias=:next)
-    elseif bias == "p" || bias == "p"
+    elseif bias == "p" || bias == "previous"
         return bdaily(d, bias=:previous)
     elseif bias == "s" || bias == "strict"
         return bdaily(d, bias=:strict)
     elseif bias == "near" || bias == "nearest"
         return bdaily(d, bias=:nearest)
+    else
+        return :(
+            throw(ArgumentError("""A  bd\"\" string literal must terminate in one of ("", "n", "next", "p", "previous", "s", "strict", "near", "nearest")."""))
+        )
     end
-
-end;
+end
 
 """
     weekly(d::Date) 
@@ -488,7 +496,7 @@ function weekly_from_iso(y::Int, p::Int)
     if p > 53 || p < 1
         throw(ArgumentError("The provided period must be between 1 and 53 (inclusive)."))
     end
-    first_day_of_year = Dates.Date("$(y)-01-01")
+    first_day_of_year = Dates.Date(y, 1, 1)
     week_of_first_day = week(first_day_of_year)
     year_end_padding = week_of_first_day !== 1 ? 1 : 0
     d2 = first_day_of_year + Day(((p - 1) + year_end_padding) * 7)
@@ -516,12 +524,12 @@ Example:
     week_of_christmas = w"2022-12-25"
     week_overlapping_with_february = w"2022-02-01:2022-02-28"
 """
-macro w_str(d)
+macro w_str(d::String, ed::Integer=7)
     if findfirst(":", d) !== nothing
         dsplit = split(d, ":")
-        return weekly(Dates.Date(dsplit[1])):weekly(Dates.Date(dsplit[2]))
+        return weekly(Dates.Date(dsplit[1]), ed):weekly(Dates.Date(dsplit[2]), ed)
     end
-    return weekly(d)
+    return weekly(d, ed)
 end
 # -------------------------
 # ppy: period per year
@@ -547,10 +555,10 @@ ppy(x::Type{<:Frequency}) = error("Frequency $(x) does not have periods per year
 #-------------------------
 # date conversion
 """
-Dates.Date(m::MIT, values_base::Symbol=:end)
+Dates.Date(m::MIT, ref::Symbol=:end)
     
 Returns a Date object representing the last day in the provided MIT.
-Returns the first day in the provided MIT when `values_base == true`.
+Returns the first day in the provided MIT when `ref == true`.
 """
 Dates.Date(m::MIT{Daily}, values_base::Symbol=:end) = _d0 + Day(Int(m))
 Dates.Date(m::MIT{BDaily}, values_base::Symbol=:end) = _d0 + Day(Int(m) + 2 * floor((Int(m) - 1) / 5))
@@ -560,33 +568,38 @@ function Dates.Date(m::MIT{Weekly{end_day}}, values_base::Symbol=:end) where {en
     end
     return _d0 + Day(Int(m) * 7) - Day(7 - end_day)
 end
-function Dates.Date(m::MIT{Monthly}, values_base::Symbol=:end)
+function Dates.Date(m::MIT{Monthly}, ref::Symbol=:end)
     year, month = divrem(Int(m), 12)
-    if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(month)
+    if ref == :begin
+        return Dates.Date(year, 1, 1) + Month(month)
     end
-    return Dates.Date("$year-01-01") + Month(month + 1) - Day(1)
+    return Dates.Date(year, 1, 1) + Month(month + 1) - Day(1)
 end
-function Dates.Date(m::MIT{Quarterly{end_month}}, values_base::Symbol=:end) where {end_month}
+function Dates.Date(m::MIT{Quarterly{end_month}}, ref::Symbol=:end) where {end_month}
     year, quarter = divrem(Int(m), 4)
-    if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(quarter * 3 - (3 - end_month))
+    if ref == :begin
+        return Dates.Date(year, 1, 1) + Month(quarter * 3 - (3 - end_month))
     end
-    return Dates.Date("$year-01-01") + Month((quarter + 1) * 3 - (3 - end_month)) - Day(1)
+    return Dates.Date(year, 1, 1) + Month((quarter + 1) * 3 - (3 - end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{HalfYearly{end_month}}, values_base::Symbol=:end) where {end_month}
+function Dates.Date(m::MIT{HalfYearly{end_month}}, ref::Symbol=:end) where {end_month}
     year, half = divrem(Int(m), 2)
-    if values_base == :begin
-        return Dates.Date("$year-01-01") + Month(half * 6 - (6 - end_month))
+    if ref == :begin
+        return Dates.Date(year, 1, 1) + Month(half * 6 - (6 - end_month))
     end
-    return Dates.Date("$year-01-01") + Month((half + 1) * 6 - (6 - end_month)) - Day(1)
+    return Dates.Date(year, 1, 1) + Month((half + 1) * 6 - (6 - end_month)) - Day(1)
 end
-function Dates.Date(m::MIT{Yearly{end_month}}, values_base::Symbol=:end) where {end_month}
-    if values_base == :begin
-        return Dates.Date("$(Int(m))-01-01") - Month(12 - end_month)
+function Dates.Date(m::MIT{Yearly{end_month}}, ref::Symbol=:end) where {end_month}
+    if ref == :begin
+        return Dates.Date(Int(m), 1, 1) - Month(12 - end_month)
     end
-    return Dates.Date("$(Int(m) + 1)-01-01") - Month(12 - end_month) - Day(1)
+    return Dates.Date(Int(m) + 1, 1, 1) - Month(12 - end_month) - Day(1)
 end
+
+MIT{Daily}(d::Dates.Date) = daily(d)
+MIT{BDaily}(d::Dates.Date; kwargs...) = bdaily(d; kwargs...)
+MIT{Weekly}(d::Dates.Date) = weekly(d)
+MIT{Weekly{end_day}}(d::Dates.Date) where {end_day} = weekly(d, end_day)
 
 #-------------------------
 # pretty printing
@@ -727,6 +740,7 @@ Base.:(<=)(l::Union{MIT,Duration}, r::Union{MIT,Duration}) = (l < r) || (l == r)
 
 # addition of two MIT is not allowed
 Base.:(+)(::MIT, ::MIT) = throw(ArgumentError("Illegal addition of two `MIT` values."))
+Base.:(+)(::Duration, ::MIT) = throw(ArgumentError("Illegal addition of `Duration` and `MIT`. Try `MIT` + `Duration`"))
 # addition of two Duration is valid only if they are of the same frequency
 Base.:(+)(l::Duration, r::Duration) = mixed_freq_error(l, r)
 Base.:(+)(l::Duration{F}, r::Duration{F}) where {F<:Frequency} = Duration{F}(Int(l) + Int(r))
@@ -754,6 +768,8 @@ Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)
 # In the special case of YPFrequency we want the year to be the whole part and the period to be the fractional part. 
 (T::Type{<:AbstractFloat})(x::MIT{<:YPFrequency{N}}) where {N} = convert(T, ((y, p) = mit2yp(x); y + (p - 1) / N))
 Base.promote_rule(::Type{<:MIT}, ::Type{T}) where {T<:AbstractFloat} = T
+(T::Type{<:AbstractFloat})(x::Duration) = convert(T, Int(x))
+(T::Type{<:AbstractFloat})(x::Duration{<:YPFrequency{N}}) where {N} = convert(T, Int(x) / N)
 
 # frequency comparisons
 Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) = isless(ppy(x), ppy(y))
@@ -768,7 +784,6 @@ Base.:(/)(a::MIT, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
 Base.:(/)(a::Duration{F}, b::Duration{F}) where {F<:Frequency} = Int(a) / Int(b)
 Base.:(/)(a::MIT{F}, b::Duration{F}) where {F<:Frequency} = (a - MIT{F}(0)) / b
 Base.promote_rule(::Type{<:Duration}, ::Type{T}) where {T<:AbstractFloat} = T
-(T::Type{<:AbstractFloat})(x::Duration) = convert(T, Int(x))
 
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
@@ -848,6 +863,8 @@ Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = mi
 
 # Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
 # Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)
+
+Base.float(rng::UnitRange{MIT{F}}) where {F} = float(first(rng)):float(Duration{F}(1)):float(last(rng))
 
 #------------------------------
 # sort!() a list of MITs

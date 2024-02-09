@@ -41,7 +41,6 @@ end
     @assert y isa TSeries
     @assert z isa Nothing
     @assert frequencyof(x) == frequencyof(y)
-    # @info "Plotting TSeries"
     mit_loc = get(plotattributes, :mit_loc, :left)
     rng = get(plotattributes, :trange, x)
     rng = intersect(rng, rangeof(y))
@@ -49,17 +48,25 @@ end
     x := Float64.(rng) .+ mit_offset(Val(mit_loc), frequencyof(rng))
     if frequencyof(x) <: YPFrequency
         xformatter --> mit_formatter(Val(mit_loc), frequencyof(rng))
+    elseif frequencyof(x) <: Union{BDaily,Daily,<:Weekly}
+        x := [Date(MIT{frequencyof(x)}(Int64(i))) for i in rng]
     end
-    seriestype := :path
+    # restore the original seriestype
+    st = plotattributes[:_org_st]
+    seriestype := st
 end
 
 # This "user"-type recipe is for plotting multiple TSeries.
 # It calls the one_tseries recipe in a loop
 @recipe function many_tseries(ts::TSeries...)
-    trng = get(plotattributes, :trange, nothing)
+    # populate x with the range and y with t itself.
+    # divert to seriestype=:tseries (done in one_tseries() above), but
+    # keep track of the original seriestype, so we can restore it
+    _org_st = get(plotattributes, :seriestype, :path)
     for t = ts
         @series begin
             seriestype := :tseries
+            _org_st := _org_st
             (rangeof(t), t)
         end
     end
@@ -69,7 +76,7 @@ end
 # It calls the one_tseries recipe in a loop
 @recipe function many_mvtseries(datasets::MVTSeries...)
     # trange 
-    trng = get(plotattributes, :trange, nothing)
+    # trng = get(plotattributes, :trange, nothing)
     # label applies to the datasets 
     lbls = get(plotattributes, :label, nothing)
     if lbls === nothing
@@ -87,7 +94,7 @@ end
     end
     nvars = length(vars)
     if nvars > 10
-        error("Too many variables. Maybe split into pages.")
+        error("Too many variables. Try splitting into pages.")
     end
 
     # default layout - one subplot for each variable
@@ -115,13 +122,13 @@ end
             if hasproperty(data, vname)
                 series = getproperty(data, vname)
                 @series begin
-                    # the series itself
-                    seriestype := :tseries
-                    (rangeof(series), series)
+                    # the series itself (done by one_tseries() above)
+                    series
                 end
             else
+                # variable missing from dataset
                 @series begin
-                    # empty series - variable missing from dataset
+                    # empty :path series
                     seriestype := :path
                     (Float64[], Float64[])
                 end

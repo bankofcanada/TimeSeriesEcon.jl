@@ -268,21 +268,24 @@ function Base.show(io::IO, t::TSeries)
     print(io, ":")
     limit = get(io, :limit, true)
     nval = length(t.values)
+    mitpad = 2 + maximum(rangeof(t)) do mit
+        length(string(mit))
+    end
     from = t.firstdate
     nrow, ncol = displaysize(io)
     if limit && nval > nrow - 5
         top = div(nrow - 5, 2)
         bot = nval - nrow + 6 + top
         for i = 1:top
-            print(io, "\n", lpad(from + (i - 1), 8), " : ", t.values[i])
+            print(io, "\n", lpad(from + (i - 1), mitpad), " : ", t.values[i])
         end
         print(io, "\n    ⋮")
         for i = bot:nval
-            print(io, "\n", lpad(from + (i - 1), 8), " : ", t.values[i])
+            print(io, "\n", lpad(from + (i - 1), mitpad), " : ", t.values[i])
         end
     else
         for i = 1:nval
-            print(io, "\n", lpad(from + (i - 1), 8), " : ", t.values[i])
+            print(io, "\n", lpad(from + (i - 1), mitpad), " : ", t.values[i])
         end
     end
 end
@@ -460,7 +463,10 @@ Base.copyto!(dest::TSeries, drng::AbstractRange{<:MIT}, src::TSeries) = mixed_fr
 function Base.copyto!(dest::TSeries{F}, drng::AbstractRange{MIT{F}}, src::TSeries{F}) where {F<:Frequency}
     fullindex = union(rangeof(dest), drng)
     resize!(dest, fullindex)
-    copyto!(dest.values, Int(first(drng) - firstindex(dest) + 1), src[drng].values, 1, length(drng))
+    fd = Int(first(drng))
+    d1 = fd - Int(firstindex(dest)) + 1
+    s1 = fd - Int(firstindex(src)) + 1
+    copyto!(dest.values, d1, src.values, s1, length(drng))
     return dest
 end
 

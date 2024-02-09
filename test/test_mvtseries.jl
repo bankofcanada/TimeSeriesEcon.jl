@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2023, Bank of Canada
 # All rights reserved.
 
 
@@ -110,13 +110,17 @@ end
     @test a[1, 1] == 22
     @test_throws BoundsError a.c
     @test (a.a = TSeries(20Q1, 1:10); a.values[:, 1] == collect(1:10))
+    @test (a.a = 1; a.values[:, 1] == ones(10))
+    b = MVTSeries(rangeof(a), (:a, ), rand)
+    @test (a.a = b; a.values[:, 1] == b.values[:,1])
+    @test (a[:,:] .= 6ones(size(a)...); all(a.values .== 6))
 end
 
 @testset "MV" begin
     @test_throws ArgumentError MVTSeries(1M10, (:a, :b, :c), rand(10, 2))
     let nms = (:a, :b), dta = rand(20, 2),
         sd = MVTSeries(2000Q1, nms, copy(dta)),
-        dta2 = rand(size(dta)...)
+        dta2 = rand!(similar(dta))
 
         # if one argument is Colon, fall back on single argument indexing
         # getindex
@@ -176,7 +180,7 @@ end
         sd.a = zeros(size(dta, 1))
         @test sum(abs, sd.a.values) == 0
         @test_throws DimensionMismatch sd.a[:] = ones(length(sd.a) + 5)
-        @test_throws BoundsError sd.a = ones(length(sd.a) + 5)
+        @test_throws DimensionMismatch sd.a = ones(length(sd.a) + 5)
         # access to rows by MIT
         sd[:] = dta[:]
         @test sd[2000Q1] isa Vector{Float64}
@@ -252,10 +256,23 @@ end
         @test (myvar = [1, 2, 3, 4]; sd[2000Q1:2000Q4, :a] = myvar; sd[2000Q1:2000Q4, :a].values == myvar)
 
         # setindex from an MVTSeries to an MVTSeries
-        let sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
+        begin
+            sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
             sd[2001Q1:2001Q4, [:a, :b]] = sd2
             @test (sd[2001Q1:2001Q4, :].values == sd2[2001Q1:2001Q4, :].values)
+
         end
+
+        # https://github.com/bankofcanada/TimeSeriesEcon.jl/pull/49
+        # `sd[var] .= ...` should work the same as `sd[:,var] .= ...`
+        rand!(sd)
+        @test (sd[nms] = dta; sd.values == dta)
+        @test (sd[:a] .= dta2[:, 1]; sd[:b] = dta2[:, 2]; sd.values == dta2)
+        @test (sd[nms] .= dta; sd.values == dta)
+        @test (sd[nms] = dta2; sd.values == dta2)
+        @test (sd[nms] = sd2; sd[rangeof(sd2),:].values == sd2.values)
+        rand!(sd)
+        @test (sd[nms] .= sd2; sd[rangeof(sd2),:].values == sd2.values)
     end
 end
 

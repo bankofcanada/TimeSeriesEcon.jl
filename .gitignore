@@ -9,5 +9,7 @@ Manifest.toml
 coverage
 *.cov
 
+*.mem
+
 docs/build
 docs/Manifest.toml
