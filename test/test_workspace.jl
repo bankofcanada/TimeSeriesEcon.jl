@@ -174,7 +174,7 @@ end
     @test frequencyof(m1) == Quarterly
     # note: these series can't be displayed due to implicit conversion
     # resulting in mixed frequency errors
-    t1 = TSeries(m1, collect(11:20));
+    t1 = TSeries(m1, collect(1:10));
     t2 = TSeries(m1, collect(11:20));
     t3 = TSeries(m1, collect(21:30));
     t4 = TSeries(m1, collect(31:40));
@@ -198,11 +198,9 @@ end
     @test typeof(cleaned_ws.d.e) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.d.f) == TSeries{Quarterly{3},Int64,Vector{Int64}}
 
-    if VERSION >= v"1.8"
-        ws_unitrange = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5), :g => m1:m2)
-        cleaned_ws_unitrange = TimeSeriesEcon.clean_old_frequencies(ws_unitrange)
-        @test typeof(cleaned_ws_unitrange.g) == UnitRange{MIT{Quarterly{3}}}
-    end
+    ws_unitrange = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5), :g => m1:m2)
+    cleaned_ws_unitrange = TimeSeriesEcon.clean_old_frequencies(ws_unitrange)
+    @test typeof(cleaned_ws_unitrange.g) == UnitRange{MIT{Quarterly{3}}}
 
     ws2 = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5))
     @test typeof(ws2.a) == TSeries{Quarterly,Int64,Vector{Int64}}
