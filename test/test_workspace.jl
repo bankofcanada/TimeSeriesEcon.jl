@@ -198,9 +198,11 @@ end
     @test typeof(cleaned_ws.d.e) == TSeries{Quarterly{3},Int64,Vector{Int64}}
     @test typeof(cleaned_ws.d.f) == TSeries{Quarterly{3},Int64,Vector{Int64}}
 
-    ws_unitrange = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5), :g => m1:m2)
-    cleaned_ws_unitrange = TimeSeriesEcon.clean_old_frequencies(ws_unitrange)
-    @test typeof(cleaned_ws_unitrange.g) == UnitRange{MIT{Quarterly{3}}}
+    if VERSION >= v"1.8"
+        ws_unitrange = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5), :g => m1:m2)
+        cleaned_ws_unitrange = TimeSeriesEcon.clean_old_frequencies(ws_unitrange)
+        @test typeof(cleaned_ws_unitrange.g) == UnitRange{MIT{Quarterly{3}}}
+    end
 
     ws2 = Workspace(:a => t1, :b => t2, :c => m1, :d => Workspace(:e => t4, :f => t5))
     @test typeof(ws2.a) == TSeries{Quarterly,Int64,Vector{Int64}}
