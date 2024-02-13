@@ -849,6 +849,11 @@ using OrderedCollections
     for c in colnames(a)
         @test a[c].values == [1, 2, 3, x[c]...]
     end
+
+    ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
+    @test apct(ts).values == ((ts.values[2:10,:] ./ ts.values[1:9,:]) .^ 4 .- 1) * 100
+    @test pct(ts).values ≈ ((ts.values[2:10,:] ./ ts.values[1:9,:]) .- 1) * 100
+    @test ytypct(ts).values ≈ ((ts.values[5:10,:] ./ ts.values[1:6,:]) .- 1) * 100
 end
 
 @testset "hcat" begin
