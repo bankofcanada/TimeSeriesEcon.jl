@@ -925,7 +925,7 @@ Returns an MVTseries when the dimensions of the result match the dimensions of A
 
 Returns a TSeries when the result is a vector of the same length as the range of A.
 
-Returns a the raw mapvalues result otherwise.
+Returns a Matrix otherwise.
 """
 function Base.mapslices(f, A::MVTSeries; dims) 
     res = mapslices(f, A.values; dims=dims)
