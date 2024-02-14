@@ -466,10 +466,10 @@ end
 
 @inline function Base.getindex(x::MVTSeries{F}, rng::StepRange{MIT{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(x, rng)
-    _vals(x)[start:Int(rng.step):stop, :]
+    getindex(_vals(x), start:Int(rng.step):stop, :)
 end
 @inline function Base.getindex(x::MVTSeries{F}, rng::StepRange{<:Integer}) where {F<:Frequency}
-    _vals(x)[rng, :]
+    getindex(_vals(x), rng, :)
 end
 
 Base.setindex!(x::MVTSeries, val, rng::AbstractUnitRange{<:MIT}) = mixed_freq_error(x, rng)
