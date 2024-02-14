@@ -199,6 +199,25 @@ end
     @test Base.Broadcast.check_broadcast_shape((1U:10U,), ()) === nothing
     @test Base.Broadcast.preprocess(t2, 10.0) == 10
 
+    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    v4 = [7.0, 2.0, 7.0, 4.0, 7.0, 6.0, 7.0, 8.0, 7.0, 10.0]
+    t4[begin:2:end] .= 7.0
+    @test t4.values == v4
+    
+    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    t4[1:2:10] .= 7.0
+    @test t4.values == v4
+    
+    v5 = ones(5) .* 7.0
+    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    t4[begin:2:end] = v5
+    @test t4.values == v4
+
+    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    t4[1:2:10] = v5
+    @test t4.values == v4
+
+
 end
 
 ts_u = TSeries(5)

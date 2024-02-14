@@ -540,6 +540,25 @@ end
     @test Base.Broadcast.preprocess(x2, t2).keeps == (true,)
     @test Base.Broadcast.preprocess(x2, t2).defaults == (1,)
     @test Base.Broadcast.preprocess(x2, 2.3) == 2.3
+
+    mat3 = [7.0 7.0; 2.0 12.0; 7.0 7.0; 4.0 14.0; 7.0 7.0; 6.0 16.0; 7.0 7.0; 8.0 18.0; 7.0 7.0; 10.0 20.0]
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] .= 7.0
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10] .= 7.0
+    @test x3.values == mat3
+    
+    mat4 = ones(5,2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] = mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10] = mat4
+    @test x3.values == mat3
+
 end
 
 @testset "MVTSeries math" begin
