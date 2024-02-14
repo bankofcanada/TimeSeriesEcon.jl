@@ -464,10 +464,25 @@ Base.getindex(x::MVTSeries, rng::AbstractUnitRange{<:MIT}) = mixed_freq_error(x,
     return MVTSeries(first(rng), axes(x, 2), getindex(_vals(x), start:stop, :))
 end
 
+@inline function Base.getindex(x::MVTSeries{F}, rng::StepRange{MIT{F}}) where {F<:Frequency}
+    start, stop = _ind_range_check(x, rng)
+    _vals(x)[start:Int(rng.step):stop, :]
+end
+@inline function Base.getindex(x::MVTSeries{F}, rng::StepRange{<:Integer}) where {F<:Frequency}
+    _vals(x)[rng, :]
+end
+
 Base.setindex!(x::MVTSeries, val, rng::AbstractUnitRange{<:MIT}) = mixed_freq_error(x, rng)
 @inline function Base.setindex!(x::MVTSeries{F}, val, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     start, stop = _ind_range_check(x, rng)
     setindex!(_vals(x), val, start:stop, :)
+end
+@inline function Base.setindex!(x::MVTSeries{F}, val, rng::StepRange{MIT{F}}) where {F<:Frequency}
+    start, stop = _ind_range_check(x, rng)
+    setindex!(_vals(x), val, start:Int(rng.step):stop, :)
+end
+@inline function Base.setindex!(x::MVTSeries{F}, val, rng::StepRange{<:Integer}) where {F<:Frequency}
+    setindex!(_vals(x), val, rng, :)
 end
 
 # single argument - variable - return a TSeries of the column
@@ -634,6 +649,14 @@ end
 Base.fill!(x::MVTSeries, val) = fill!(_vals(x), val)
 
 Base.view(x::MVTSeries, I...) = view(_vals(x), _vals.(I)...)
+function Base.view(x::MVTSeries{F}, I::StepRange{MIT{F}}) where {F<:Frequency} 
+    start, stop = _ind_range_check(x, I)
+    view(_vals(x), start:Int(I.step):stop, :)
+end
+function Base.view(x::MVTSeries{F}, I::StepRange{<:Integer}) where {F<:Frequency} 
+    view(_vals(x), I, :)
+end
+    
 # Base.view(::MVTSeries{F1}, ::TSeries{F2,Bool}, ::Colon=Colon()) where {F1,F2} = mixed_freq_error(F1, F2)
 # Base.view(x::MVTSeries{F}, ind::TSeries{F,Bool}, ::Colon=Colon()) where F<:Frequency = view(x, rangeof(ind)[_vals(ind)], :)
 

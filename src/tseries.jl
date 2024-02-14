@@ -471,11 +471,26 @@ Base.view(t::TSeries, I::AbstractRange{<:MIT}) = mixed_freq_error(t, I)
     TSeries(first(I), view(t.values, oftype(fi, first(I) - firstindex(t) + fi):oftype(fi, last(I) - firstindex(t) + fi)))
 end
 
+# stepranges
+@inline function Base.view(t::TSeries{F}, I::StepRange{MIT{F}}) where {F<:Frequency}
+    # fi = firstdate(t)
+    start = Int(I.start - firstdate(t) + 1)
+    step = Int(I.step)
+    stop =  Int(I.stop - firstdate(t) + 1)
+    view(t.values, start:step:stop)
+end
+
 # view with Int indexing
 @inline function Base.view(t::TSeries, I::AbstractRange{<:Integer})
     fi = firstindex(t.values)
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
+
+# stepranges
+@inline function Base.view(t::TSeries{F}, I::StepRange{<:Integer}) where {F<:Frequency} 
+    view(t.values, I)
+end
+
 
 """
     diff(x::TSeries)
