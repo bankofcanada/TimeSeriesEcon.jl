@@ -473,11 +473,9 @@ end
 
 # stepranges
 @inline function Base.view(t::TSeries{F}, I::StepRange{MIT{F}}) where {F<:Frequency}
-    # fi = firstdate(t)
     start = Int(I.start - firstdate(t) + 1)
-    step = Int(I.step)
     stop =  Int(I.stop - firstdate(t) + 1)
-    view(t.values, start:step:stop)
+    view(t.values, start:Int(I.step):stop)
 end
 
 # view with Int indexing
