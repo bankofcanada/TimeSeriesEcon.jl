@@ -107,10 +107,10 @@ _regime_change_dict_end = Dict{Symbol, String}(
 )
 
 _per_quarterly_strings_dict = Dict{UnionAll, String}(
-    Q1 =>  "q1",
-    Q2 =>  "q2",
-    Q3 =>  "q3",
-    Q4 =>  "q4" #TODO: check if these work.
+    Q1 =>  "1",
+    Q2 =>  "2",
+    Q3 =>  "3",
+    Q4 =>  "4"
 )
 
 function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,X13forecast,X13history,X13identify,X13outlier,X13pickmdl,X13regression,X13seats,X13slidingspans,X13spectrum,X13transform,X13x11,X13x11regression}; test=false, outfolder::Union{String,X13default}=X13default())
@@ -157,7 +157,7 @@ function x13write(spec::Union{X13arima,X13automdl,X13check,X13estimate,X13force,
     for key in keys_at_end
         val = getfield(spec,key)
         if key ∈ (:ma, :ar, :b)
-            push!(s, "$key = $(x12write_fixed_values(spec, key, val))")
+            push!(s, "$key = $(x13write_fixed_values(spec, key, val))")
             continue
         end
         push!(s, "$key = $(x13write(val))")
@@ -217,7 +217,7 @@ _fixed_val_dict = Dict{Bool,String}(
     true => "f",
     false => ""
 )
-function x12write_fixed_values(spec, key, val)
+function x13write_fixed_values(spec, key, val)
     fixedval = getfield(spec, Symbol("fix$(key)"))
     if fixedval isa X13default
         return x13write(val)
@@ -276,7 +276,7 @@ x13write(val::Union{X13.tdstock,X13.tdstock1coef,X13.easter,X13.labor,X13.thank,
 x13write(val::sincos) = "sincos[$(join(val.n, " "))]"
 x13write(val::Union{X13.td, X13.tdnolpyear, X13.td1coef, X13.td1nolpyear, X13.lpyear, X13.lom, X13.loq, X13.seasonal})           = val.regimechange == :neither ? "$(nameof(typeof(val)))" : "$(nameof(typeof(val)))$(_regime_change_dict_start[val.regimechange])$(x13write(val.mit))$(_regime_change_dict_end[val.regimechange])"
 x13write(val::Span)         = val.e isa TimeSeriesEcon._FPConst || val.e isa UnionAll ? "($(x13write(val.b)), 0.$(x13write(val.e)))" : "($(x13write(val.b)), $(x13write(val.e)))"
-x13write(val::UnionAll) = _quarterly_strings_dict[val]
+x13write(val::UnionAll) = _per_quarterly_strings_dict[val]
 x13write(val::TimeSeriesEcon._FPConst{Monthly, N}) where N = _ordered_month_names[N]
 
 function x13write(val::MIT)

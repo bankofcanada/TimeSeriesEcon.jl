@@ -746,6 +746,10 @@ function _tryparse(t::Type, s::AbstractString, default)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
+    if length(keys(ws)) == 0
+        print(io, "Empty WorkspaceTable");
+        return
+    end
     colwidths = [length(string(k)) + 1 for k in keys(ws)]
     numrows = maximum(length.(values(ws)))
     types = [typeof(v) for v in values(ws)]
@@ -784,10 +788,14 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
             if sumwidth + colwidths[i] + 1 < dwidth
                 leftcols = i
                 sumwidth += colwidths[i] + 1
+            else
+                break
             end
-            if sumwidth + colwidths[end-i] + 1 < dwidth && i <= length(colwidths)/2
+            if sumwidth + colwidths[end-(i-1)] + 1 < dwidth && i <= length(colwidths)/2
                 rightcols = length(colwidths) - (i-1)
-                sumwidth += colwidths[end-i] + 1
+                sumwidth += colwidths[end-(i-1)] + 1
+            else
+                break
             end
         end
     else
@@ -956,7 +964,7 @@ function descriptions(res::X13result)
     if :udg in keys(res.other)
         desc.other = Workspace()
         desc.other.udg = Workspace()
-        for key in res.other.udg
+        for key in keys(res.other.udg)
             if key ∈ keys(_output_udg_description)
                 desc.other.udg[key]  = _output_udg_description[key]
             end

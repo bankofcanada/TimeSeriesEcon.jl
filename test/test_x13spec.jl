@@ -504,6 +504,21 @@ end
     @test contains(s, "x11 {\n        seasonalma = s3x3\n}")
     @test contains(s, "history {\n        estimates = (sadj trend)\n}")
     @test contains(s, "series {\n        comptype = add\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50)\n        modelspan = (, 0.dec)\n        start = 1967.jan\n        title = \"Housing Starts in the Midwest\"\n}")
+
+    # As example 4, but quarterly
+    ts = TSeries(1967Q1, collect(1:50))
+    xts = X13.series(ts, title="Housing Starts in the Midwest", comptype=:add, modelspan=X13.Span(missing,Q3))
+    spec = X13.newspec(xts)
+    X13.regression!(spec; variables=:td)
+    X13.arima!(spec, X13.ArimaModel(0, 1, 2, 0, 1, 1))
+    X13.x11!(spec, seasonalma=:s3x3)
+    X13.history!(spec, estimates=[:sadj, :trend])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = td\n}")
+    @test contains(s, "arima {\n        model = (0 1 2)(0 1 1)\n}")
+    @test contains(s, "x11 {\n        seasonalma = s3x3\n}")
+    @test contains(s, "history {\n        estimates = (sadj trend)\n}")
+    @test contains(s, "series {\n        comptype = add\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50)\n        modelspan = (, 0.3)\n        period = 4\n        start = 1967.1\n        title = \"Housing Starts in the Midwest\"\n}")
     
 end
 
@@ -1170,7 +1185,7 @@ end
     @test contains(s, "forecast {\n        maxlead = 18\n}")
     @test contains(s, "seats {\n        out = 0\n}")
 
-    # Example with tabtables
+    # Example with tabtables and printphtrf
     ts = TSeries(MIT{YPFrequency{6}}(1995*6), collect(1:50))
     xts = X13.series(ts, title="Model based adjustment of Bimonthly exports")
     spec = X13.newspec(xts)
@@ -1179,14 +1194,14 @@ end
     X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
     X13.outlier!(spec, types=[:ao, :ls, :tc])
     X13.forecast!(spec, maxlead=18)
-    X13.seats!(spec, tabtables=[:xo,:n,:s,:p])
+    X13.seats!(spec, tabtables=[:xo,:n,:s,:p], printphtrf=true)
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n        function = log\n}")
     @test contains(s, "regression {\n        aictest = td\n}")
     @test contains(s, "arima {\n        model = (0 1 1)(0 1 1)\n}")
     @test contains(s, "outlier {\n        types = (ao ls tc)\n}")
     @test contains(s, "forecast {\n        maxlead = 18\n}")
-    @test contains(s, "seats {\n        out = 0\n        tabtables = \"xo,n,s,p\"\n}")
+    @test contains(s, "seats {\n        out = 0\n        printphtrf = 1\n        tabtables = \"xo,n,s,p\"\n}")
 
 end
 
@@ -1647,7 +1662,7 @@ end
  
 end
 
-@testset "X13  Specification errors writing" begin
+@testset "X13 Specification errors writing" begin
     # invalid aictest when using :td variable
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
@@ -1665,4 +1680,30 @@ end
 end
 
 
+@testset "X13 Specification show" begin
+    ts = TSeries(1975M1, collect(1:50))
+    xts = X13.series(ts, title="Automobile sales")
+    spec = X13.newspec(xts)
+    X13.transform!(spec, func=:log)
+    X13.regression!(spec, variables=[:const], 
+        data=MVTSeries(1975M1, [:strike80, :strike85, :strike90], hcat(collect(1.0:0.1:8.3),collect(0.0:0.2:14.6),collect(3.0:0.3:24.9)))
+    )
+    X13.arima!(spec, X13.ArimaSpec(0,1,1), X13.ArimaSpec(0,1,1,12))
+    X13.x11!(spec, title = ["Car Sales in US", "Adjusted for strikes in 80, 85, 90"])
+    X13.x11regression!(spec, variables=[:td, X13.easter(8)])
 
+    let io = IOBuffer()
+        show(IOContext(io, :displaysize => (20, 80)), MIME"text/plain"(), spec)
+        
+        lines = readlines(seek(io, 0))
+        @test length(lines) == 22
+        @test lines[1] == "X13 spec"
+        @test lines[2] == "series:"
+        @test lines[6] == "arima:"
+        @test lines[8] == "transform:"
+        @test lines[11] == "regression:"
+        @test lines[17] == "x11:"
+        @test lines[20] == "x11regression:"
+    end
+
+end
