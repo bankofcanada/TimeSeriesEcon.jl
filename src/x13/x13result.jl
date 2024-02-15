@@ -746,8 +746,6 @@ function _tryparse(t::Type, s::AbstractString, default)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
-    # we are going to print everything...
-    # TODO: account for REPL window width
     colwidths = [length(string(k)) + 1 for k in keys(ws)]
     numrows = maximum(length.(values(ws)))
     types = [typeof(v) for v in values(ws)]
@@ -777,22 +775,62 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
         end
         colwidths[i] = max(colwidths[i], maximum(length.(v)))
     end
+    if limit && sum(colwidths) + length(colwidths) > dwidth
+        # print some but not all columns (no room on screen)
+        leftcols = 1
+        rightcols = length(colwidths)
+        sumwidth = colwidths[1] + colwidths[end] + 3
+        for i in 2:(floor(Int,length(colwidths)/2) + 1)
+            if sumwidth + colwidths[i] + 1 < dwidth
+                leftcols = i
+                sumwidth += colwidths[i] + 1
+            end
+            if sumwidth + colwidths[end-i] + 1 < dwidth && i <= length(colwidths)/2
+                rightcols = length(colwidths) - (i-1)
+                sumwidth += colwidths[end-i] + 1
+            end
+        end
+    else
+        leftcols = length(colwidths)
+        rightcols = length(colwidths)
+    end
 
     # now print the thing
-    for (i,h) in enumerate(keys(ws))
-        print(io, rpad(h,colwidths[i]+1, " "))
+    printed_filler_col = false
+    for (j,h) in enumerate(keys(ws))
+        leftcols < j < rightcols && printed_filler_col && continue
+        if leftcols < j < rightcols
+            print(io, " … ")
+            printed_filler_col = true
+            continue
+        end
+        print(io, rpad(h,colwidths[j]+1, " "))
     end
     print(io, "\n")
-    for c in colwidths
+    printed_filler_col = false
+    for (j,c) in enumerate(colwidths)
+        leftcols < j < rightcols && printed_filler_col && continue
+        if leftcols < j < rightcols
+            print(io, " … ")
+            printed_filler_col = true
+            continue
+        end
         print(io, "-"^c)
         print(io, " ")
     end
     print(io, "\n")
     printed_filler_row = false
     for i in 1:numrows
+        printed_filler_col = false
         top < i < bot && printed_filler_row && continue
         if top < i < bot
             for (j,vec) in enumerate(stringvals)
+                leftcols < j < rightcols && printed_filler_col && continue
+                if leftcols < j < rightcols
+                    print(io, " … ")
+                    printed_filler_col = true
+                    continue
+                end
                 print(io, lpad("⋮", colwidths[j], " "))
                 print(io, " ")
             end
@@ -801,6 +839,12 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
             continue
         end
         for (j,vec) in enumerate(stringvals)
+            leftcols < j < rightcols && printed_filler_col && continue
+            if leftcols < j < rightcols
+                print(io, " … ")
+                printed_filler_col = true
+                continue
+            end
             if length(vec) >= i
                 if types[j] == Vector{String}
                     print(io, rpad(vec[i], colwidths[j], " "))

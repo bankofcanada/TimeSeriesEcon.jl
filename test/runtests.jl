@@ -16,5 +16,7 @@ include("test_fconvert.jl")
 include("test_serialize.jl")
 include("test_various.jl")
 include("test_22.jl")
+include("test_x13spec.jl")
+include("test_x13run.jl")
 
 include("test_dataecon.jl")
