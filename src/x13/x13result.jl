@@ -772,6 +772,9 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
         push!(stringvals, vec)
     end
     for (i,v) in enumerate(stringvals)
+        if length(v) == 0
+            continue
+        end
         colwidths[i] = max(colwidths[i], maximum(length.(v)))
     end
 
