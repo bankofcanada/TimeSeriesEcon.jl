@@ -2134,8 +2134,29 @@ end
     X13.x11!(spec; seasonalma=:s3x9)
     X13.slidingspans!(spec, length=40, numspans=3)
     @suppress @test_throws ErrorException res = X13.run(spec; verbose=false, load=:all);
+end
+
+@testset "X13 logs and verbose" begin
+    # test with an error
+    ts = TSeries(1967Q1, mvsales[1:350])
+    xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
+    spec = X13.newspec(xts)
+    X13.x11!(spec; seasonalma=:s3x9)
+    X13.slidingspans!(spec, length=40, numspans=3)
+    @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
+
+    ts = TSeries(1976M1, mvsales[1:50])
+    xts = X13.series(ts, title="Monthly Sales", print=[:span, :seriesplot])
+    spec = X13.newspec(xts)
+    X13.transform!(spec, func=:log, save=:all,  print=[:aictransform, :seriesconstant])
+    X13.regression!(spec, variables = [:const, :seasonal], save=:all)
+    m = X13.ArimaModel(X13.ArimaSpec(1,1,0),X13.ArimaSpec(1,0,0,3),X13.ArimaSpec(0,0,1))
+    X13.arima!(spec, m)
+    X13.estimate!(spec, save=:all)
+    @test_logs (:warn, r"At least one visually significant seasonal peak has been\s+found in one or more of the estimated spectra\."i) (:info, r"The program cannot perform hypothesis tests for kurtosis on\s+less than 50 observations\."i)  X13.run(spec; verbose=true);
 
 end
+
 
 @testset "X13 using a string" begin
     ts = TSeries(1950Q1, mvsales[1:150])
