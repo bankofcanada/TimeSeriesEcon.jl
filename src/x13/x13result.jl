@@ -103,9 +103,7 @@ function _run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, lo
         if TimeSeriesEcon.getoption(:x13path) !== ""
             c = `$(TimeSeriesEcon.getoption(:x13path)) -I "$(joinpath(spec.folder,"spec"))" -G "$(gpath)" -S`
         else
-            x13as_ascii() do x13
-                c = `$x13 -I "spec"  -G "graphics" -S`
-            end
+            c = `$(X13as_jll.get_x13as_ascii_path()) -I "spec"  -G "graphics" -S`
         end
         cd(spec.folder) do
            process = Base.run(pipeline(c, stdout=stdout_buffer, stderr=stderr_buffer))

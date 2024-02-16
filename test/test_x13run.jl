@@ -2278,6 +2278,18 @@ end
     @test res.text.out isa String
     @test res.text.spc isa String
     @test res.text.gmt isa String
+
+    #cleanup
+    cleanup_folders_before = X13.get_cleanup_folders()
+    if length(cleanup_folders_before) > 5
+        @test_logs (:info, r"There are \d+ temporary X13 folders created by this user which have not been automatically removed."i) X13.__init__()
+    end
+    if length(cleanup_folders_before) > 1
+        @suppress X13.cleanup()
+        cleanup_folders_after = X13.get_cleanup_folders()
+        @test length(cleanup_folders_after) <= 1
+        @show cleanup_folders_after
+    end
    
 end
 
