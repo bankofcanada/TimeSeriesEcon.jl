@@ -2248,8 +2248,8 @@ end
 
     let io = IOBuffer()
         show(IOContext(io, :displaysize => (20, 80)), MIME"text/plain"(), wst5)
-        @test length(readlines(seek(io, 0))) <= 20
         lines = readlines(seek(io, 0))
+        @test length(lines) <= 20
         @test maximum(length.(lines)) <= 80
         @test contains(lines[10], "⋮")
     end
@@ -2268,6 +2268,29 @@ end
     @test desc.series.a1 == "SERIES: time series data, with associated dates (if the span argument is present, data are printed and/or saved only for the specified span)"
     @test desc.tables.acm == "ESTIMATE: correlation matrix of ARMA parameter estimates if used with the print argument; covariance matrix of same if used with the save argument"
     
+    # show results
+    let io = IOBuffer()
+        show(IOContext(io, :displaysize => (20, 80)), MIME"text/plain"(), res)
+        lines = readlines(seek(io, 0))
+        @test length(lines) == 11
+        @test lines[1] == "X13 results"
+        @test lines[4] == "     series ⇒ X13ResultWorkspace with 7 TSeries/MVTSeries"
+        @test lines[5] == "     tables ⇒ X13ResultWorkspace with 7 tables"
+        @test lines[6] == "       text ⇒ X13ResultWorkspace with 4 entries"
+        @test lines[7] == "      other ⇒ X13ResultWorkspace with 4 entries"
+        @test lines[11] == "      notes ⇒ 2-element Vector{String}"
+    end
+    let io = IOBuffer()
+        show(IOContext(io, :displaysize => (10, 80)), MIME"text/plain"(), res)
+        lines = readlines(seek(io, 0))
+        @test length(lines) == 6
+        @test lines[1] == "X13 results"
+        @test lines[2] == "       spec ⇒ X13spec{Monthly}"
+        @test lines[4] == "          ⋮ ⇒ ⋮"
+        @test lines[5] == "   warnings ⇒ 1-element Vector{String}"
+        @test lines[6] == "      notes ⇒ 2-element Vector{String}"
+    end
+
     # lazy-loading
     ts = TSeries(1976M1, mvsales[1:50])
     xts = X13.series(ts, title="Monthly Sales")
