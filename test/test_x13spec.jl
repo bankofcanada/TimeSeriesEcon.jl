@@ -87,6 +87,34 @@ end
     @test arima1.model isa X13.ArimaModel
     @test arima1.model.specs[1] == x1
     @test arima1.model.specs[2] == x2
+    
+    x4 = X13.ArimaSpec(3)
+    @test x4 isa X13.ArimaSpec
+    @test x4.p == 3
+    @test x4.d == 0
+    @test x4.q == 0
+    @test x4.period == 0
+
+    x5 = X13.ArimaSpec([3])
+    @test x5 isa X13.ArimaSpec
+    @test x5.p == [3]
+    @test x5.d == 0
+    @test x5.q == 0
+    @test x5.period == 0
+
+    x6 = X13.ArimaSpec(3,2)
+    @test x6 isa X13.ArimaSpec
+    @test x6.p == 3
+    @test x6.d == 2
+    @test x6.q == 0
+    @test x6.period == 0
+
+    x7 = X13.ArimaSpec([3],[2])
+    @test x7 isa X13.ArimaSpec
+    @test x7.p == [3]
+    @test x7.d == [2]
+    @test x7.q == 0
+    @test x7.period == 0
 end
 
 @testset "X13 Arima writing" begin
@@ -175,6 +203,25 @@ end
     @test contains(s, "arima {\n        model = (0 1 1)(0 1 1)12\n        ma = (,1.0f)\n}")
     @test contains(s, "estimate { }")
     @test contains(s, "transform {\n        function = log\n}")
+
+    ts = TSeries(1976M1, collect(1:50))
+    xts = X13.series(ts, title="Monthly Sales")
+    spec = X13.newspec(xts; 
+        transform=X13.transform(;func=:log),
+        arima=X13.arima(X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12); ma = [missing, 1.0], fixma = [false, true]),
+        estimate=X13.estimate()
+    )
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "arima {\n        model = (0 1 1)(0 1 1)12\n        ma = (,1.0f)\n}")
+    @test contains(s, "estimate { }")
+    @test contains(s, "transform {\n        function = log\n}")
+
+    # arima errors and warnings
+    @test_throws ArgumentError X13.arima(X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12); ma = [missing, 1.0], fixma = [true])
+    @test_throws ArgumentError X13.arima(X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12); ar = [missing, 1.0], fixar = [true])
+    @test_logs (:warn, r"Arima title trunctated to 79 characters*"i) xts = X13.arima(X13.ArimaSpec(0,1,1),X13.ArimaSpec(0,1,1,12);
+        title="This is a very long title that will most certainly trigger the warning about the title being truncated")    
+    
 end
 
 @testset "X13 Automdl writing" begin
@@ -218,6 +265,25 @@ end
     @test contains(s, "automdl { }")
     @test contains(s, "regression {\n        aictest = td\n}")
     @test contains(s, "x11 { }")
+
+    # automdl warnings and errors
+    @test_throws ArgumentError X13.automdl(; diff=[3,1])
+    @test_throws ArgumentError X13.automdl(; diff=[2,2])
+    @test_throws ArgumentError X13.automdl(; diff=[2,0,0])
+    @test_logs (:warn, r"The diff argument of the automdl spec will be ignored because a maxdiff argument is specified."i) X13.automdl(; diff=[2,0], maxdiff=[2,1])
+    @test_throws ArgumentError X13.automdl(; maxdiff=[3,1])
+    @test_throws ArgumentError X13.automdl(; maxdiff=[2,2])
+    @test_throws ArgumentError X13.automdl(; maxdiff=[2,1,0])
+    @test_throws ArgumentError X13.automdl(; maxorder=[5,2])
+    @test_throws ArgumentError X13.automdl(; maxorder=[4,3])
+    @test_throws ArgumentError X13.automdl(; maxorder=[4,2,0])
+    @test_throws ArgumentError X13.automdl(; armalimit=-0.9)
+    @test_throws ArgumentError X13.automdl(; fcstlim=-3)
+    @test_throws ArgumentError X13.automdl(; fcstlim=103)
+    @test_throws ArgumentError X13.automdl(; reducecv=-0.9)
+    @test_throws ArgumentError X13.automdl(; reducecv=1.1)
+    @test_throws ArgumentError X13.automdl(; urfinal=0.9)
+    # @test_throws ArgumentError X13.automdl(; diff=[2,0])
     
 end
 
@@ -520,6 +586,15 @@ end
     @test contains(s, "history {\n        estimates = (sadj trend)\n}")
     @test contains(s, "series {\n        comptype = add\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50)\n        modelspan = (, 0.3)\n        period = 4\n        start = 1967.1\n        title = \"Housing Starts in the Midwest\"\n}")
     
+    # automdl warnings and errors
+    @test_throws ArgumentError X13.history(; fstep=[1,2,3,4,5])
+    @test_throws ArgumentError X13.history(; fstep=[-1, 2])
+    @test_throws ArgumentError X13.history(; fstep=-2)
+    @test_throws ArgumentError X13.history(; sadjlags=[1,2,3,4,5,6])
+    @test_throws ArgumentError X13.history(; sadjlags=[-1, 2])
+    @test_throws ArgumentError X13.history(; sadjlags=-2)
+    # @test_throws ArgumentError X13.automdl(; diff=[2,2])
+    # @test_throws ArgumentError X13.automdl(; diff=[2,0,0])
 end
 
 @testset "X13 Identify writing" begin
@@ -625,6 +700,22 @@ end
     @test contains(s, "check { }")
     @test contains(s, "x11 { }")
     @test contains(s, "metadata {\n        key = (\n                \"analyst\"\n                \"spec.final\"\n                \"key3\"\n        )\n        value = (\n                \"John J. J. Smith\"\n                \"November 10, 2006\"\n                \"AO caused by strike, LS caused by survey change\"\n        )\n}")
+
+
+    # metadata warnings and errors
+    @test_throws ArgumentError X13.metadata("This is a very long key that will for sure trigger an arguement error if we just write it long enough so that its total length exceeds one hundred and thirty-two characters" => "success!")
+    @test_throws ArgumentError X13.metadata("key" => "This is a very long value that will for sure trigger an arguement error if we just write it long enough so that its total length exceeds one hundred and thirty-two characters")
+    v = Vector{Pair{String,String}}()
+    for i in 1:600
+        push!(v, "hello$i"=>" ")
+    end
+    @test_throws ArgumentError X13.metadata(v)
+    v = Vector{Pair{String,String}}()
+    for i in 1:600
+        push!(v, "h$i"=>"world")
+    end
+    @test_throws ArgumentError X13.metadata(v)
+    # @test_throws ArgumentError X13.history(; fstep=[-1, 2])
 end
 
 @testset "X13 Outlier writing" begin
@@ -676,6 +767,16 @@ end
     @test contains(s, "arima {\n        model = (0 1 1)(0 1 1)12\n}")
     @test contains(s, "estimate { }")
     @test contains(s, "outlier {\n        critical = (3.0, 4.5, 4.0)\n        types = all\n}")
+
+    # outlier warnings and errors
+    @test_throws ArgumentError X13.outlier(; critical=[3.1,4.0,6.0,7.0])
+    @test_throws ArgumentError X13.outlier(; lsrun=-1)
+    @test_throws ArgumentError X13.outlier(; lsrun=6)
+    @test_throws ArgumentError X13.outlier(; almost=-0.1)
+    @test_throws ArgumentError X13.outlier(; tcrate=-0.1)
+    @test_throws ArgumentError X13.outlier(; tcrate=1.1)
+    @test_throws ArgumentError X13.outlier(; span=X13.Span(missing,M11))
+    
 
 end
 
@@ -733,6 +834,24 @@ end
     @test contains(s, "pickmdl {\n        models = (0 1 1)(0 1 1) *\n(0 1 2)(0 1 1) X\n(2 1 0)(0 1 1) X\n(0 2 2)(0 1 1) X\n(2 1 2)(0 1 1)\n        mode = fcst\n        outofsample = yes\n}")
     @test contains(s, "estimate { }")
     @test contains(s, "x11 { }")
+
+    # pickmdl warnings and errors
+    @test_throws ArgumentError X13.pickmdl(; bcstlim=-1)
+    @test_throws ArgumentError X13.pickmdl(; bcstlim=101)
+    @test_throws ArgumentError X13.pickmdl(; fcstlim=-1)
+    @test_throws ArgumentError X13.pickmdl(; fcstlim=101)
+    @test_throws ArgumentError X13.pickmdl(; qlim=-1)
+    @test_throws ArgumentError X13.pickmdl(; qlim=101)
+    @test_throws ArgumentError X13.pickmdl(; overdiff=1.1)
+    @test_throws ArgumentError X13.pickmdl(; overdiff=0.8)
+    @test_throws ArgumentError X13.pickmdl([models[1]])
+    models2 = [
+        X13.ArimaModel(0,1,1,0,1,1; default=true)
+        X13.ArimaModel(0,1,2,0,1,1; default=true)
+    ]
+    @test_throws ArgumentError X13.pickmdl(models2)
+    @test_throws ArgumentError X13.pickmdl()
+    
 
 end
 
@@ -1126,7 +1245,34 @@ end
     @test contains(s, "check { }")
     @test contains(s, "forecast {\n        maxlead = 12\n}")
     @test contains(s, "estimate { }")
-    
+
+    # regression warnings and errors
+    @test_throws ArgumentError X13.regression(; aicdiff=[1.0,1.5], pvaictest=1.5)
+    @test_throws ArgumentError X13.regression(;
+        data=MVTSeries(1991M1, [:beforecny, :betweencny, :aftercny], hcat(collect(1.0:0.1:17.1),collect(0.0:0.2:32.2),collect(3.0:0.3:51.3))),
+        usertype=[:holiday, :holiday],)
+    @test_throws ArgumentError X13.regression(;
+        data=MVTSeries(1991M1, [:beforecny, :betweencny, :aftercny], hcat(collect(1.0:0.1:17.1),collect(0.0:0.2:32.2),collect(3.0:0.3:51.3))),
+        usertype=[:holiday, :holiday, :somethingelse],)
+    @test_throws ArgumentError X13.regression(;
+        data=MVTSeries(1991M1, [:beforecny, :betweencny, :aftercny], hcat(collect(1.0:0.1:17.1),collect(0.0:0.2:32.2),collect(3.0:0.3:51.3))),
+        usertype=:somethingelse)
+    @test_throws ArgumentError X13.regression(; variables=[X13.tdstock(-1)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.tdstock(32)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.easter(-1)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.easter(26)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.labor(-1)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.labor(26)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.thank(-9)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.thank(18)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.sceaster(0)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.sceaster(25)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.easterstock(0)])
+    @test_throws ArgumentError X13.regression(; variables=[X13.easterstock(26)])
+    @test_logs (:warn, r"The variables argument has overlapping aos specifications.*"i) (:warn, r"The variables argument has overlapping aos specifications.*"i) X13.regression(; variables=[X13.aos(1996Q1,1997Q4), X13.aos(1997Q1,1998Q4)])
+    @test_logs (:warn, r"The variables argument has overlapping lss specifications.*"i) (:warn, r"The variables argument has overlapping lss specifications.*"i) X13.regression(; variables=[X13.lss(1996Q1,1997Q4), X13.lss(1997Q1,1998Q4)])
+    @test_throws ArgumentError X13.regression(; aictest=:something)
+     
 end
 
 @testset "X13 Seats writing" begin
@@ -1203,6 +1349,11 @@ end
     @test contains(s, "forecast {\n        maxlead = 18\n}")
     @test contains(s, "seats {\n        out = 0\n        printphtrf = 1\n        tabtables = \"xo,n,s,p\"\n}")
 
+    # seats warnings and errors
+    @test_throws ArgumentError X13.seats(; epsiv=-0.1)
+    @test_logs (:warn, r"Hodrick-Prescott filters will be used even though hpcycle is false because an hplan value has been specified."i) X13.seats(; hpcycle=false, hplan=2)
+    @test_logs (:warn, r"The print=:all option is not available for the Seats spec."i) X13.seats(; print=:all)
+    
 end
 
 @testset "X13 Series writing" begin
@@ -1221,12 +1372,33 @@ end
     s = X13.x13write(spec, test=true)
     @test contains(s, "series {\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 \n                80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 \n                114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 \n                143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 \n                172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 \n                201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228 229 \n                230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250)\n        period = 4\n        span = (1964.1, 1990.4)\n        start = 1940.1\n}")
     
+    # Manual example 2 with start
+    ts = TSeries(1940Q1, collect(1:250))[begin:1990Q4]
+    xts = X13.series(ts, start=1964Q1)
+    spec = X13.newspec(xts)
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "series {\n        data = (97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 \n                126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 \n                155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 \n                184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204)\n        period = 4\n        start = 1964.1\n}")
+    
     # Manual example 6
     ts = TSeries(1976M1, collect(1.0:0.1:25.0))
     xts = X13.series(ts, span=first(rangeof(ts)):1992M12, comptype=:add, decimals=2)
     spec = X13.newspec(xts)
     s = X13.x13write(spec, test=true)
     @test contains(s, "series {\n        comptype = add\n        data = (1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 \n                3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0 5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 5.9 6.0 6.1 6.2 6.3 6.4 6.5 6.6 6.7 \n                6.8 6.9 7.0 7.1 7.2 7.3 7.4 7.5 7.6 7.7 7.8 7.9 8.0 8.1 8.2 8.3 8.4 8.5 8.6 8.7 8.8 8.9 9.0 9.1 9.2 9.3 9.4 9.5 9.6 \n                9.7 9.8 9.9 10.0 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.0 11.1 11.2 11.3 11.4 11.5 11.6 11.7 11.8 11.9 \n                12.0 12.1 12.2 12.3 12.4 12.5 12.6 12.7 12.8 12.9 13.0 13.1 13.2 13.3 13.4 13.5 13.6 13.7 13.8 13.9 14.0 14.1 14.2 \n                14.3 14.4 14.5 14.6 14.7 14.8 14.9 15.0 15.1 15.2 15.3 15.4 15.5 15.6 15.7 15.8 15.9 16.0 16.1 16.2 16.3 16.4 16.5 \n                16.6 16.7 16.8 16.9 17.0 17.1 17.2 17.3 17.4 17.5 17.6 17.7 17.8 17.9 18.0 18.1 18.2 18.3 18.4 18.5 18.6 18.7 18.8 \n                18.9 19.0 19.1 19.2 19.3 19.4 19.5 19.6 19.7 19.8 19.9 20.0 20.1 20.2 20.3 20.4 20.5 20.6 20.7 20.8 20.9 21.0 21.1 \n                21.2 21.3 21.4 21.5 21.6 21.7 21.8 21.9 22.0 22.1 22.2 22.3 22.4 22.5 22.6 22.7 22.8 22.9 23.0 23.1 23.2 23.3 23.4 \n                23.5 23.6 23.7 23.8 23.9 24.0 24.1 24.2 24.3 24.4 24.5 24.6 24.7 24.8 24.9 25.0)\n        decimals = 2\n        span = (1976.jan, 1992.dec)\n        start = 1976.jan\n}")
+    
+    # series warnings and errors
+    ts = TSeries(1976M1, collect(1.0:0.1:25.0))
+    @test_logs (:warn, r"Series title trunctated to 79 characters*"i) xts = X13.series(ts, span=first(rangeof(ts)):1992M12, comptype=:add, decimals=2, 
+        title="This is a very long title that will most certainly trigger the warning about the title being truncated")    
+    @test_logs (:warn, r"Series name trunctated to 64 characters*"i) xts = X13.series(ts, span=first(rangeof(ts)):1992M12, comptype=:add, decimals=2, 
+        name="This is a very long name that will most certainly trigger the warning about the title being truncated")
+    
+    @test_throws ArgumentError X13.series(ts; divpower=11)
+    @test_throws ArgumentError X13.series(ts; span=1960M1:1996M1)
+    @test_throws ArgumentError X13.series(ts; span=1976M1:1997M1)
+    @test_throws ArgumentError X13.series(ts; span=X13.Span(missing,M1))
+
+    
     
 end
 
@@ -1323,6 +1495,11 @@ end
     s = X13.x13write(spec, test=true)
     @test contains(s, "x11 {\n        seasonalma = s3x9\n}")
     @test contains(s, "slidingspans {\n        length = 40\n        numspans = 3\n}")
+
+    # slidingspans warnings and errors
+    @test_logs (:warn, r"fixreg will be ignored because fixmdl is set to true."i) X13.slidingspans(; fixmdl=true, fixreg=[:td])
+    
+     
    
 end
 
@@ -1438,6 +1615,19 @@ end
     X13.transform!(spec; func=:auto, aicdiff=0.0)
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n        aicdiff = 0.0\n        function = auto\n}")
+
+    # transform warnings and errors
+    @test_throws ArgumentError X13.transform(; power=0.0, func=:log)
+    @test_throws ArgumentError X13.transform(; func=:sqrt, adjust=:lpyear)
+    @test_throws ArgumentError X13.transform(; power=0.33, adjust=:lpyear)
+    @test_throws ArgumentError X13.transform(; mode=[:ratio, :diff])
+    @test_logs (:warn, r"Transform title trunctated to 79 characters*"i) xts = X13.transform(;
+    title="This is a very long title that will most certainly trigger the warning about the title being truncated")    
+    @test_throws ArgumentError X13.transform(; type=:permanent)
+    @test_throws ArgumentError X13.transform(; type=[:temporary, :permanent], data=TSeries(1991Q1, rand(100)))
+    @test_throws ArgumentError X13.transform(; type=[:temporary, :permanent], data=MVTSeries(1991Q1, (:S1,), rand(100,1)))
+    @test_throws ArgumentError X13.transform(; type=:temporary, data=MVTSeries(1991Q1, (:s1, :s2), randn(100,2)))
+    
 
 end
 
@@ -1572,6 +1762,12 @@ end
     s = X13.x13write(spec, test=true)
     @test contains(s, "transform {\n        aicdiff = 0.0\n        function = auto\n}")
     @test contains(s, "x11 {\n        calendarsigma = select\n        sigmavec = (jan, feb, dec)\n}")
+
+    # x11 warnings and errors
+    @test_throws ArgumentError X13.x11(; trendma=8)
+    @test_throws ArgumentError X13.x11(; trendma=1)
+    @test_throws ArgumentError X13.x11(; trendma=102)
+    @test_throws ArgumentError X13.x11(; calendarsigma=:all, sigmavec=[M1, M3])
     
 end
 
@@ -1659,7 +1855,176 @@ end
     @test contains(s, "arima {\n        model = (0 1 1)(0 1 1)12\n}")
     @test contains(s, "x11 {\n        title = (\"Car Sales in US\"\n        \"Adjusted for strikes in 80, 85, 90\")\n}")
     @test contains(s, "x11regression {\n        variables = (td easter[8])\n}")
- 
+
+    # x11regression warnings and errors
+    @test_throws ArgumentError X13.x11regression(; aictest=:td, variables=:tdstock)
+    @test_throws ArgumentError X13.x11regression(; aictest=:something)
+    @test_throws ArgumentError X13.x11regression(; aictest=[:something,:td])
+    @test_throws ArgumentError X13.x11regression(; sigma=-0.1)
+    @test_throws ArgumentError X13.x11regression(; tdprior=tdprior=[0.7, 0.7, 0.7, 1.05, 1.4, 1.4, 1.05, 1.8])
+    @test_throws ArgumentError X13.x11regression(; tdprior=tdprior=[0.7, 0.7, 0.7, 1.05, 1.4, 1.4])
+    @test_throws ArgumentError X13.x11regression(; tdprior=tdprior=[0.7, 0.7, -0.7, 1.05, 1.4, 1.4, 1.05])
+    @test_throws ArgumentError X13.x11regression(; outlierspan=X13.Span(missing,M2))
+    @test_throws ArgumentError X13.x11regression(;
+        data=MVTSeries(1991M1, [:beforecny, :betweencny, :aftercny], hcat(collect(1.0:0.1:17.1),collect(0.0:0.2:32.2),collect(3.0:0.3:51.3))),
+        usertype=[:holiday, :holiday],)
+    @test_throws ArgumentError X13.x11regression(;
+        data=MVTSeries(1991M1, [:beforecny, :betweencny, :aftercny], hcat(collect(1.0:0.1:17.1),collect(0.0:0.2:32.2),collect(3.0:0.3:51.3))),
+        usertype=[:holiday, :holiday, :somethingelse],)
+    @test_throws ArgumentError X13.x11regression(;
+        data=MVTSeries(1991M1, [:beforecny, :betweencny, :aftercny], hcat(collect(1.0:0.1:17.1),collect(0.0:0.2:32.2),collect(3.0:0.3:51.3))),
+        usertype=:somethingelse)
+end
+
+@testset "X13 Spec regvars" begin
+    ts = TSeries(1964M1, collect(1:150))
+    xts = X13.series(ts, title="Monthly Retail Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec; variables=[:td, X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td(), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.tdnolpyear(1964M4), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (tdnolpyear/1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.tdnolpyear(1964M4, :zerobefore), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (tdnolpyear//1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.tdnolpyear(1964M4, :zeroafter), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (tdnolpyear/1964.apr// ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.tdnolpyear(), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (tdnolpyear ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1coef(1964M4), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1coef/1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1coef(1964M4, :zerobefore), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1coef//1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1coef(1964M4, :zeroafter), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1coef/1964.apr// ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1coef(), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1coef ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1nolpyear(1964M4), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1nolpyear/1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1nolpyear(1964M4, :zerobefore), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1nolpyear//1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1nolpyear(1964M4, :zeroafter), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1nolpyear/1964.apr// ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.td1nolpyear(), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (td1nolpyear ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lpyear(1964M4), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lpyear/1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lpyear(1964M4, :zerobefore), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lpyear//1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lpyear(1964M4, :zeroafter), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lpyear/1964.apr// ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lpyear(), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lpyear ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lom(1964M4), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lom/1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lom(1964M4, :zerobefore), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lom//1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lom(1964M4, :zeroafter), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lom/1964.apr// ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.lom(), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (lom ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.seasonal(1964M4), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (seasonal/1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.seasonal(1964M4, :zerobefore), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (seasonal//1964.apr/ ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.seasonal(1964M4, :zeroafter), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (seasonal/1964.apr// ao1967.jun ls1971.jun easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.seasonal(), X13.ao(1967M6), X13.ls(1971M6), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (seasonal ao1967.jun ls1971.jun easter[14])\n}")
+
+    ts = TSeries(1964Q1, collect(1:150))
+    xts = X13.series(ts, title="Quarterly Retail Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec; variables=[X13.loq(1964Q4), X13.ao(1967Q1), X13.ls(1971Q2), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (loq/1964.4/ ao1967.1 ls1971.2 easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.loq(1964Q4, :zerobefore), X13.ao(1967Q1), X13.ls(1971Q2), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (loq//1964.4/ ao1967.1 ls1971.2 easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.loq(1964Q4, :zeroafter), X13.ao(1967Q1), X13.ls(1971Q2), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (loq/1964.4// ao1967.1 ls1971.2 easter[14])\n}")
+
+    X13.regression!(spec; variables=[X13.loq(), X13.ao(1967Q1), X13.ls(1971Q2), X13.easter(14)])
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "regression {\n        variables = (loq ao1967.1 ls1971.2 easter[14])\n}")
+
+    #Span
+    ts = TSeries(1967M1, collect(1:50))
+    xts = X13.series(ts, title="Housing Starts in the Midwest", comptype=:add, modelspan=X13.Span(missing,M12))
+    spec = X13.newspec(xts)
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "series {\n        comptype = add\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50)\n        modelspan = (, 0.dec)\n        start = 1967.jan\n        title = \"Housing Starts in the Midwest\"\n}")
+
+
+    ts = TSeries(1967M1, collect(1:50))
+    xts = X13.series(ts, title="Housing Starts in the Midwest", comptype=:add, modelspan=X13.Span(nothing,M12))
+    spec = X13.newspec(xts)
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "series {\n        comptype = add\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50)\n        modelspan = (, 0.dec)\n        start = 1967.jan\n        title = \"Housing Starts in the Midwest\"\n}")
+
+    ts = TSeries(1976M1, collect(1:250))
+    xts = X13.series(ts, title="Monthly Sales", span=1980M1:1992M12)
+    spec = X13.newspec(xts)
+    s1 = X13.x13write(spec, test=true)
+    xts2 = X13.series(ts, title="Monthly Sales", span=X13.Span(1980M1:1992M12))
+    spec2 = X13.newspec(xts2)
+    s2 = X13.x13write(spec2, test=true)
+    @test s1 == s2
 end
 
 @testset "X13 Specification errors writing" begin

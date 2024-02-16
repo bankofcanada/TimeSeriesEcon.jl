@@ -201,7 +201,7 @@ mutable struct ArimaSpec
     period::Union{Int64,X13default}
 
     ArimaSpec() = new(0,0,0,0)
-    ArimaSpec(p::Union{Int64,Vector{Int64}}) = new(p,0,0,0) # could write these in one line iwth dfaults
+    ArimaSpec(p::Union{Int64,Vector{Int64}}) = new(p,0,0,0) # could write these in one line with dfaults
     ArimaSpec(p::Union{Int64,Vector{Int64}}, d::Union{Int64,Vector{Int64}}) = new(p,d,0,0)
     ArimaSpec(p::Union{Int64,Vector{Int64}}, d::Union{Int64,Vector{Int64}}, q::Union{Int64,Vector{Int64}}) = new(p,d,q,0)
     ArimaSpec(p::Union{Int64,Vector{Int64}}, d::Union{Int64,Vector{Int64}}, q::Union{Int64,Vector{Int64}}, period::Int64) = new(p,d,q,period)
@@ -750,10 +750,6 @@ function series(t::TSeries{F};
         title = title[1:79]
     end
 
-    if divpower isa Int64 && (divpower < -9 || divpower > 9)
-        Throw(ArgumentError("Series divpower must be between -9 and 9. $(divpower) provided"))
-    end
-
     if F !== Monthly && !(F <: Yearly)
         period = ppy(t)
     end
@@ -872,15 +868,15 @@ function arima(model::ArimaModel;
     # end
 
     # fixed arguments have correct length
-    if !(fixar isa X13default)
-        @assert length(fixar) == length(ar) 
+    if !(fixar isa X13default) && length(fixar) !== length(ar)
+        throw(ArgumentError("fixar must have the same length as ar. Provided ar=$(ar), fixar=$(fixar).")) 
     end
-    if !(fixma isa X13default)
-        @assert length(fixma) == length(ma) 
+    if !(fixma isa X13default) && length(fixma) !== length(ma)
+        throw(ArgumentError("fixma must have the same length as ma. Provided ar=$(ma), fixar=$(fixma).")) 
     end
 
     if title isa String && length(title) > 79
-        @warn "Series title trunctated to 79 characters. Full title: $title"
+        @warn "Arima title trunctated to 79 characters. Full title: $title"
         title = title[1:79]
     end
 
@@ -1078,7 +1074,7 @@ function automdl(;
         throw(ArgumentError("armalimit should have a value geater than zero. Received: $(armalimit)."))
     end
 
-    if !(fcstlim isa X13default) && (fcstlim < 0 || fctslim > 100)
+    if !(fcstlim isa X13default) && (fcstlim < 0 || fcstlim > 100)
         throw(ArgumentError("fcstlim must not be less than zero or greater than 100. Received: $(fcstlim)."))
     end
 
@@ -1622,7 +1618,7 @@ function history(;
         if any(sadjlags .< 1)
             throw(ArgumentError("sadjlags values cannot be less than one. Received: $(sadjlags)."))
         end
-    elseif fstep isa Int64 && fstep < 1
+    elseif sadjlags isa Int64 && sadjlags < 1
         throw(ArgumentError("sadjlags cannot be less than one. Received: $(sadjlags)."))
     end
 
@@ -2137,7 +2133,7 @@ Specification for including regression variables in a regARIMA model, or for spe
     `tdstock1coef(w)` | Estimate a constrained stock trading day effect for inventories or other stocks reported for the w-th day of each month. The value w must be supplied and can range from 1 to 31. For any month of length less than the specified w, the tdstock1coef variables are measured as of the end of the month. Use `X13.tdstock1coef(31)` for end-of-month stock series. `tdstock1coef` can be used only with monthly series and cannot be used with `tdstock1coef`, `:td`, `:tdnolpyear`, `:td1coef`, `:td1nolpyear`, `:lom`, or `:loq`.                                                                                                                                                                                                                                                                 
     `easter(w)`       | Easter holiday regression variable for monthly or quarterly flow data which assumes the level of daily activity changes on the w−th day before Easter and remains at the new level through the day before Easter. This value w must be supplied and can range from 1 to 25. A user can also specify an `X13.easter(0)` regression variable, that assumes the daily activity level changes on Easter Sunday only. To estimate complex effects, several of these variables, differing in their choices of w, can be specified.                                                                                                                                                                                                                                                                        
     `labor(w)`        | Labor Day holiday regression variable (monthly flow data only) that assumes the level of daily activity changes on the w−th day before Labor Day and remains at the new level until the day before Labor Day. The value w must be supplied and can range from 1 to 25. Example: `X13.labor(10).`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
-    `thanks(w)`       | Thanksgiving holiday regression variable (monthly flow data only) that assumes the level of daily activity changes on the w−th day before or after Thanksgiving and remains at the new level until December 24. The value w must be supplied and can range from −8 to 17. Values of w < 0 indicate a number of days after Thanksgiving; values of w > 0 indicate a number of days before Thanksgiving. Example: `X13.thanks(-5)`.                                                                                                                                                                                                                                                                                                                                                                   
+    `thank(w)`        | Thanksgiving holiday regression variable (monthly flow data only) that assumes the level of daily activity changes on the w−th day before or after Thanksgiving and remains at the new level until December 24. The value w must be supplied and can range from −8 to 17. Values of w < 0 indicate a number of days after Thanksgiving; values of w > 0 indicate a number of days before Thanksgiving. Example: `X13.thank(-5)`.                                                                                                                                                                                                                                                                                                                                                                   
     `sceaster(w)`     | Statistics Canada Easter holiday regression variable (monthly or quarterly flow data only) assumes that the level of daily activity changes on the (w − 1)−th day and remains at the new level through Easter day. The value w must be supplied and can range from 1 to 24. To estimate complex effects, several of these variables, differing in their choices of w, can be specified. Example: `X13.sceaster(5)`.                                                                                                                                                                                                                                                                                                                                                                                 
     `easterstock(w)`  | End of month stock Easter holiday regression variable for monthly or quarterly stock data. This regressor is generated from the `easter(w)` regressors. The value w must be supplied and can range from 1 to 25. To estimate complex effects, several of these variables, differing in their choices of w, can be specified. Example: `X13.easterstock(10)`.                                                                                                                                                                                                                                                                                                                                                                                                                                        
     `ao(mit)`         | Additive (point) outlier variable, AO, for the given date. More than one AO may be specified. All specified outlier dates must occur within the series. (AOs with dates within the series but outside the span specified by the `span` argument of the `series` spec are ignored). Example: `X13.ao(1983M1)`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
@@ -2285,7 +2281,7 @@ function regression(;
                 throw(ArgumentError("labor variables must have a value between 1 and 25 (inclusive). Received: $(v.n)."))
             end
             if v isa thank && (v.n < -8 || v.n > 17)
-                throw(ArgumentError("labor variables must have a value between -8 and 17 (inclusive). Received: $(v.n)."))
+                throw(ArgumentError("thank variables must have a value between -8 and 17 (inclusive). Received: $(v.n)."))
             end
             if v isa sceaster && (v.n < 1 || v.n > 24)
                 throw(ArgumentError("sceaster variables must have a value between 1 and 24 (inclusive). Received: $(v.n)."))
@@ -2303,14 +2299,14 @@ function regression(;
         for n1 in 1:length(all_aos)
             for n2 in 1:length(all_aos)
                 if n1 !== n2 && length(intersect(all_aos[n1], all_aos[n2])) > 0
-                    @warn "The variables spec has overlapping aos specifications: $(all_aos[n1]) and $(all_aos[n2])."
+                    @warn "The variables argument has overlapping aos specifications: $(all_aos[n1]) and $(all_aos[n2])."
                 end
             end
         end
         for n1 in 1:length(all_lss)
             for n2 in 1:length(all_lss)
                 if n1 !== n2 &&length(intersect(all_lss[n1], all_lss[n2])) > 0
-                    @warn "The variables spec has overlapping lss specifications: $(all_lss[n1]) and $(all_lss[n2])."
+                    @warn "The variables argument has overlapping lss specifications: $(all_lss[n1]) and $(all_lss[n2])."
                 end
             end
         end
@@ -2948,9 +2944,9 @@ function transform(;
 
     if !(adjust isa X13default) && adjust == :lpyear
         if !(power isa X13default) && power !== 0.0
-            throw(ArgumentError("adjust can only be :lpyear when a log-transform (power=0.0) is specified."))
+            throw(ArgumentError("adjust=:lpyear is only allowed when a log-transform (power=0.0) is specified."))
         elseif !(func isa X13default) && func !== :log
-            throw(ArgumentError("adjust can only be :lpyear when a log-transform (func=:log) is specified."))
+            throw(ArgumentError("adjust=:lpyear is only allowed when a log-transform (func=:log) is specified."))
         end
     end
 
@@ -2964,7 +2960,7 @@ function transform(;
     end
 
     if title isa String && length(title) > 79
-        @warn "Series title trunctated to 79 characters. Full title: $title"
+        @warn "Transform title trunctated to 79 characters. Full title: $title"
         title = title[1:79]
     end
 
@@ -2974,8 +2970,10 @@ function transform(;
         end
         if data isa TSeries && type isa Vector{Symbol} && length(type) > 1
             throw(ArgumentError("The number of user-defined prior adjustment types provided ($(length(type))) must match the number of data series provided (1)."))
-        elseif data isa MVTSeries && type isa Vector{Symbol} && length(type) !== length(columns(data))
+        elseif data isa MVTSeries && type isa Vector{Symbol} && length(type) !== length(columns(data)) 
             throw(ArgumentError("The number of user-defined prior adjustment types provided ($(length(type))) must match the number of data series provided ($(length(columns(data))))."))
+        elseif data isa MVTSeries && type isa Symbol && length(columns(data)) !== 1
+            throw(ArgumentError("The number of user-defined prior adjustment types provided (1) must match the number of data series provided ($(length(columns(data))))."))
         end
     end
 
@@ -3472,7 +3470,7 @@ function x11regression(;
             aics = aictest isa Vector ? aictest : [aictest]
             vars =_variables isa Vector ? _variables : [_variables]
             types_used = Set(collect_regvar_types(vars))
-            if length(filter(a -> a ∈ (:td, :tdstock, :td1coef, :tdstock1coef), aics)) > 1 && length(filter(a -> a  ∈ (:td, :tdstock, :td1coef, :tdstock1coef), types_used)) > 1
+            if length(filter(a -> a ∈ (:td, :tdstock, :td1coef, :tdstock1coef), aics)) >= 1 && length(filter(a -> a  ∈ (:td, :tdstock, :td1coef, :tdstock1coef), types_used)) >= 1
                 for aic in aics
                     if aic  ∈ (:td, :tdstock, :td1coef, :tdstock1coef) && aic ∉ types_used
                         throw(ArgumentError("Trading day regressors specified in the aictest must correspond with trading day regressors provided in the variables argument. $(aic) was specified in the aictest argument, but the variables argument uses $(filter(x -> x ∈ (:td, :tdstock, :td1coef, :tdstock1coef), types_used))."))
@@ -3517,8 +3515,8 @@ function x11regression(;
     end
 
     if outlierspan isa X13.Span
-        if span.e isa TimeSeriesEcon._FPConst || span.e isa UnionAll
-            throw(ArgumentError("Spans with a fuzzy ending time, such as M11 or Q2, are not allowed in the span argument of the series spec. Please pass an MIT or `missing`. Received: $(span.e)."))
+        if outlierspan.e isa TimeSeriesEcon._FPConst || outlierspan.e isa UnionAll
+            throw(ArgumentError("Spans with a fuzzy ending time, such as M11 or Q2, are not allowed in the outlierspan argument of the x11regression spec. Please pass an MIT or `missing`. Received: $(outlierspan.e)."))
         end
     end
 
