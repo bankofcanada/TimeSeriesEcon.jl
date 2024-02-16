@@ -2207,7 +2207,7 @@ end
     let io = IOBuffer()
         show(IOContext(io, :displaysize => (20, 80)), MIME"text/plain"(), wst1)
         @test length(readlines(seek(io, 0))) == 6
-        @test readlines(seek(io, 0)) == ["numbers  words  ", "-------- ------ ", "       1 one    ", "       2 two    ", "       3 three  ", "       4 four   "]
+        @test readlines(seek(io, 0)) == ["numbers  words ", "-------- ------", "       1 one   ", "       2 two   ", "       3 three ", "       4 four  "]
     end
     let io = IOBuffer()
         wst4 = X13.WorkspaceTable()

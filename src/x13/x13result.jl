@@ -802,8 +802,8 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
         leftcols = length(colwidths)
         rightcols = length(colwidths)
     end
-
     # now print the thing
+    numcols = length(colwidths)
     printed_filler_col = false
     for (j,h) in enumerate(keys(ws))
         leftcols < j < rightcols && printed_filler_col && continue
@@ -812,7 +812,11 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
             printed_filler_col = true
             continue
         end
-        print(io, rpad(h,colwidths[j]+1, " "))
+        if j == numcols
+            print(io, rpad(h,colwidths[j], " "))
+        else
+            print(io, rpad(h,colwidths[j]+1, " "))
+        end
     end
     print(io, "\n")
     printed_filler_col = false
@@ -824,6 +828,7 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
             continue
         end
         print(io, "-"^c)
+        j == numcols && continue
         print(io, " ")
     end
     print(io, "\n")
@@ -840,6 +845,7 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
                     continue
                 end
                 print(io, lpad("⋮", colwidths[j], " "))
+                j == numcols && continue
                 print(io, " ")
             end
             print(io, "\n")
@@ -859,9 +865,11 @@ function Base.show(io::IO, ::MIME"text/plain", ws::WorkspaceTable)
                 else
                     print(io, lpad(vec[i], colwidths[j], " "))
                 end
+                j == numcols && continue
                 print(io, " ")
             else
                 print(io, lpad(" ", colwidths[j], " "))
+                j == numcols && continue
                 print(io, " ")
             end
         end
