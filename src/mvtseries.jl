@@ -916,3 +916,27 @@ Base.getindex(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where {F<:Frequency} = get
 Base.setindex!(sd::MVTSeries, ::Any, ::TSeries{F,Bool}) where {F<:Frequency} = mixed_freq_error(frequencyof(sd), F)
 Base.setindex!(sd::MVTSeries{F}, val, ind::TSeries{F,Bool}) where {F<:Frequency} = setindex!(_vals(sd), val, _vals(ind), :)
 
+"""
+mapslices(f, A::MVTSeries, dims)
+
+This functions as Base.mapslices with some specialized returns.
+
+Returns an MVTseries when the dimensions of the result match the dimensions of A.
+
+Returns a TSeries when the result is a vector of the same length as the range of A.
+
+Returns a Matrix otherwise.
+"""
+function Base.mapslices(f, A::MVTSeries; dims) 
+    res = mapslices(f, A.values; dims=dims)
+    if size(res) == size(A)
+        res_mvts = similar(A)
+        res_mvts.values = res
+        return res_mvts
+    elseif size(res) == (size(A)[1], 1)
+        # one column
+        return TSeries(rangeof(A), res[:,1])
+    end
+    return res
+end
+
