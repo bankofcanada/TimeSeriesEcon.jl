@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 using OrderedCollections
@@ -275,6 +275,8 @@ _vals(a) = a
 const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex,AbstractArray{<:CartesianIndex}}
 Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), _vals.(i1)...)
 Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, _vals.(i1)...)
+
+Base.getindex(x::MVTSeries, ::Colon, ::Colon) = x
 
 # -------------------------------------------------------------
 # Some other constructors
@@ -649,6 +651,24 @@ Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon=Colon()) = view(x, I, axes(x, 2))
 Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))
 function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
+    @boundscheck checkbounds(x, I)
+    @boundscheck checkbounds(x, J)
+    start, stop = _ind_range_check(x, I)
+    i1 = start:stop
+    i2 = _colind(x, J)
+    if I isa MIT
+        return view(_vals(x), first(i1), i2)
+    elseif J isa Symbol
+        return TSeries(first(I), view(_vals(x), i1, i2))
+    else
+        return MVTSeries(first(I), axes(x, 2)[i2], view(_vals(x), i1, i2))
+    end
+end
+
+Base.Broadcast.dotview(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = Base.Broadcast.dotview(x, axes(x, 1), J)
+Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrRange, ::Colon) = Base.Broadcast.dotview(x, I, axes(x, 2))
+Base.Broadcast.dotview(x::MVTSeries, ::Colon, ::Colon) = Base.Broadcast.dotview(x, axes(x, 1), axes(x, 2))
+function Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     @boundscheck checkbounds(x, I)
     @boundscheck checkbounds(x, J)
     start, stop = _ind_range_check(x, I)
