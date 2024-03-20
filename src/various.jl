@@ -386,7 +386,7 @@ end
 function clean_old_frequencies(r::UnitRange{<:MIT})
     sanitized_frequency = sanitize_frequency(frequencyof(r))
     if sanitized_frequency !== frequencyof(r)
-        return MIT{sanitized_frequency}(Int(first(r))):MIT{sanitized_frequency}(Int(last(r)))
+        return MIT{sanitized_frequency}(Int(first(r))):MIT{sanitized_frequency}(Int(first(r)) + length(r) - 1)
     end
     return r
 end
