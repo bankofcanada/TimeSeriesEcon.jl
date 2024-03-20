@@ -675,6 +675,10 @@ Base.promote_shape(x::MVTSeries, y::AbstractArray) =
 Base.promote_shape(x::AbstractArray, y::MVTSeries) =
     promote_shape(x, _vals(y))
 
+# fix axis promotion for isapprox with matrix
+Base.promote_shape(x::Tuple{UnitRange{<:MIT}, Vector{Symbol}}, y::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}) = (Base.OneTo(length(x[1])), Base.OneTo(length(x[2])))
+Base.promote_shape(x::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, y::Tuple{UnitRange{<:MIT}, Vector{Symbol}}) = x
+
 Base.LinearIndices(x::MVTSeries) = LinearIndices(_vals(x))
 
 Base.:*(x::Number, y::MVTSeries) = copyto!(similar(y), *(x, y.values))
