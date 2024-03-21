@@ -119,6 +119,7 @@ function _run(spec::X13spec{F}; verbose::Bool=true, allow_errors::Bool=false, lo
     stderr = String(take!(stderr_buffer))
     
     if length(stderr) > 0
+        println(spec)
         println(stderr)
         error("running X13 failed. See above. Additional information may be available in $(spec.folder)")
     end
