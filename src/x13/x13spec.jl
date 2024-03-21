@@ -3618,11 +3618,11 @@ function validateX13spec(spec::X13spec)
             if !(spec.series.type isa X13default)
                 if spec.series.type != :flow
                     if vtypesymbol ∈ (:td, :tdnolpyear, :td1coef, :td1nolpyear, :lpyear, :easter, :labor, :thank, :sceaster)
-                        throw(ArgumentError("$vtype regressors can only be used with flow-type data. The provided series has the type: $(spec.series.type)."))
+                        throw(ArgumentError("$vtypesymbol regressors can only be used with flow-type data. The provided series has the type: $(spec.series.type)."))
                     end
                 elseif spec.series.type != :stock
                     if vtypesymbol ∈ (:tdstock, :td1stock, :easterstock)
-                        throw(ArgumentError("$vtype regressors can only be used with stock-type data. The provided series has the type: $(spec.series.type)."))
+                        throw(ArgumentError("$vtypesymbol regressors can only be used with stock-type data. The provided series has the type: $(spec.series.type)."))
                     end
                 end
             end

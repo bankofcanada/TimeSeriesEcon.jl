@@ -2027,7 +2027,7 @@ end
     @test s1 == s2
 end
 
-@testset "X13 Specification errors writing" begin
+@testset "X13 Specification validation errors" begin
     # invalid aictest when using :td variable
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
@@ -2041,6 +2041,96 @@ end
     spec = X13.newspec(xts)
     X13.regression!(spec, variables=[:const, :td, :tdstock])
     @test_throws ArgumentError X13.x13write(spec, test=true)
+    # X13.regression!(spec, variables=[:const, :td, :tdstock])
+    
+    # using a stock regressor on flow data
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales", type=:flow)
+    spec = X13.newspec(xts)
+    X13.regression!(spec, variables=[:const, :tdstock])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using a flow regressor on stock data
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales", type=:stock)
+    spec = X13.newspec(xts)
+    X13.regression!(spec, variables=[:const, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using various regressors on non-monthly or non-quarterly data
+    ts = TSeries(MIT{YPFrequency{6}}(1986,1), collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec, variables=[:const, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :tdnolpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td1nolpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :lpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :lom])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :loq])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using various regressors on non-monthly data
+    ts = TSeries(MIT{YPFrequency{6}}(1986,1), collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec, variables=[:const, :tdstock])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :labor])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :sceaster])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using combinations of mutually excluded regressors
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec, variables=[:const, :td, :tdnolpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :tdnolpyear, :td1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td1coef, :lpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td1nolpyear, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :lpyear, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :lom, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :loq, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :tdstock, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :tdstock1coef, :td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using some regressors with the transform spec with an adjust argument
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec, variables=[:const, :td])
+    X13.transform!(spec, adjust=:loq)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+   
+    # using a transform spec with lom and a regression spec with td
+    X13.regression!(spec, variables=[:const, :td])
+    X13.transform!(spec, adjust=:lom)
+    @test_throws ArgumentError  X13.x13write(spec, test=true)
+
+    # using a transform spec with lom and a regression spec with td
+    X13.regression!(spec, variables=[:const, :lom])
+    X13.transform!(spec, adjust=:lom)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    
+
     
 end
 
