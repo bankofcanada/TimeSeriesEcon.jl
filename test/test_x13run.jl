@@ -1471,6 +1471,7 @@ end
 @testset "X13 Slidingspans run" begin
 
     # Manual example 1
+    # not all outputs provided on windows testrunner...
     ts = TSeries(1976M1, mvsales[1:50])
     xts = X13.series(ts, title="Tourist")
     spec = X13.newspec(xts)
