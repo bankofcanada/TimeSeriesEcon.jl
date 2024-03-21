@@ -20,9 +20,9 @@ jobs:
 
     strategy: 
       matrix:
-        julia-version: ["1.7", "1.8"]
+        julia-version: ["1.8"]
         julia-arch: [x64]
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
 
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
