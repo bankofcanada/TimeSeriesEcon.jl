@@ -2153,11 +2153,11 @@ end
     spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=:s3x9)
     X13.slidingspans!(spec, length=40, numspans=3)
-    if Sys.iswindows()
-        @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
-    else
-        @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
-    end
+    # if Sys.iswindows()
+    #     @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
+    # else
+    @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
+    # end
 
     ts = TSeries(1976M1, mvsales[1:50])
     xts = X13.series(ts, title="Monthly Sales", print=[:span, :seriesplot])
