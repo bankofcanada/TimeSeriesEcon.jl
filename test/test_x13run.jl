@@ -1446,7 +1446,7 @@ end
         @test res.other[key] isa AbstractWorkspace
     end
 
-    Example with tabtables
+    # Example with tabtables
     ts = TSeries(1990Q1, mvsales[100:150])
     xts = X13.series(ts)
     spec = X13.newspec(xts)
