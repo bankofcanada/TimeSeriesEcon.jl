@@ -2206,14 +2206,16 @@ end
     @suppress @test_throws ArgumentError xts = X13.series(missing_ts, title="Quarterly Grape Harvest")
 
     # broken on windows testrunner; don't use save=:all
-    xts = X13.series(missing_ts, title="Quarterly Grape Harvest", missingcode = -99999)
-    spec = X13.newspec(xts)
-    X13.arima!(spec, X13.ArimaModel(0,1,1))
-    X13.estimate!(spec; save=:all)
-    res = X13.run(spec; verbose=false, load=:all);
-    @test res isa X13.X13result
-    for key in (:a1, :a3, :b1)
-        @test res.series[key] isa Union{TSeries,MVTSeries}
+    if !Sys.iswindows()
+        xts = X13.series(missing_ts, title="Quarterly Grape Harvest", missingcode = -99999.0)
+        spec = X13.newspec(xts)
+        X13.arima!(spec, X13.ArimaModel(0,1,1))
+        X13.estimate!(spec; save=:all)
+        res = X13.run(spec; verbose=false, load=:all);
+        @test res isa X13.X13result
+        for key in (:a1, :a3, :b1)
+            @test res.series[key] isa Union{TSeries,MVTSeries}
+        end
     end
 end
 

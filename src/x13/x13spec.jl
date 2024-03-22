@@ -173,7 +173,7 @@ struct X13series{F<:Frequency}
     title::Union{String,X13default}
     type::Union{Symbol, X13default}
     divpower::Union{Int64,X13default}
-    missingcode::Union{Number,X13default}
+    missingcode::Union{Float64,X13default}
     missingval::Union{Float64,X13default}
     saveprecision::Union{Int64,X13default}
     trimzero::Union{Bool,Symbol,X13default}
@@ -697,7 +697,7 @@ newspec(ts::TSeries; kwargs...) = newspec(X13.series(ts); kwargs...)
     Integers from -9 to 9 are acceptable values for divpower. If this option is not
     specified, the time series will not be re-scaled.
 
-* **missingcode** (Float64 or Int64) - A numeric value in the input time series that the program will interpret as a missing
+* **missingcode** (Float64) - A numeric value in the input time series that the program will interpret as a missing
     value. This option can only be used in input specification files requiring a regARIMA
     model to be estimated or identified automatically. The default value is -99999.0. Example:
     `missingcode=0.0`.
@@ -728,7 +728,7 @@ function series(t::TSeries{F};
     title::Union{String,X13default}=_X13default,
     type::Union{Symbol, X13default}=_X13default,
     divpower::Union{Int64,X13default}=_X13default,
-    missingcode::Union{Number,X13default}=_X13default,
+    missingcode::Union{Float64,X13default}=_X13default,
     missingval::Union{Float64,X13default}=_X13default,
     saveprecision::Union{Int64,X13default}=_X13default,
     trimzero::Union{Bool,Symbol,X13default}=_X13default
