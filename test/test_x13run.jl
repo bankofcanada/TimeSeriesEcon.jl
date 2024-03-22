@@ -2202,7 +2202,8 @@ end
 
 @testset "X13 with missing values" begin
     missing_ts = TSeries(1990Q1, Float64.(mvsales[1:150]))
-    missing_ts[1994Q1:1994Q4] .= NaN
+    # missing_ts[1994Q1:1994Q4] .= NaN
+    missing_ts[1994Q1:1994Q1] .= NaN
     @suppress @test_throws ArgumentError xts = X13.series(missing_ts, title="Quarterly Grape Harvest")
 
     # broken on windows testrunner; don't use save=:all
