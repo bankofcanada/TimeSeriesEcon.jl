@@ -971,7 +971,7 @@ end
     # X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
     # X13.estimate!(spec, save=:all)
     X13.transform!(spec; func=:log)
-    X13.regression!(spec; variables=[X13.ao(2007Q1), X13.rp(2005Q2,2005Q4), X13.ao(1998Q1), :td])
+    X13.regression!(spec; variables=[X13.ao(2007Q1), X13.rp(2005Q2,2005Q4), X13.ao(1998Q1), :td], save=:all)
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
     X13.estimate!(spec)
     res = X13.run(spec; verbose=false, load=:all);
