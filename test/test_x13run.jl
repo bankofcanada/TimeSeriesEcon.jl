@@ -963,10 +963,10 @@ end
 
     # Manual example 6 
     # broken on windows testrunner
-    ts = TSeries(1990Q1, mvsales[401:550])
+    ts = TSeries(1990Q1,reverse(mvsales[401:550]))
     xts = X13.series(ts, title="Quarterly Sales Reg6")
     spec = X13.newspec(xts)
-    # X13.transform!(spec; func=:log, save=:all)
+    X13.transform!(spec; func=:log, save=:all)
     X13.regression!(spec; variables=[X13.ao(2007Q1), X13.rp(2005Q2,2005Q4), X13.ao(1998Q1), :td], save=:all)
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
     X13.estimate!(spec, save=:all)
