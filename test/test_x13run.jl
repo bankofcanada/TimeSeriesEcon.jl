@@ -962,14 +962,10 @@ end
 
 
     # Manual example 6 
-    # broken on windows testrunner
+    # broken on windows testrunner; don't use save=:all
     ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
     xts = X13.series(ts, title="Quarterly Sales Reg6")
     spec = X13.newspec(xts)
-    # X13.transform!(spec; func=:log, save=:all)
-    # X13.regression!(spec; variables=[X13.ao(2007Q1), X13.rp(2005Q2,2005Q4), X13.ao(1998Q1), :td], save=:all)
-    # X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
-    # X13.estimate!(spec, save=:all)
     X13.transform!(spec; func=:log)
     X13.regression!(spec; variables=[X13.ao(2007Q1), X13.rp(2005Q2,2005Q4), X13.ao(1998Q1), :td])
     X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
@@ -989,60 +985,60 @@ end
     end
  
     # Manual example 7
-    # broken on window testrunner
-    # ts = TSeries(1990Q1, mvsales[1:150])
-    # xts = X13.series(ts, title="Quarterly Sales Reg7")
-    # spec = X13.newspec(xts)
-    # X13.transform!(spec; func=:log, save=:all)
-    # X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td], save=:all)
-    # X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
-    # X13.estimate!(spec, save=:all)
-    # res = X13.run(spec; verbose=false, load=:all);
-    # for key in (:a1, :a18, :a19, :a2, :a3, :ao, :b1, :ls, :otl, :ref, :rmx, :rrs, :rsd, :td, :trn)
-    #     @test res.series[key] isa Union{TSeries,MVTSeries}
-    # end
-    # for key in (:acm, :itr, :rcm, :rts, :ac2, :acf, :pcf)
-    #     @test res.tables[key] isa AbstractWorkspace
-    # end
-    # for key in (:est, :lks, :mdl, :udg)
-    #     @test res.other[key] isa AbstractWorkspace
-    # end
+    # broken on window testrunner; don't use save=:all
+    ts = TSeries(1990Q1, mvsales[1:150])
+    xts = X13.series(ts, title="Quarterly Sales Reg7")
+    spec = X13.newspec(xts)
+    X13.transform!(spec; func=:log)
+    X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td])
+    X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
+    X13.estimate!(spec)
+    res = X13.run(spec; verbose=false, load=:all);
+    for key in (:a1, :a18, :a19, :a2, :a3, :ao, :b1, :ls, :otl, :rrs, :td)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    for key in (:ac2, :acf, :pcf)
+        @test res.tables[key] isa AbstractWorkspace
+    end
+    for key in (:est, :udg)
+        @test res.other[key] isa AbstractWorkspace
+    end
 
     # Manual example 8
     # TODO: parse data output from regression spec / model file
-    # broken on window testrunner
-    # ts = TSeries(1990Q1, mvsales[101:250])
-    # xts = X13.series(ts, title="Quarterly Sales Reg8")
-    # spec = X13.newspec(xts)
-    # X13.transform!(spec; func=:log, save=:all)
-    # X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td], user=:tls, data=MVTSeries(1990Q1, [:tls], mvsales[51:200]), save=:all)
-    # X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
-    # X13.estimate!(spec, save=:all)
-    # res = X13.run(spec; verbose=false, load=:all);
-    # for key in (:a1, :a18, :a19, :a2, :a3, :ao, :b1, :ls, :otl, :ref, :rmx, :rrs, :rsd, :td, :trn, :usr)
-    #     @test res.series[key] isa Union{TSeries,MVTSeries}
-    # end
-    # for key in (:acm, :itr, :rcm, :rts, :ac2, :acf, :pcf)
-    #     @test res.tables[key] isa AbstractWorkspace
-    # end
-    # for key in (:est, :lks, :mdl, :udg)
-    #     @test res.other[key] isa AbstractWorkspace
-    # end
+    # broken on window testrunner; don't use save=:all
+    ts = TSeries(1990Q1, mvsales[101:250])
+    xts = X13.series(ts, title="Quarterly Sales Reg8")
+    spec = X13.newspec(xts)
+    X13.transform!(spec; func=:log)
+    X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td], user=:tls, data=MVTSeries(1990Q1, [:tls], mvsales[51:200]))
+    X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
+    X13.estimate!(spec)
+    res = X13.run(spec; verbose=false, load=:all);
+    for key in (:a1, :a18, :a19, :a2, :a3, :ao, :b1, :ls, :otl,  :rrs, :td, :usr)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    for key in (:ac2, :acf, :pcf)
+        @test res.tables[key] isa AbstractWorkspace
+    end
+    for key in (:est, :udg)
+        @test res.other[key] isa AbstractWorkspace
+    end
 
     # Manual example 9
-    # broken on window testrunner
-    # ts = TSeries(1981Q1, mvsales[75:150])
-    # xts = X13.series(ts, title="Quarterly Sales")
-    # spec = X13.newspec(xts)
-    # X13.regression!(spec; variables=X13.tl(1985Q3,1987Q1), save=:all)
-    # X13.identify!(spec, diff=[0,1], sdiff=[0,1], save=:all)
-    # res = X13.run(spec; verbose=false, load=:all);
-    # for key in (:a1, :b1, :rmx, :a3)
-    #     @test res.series[key] isa Union{TSeries,MVTSeries}
-    # end
-    # for key in (:iac, :ipc, :udg)
-    #     @test res.other[key] isa AbstractWorkspace
-    # end
+    # broken on window testrunner; don't use save=:all
+    ts = TSeries(1981Q1, mvsales[75:150])
+    xts = X13.series(ts, title="Quarterly Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec; variables=X13.tl(1985Q3,1987Q1))
+    X13.identify!(spec, diff=[0,1], sdiff=[0,1])
+    res = X13.run(spec; verbose=false, load=:all);
+    for key in (:a1, :b1, :a3)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    for key in (:iac, :ipc, :udg)
+        @test res.other[key] isa AbstractWorkspace
+    end
 
     # # Manual example 10
     ts = TSeries(1970M1, mvsales[501:550])
@@ -1412,26 +1408,26 @@ end
     end
 
     # Manual example 2
-    # broken on windows testrunner
-    # ts = TSeries(1990Q1, mvsales[100:150])
-    # xts = X13.series(ts)
-    # spec = X13.newspec(xts)
-    # X13.transform!(spec; func=:log, save=:all)
-    # X13.regression!(spec; aictest=:td, save=:all)
-    # X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
-    # X13.forecast!(spec, maxlead=12, save=:all)
-    # X13.seats!(spec, finite=true, save=:all)
-    # X13.history!(spec, estimates=[:sadj, :trend], save=:all)
-    # res = X13.run(spec; verbose=false, load=:all);
-    # for key in (:tbs, :a3, :afd, :cyc, :dor, :dsa, :dtr, :fct, :ftr, :ltt, :psi, :pss, :rmx, :s10, :s11, :s12, :s13, :s16, :s18, :sae, :sar, :sfd, :ssm, :tfd, :tre, :trn, :trr, :a1, :ase, :b1, :se2, :se3, :sse, :tse)
-    #     @test res.series[key] isa Union{TSeries,MVTSeries}
-    # end
-    # for key in (:fac, :faf, :ftc, :ftf, :gac, :gaf, :gtc, :gtf, :rot, :tac, :ttc, :wkf, :ac2, :acf, :pcf, :rog)
-    #     @test res.tables[key] isa AbstractWorkspace
-    # end
-    # for key in (:mdc, :est, :udg)
-    #     @test res.other[key] isa AbstractWorkspace
-    # end
+    # broken on windows testrunner; don't use save=:all
+    ts = TSeries(1990Q1, mvsales[100:150])
+    xts = X13.series(ts)
+    spec = X13.newspec(xts)
+    X13.transform!(spec; func=:log)
+    X13.regression!(spec; aictest=:td)
+    X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
+    X13.forecast!(spec, maxlead=12)
+    X13.seats!(spec, finite=true)
+    X13.history!(spec, estimates=[:sadj, :trend])
+    res = X13.run(spec; verbose=false, load=:all);
+    for key in (:tbs, :a3, :afd, :dor, :dsa, :dtr, :fct, :ftr, :s10, :s11, :s12, :s13, :s16, :s18, :sae, :sfd, :ssm, :tfd, :tre, :a1, :ase, :b1, :se2, :se3, :sse, :tse)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    for key in (:fac, :faf, :ftc, :ftf, :gac, :gaf, :gtc, :gtf, :tac, :ttc, :ac2, :acf, :pcf, :rog)
+        @test res.tables[key] isa AbstractWorkspace
+    end
+    for key in (:est, :udg)
+        @test res.other[key] isa AbstractWorkspace
+    end
 
     # Manual example 3
     ts = TSeries(MIT{YPFrequency{6}}(1995*6), mvsales[50:150])
@@ -1478,7 +1474,6 @@ end
 @testset "X13 Slidingspans run" begin
 
     # Manual example 1
-    # not all outputs provided on windows testrunner...
     ts = TSeries(1976M1, mvsales[1:50])
     xts = X13.series(ts, title="Tourist")
     spec = X13.newspec(xts)
@@ -1496,7 +1491,7 @@ end
     end
 
     # Manual example 2
-    # broken on windows testrunner
+    # broken on windows testrunner; don't use save=:all
     # ts = TSeries(1967Q1, mvsales[1:150])
     # xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
     # spec = X13.newspec(xts)
@@ -1581,7 +1576,7 @@ end
     end
 
     # Manual example 6
-    # broken on windows testrunner
+    # broken on windows testrunner; don't use save=:all
     # ts = TSeries(1967Q1, mvsales[401:550])
     # xts = X13.series(ts, title="Quarterly stock prices on NASDAQ sp6")
     # spec = X13.newspec(xts)
@@ -1739,7 +1734,7 @@ end
     end
 
     # Manual example 5
-    # broken on windows testrunner
+    # broken on windows testrunner; don't use save=:all
     # ts = TSeries(1901Q1, mvsales[1:50])
     # xts = X13.series(ts, title="Annual Rainfall")
     # spec = X13.newspec(xts)
@@ -2069,7 +2064,7 @@ end
     end
 
     # Manual example 5
-    # broken on windows testrunner
+    # broken on windows testrunner; don't use save=:all
     # ts = TSeries(1964Q1, mvsales[151:300])
     # xts = X13.series(ts, title="MIDWEST ONE FAMILY Housing Starts", span=1964Q1:1989Q3)
     # spec = X13.newspec(xts)
@@ -2201,7 +2196,7 @@ end
     missing_ts[1994Q1:1994Q4] .= NaN
     @suppress @test_throws ArgumentError xts = X13.series(missing_ts, title="Quarterly Grape Harvest")
 
-    # broken on windows testrunner
+    # broken on windows testrunner; don't use save=:all
     # xts = X13.series(missing_ts, title="Quarterly Grape Harvest", missingcode = -99999.0)
     # spec = X13.newspec(xts)
     # X13.arima!(spec, X13.ArimaModel(0,1,1))
