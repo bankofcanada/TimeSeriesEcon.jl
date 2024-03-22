@@ -1493,7 +1493,7 @@ end
 
     # Manual example 2
     # broken on windows testrunner; don't use save=:all
-    ts = TSeries(1967Q1, mvsales[1:150])
+    ts = fconvert(Quarterly, TSeries(1967M1, mvsales[1:400]))
     xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
     spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=[:s3x9, :s3x9, :s3x5, :s3x5], trendma=7, mode=:logadd)
