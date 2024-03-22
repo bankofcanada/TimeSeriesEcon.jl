@@ -1580,20 +1580,22 @@ end
 
     # Manual example 6
     # broken on windows testrunner; don't use save=:all
-    ts = TSeries(1967Q1, mvsales[401:550])
-    xts = X13.series(ts, title="Quarterly stock prices on NASDAQ sp6")
-    spec = X13.newspec(xts)
-    X13.x11!(spec; seasonalma=:s3x9)
-    X13.slidingspans!(spec, length=40, numspans=3)
-    res = X13.run(spec; verbose=false, load=:all);
-    for key in (:a1, :b1, :c17, :c20, :chs, :d10, :d11, :d12, :d13, :d16, :d8, :d9, :e1, :e18, :e2, :e3, :sfs, :ycs)
-        @test res.series[key] isa Union{TSeries,MVTSeries}
-    end
-    for key in (:d8b,)
-        @test res.tables[key] isa AbstractWorkspace
-    end
-    for key in (:udg,)
-        @test res.other[key] isa AbstractWorkspace
+    if !Sys.iswindows()
+        ts = TSeries(1967Q1, mvsales[401:550])
+        xts = X13.series(ts, title="Quarterly stock prices on NASDAQ sp6")
+        spec = X13.newspec(xts)
+        X13.x11!(spec; seasonalma=:s3x9)
+        X13.slidingspans!(spec, length=40, numspans=3)
+        res = X13.run(spec; verbose=false, load=:all);
+        for key in (:a1, :b1, :c17, :c20, :chs, :d10, :d11, :d12, :d13, :d16, :d8, :d9, :e1, :e18, :e2, :e3, :sfs, :ycs)
+            @test res.series[key] isa Union{TSeries,MVTSeries}
+        end
+        for key in (:d8b,)
+            @test res.tables[key] isa AbstractWorkspace
+        end
+        for key in (:udg,)
+            @test res.other[key] isa AbstractWorkspace
+        end
     end
 end
 
