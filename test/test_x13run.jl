@@ -1740,7 +1740,7 @@ end
 
     # Manual example 5
     # broken on windows testrunner; don't use save=:all
-    ts = TSeries(1901Q1, mvsales[1:50])
+    ts = TSeries(1901Q1, mvsales[1:150])
     xts = X13.series(ts, title="Annual Rainfall")
     spec = X13.newspec(xts)
     X13.transform!(spec; power=.3333)
