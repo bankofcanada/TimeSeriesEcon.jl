@@ -2072,23 +2072,25 @@ end
 
     # Manual example 5
     # broken on windows testrunner; don't use save=:all
-    ts = TSeries(1964Q1, mvsales[151:300])
-    xts = X13.series(ts, title="MIDWEST ONE FAMILY Housing Starts", span=1964Q1:1989Q3)
-    spec = X13.newspec(xts)
-    X13.x11!(spec)
-    X13.x11regression!(spec, variables=[:td, X13.easter(8)],
-        b=[0.4453, 0.8550, -0.3012, 0.2717, -0.1705, 0.0983, -0.0082],
-        fixb=[true, true, true, true, true, true, false]
-    )
-    res = X13.run(spec; verbose=false, load=:all);
-    for key in (:a1, :b1, :c16, :c17, :c20, :d10, :d11, :d12, :d13, :d16, :d18, :d8, :d9, :e1, :e18, :e2, :e3, :xhl)
-        @test res.series[key] isa Union{TSeries,MVTSeries}
-    end
-    for key in (:d8b, )
-        @test res.tables[key] isa AbstractWorkspace
-    end
-    for key in (:udg,)
-        @test res.other[key] isa AbstractWorkspace
+    if !Sys.iswindows()
+        ts = TSeries(1964Q1, mvsales[151:300])
+        xts = X13.series(ts, title="MIDWEST ONE FAMILY Housing Starts", span=1964Q1:1989Q3)
+        spec = X13.newspec(xts)
+        X13.x11!(spec)
+        X13.x11regression!(spec, variables=[:td, X13.easter(8)],
+            b=[0.4453, 0.8550, -0.3012, 0.2717, -0.1705, 0.0983, -0.0082],
+            fixb=[true, true, true, true, true, true, false]
+        )
+        res = X13.run(spec; verbose=false, load=:all);
+        for key in (:a1, :b1, :c16, :c17, :c20, :d10, :d11, :d12, :d13, :d16, :d18, :d8, :d9, :e1, :e18, :e2, :e3, :xhl)
+            @test res.series[key] isa Union{TSeries,MVTSeries}
+        end
+        for key in (:d8b, )
+            @test res.tables[key] isa AbstractWorkspace
+        end
+        for key in (:udg,)
+            @test res.other[key] isa AbstractWorkspace
+        end
     end
 
 
