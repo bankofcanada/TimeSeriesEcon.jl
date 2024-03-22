@@ -963,7 +963,7 @@ end
 
     # Manual example 6 
     # broken on windows testrunner
-    ts = TSeries(1990Q1, mvsales[201:550])
+    ts = TSeries(1990Q1, mvsales[401:550])
     xts = X13.series(ts, title="Quarterly Sales Reg6")
     spec = X13.newspec(xts)
     X13.transform!(spec; func=:log, save=:all)
