@@ -983,7 +983,7 @@ end
  
     # Manual example 7
     # broken on window testrunner
-    ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
+    ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[101:350])))
     xts = X13.series(ts, title="Quarterly Sales Reg7")
     spec = X13.newspec(xts)
     X13.transform!(spec; func=:log)
