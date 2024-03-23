@@ -1495,25 +1495,21 @@ end
     end
 
     # Manual example 2
-    # broken on windows testrunner
-    # if !Sys.iswindows()
-        ts = TSeries(1967Q1, mvsales[1:150])
-        ts = fconvert(Quarterly, TSeries(1967M1,reverse(mvsales[1:250])))
-        xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
-        spec = X13.newspec(xts)
-        X13.x11!(spec; seasonalma=[:s3x9, :s3x9, :s3x5, :s3x5], trendma=7, mode=:logadd)
-        X13.slidingspans!(spec, cutseas = 5.0, cutchng = 5.0)
-        res = X13.run(spec; verbose=false, load=:all);
-        for key in (:a1, :b1, :c17, :c20, :chs, :d10, :d11, :d12, :d13, :d16, :d8, :d9, :e1, :e18, :e2, :e3, :sfs, :ycs)
-            @test res.series[key] isa Union{TSeries,MVTSeries}
-        end
-        for key in (:d8b,)
-            @test res.tables[key] isa AbstractWorkspace
-        end
-        for key in (:udg,)
-            @test res.other[key] isa AbstractWorkspace
-        end
-    # end
+    ts = fconvert(Quarterly, TSeries(1967M1,reverse(mvsales[1:250])))
+    xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
+    spec = X13.newspec(xts)
+    X13.x11!(spec; seasonalma=[:s3x9, :s3x9, :s3x5, :s3x5], trendma=7, mode=:logadd)
+    X13.slidingspans!(spec, cutseas = 5.0, cutchng = 5.0)
+    res = X13.run(spec; verbose=false, load=:all);
+    for key in (:a1, :b1, :c17, :c20, :chs, :d10, :d11, :d12, :d13, :d16, :d8, :d9, :e1, :e18, :e2, :e3, :sfs, :ycs)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    for key in (:d8b,)
+        @test res.tables[key] isa AbstractWorkspace
+    end
+    for key in (:udg,)
+        @test res.other[key] isa AbstractWorkspace
+    end
 
     # Manual example 3
     ts = TSeries(1980M1, mvsales[301:500])
@@ -1584,8 +1580,9 @@ end
 
     # Manual example 6
     # broken on windows testrunner
-    if !Sys.iswindows()
+    # if !Sys.iswindows()
         ts = TSeries(1967Q1, mvsales[401:550])
+        ts = fconvert(Quarterly, TSeries(1967M1,reverse(mvsales[1:250])))
         xts = X13.series(ts, title="Quarterly stock prices on NASDAQ sp6")
         spec = X13.newspec(xts)
         X13.x11!(spec; seasonalma=:s3x9)
@@ -1600,7 +1597,7 @@ end
         for key in (:udg,)
             @test res.other[key] isa AbstractWorkspace
         end
-    end
+    # end
 end
 
 @testset "X13 Spectrum run" begin
