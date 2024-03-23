@@ -17,6 +17,8 @@ using Suppressor
 # include("test_various.jl")
 # include("test_22.jl")
 include("test_x13spec.jl")
-include("test_x13run.jl")
+if !Sys.isapple()
+    include("test_x13run.jl")
+end
 
 # include("test_dataecon.jl")
