@@ -1496,8 +1496,9 @@ end
 
     # Manual example 2
     # broken on windows testrunner
-    if !Sys.iswindows()
+    # if !Sys.iswindows()
         ts = TSeries(1967Q1, mvsales[1:150])
+        ts = fconvert(Quarterly, TSeries(1967M1,reverse(mvsales[1:250])))
         xts = X13.series(ts, title="Quarterly stock prices on NASDAQ")
         spec = X13.newspec(xts)
         X13.x11!(spec; seasonalma=[:s3x9, :s3x9, :s3x5, :s3x5], trendma=7, mode=:logadd)
@@ -1512,7 +1513,7 @@ end
         for key in (:udg,)
             @test res.other[key] isa AbstractWorkspace
         end
-    end
+    # end
 
     # Manual example 3
     ts = TSeries(1980M1, mvsales[301:500])
@@ -2167,11 +2168,10 @@ end
     spec = X13.newspec(xts)
     X13.x11!(spec; seasonalma=:s3x9)
     X13.slidingspans!(spec, length=40, numspans=3)
-    # if Sys.iswindows()
-    #     @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
-    # else
-    @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
-    # end
+    if !Sys.iswindows()
+        # @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
+        @test_logs (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:error, r".*Number of years spanned by the forecast augmented series.*"i) (:warn, r"There were errors in the specification file.")  X13.run(spec; verbose=false, load=:all, allow_errors=true);
+    end
 
     ts = TSeries(1976M1, mvsales[1:50])
     xts = X13.series(ts, title="Monthly Sales", print=[:span, :seriesplot])
