@@ -1409,26 +1409,27 @@ end
     end
 
     # Manual example 2
-    # broken on windows testrunner; don't use save=:all
-    # ts = TSeries(1990Q1, mvsales[100:150])
-    ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
-    xts = X13.series(ts)
-    spec = X13.newspec(xts)
-    X13.transform!(spec; func=:log)
-    X13.regression!(spec; aictest=:td)
-    X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
-    X13.forecast!(spec, maxlead=12)
-    X13.seats!(spec, finite=true)
-    X13.history!(spec, estimates=[:sadj, :trend])
-    res = X13.run(spec; verbose=false, load=:all);
-    for key in (:tbs, :a3, :afd, :dor, :dsa, :dtr, :fct, :ftr, :s10, :s11, :s12, :s13, :s16, :s18, :sae, :sfd, :ssm, :tfd, :tre, :a1, :ase, :b1, :se2, :se3, :sse, :tse)
-        @test res.series[key] isa Union{TSeries,MVTSeries}
-    end
-    for key in (:fac, :faf, :ftc, :ftf, :gac, :gaf, :gtc, :gtf, :tac, :ttc, :ac2, :acf, :pcf, :rog)
-        @test res.tables[key] isa AbstractWorkspace
-    end
-    for key in (:est, :udg)
-        @test res.other[key] isa AbstractWorkspace
+    # broken on windows testrunner
+    if !Sys.iswindows()
+        ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
+        xts = X13.series(ts)
+        spec = X13.newspec(xts)
+        X13.transform!(spec; func=:log)
+        X13.regression!(spec; aictest=:td)
+        X13.arima!(spec, X13.ArimaModel(0,1,1,0,1,1))
+        X13.forecast!(spec, maxlead=12)
+        X13.seats!(spec, finite=true)
+        X13.history!(spec, estimates=[:sadj, :trend])
+        res = X13.run(spec; verbose=false, load=:all);
+        for key in (:tbs, :a3, :afd, :dor, :dsa, :dtr, :fct, :ftr, :s10, :s11, :s12, :s13, :s16, :s18, :sae, :sfd, :ssm, :tfd, :tre, :a1, :ase, :b1, :se2, :se3, :sse, :tse)
+            @test res.series[key] isa Union{TSeries,MVTSeries}
+        end
+        for key in (:fac, :faf, :ftc, :ftf, :gac, :gaf, :gtc, :gtf, :tac, :ttc, :ac2, :acf, :pcf, :rog)
+            @test res.tables[key] isa AbstractWorkspace
+        end
+        for key in (:est, :udg)
+            @test res.other[key] isa AbstractWorkspace
+        end
     end
 
     # Manual example 3
