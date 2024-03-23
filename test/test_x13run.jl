@@ -982,7 +982,6 @@ end
     end
  
     # Manual example 7
-    # broken on window testrunner
     ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
     xts = X13.series(ts, title="Quarterly Sales Reg7")
     spec = X13.newspec(xts)
@@ -1003,7 +1002,6 @@ end
     
     # Manual example 8
     # TODO: parse data output from regression spec / model file
-    # broken on window testrunner; don't use save=:all
     ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
     xts = X13.series(ts, title="Quarterly Sales Reg8")
     spec = X13.newspec(xts)
@@ -1023,19 +1021,18 @@ end
     end
 
     # Manual example 9
-    # broken on window testrunner; don't use save=:all
-    # ts = TSeries(1981Q1, mvsales[75:150])
-    # xts = X13.series(ts, title="Quarterly Sales")
-    # spec = X13.newspec(xts)
-    # X13.regression!(spec; variables=X13.tl(1985Q3,1987Q1))
-    # X13.identify!(spec, diff=[0,1], sdiff=[0,1])
-    # res = X13.run(spec; verbose=false, load=:all);
-    # for key in (:a1, :b1, :a3)
-    #     @test res.series[key] isa Union{TSeries,MVTSeries}
-    # end
-    # for key in (:iac, :ipc, :udg)
-    #     @test res.other[key] isa AbstractWorkspace
-    # end
+    ts = fconvert(Quarterly, TSeries(1981M1,reverse(mvsales[1:250])))
+    xts = X13.series(ts, title="Quarterly Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec; variables=X13.tl(1985Q3,1987Q1))
+    X13.identify!(spec, diff=[0,1], sdiff=[0,1])
+    res = X13.run(spec; verbose=false, load=:all);
+    for key in (:a1, :b1, :a3)
+        @test res.series[key] isa Union{TSeries,MVTSeries}
+    end
+    for key in (:iac, :ipc, :udg)
+        @test res.other[key] isa AbstractWorkspace
+    end
 
     # # Manual example 10
     ts = TSeries(1970M1, mvsales[501:550])
