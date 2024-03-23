@@ -12,13 +12,20 @@ end
 struct aos <: X13var
     mit1::MIT
     mit2::MIT
+
+    aos(x::UnitRange{<:MIT}) = new(first(x), last(x))
+    aos(mit1::MIT, mit2::MIT) = new(mit1, mit2)
 end
+
 struct ls <: X13var
     mit::MIT
 end
 struct lss <: X13var
     mit1::MIT
     mit2::MIT
+
+    lss(x::UnitRange{<:MIT}) = new(first(x), last(x))
+    lss(mit1::MIT, mit2::MIT) = new(mit1, mit2)
 end
 
 struct tc <: X13var
@@ -32,20 +39,32 @@ end
 struct rp <: X13var
     mit1::MIT
     mit2::MIT
+
+    rp(x::UnitRange{<:MIT}) = new(first(x), last(x))
+    rp(mit1::MIT, mit2::MIT) = new(mit1, mit2)
 end
 
 struct qd <: X13var
     mit1::MIT
     mit2::MIT
+
+    qd(x::UnitRange{<:MIT}) = new(first(x), last(x))
+    qd(mit1::MIT, mit2::MIT) = new(mit1, mit2)
 end
 struct qi <: X13var
     mit1::MIT
     mit2::MIT
+
+    qi(x::UnitRange{<:MIT}) = new(first(x), last(x))
+    qi(mit1::MIT, mit2::MIT) = new(mit1, mit2)
 end
 
 struct tl <: X13var
     mit1::MIT
     mit2::MIT
+
+    tl(x::UnitRange{<:MIT}) = new(first(x), last(x))
+    tl(mit1::MIT, mit2::MIT) = new(mit1, mit2)
 end
 
 struct tdstock <: X13var
@@ -581,7 +600,7 @@ function newspec(series::Union{X13series,X13default};
     )
     return X13spec{frequencyof(series.data)}(series, arima, estimate,transform,regression,automdl,x11,x11regression,check,forecast,force,pickmdl,history,metadata,identify,outlier,seats,slidingspans,spectrum,folder,string)
 end
-function newspec(F::Frequency; 
+function newspec(F::Type{<:Frequency}; 
     series::Union{X13series,X13default} = _X13default,
     arima::Union{X13arima,X13default} = _X13default,
     estimate::Union{X13estimate,X13default} = _X13default,
@@ -605,9 +624,10 @@ function newspec(F::Frequency;
     folder::Union{String,X13default} = _X13default,
     string::Union{String,X13default} = _X13default
     )
-    return X13spec{F}(series, arima, estimate,transform,regression,automdl,x11,x11regression,check,forecast,force,pickmdl,history,metadata,identify,outlier,seats,slidingspans,spectrum,folder,string)
+    return X13spec{sanitize_frequency(F)}(series, arima, estimate,transform,regression,automdl,x11,x11regression,check,forecast,force,pickmdl,history,metadata,identify,outlier,seats,slidingspans,spectrum,folder,string)
 end
 newspec(ts::TSeries; kwargs...) = newspec(X13.series(ts); kwargs...)
+
 
 
 
@@ -760,10 +780,10 @@ function series(t::TSeries{F};
         end
     elseif span isa Span
         if span.b isa MIT && span.b < first(rangeof(t))
-            throw(ArgumentError("the start of the specified span must be on or after the start of the provided series ($(first(rangeof(data)))). Received: $(span.b)"))
+            throw(ArgumentError("The start of the specified span must be on or after the start of the provided series ($(first(rangeof(data)))). Received: $(span.b)"))
         end
         if span.e isa MIT && span.e > last(rangeof(t))
-            throw(ArgumentError("the end of the specified spanmust be on or after the end of the provided series ($(last(rangeof(data)))). Received: $(span.b)"))
+            throw(ArgumentError("The end of the specified span must be on or after the end of the provided series ($(last(rangeof(data)))). Received: $(span.b)"))
         end
     end
 
@@ -3585,7 +3605,9 @@ function validateX13spec(spec::X13spec)
 
         if !(spec.forecast.maxlead isa X13default) && !(spec.history isa X13default) && !(spec.history.fstep isa X13default)
             if spec.history.fstep isa Vector{Int64} && any(spec.history.fstep .> spec.forecast.maxlead)
-                throw(ArgumentError("The values of fstep in the history spec cannot be greater than the maxlead specified in the history spec ($(spec.forecast.maxlead)). Recieved: $(spec.history.fstep)."))
+                throw(ArgumentError("The values of fstep in the history spec cannot be greater than the maxlead specified in the forecast spec ($(spec.forecast.maxlead)). Recieved: $(spec.history.fstep)."))
+            elseif spec.history.fstep > spec.forecast.maxlead
+                throw(ArgumentError("The values of fstep in the history spec cannot be greater than the maxlead specified in the forecast spec ($(spec.forecast.maxlead)). Recieved: $(spec.history.fstep)."))
             end
         end
     end
@@ -3875,14 +3897,6 @@ function validateX13spec(spec::X13spec)
         end
     end
 
-   
-
-    if !(spec.history isa X13default) 
-        if !(spec.history.outlier isa X13default) && (spec.outlier isa X13default)
-            @warn "The outlier argument of the history spec has no effect when no outlier spec is specified."
-        end
-    end
-
     if !(spec.seats isa X13default)
         if !(spec.seats.hpcycle isa X13default) && spec.seats.hplan isa X13default && spec.seats.hpcycle == true
             if ismonthly(spec.series.data) && length(spec.series.data) < 120
@@ -3903,17 +3917,17 @@ function validateX13spec(spec::X13spec)
     if !(spec.slidingspans isa X13default)
         if !(spec.slidingspans.length isa X13default)
             if isquarterly(spec.series.data) && spec.slidingspans.length < 12
-                throw(ArgumentError("The length argument of the slidingspans spec must cover at least 3 years. Current length is ≈$(spec.slidingspan.length / 4) years."))
+                throw(ArgumentError("The length argument of the slidingspans spec must cover at least 3 years. Current length is ≈$(spec.slidingspans.length / 4) years."))
             end
             if isquarterly(spec.series.data) && spec.slidingspans.length > 4*19
-                throw(ArgumentError("The length argument of the slidingspans spec can cover at most 19 years. Current length is ≈$(spec.slidingspan.length / 4) years."))
+                throw(ArgumentError("The length argument of the slidingspans spec can cover at most 19 years. Current length is ≈$(spec.slidingspans.length / 4) years."))
             end
 
             if ismonthly(spec.series.data) && spec.slidingspans.length < 36
                 throw(ArgumentError("The length argument of the slidingspans spec must cover at least 3 years. Current length is ≈$(spec.slidingspans.length / 12) years."))
             end
             if ismonthly(spec.series.data) && spec.slidingspans.length > 12*19
-                throw(ArgumentError("The length argument of the slidingspans spec can cover at most 19 years. Current length is ≈$(spec.slidingspan.length / 12) years."))
+                throw(ArgumentError("The length argument of the slidingspans spec can cover at most 19 years. Current length is ≈$(spec.slidingspans.length / 12) years."))
             end
         end
         if !(spec.slidingspans.outlier isa X13default) && spec.outlier isa X13default
@@ -3941,9 +3955,10 @@ function validateX13spec(spec::X13spec)
     end
 
     if !(spec.x11regression isa X13default)
-        if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
-            throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the x11regression spec."))
-        end
+        # TODO:
+        # if !(spec.transform isa X13default) && !(spec.transform.adjust isa X13default)
+        #     throw(ArgumentError("The adjust argument of the transform spec cannot be used when td or td1coef is specified in the x11regression spec."))
+        # end
 
         if !(spec.x11regression.data isa X13default)
             data_range = rangeof(spec.x11regression.data)
@@ -4114,6 +4129,10 @@ function effective_span(s::X13series)
     end
     return span
 end
+
+# frequencyof
+TimeSeriesEcon.frequencyof(::Type{X13series{F}}) where {F<:Frequency} = F
+TimeSeriesEcon.frequencyof(::Type{X13spec{F}}) where {F<:Frequency} = F
 
 
 export X13spec

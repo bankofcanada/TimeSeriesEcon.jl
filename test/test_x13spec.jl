@@ -49,6 +49,12 @@ using TimeSeriesEcon
     @test spec.slidingspans isa X13.X13slidingspans
     @test spec.spectrum isa X13.X13spectrum
     @test spec.series isa X13.X13series
+
+    spec2 = X13.newspec(Quarterly)
+    @test spec2 isa X13.X13spec
+    @test frequencyof(spec2) == Quarterly{3}
+    X13.series!(spec2, ts)
+    @test frequencyof(spec2.series) == Quarterly{3}
 end
 
 
@@ -411,6 +417,10 @@ end
     s = X13.x13write(spec, test=true)
     @test contains(s, "x11 {\n        seasonalma = s3x5\n}")
     @test contains(s, "force {\n        round = yes\n        type = none\n}")
+
+    # force warnings and errors
+    @test_throws ArgumentError X13.force(; rho=-0.1)
+    @test_throws ArgumentError X13.force(; rho=1.1)
 end
 
 @testset "X13 Forecast writing" begin
@@ -715,7 +725,11 @@ end
         push!(v, "h$i"=>"world")
     end
     @test_throws ArgumentError X13.metadata(v)
-    # @test_throws ArgumentError X13.history(; fstep=[-1, 2])
+    v = Vector{Pair{String,String}}()
+    for i in 1:600
+        push!(v, "hello$i"=>"w")
+    end
+    @test_throws ArgumentError X13.metadata(v)
 end
 
 @testset "X13 Outlier writing" begin
@@ -1364,14 +1378,16 @@ end
     spec = X13.newspec(xts)
     s = X13.x13write(spec, test=true)
     @test contains(s, "series {\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50)\n        start = 1967.jan\n        title = \"A simple example\"\n}")
-    
+    @test frequencyof(xts) == Monthly
+
     # Manual example 2
     ts = TSeries(1940Q1, collect(1:250))
     xts = X13.series(ts, span=1964Q1:1990Q4)
     spec = X13.newspec(xts)
     s = X13.x13write(spec, test=true)
     @test contains(s, "series {\n        data = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 \n                42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 \n                80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 \n                114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 \n                143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 \n                172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 199 200 \n                201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228 229 \n                230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250)\n        period = 4\n        span = (1964.1, 1990.4)\n        start = 1940.1\n}")
-    
+    @test frequencyof(xts) == Quarterly{3}
+
     # Manual example 2 with start
     ts = TSeries(1940Q1, collect(1:250))[begin:1990Q4]
     xts = X13.series(ts, start=1964Q1)
@@ -1393,12 +1409,13 @@ end
     @test_logs (:warn, r"Series name trunctated to 64 characters*"i) xts = X13.series(ts, span=first(rangeof(ts)):1992M12, comptype=:add, decimals=2, 
         name="This is a very long name that will most certainly trigger the warning about the title being truncated")
     
+        # series warnings and errors
     @test_throws ArgumentError X13.series(ts; divpower=11)
     @test_throws ArgumentError X13.series(ts; span=1960M1:1996M1)
     @test_throws ArgumentError X13.series(ts; span=1976M1:1997M1)
     @test_throws ArgumentError X13.series(ts; span=X13.Span(missing,M1))
-
-    
+    @test_throws ArgumentError X13.series(ts; span=X13.Span(1975M3))
+    @test_throws ArgumentError X13.series(ts; span=X13.Span(missing,1997M3))
     
 end
 
@@ -1856,6 +1873,18 @@ end
     @test contains(s, "x11 {\n        title = (\"Car Sales in US\"\n        \"Adjusted for strikes in 80, 85, 90\")\n}")
     @test contains(s, "x11regression {\n        variables = (td easter[8])\n}")
 
+    # example with a single-column MVTSeries
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Ukclothes")
+    spec = X13.newspec(xts)
+    X13.x11!(spec)
+    X13.x11regression!(spec, variables=:td, usertype=:holiday, critical=4.0,
+        data=MVTSeries(1980M1, [:easter1], hcat(collect(0.1:0.1:11)))
+    )
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "x11 { }")
+    @test contains(s, "x11regression {\n        critical = 4.0\n        data = (0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 \n                3.0 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0 5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 \n                5.9 6.0 6.1 6.2 6.3 6.4 6.5 6.6 6.7 6.8 6.9 7.0 7.1 7.2 7.3 7.4 7.5 7.6 7.7 7.8 7.9 8.0 8.1 8.2 8.3 8.4 8.5 8.6 8.7 \n                8.8 8.9 9.0 9.1 9.2 9.3 9.4 9.5 9.6 9.7 9.8 9.9 10.0 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.0)\n        start = 1980.jan\n        user = easter1\n        usertype = holiday\n        variables = td\n}")
+
     # x11regression warnings and errors
     @test_throws ArgumentError X13.x11regression(; aictest=:td, variables=:tdstock)
     @test_throws ArgumentError X13.x11regression(; aictest=:something)
@@ -2028,6 +2057,57 @@ end
 end
 
 @testset "X13 Specification validation errors" begin
+    # using arima together with automdl or pickmdl
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.arima!(spec, X13.ArimaModel(0,1,1))
+    X13.pickmdl!(spec, [
+        X13.ArimaModel(0,1,1,0,1,1; default=true)
+        X13.ArimaModel(0,1,2,0,1,1;)
+    ])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    spec = X13.newspec(xts)
+    X13.arima!(spec, X13.ArimaModel(0,1,1))
+    X13.automdl!(spec)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using automdl together with pickmdl
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.automdl!(spec)
+    X13.pickmdl!(spec, [
+        X13.ArimaModel(0,1,1,0,1,1; default=true)
+        X13.ArimaModel(0,1,2,0,1,1;)
+    ])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    
+    # using some regression arguments together with the file argument in the estimates spec
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.estimate!(spec, file="/some/file")
+    X13.regression!(spec, variables=[:td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # history.fstep > forecast.maxlead
+    ts = TSeries(1969M7, collect(1:150))
+    xts = X13.series(ts, title="Exports of leather goods")
+    spec = X13.newspec(xts)
+    X13.history!(spec, estimates=:fcst, fstep=[4,2], start=1975M1)
+    X13.forecast!(spec, maxlead=2)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.history!(spec, estimates=:fcst, fstep=4, start=1975M1)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # outlier argument in history spec, but no outlier spec specified
+    ts = TSeries(1969M7, collect(1:150))
+    xts = X13.series(ts, title="Exports of leather goods")
+    spec = X13.newspec(xts)
+    X13.history!(spec, estimates=:fcst, fstep=[4,2], start=1975M1, outlier=:remove)
+    @test_logs (:warn, r"The outlier argument of the history spec has no effect when no outlier spec is specified."i) X13.x13write(spec, test=true)
+
     # invalid aictest when using :td variable
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
@@ -2041,13 +2121,26 @@ end
     spec = X13.newspec(xts)
     X13.regression!(spec, variables=[:const, :td, :tdstock])
     @test_throws ArgumentError X13.x13write(spec, test=true)
-    # X13.regression!(spec, variables=[:const, :td, :tdstock])
     
     # using a stock regressor on flow data
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales", type=:flow)
     spec = X13.newspec(xts)
     X13.regression!(spec, variables=[:const, :tdstock])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using a stock aictest on flow data
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales", type=:flow)
+    spec = X13.newspec(xts)
+    X13.regression!(spec, aictest=[:tdstock], variables=[:const])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using a flow aictest on stock data
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales", type=:stock)
+    spec = X13.newspec(xts)
+    X13.regression!(spec, aictest=[:td1coef], variables=[:const])
     @test_throws ArgumentError X13.x13write(spec, test=true)
 
     # using a flow regressor on stock data
@@ -2057,7 +2150,7 @@ end
     X13.regression!(spec, variables=[:const, :td])
     @test_throws ArgumentError X13.x13write(spec, test=true)
 
-    # using various regressors on non-monthly or non-quarterly data
+    # using various regressors or aictests on non-monthly or non-quarterly data
     ts = TSeries(MIT{YPFrequency{6}}(1986,1), collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
     spec = X13.newspec(xts)
@@ -2075,6 +2168,21 @@ end
     @test_throws ArgumentError X13.x13write(spec, test=true)
     X13.regression!(spec, variables=[:const, :loq])
     @test_throws ArgumentError X13.x13write(spec, test=true)
+    
+    X13.regression!(spec, variables=[:const], aictest=[:td])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const], aictest=[:tdnolpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const], aictest=[:td1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const], aictest=[:td1nolpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const], aictest=[:lpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const], aictest=[:lom])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const], aictest=[:loq])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
 
     # using various regressors on non-monthly data
     ts = TSeries(MIT{YPFrequency{6}}(1986,1), collect(1:50))
@@ -2082,11 +2190,18 @@ end
     spec = X13.newspec(xts)
     X13.regression!(spec, variables=[:const, :tdstock])
     @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :tdstock1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
     X13.regression!(spec, variables=[:const, :labor])
     @test_throws ArgumentError X13.x13write(spec, test=true)
     X13.regression!(spec, variables=[:const, :sceaster])
     @test_throws ArgumentError X13.x13write(spec, test=true)
 
+    X13.regression!(spec, variables=[:const], aictest=[:tdstock])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const], aictest=[:tdstock1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+   
     # using combinations of mutually excluded regressors
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
@@ -2110,6 +2225,54 @@ end
     X13.regression!(spec, variables=[:const, :tdstock1coef, :td])
     @test_throws ArgumentError X13.x13write(spec, test=true)
 
+    X13.regression!(spec, variables=[:const, :td], aictest=[:tdnolpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:td1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:lpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:td1nolpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:lpyear])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:lom])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:loq])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:tdstock])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, :td], aictest=[:tdstock1coef])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # using dated regressors with invalid Ranges
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Unit Auto Sales")
+    spec = X13.newspec(xts)
+    X13.regression!(spec, variables=[:const, X13.ao(1984M2)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.tc(1984M2)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.ls(1984M2)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.ls(1985M1)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.so(1984M2)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.so(1985M1)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.aos(1984M2,1986M3)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.lss(1984M2,1986M3)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.rp(1984M2,1986M3)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.qd(1984M2,1986M3)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.qi(1984M2,1986M3)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.regression!(spec, variables=[:const, X13.tl(1984M2,1986M3)])
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
     # using some regressors with the transform spec with an adjust argument
     ts = TSeries(1985M1, collect(1:50))
     xts = X13.series(ts, title="Unit Auto Sales")
@@ -2129,9 +2292,77 @@ end
     X13.regression!(spec, variables=[:const, :lom])
     X13.transform!(spec, adjust=:lom)
     @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # insufficient data in regression spec
+    ts = TSeries(1970M1, collect(1:50))
+    xts = X13.series(ts, title="Monthly Riverflow")
+    spec = X13.newspec(xts)
+    X13.regression!(spec; variables=[:seasonal, :const], data=MVTSeries(1960M1, [:temp, :precip], hcat(collect(1.0:0.1:18),collect(0.0:0.2:34))))
+    X13.forecast!(spec; maxlead=2)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
     
 
-    
+    # insufficient data for hpcycle
+    ts = TSeries(1993M1, collect(1:50))
+    xts = X13.series(ts, title="Model based adjustment of exports")
+    spec = X13.newspec(xts)
+    X13.seats!(spec, hpcycle=true)
+    @test_logs (:warn, r"Hodrick-Prescott filters will not be used as the default hplan requires at least 120 monthly observations.*"i) X13.x13write(spec, test=true)
+    ts = TSeries(1993Q1, collect(1:40))
+    xts = X13.series(ts, title="Model based adjustment of exports")
+    spec = X13.newspec(xts)
+    X13.seats!(spec, hpcycle=true)
+    @test_logs (:warn, r"Hodrick-Prescott filters will not be used as the default hplan requires at least 48 quarterly observations.*"i) X13.x13write(spec, test=true)
+   
+    # mismatched span and modelspan
+    ts = TSeries(1993M1, collect(1:150))
+    xts = X13.series(ts, title="Model based adjustment of exports", modelspan=1993M6:2001M12, span=1993M1:2005M5)
+    spec = X13.newspec(xts)
+    X13.forecast!(spec; maxback=12)
+    @test_logs (:warn, r"Backcasts will not be generated as the start of the modelspan specified .* does not coincide with the start of the series span specified.*"i) X13.x13write(spec, test=true)
+   
+    # slidingspans which are too short or too long
+    ts = TSeries(1980M1, collect(1:50))
+    xts = X13.series(ts, title="Number of employed machinists - X-11")
+    spec = X13.newspec(xts)
+    X13.slidingspans!(spec, outlier=:keep, length=30)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.slidingspans!(spec, outlier=:keep, length=240)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    ts = TSeries(1980Q1, collect(1:50))
+    xts = X13.series(ts, title="Number of employed machinists - X-11")
+    spec = X13.newspec(xts)
+    X13.slidingspans!(spec, outlier=:keep, length=8)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.slidingspans!(spec, outlier=:keep, length=80)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # qcheck argument in spectrum spec with monthly data
+    ts = TSeries(1988Q1, collect(1:50))
+    xts = X13.series(ts, title="Total U.S. Retail Sales")
+    spec = X13.newspec(xts)
+    X13.spectrum!(spec, logqs=true, qcheck=true)
+    @test_logs (:warn, r"The qcheck argument of the spectrum spec only produces output for a monthly TSeries.*"i) X13.x13write(spec, test=true)
+
+    # Invalid combination of tranform.adjust and x11.mode
+    ts = TSeries(1967M1, collect(1:50))
+    xts = X13.series(ts, title="Transform example")
+    spec = X13.newspec(xts)
+    X13.transform!(spec; data=TSeries(1967M1,collect(0.1:0.1:5.0)), mode=:ratio, adjust=:lom)
+    X13.x11!(spec; mode=:add)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.transform!(spec)
+    X13.x11!(spec)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # insufficient data in x11regression spec
+    ts = TSeries(1970M1, collect(1:50))
+    xts = X13.series(ts, title="Monthly Riverflow")
+    spec = X13.newspec(xts)
+    X13.x11regression!(spec; variables=[:seasonal, :const], data=MVTSeries(1960M1, [:temp, :precip], hcat(collect(1.0:0.1:18),collect(0.0:0.2:34))))
+    X13.forecast!(spec; maxlead=2)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+   
 end
 
 
