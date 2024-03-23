@@ -1737,9 +1737,8 @@ end
 
     # Manual example 5
     # broken on windows testrunner
-    # if !Sys.iswindows()
-    #     ts = TSeries(1901Q1, mvsales[1:50])
-        ts = fconvert(Quarterly, TSeries(1967M1,reverse(mvsales[1:250])))
+    if !Sys.iswindows()
+        ts = TSeries(1901Q1, mvsales[1:50])
         xts = X13.series(ts, title="Annual Rainfall")
         spec = X13.newspec(xts)
         X13.transform!(spec; power=.3333)
@@ -1750,7 +1749,7 @@ end
         for key in (:udg,)
             @test res.other[key] isa AbstractWorkspace
         end
-    # end
+    end
 
 
     # # Manual example 7
@@ -2070,8 +2069,9 @@ end
 
     # Manual example 5
     # broken on windows testrunner
-    if !Sys.iswindows()
+    # if !Sys.iswindows()
         ts = TSeries(1964Q1, mvsales[151:300])
+        ts = fconvert(Quarterly, TSeries(1964M1,reverse(mvsales[1:350])))
         xts = X13.series(ts, title="MIDWEST ONE FAMILY Housing Starts", span=1964Q1:1989Q3)
         spec = X13.newspec(xts)
         X13.x11!(spec)
@@ -2089,7 +2089,7 @@ end
         for key in (:udg,)
             @test res.other[key] isa AbstractWorkspace
         end
-    end
+    # end
 
 
     # Manual example 6
