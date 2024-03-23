@@ -2069,9 +2069,8 @@ end
 
     # Manual example 5
     # broken on windows testrunner
-    # if !Sys.iswindows()
+    if !Sys.iswindows()
         ts = TSeries(1964Q1, mvsales[151:300])
-        ts = fconvert(Quarterly, TSeries(1964M1,reverse(mvsales[1:350])))
         xts = X13.series(ts, title="MIDWEST ONE FAMILY Housing Starts", span=1964Q1:1989Q3)
         spec = X13.newspec(xts)
         X13.x11!(spec)
@@ -2089,7 +2088,7 @@ end
         for key in (:udg,)
             @test res.other[key] isa AbstractWorkspace
         end
-    # end
+    end
 
 
     # Manual example 6
@@ -2199,11 +2198,12 @@ end
 
 @testset "X13 with missing values" begin
     missing_ts = TSeries(1990Q1, Float64.(mvsales[1:150]))
+    missing_ts = fconvert(Quarterly, TSeries(1990Q1, Float64.(reverse(mvsales[1:250]))))
     missing_ts[1994Q1:1994Q4] .= NaN
     @suppress @test_throws ArgumentError xts = X13.series(missing_ts, title="Quarterly Grape Harvest")
 
     # broken on windows testrunner
-    if !Sys.iswindows()
+    # if !Sys.iswindows()
         xts = X13.series(missing_ts, title="Quarterly Grape Harvest", missingcode = -99999.0)
         spec = X13.newspec(xts)
         X13.arima!(spec, X13.ArimaModel(0,1,1))
@@ -2213,7 +2213,7 @@ end
         for key in (:a1, :a3, :b1)
             @test res.series[key] isa Union{TSeries,MVTSeries}
         end
-    end
+    # end
 end
 
 
