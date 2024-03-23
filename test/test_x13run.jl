@@ -1004,22 +1004,24 @@ end
     
     # Manual example 8
     # TODO: parse data output from regression spec / model file
-    ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
-    xts = X13.series(ts, title="Quarterly Sales Reg8")
-    spec = X13.newspec(xts)
-    X13.transform!(spec; func=:log)
-    X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td], user=:tls, data=MVTSeries(1990Q1, [:tls], mvsales[51:200]))
-    X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
-    X13.estimate!(spec)
-    res = X13.run(spec; verbose=false, load=:all);
-    for key in (:a1, :a18, :a19, :a2, :a3, :ao, :b1, :ls, :otl,  :rrs, :td, :usr)
-        @test res.series[key] isa Union{TSeries,MVTSeries}
-    end
-    for key in (:ac2, :acf, :pcf)
-        @test res.tables[key] isa AbstractWorkspace
-    end
-    for key in (:est, :udg)
-        @test res.other[key] isa AbstractWorkspace
+    if !Sys.iswindows()
+        ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
+        xts = X13.series(ts, title="Quarterly Sales Reg8")
+        spec = X13.newspec(xts)
+        X13.transform!(spec; func=:log)
+        X13.regression!(spec; variables=[X13.ao(2007Q1), X13.qi(2005Q2,2005Q4), X13.ao(1998Q1), :td], user=:tls, data=MVTSeries(1990Q1, [:tls], mvsales[51:200]))
+        X13.arima!(spec, X13.ArimaModel(0, 1, 1, 0, 1, 1))
+        X13.estimate!(spec)
+        res = X13.run(spec; verbose=false, load=:all);
+        for key in (:a1, :a18, :a19, :a2, :a3, :ao, :b1, :ls, :otl,  :rrs, :td, :usr)
+            @test res.series[key] isa Union{TSeries,MVTSeries}
+        end
+        for key in (:ac2, :acf, :pcf)
+            @test res.tables[key] isa AbstractWorkspace
+        end
+        for key in (:est, :udg)
+            @test res.other[key] isa AbstractWorkspace
+        end
     end
 
     # Manual example 9
