@@ -961,8 +961,7 @@ end
     end
 
 
-    # Manual example 6 
-    # broken on windows testrunner; don't use save=:all
+    # Manual example 6
     ts = fconvert(Quarterly, TSeries(1990M1,reverse(mvsales[1:250])))
     xts = X13.series(ts, title="Quarterly Sales Reg6")
     spec = X13.newspec(xts)
