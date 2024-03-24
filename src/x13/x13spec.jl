@@ -540,7 +540,7 @@ mutable struct X13x11regression
     umdata::Any
     umfile::Union{String,X13default}
     umformat::Union{String,X13default}
-    umname::Union{String,X13default}
+    umname::Union{Vector{String},String,X13default}
     umprecision::Union{Int64,X13default}
     umstart::Union{MIT,X13default}
     umtrimzero::Union{Symbol,X13default}
@@ -3448,7 +3448,7 @@ function x11regression(;
     umdata::Any=_X13default,
     umfile::Union{String,X13default}=_X13default,
     umformat::Union{String,X13default}=_X13default,
-    umname::Union{String,X13default}=_X13default,
+    umname::Union{Vector{String},String,X13default}=_X13default,
     umprecision::Union{Int64,X13default}=_X13default,
     umstart::Union{MIT,X13default}=_X13default,
     umtrimzero::Union{Bool,Symbol,X13default}=_X13default,
@@ -3468,7 +3468,7 @@ function x11regression(;
     umname = _X13default
     if !(umdata isa X13default)
         umstart = first(rangeof(umdata))
-        umname = collect(colnames(umdata))
+        umname = string.(collect(colnames(umdata)))
         if length(umname) == 1
             umname = umname[1]
         end
@@ -3997,16 +3997,16 @@ function validateX13spec(spec::X13spec)
             end
         end
         if !(spec.x11regression.span isa X13default)
-            required_range = effective_span(spec.series.data)
+            required_range = effective_span(spec.series)
             reg_range = copy(required_range)
             if (spec.x11regression.span isa UnitRange)
                 reg_range = spec.x11regression.span
             elseif spec.x11regression.span isa Span
                 if spec.x11regression.span.b isa MIT
-                    reg_range = sspec.x11regression.span.b:last(required_range)
+                    reg_range = spec.x11regression.span.b:last(required_range)
                 end
                 if spec.x11regression.span.e isa MIT
-                    reg_range = first(required_range):spec.x11regression.span.e
+                    reg_range = first(reg_range):spec.x11regression.span.e
                 end
                 # 0.per
                 if (spec.x11regression.span.b isa Missing) && spec.x11regression.span.e ∈ (M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12,Q1,Q2,Q3,Q4,H1,H2)
@@ -4034,14 +4034,14 @@ function validateX13spec(spec::X13spec)
                 if spec.x11regression.usertype isa Symbol
                     push!(types_used, spec.x11regression.usertype)
                 else
-                    for ut in spec.x11regresison.usertype
+                    for ut in spec.x11regression.usertype
                         push!(types_used, ut)
                     end
                 end
             end
 
             if !(spec.x11regression.forcecal isa X13default)
-                if !(any([:td, :td1coef, :tdstock, :tdstock1coef] .∈ types_used ) && any([:easter, :labor, :thank, :sceaster] .∈ types_used ))
+                if !(length(intersect([:td, :td1coef, :tdstock, :tdstock1coef], types_used)) > 0 && length(intersect([:easter, :labor, :thank, :sceaster], types_used )) > 0)
                     @warn "The forcecal argument of the x11regression will not have any effect as the variables argument does not contain both td and holiday regressors."
                 end
             end

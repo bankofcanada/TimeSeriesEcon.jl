@@ -290,6 +290,8 @@ end
     @test_throws ArgumentError X13.automdl(; reducecv=1.1)
     @test_throws ArgumentError X13.automdl(; urfinal=0.9)
     # @test_throws ArgumentError X13.automdl(; diff=[2,0])
+
+    
     
 end
 
@@ -1885,6 +1887,19 @@ end
     @test contains(s, "x11 { }")
     @test contains(s, "x11regression {\n        critical = 4.0\n        data = (0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 \n                3.0 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0 5.1 5.2 5.3 5.4 5.5 5.6 5.7 5.8 \n                5.9 6.0 6.1 6.2 6.3 6.4 6.5 6.6 6.7 6.8 6.9 7.0 7.1 7.2 7.3 7.4 7.5 7.6 7.7 7.8 7.9 8.0 8.1 8.2 8.3 8.4 8.5 8.6 8.7 \n                8.8 8.9 9.0 9.1 9.2 9.3 9.4 9.5 9.6 9.7 9.8 9.9 10.0 10.1 10.2 10.3 10.4 10.5 10.6 10.7 10.8 10.9 11.0)\n        start = 1980.jan\n        user = easter1\n        usertype = holiday\n        variables = td\n}")
 
+    # example with a usertype vector
+    ts = TSeries(1985M1, collect(1:50))
+    xts = X13.series(ts, title="Ukclothes")
+    spec = X13.newspec(xts)
+    X13.x11!(spec)
+    X13.x11regression!(spec, variables=:td, usertype=[:holiday, :holiday], critical=4.0,
+        data=MVTSeries(1980M1, [:easter1, :easter2], hcat(collect(0.1:0.1:11),collect(11:-0.1:0.1)))
+    )
+    s = X13.x13write(spec, test=true)
+    @test contains(s, "x11 { }")
+    @test contains(s, "x11regression {\n        critical = 4.0\n        data = (        0.1        11.0\n        0.2        10.9\n        0.3        10.8\n        0.4        10.7\n        0.5        10.6\n        0.6        10.5\n        0.7        10.4\n        0.8        10.3\n        0.9        10.2\n        1.0        10.1\n        1.1        10.0\n        1.2        9.9\n        1.3        9.8\n        1.4        9.7\n        1.5        9.6\n        1.6        9.5\n        1.7        9.4\n        1.8        9.3\n        1.9        9.2\n        2.0        9.1\n        2.1        9.0\n        2.2        8.9\n        2.3        8.8\n        2.4        8.7\n        2.5        8.6\n        2.6        8.5\n        2.7        8.4\n        2.8        8.3\n        2.9        8.2\n        3.0        8.1\n        3.1        8.0\n        3.2        7.9\n        3.3        7.8\n        3.4        7.7\n        3.5        7.6\n        3.6        7.5\n        3.7        7.4\n        3.8        7.3\n        3.9        7.2\n        4.0        7.1\n        4.1        7.0\n        4.2        6.9\n        4.3        6.8\n        4.4        6.7\n        4.5        6.6\n        4.6        6.5\n        4.7        6.4\n        4.8        6.3\n        4.9        6.2\n        5.0        6.1\n        5.1        6.0\n        5.2        5.9\n        5.3        5.8\n        5.4        5.7\n        5.5        5.6\n        5.6        5.5\n        5.7        5.4\n        5.8        5.3\n        5.9        5.2\n        6.0        5.1\n        6.1        5.0\n        6.2        4.9\n        6.3        4.8\n        6.4        4.7\n        6.5        4.6\n        6.6        4.5\n        6.7        4.4\n        6.8        4.3\n        6.9        4.2\n        7.0        4.1\n        7.1        4.0\n        7.2        3.9\n        7.3        3.8\n        7.4        3.7\n        7.5        3.6\n        7.6        3.5\n        7.7        3.4\n        7.8        3.3\n        7.9        3.2\n        8.0        3.1\n        8.1        3.0\n        8.2        2.9\n        8.3        2.8\n        8.4        2.7\n        8.5        2.6\n        8.6        2.5\n        8.7        2.4\n        8.8        2.3\n        8.9        2.2\n        9.0        2.1\n        9.1        2.0\n        9.2        1.9\n        9.3        1.8\n        9.4        1.7\n        9.5        1.6\n        9.6        1.5\n        9.7        1.4\n        9.8        1.3\n        9.9        1.2\n        10.0        1.1\n        10.1        1.0\n        10.2        0.9\n        10.3        0.8\n        10.4        0.7\n        10.5        0.6\n        10.6        0.5\n        10.7        0.4\n        10.8        0.3\n        10.9        0.2\n        11.0        0.1        )\n        start = 1980.jan\n        user = (easter1 easter2)\n        usertype = (holiday holiday)\n        variables = td\n}")
+
+
     # x11regression warnings and errors
     @test_throws ArgumentError X13.x11regression(; aictest=:td, variables=:tdstock)
     @test_throws ArgumentError X13.x11regression(; aictest=:something)
@@ -2360,8 +2375,22 @@ end
     xts = X13.series(ts, title="Monthly Riverflow")
     spec = X13.newspec(xts)
     X13.x11regression!(spec; variables=[:seasonal, :const], data=MVTSeries(1960M1, [:temp, :precip], hcat(collect(1.0:0.1:18),collect(0.0:0.2:34))))
-    X13.forecast!(spec; maxlead=2)
+    X13.forecast!(spec; maxlead=2, maxback=5)
     @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.x11regression!(spec; variables=[:seasonal, :const], umdata=MVTSeries(1960M1, [:temp, :precip], hcat(collect(1.0:0.1:18),collect(0.0:0.2:34))))
+    X13.forecast!(spec; maxlead=2, maxback=5)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.x11regression!(spec; variables=[:seasonal, :const], outlierspan=1965M1:1975M12)
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+    X13.x11regression!(spec; variables=[:seasonal, :const], span=X13.Span(1965M1,1975M12))
+    @test_throws ArgumentError X13.x13write(spec, test=true)
+
+    # incorrect use of forcecal
+    ts = TSeries(1970M1, collect(1:50))
+    xts = X13.series(ts, title="Monthly Riverflow")
+    spec = X13.newspec(xts)
+    X13.x11regression!(spec; variables=[:const, :td], forcecal=true)
+    @test_logs (:warn, r"The forcecal argument of the x11regression will not have any effect as the variables argument does not contain both td and holiday regressors.*"i) X13.x13write(spec, test=true)
    
 end
 
