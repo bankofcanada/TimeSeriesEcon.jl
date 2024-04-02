@@ -228,7 +228,7 @@ Base.size(x::MVTSeries) = size(_vals(x))
 Base.axes(x::MVTSeries) = (rangeof(x), [colnames(x)...])
 Base.axes1(x::MVTSeries) = rangeof(x)
 
-const _MVTSAxes1 = AbstractUnitRange{<:MIT}
+const _MVTSAxes1 = Union{<:AbstractUnitRange{<:MIT}, <:StepRange{<:MIT}}
 const _MVTSAxes2 = Union{NTuple{N,Symbol},Vector{Symbol}} where {N}
 const _MVTSAxesType = Tuple{<:_MVTSAxes1,<:_MVTSAxes2}
 
@@ -426,6 +426,7 @@ end
 # some check bounds that plug MVTSeries into the Julia infrastructure for AbstractArrays
 Base.checkbounds(::Type{Bool}, x::MVTSeries, p::MIT) = checkindex(Bool, rangeof(x), p)
 Base.checkbounds(::Type{Bool}, x::MVTSeries, p::AbstractUnitRange{<:MIT}) = checkindex(Bool, rangeof(x), p)
+Base.checkbounds(::Type{Bool}, x::MVTSeries, p::StepRange{<:MIT}) = checkindex(Bool, rangeof(x), p)
 Base.checkbounds(::Type{Bool}, x::MVTSeries, c::Symbol) = haskey(_cols(x), c)
 @inline function Base.checkbounds(::Type{Bool}, x::MVTSeries, INDS::_MVTSAxes2)
     cols = _cols(x)
@@ -678,6 +679,15 @@ function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     i1 = start:stop
     i2 = _colind(x, J)
     return MVTSeries(first(I), axes(x, 2)[i2], view(_vals(x), i1, i2))
+end
+
+function Base.view(x::MVTSeries, I::StepRange{<:MIT}, J::_SymbolOneOrCollection)
+    @boundscheck checkbounds(x, I)
+    @boundscheck checkbounds(x, J)
+    start, stop = _ind_range_check(x, I)
+    i1 = start:Int(I.step):stop
+    i2 = _colind(x, J)
+    return view(_vals(x), i1, i2)
 end
 
 
