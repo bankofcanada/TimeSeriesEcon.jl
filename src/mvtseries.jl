@@ -695,6 +695,10 @@ Base.promote_shape(x::MVTSeries, y::AbstractArray) =
 Base.promote_shape(x::AbstractArray, y::MVTSeries) =
     promote_shape(x, _vals(y))
 
+# fix axis promotion for isapprox with matrix
+Base.promote_shape(x::Tuple{UnitRange{<:MIT}, Vector{Symbol}}, y::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}) = (Base.OneTo(length(x[1])), Base.OneTo(length(x[2])))
+Base.promote_shape(x::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, y::Tuple{UnitRange{<:MIT}, Vector{Symbol}}) = x
+
 Base.LinearIndices(x::MVTSeries) = LinearIndices(_vals(x))
 
 Base.:*(x::Number, y::MVTSeries) = copyto!(similar(y), *(x, y.values))
@@ -936,20 +940,27 @@ Base.getindex(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where {F<:Frequency} = get
 Base.setindex!(sd::MVTSeries, ::Any, ::TSeries{F,Bool}) where {F<:Frequency} = mixed_freq_error(frequencyof(sd), F)
 Base.setindex!(sd::MVTSeries{F}, val, ind::TSeries{F,Bool}) where {F<:Frequency} = setindex!(_vals(sd), val, _vals(ind), :)
 
-# Statistics
-# Statistics.mean(x::MVTSeries; kwargs...) = mean(x.values; kwargs...)
-# Statistics.mean(f, x::MVTSeries; kwargs...) = mean(f, x.values; kwargs...)
-Statistics.std(x::MVTSeries; kwargs...) = std(x.values; kwargs...)
-Statistics.var(x::MVTSeries; kwargs...) = var(x.values; kwargs...)
-# Statistics.median(x::MVTSeries; kwargs...) = median(x.values; kwargs...)
-Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...)
-Statistics.cov(x::MVTSeries; kwargs...) = cov(x.values; kwargs...)
+"""
+mapslices(f, A::MVTSeries, dims)
 
-Statistics.mean(f, x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
-Statistics.mean(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = mean(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
-Statistics.std(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = std(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
-Statistics.var(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = var(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
-Statistics.median(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = median(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
-Statistics.cor(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = cor(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
-Statistics.cov(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = cov(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+This functions as Base.mapslices with some specialized returns.
+
+Returns an MVTseries when the dimensions of the result match the dimensions of A.
+
+Returns a TSeries when the result is a vector of the same length as the range of A.
+
+Returns a Matrix otherwise.
+"""
+function Base.mapslices(f, A::MVTSeries; dims) 
+    res = mapslices(f, A.values; dims=dims)
+    if size(res) == size(A)
+        res_mvts = similar(A)
+        res_mvts.values = res
+        return res_mvts
+    elseif size(res) == (size(A)[1], 1)
+        # one column
+        return TSeries(rangeof(A), res[:,1])
+    end
+    return res
+end
 

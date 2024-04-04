@@ -259,6 +259,10 @@ end
         @test 5 == (t[3] = 5)
         @test t.values == [first(t), 2.5, 5.0, 2.5, last(t)]
         @test t[:] === t
+        @test nextind(t, 2) == 3
+        @test prevind(t, 2) == 1
+        @test nextind(t, 5U) == 6U
+        @test prevind(t, 5U) == 4U
     end
 end
 
