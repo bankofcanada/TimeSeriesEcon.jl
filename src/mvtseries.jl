@@ -633,8 +633,6 @@ end
 
 ####   Views
 
-Base.fill!(x::MVTSeries, val) = fill!(_vals(x), val)
-
 Base.view(x::MVTSeries, I...) = view(_vals(x), _vals.(I)...)
 # Base.view(::MVTSeries{F1}, ::TSeries{F2,Bool}, ::Colon=Colon()) where {F1,F2} = mixed_freq_error(F1, F2)
 # Base.view(x::MVTSeries{F}, ind::TSeries{F,Bool}, ::Colon=Colon()) where F<:Frequency = view(x, rangeof(ind)[_vals(ind)], :)
