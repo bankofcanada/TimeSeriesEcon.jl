@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 # -------------------------------------------------------------------------------
@@ -183,6 +183,8 @@ Base.hash(t::TSeries, h::UInt) = hash((t.values, t.firstdate), h)
 
 # -------------------------------------------------------------------------------
 # Indexing with integers and booleans - same as vectors
+
+Base.getindex(x::TSeries, ::Colon) = x
 
 # indexing with integers is plain and simple
 Base.getindex(t::TSeries, i::Int) = getindex(t.values, i)
@@ -369,6 +371,14 @@ end
 Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) where {F1<:Frequency,F2<:Frequency,F3<:Frequency} = mixed_freq_error(t, src, rng)
 Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency} = copyto!(t, rng, src)
 
+# findall and index iteration
+Base.nextind(A::TSeries{F}, i::Integer) where F<:Frequency = i + 1
+Base.prevind(A::TSeries{F}, i::Integer) where F<:Frequency = i - 1
+
+# fix axis promotion for isapprox with vector
+Base.promote_shape(x::Tuple{UnitRange{<:MIT}}, y::Tuple{Base.OneTo{Int64}}) = (Base.OneTo(length(x[1])),)
+Base.promote_shape(x::Tuple{Base.OneTo{Int64}}, y::Tuple{UnitRange{<:MIT}}) = x
+
 """
     typenan(x)
     typenan(T)
@@ -489,6 +499,7 @@ end
     view(t.values, I)
 end
 
+Base.view(t::TSeries, ::Colon) = view(t, Base.axes1(t))
 
 """
     diff(x::TSeries)

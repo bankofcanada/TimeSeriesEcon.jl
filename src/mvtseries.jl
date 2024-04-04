@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 using OrderedCollections
@@ -275,6 +275,8 @@ _vals(a) = a
 const _FallbackType = Union{Integer,Colon,AbstractUnitRange{<:Integer},AbstractArray{<:Integer},CartesianIndex,AbstractArray{<:CartesianIndex}}
 Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), _vals.(i1)...)
 Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, _vals.(i1)...)
+
+Base.getindex(x::MVTSeries, ::Colon, ::Colon) = x
 
 # -------------------------------------------------------------
 # Some other constructors
@@ -647,8 +649,6 @@ end
 
 ####   Views
 
-Base.fill!(x::MVTSeries, val) = fill!(_vals(x), val)
-
 Base.view(x::MVTSeries, I...) = view(_vals(x), _vals.(I)...)
 function Base.view(x::MVTSeries{F}, I::StepRange{MIT{F}}) where {F<:Frequency} 
     start, stop = _ind_range_check(x, I)
@@ -673,6 +673,24 @@ Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon=Colon()) = view(x, I, axes(x, 2))
 Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))
 function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
+    @boundscheck checkbounds(x, I)
+    @boundscheck checkbounds(x, J)
+    start, stop = _ind_range_check(x, I)
+    i1 = start:stop
+    i2 = _colind(x, J)
+    if I isa MIT
+        return view(_vals(x), first(i1), i2)
+    elseif J isa Symbol
+        return TSeries(first(I), view(_vals(x), i1, i2))
+    else
+        return MVTSeries(first(I), axes(x, 2)[i2], view(_vals(x), i1, i2))
+    end
+end
+
+Base.Broadcast.dotview(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = Base.Broadcast.dotview(x, axes(x, 1), J)
+Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrRange, ::Colon) = Base.Broadcast.dotview(x, I, axes(x, 2))
+Base.Broadcast.dotview(x::MVTSeries, ::Colon, ::Colon) = Base.Broadcast.dotview(x, axes(x, 1), axes(x, 2))
+function Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection)
     @boundscheck checkbounds(x, I)
     @boundscheck checkbounds(x, J)
     start, stop = _ind_range_check(x, I)
@@ -707,6 +725,10 @@ Base.promote_shape(x::MVTSeries, y::AbstractArray) =
 
 Base.promote_shape(x::AbstractArray, y::MVTSeries) =
     promote_shape(x, _vals(y))
+
+# fix axis promotion for isapprox with matrix
+Base.promote_shape(x::Tuple{UnitRange{<:MIT}, Vector{Symbol}}, y::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}) = (Base.OneTo(length(x[1])), Base.OneTo(length(x[2])))
+Base.promote_shape(x::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, y::Tuple{UnitRange{<:MIT}, Vector{Symbol}}) = x
 
 Base.LinearIndices(x::MVTSeries) = LinearIndices(_vals(x))
 
@@ -948,4 +970,28 @@ Base.getindex(sd::MVTSeries, ::TSeries{F,Bool}) where {F<:Frequency} = mixed_fre
 Base.getindex(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where {F<:Frequency} = getindex(_vals(sd), _vals(ind), :)
 Base.setindex!(sd::MVTSeries, ::Any, ::TSeries{F,Bool}) where {F<:Frequency} = mixed_freq_error(frequencyof(sd), F)
 Base.setindex!(sd::MVTSeries{F}, val, ind::TSeries{F,Bool}) where {F<:Frequency} = setindex!(_vals(sd), val, _vals(ind), :)
+
+"""
+mapslices(f, A::MVTSeries, dims)
+
+This functions as Base.mapslices with some specialized returns.
+
+Returns an MVTseries when the dimensions of the result match the dimensions of A.
+
+Returns a TSeries when the result is a vector of the same length as the range of A.
+
+Returns a Matrix otherwise.
+"""
+function Base.mapslices(f, A::MVTSeries; dims) 
+    res = mapslices(f, A.values; dims=dims)
+    if size(res) == size(A)
+        res_mvts = similar(A)
+        res_mvts.values = res
+        return res_mvts
+    elseif size(res) == (size(A)[1], 1)
+        # one column
+        return TSeries(rangeof(A), res[:,1])
+    end
+    return res
+end
 

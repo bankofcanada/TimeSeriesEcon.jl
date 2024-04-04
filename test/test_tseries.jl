@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 import TimeSeriesEcon: qq, mm, yy
 
@@ -29,14 +29,14 @@ import TimeSeriesEcon: qq, mm, yy
     @test s[12] == 22.0
     @test s[1:3] == [11.0, 12.0, 13.0]
     @test s[1:2:12] == collect(10.0 .+ (1:2:12))
-    @test s[s .< 13] == [11.0, 12.0]
+    @test s[s.<13] == [11.0, 12.0]
     #
     @test s[20Q1] == 11.0
     @test s[begin] == s.values[1]
     @test s[end] == s.values[end]
-    @test s[begin:begin + 3] isa typeof(s)
-    @test s[begin:begin + 3].values == s.values[begin:begin + 3]
-    @test (@. 13 < s < 16 ) isa TSeries{frequencyof(s),Bool}
+    @test s[begin:begin+3] isa typeof(s)
+    @test s[begin:begin+3].values == s.values[begin:begin+3]
+    @test (@. 13 < s < 16) isa TSeries{frequencyof(s),Bool}
     #
     @test_throws ArgumentError s[2:end]  # can't mix Int indexing with begin/end
     @test_throws ArgumentError s[begin:4]
@@ -47,9 +47,9 @@ import TimeSeriesEcon: qq, mm, yy
 
     q = copy(s)
     s[19Q1] = 5  # outside range
-    @test s.values ≈ [5, NaN, NaN, NaN, q.values...] nans=true
-    s[end + 3] = 3  # outside range
-    @test s.values ≈ [5, NaN, NaN, NaN, q.values..., NaN, NaN, 3] nans=true
+    @test s.values ≈ [5, NaN, NaN, NaN, q.values...] nans = true
+    s[end+3] = 3  # outside range
+    @test s.values ≈ [5, NaN, NaN, NaN, q.values..., NaN, NaN, 3] nans = true
 
     @test_throws ArgumentError s[20Y:21Y] = [2, 3]  # wrong frequency
 
@@ -69,9 +69,9 @@ import TimeSeriesEcon: qq, mm, yy
     @test_throws InexactError i3[20Y] = 2.5
 
     # rangeof with drop
-    let myts = TSeries(20Q1:21Q4,1)
-        @test rangeof(myts,drop= 2) == 20Q3:21Q4
-        @test rangeof(myts,drop=-2) == 20Q1:21Q2
+    let myts = TSeries(20Q1:21Q4, 1)
+        @test rangeof(myts, drop=2) == 20Q3:21Q4
+        @test rangeof(myts, drop=-2) == 20Q1:21Q2
     end
 
     # similar with an abstract array
@@ -124,7 +124,7 @@ end
 
     # we can broadcast with another TSeries of different range
     r = t .+ TSeries(4U, collect(1:6))
-    @test typeof(r) == typeof(t) && eachindex(r) == 5U:9U && all(r.values .== t.values[1:end - 1] .+ (2:6))
+    @test typeof(r) == typeof(t) && eachindex(r) == 5U:9U && all(r.values .== t.values[1:end-1] .+ (2:6))
 
     # we can broadcast with a Vector
     r = t .+ collect(1:6)
@@ -151,7 +151,7 @@ end
     @test all(s[3U:4U].values .== 0.0) && all(s[11U:end] .== 0.0)
 
     # we can .^ correctly
-    @test isa(s .^ 2,typeof(s))
+    @test isa(s .^ 2, typeof(s))
     @test (s .^ 2).values == s.values .^ 2
 
     # dot-assign when the rhs is a vector
@@ -160,16 +160,16 @@ end
     @test (s .= ones(length(s)); rangeof(s) === 3U:12U && all(s.values .== 1.0))
 
     # dot-assign into a range
-    t[begin + 2:end - 2] .= 2
+    t[begin+2:end-2] .= 2
     @test t.values == [2, 3, 2, 2, 6, 7]
-    
-    t[end + 2:end + 4] .= 8
+
+    t[end+2:end+4] .= 8
     @test t.values ≈ [2, 3, 2, 2, 6, 7, NaN, 8, 8, 8] nans = true
 
     # setindex with BitArray and broadcasting
-    t[t .< 7] .= 0
+    t[t.<7] .= 0
     @test t.values ≈ [0, 0, 0, 0, 0, 7, NaN, 8, 8, 8] nans = true
-    
+
     t[2:4] .= 1
     @test t.values ≈ [0, 1, 1, 1, 0, 7, NaN, 8, 8, 8] nans = true
 
@@ -180,22 +180,22 @@ end
     r2 = t2 .+ 5
     t3 = t2 .+ r2
     @test Base.Broadcast.preprocess(t2, r2).x ≈ [6, 7, 8, 9, 10, 11]
-    @test Base.Broadcast.preprocess(t2, r2).keeps == (true, )
-    @test Base.Broadcast.preprocess(t2, r2).defaults == (1, )
+    @test Base.Broadcast.preprocess(t2, r2).keeps == (true,)
+    @test Base.Broadcast.preprocess(t2, r2).defaults == (1,)
 
     Base.Broadcast.check_broadcast_shape((1U:10U,), (1,)) == nothing
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((10,), (1U:10U,))
     @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((2U:11U,), (1U:10U,))
-    @test Base.Broadcast.preprocess(t2, collect(1:10)).keeps == (true, )
-    @test Base.Broadcast.preprocess(t2, collect(1:10)).defaults == (1, )
-    @test Base.Broadcast.preprocess(t2, collect(1:10)).x == [1,2,3,4,5,6,7,8,9,10]
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).keeps == (true,)
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).defaults == (1,)
+    @test Base.Broadcast.preprocess(t2, collect(1:10)).x == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     @test Base.Broadcast.BroadcastStyle(TimeSeriesEcon.TSeriesStyle{Monthly}(), TimeSeriesEcon.TSeriesStyle{Monthly}()) == TimeSeriesEcon.TSeriesStyle{Monthly}()
     bcStyle = TimeSeriesEcon.TSeriesStyle{Monthly}()
     bcStyle2 = TimeSeriesEcon.TSeriesStyle{Unit}()
-    
-    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.TSeriesStyle{Monthly}}(Monthly, (1, ))
+
+    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.TSeriesStyle{Monthly}}(Monthly, (1,))
     @test_throws DimensionMismatch Base.similar(bcasted, Float64)
-    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((1U:10U,), (10, ))
+    @test_throws DimensionMismatch Base.Broadcast.check_broadcast_shape((1U:10U,), (10,))
     @test Base.Broadcast.check_broadcast_shape((1U:10U,), ()) === nothing
     @test Base.Broadcast.preprocess(t2, 10.0) == 10
 
@@ -268,8 +268,8 @@ end
         @test t[1] == t.values[1]
         @test t[2:4] isa Vector{Float64} # TSeries{frequencyof(t),Float64,Vector{Float64}}
         @test t[2:4] == t.values[2:4]
-        @test t[[1,3,4]] isa Vector{Float64}
-        @test t[[1,3,4]] == t.values[[1,3,4]]
+        @test t[[1, 3, 4]] isa Vector{Float64}
+        @test t[[1, 3, 4]] == t.values[[1, 3, 4]]
         # test assignment
         @test begin
             t[2:4] .= 2.5
@@ -277,16 +277,21 @@ end
         end
         @test 5 == (t[3] = 5)
         @test t.values == [first(t), 2.5, 5.0, 2.5, last(t)]
+        @test t[:] === t
+        @test nextind(t, 2) == 3
+        @test prevind(t, 2) == 1
+        @test nextind(t, 5U) == 6U
+        @test prevind(t, 5U) == 4U
     end
 end
 
 @testset "Bool indexing" begin
     tt = TSeries(2020Q1, falses(5))
-    tt[[2,4]] .= true
+    tt[[2, 4]] .= true
     @test tt[tt] == [true, true]
     @test tt[.!tt] == [false, false, false]
     @test_throws ArgumentError (1U:5U)[tt]    # mixed frequencies
-    @test_throws BoundsError (1:5)[tt] == [2,4]
+    @test_throws BoundsError (1:5)[tt] == [2, 4]
     @test rangeof(tt)[tt] == [2020Q2, 2020Q4]
 end
 
@@ -300,22 +305,25 @@ end
         @test z != t
         z = copy(t)
         @test z == t
-        z[begin .+ (2:4)] .+= 0.2
-        z[begin .+ (3:4)] = [3,4]
+        z[begin.+(2:4)] .+= 0.2
+        z[begin.+(3:4)] = [3, 4]
         @test z != t
         z = view(t, 2:5)
         c = view(t, 2010M2:2010M5)
-@test c == z
-        @test z == t[begin .+ (1:4)]
-        z[[1,3]] += [0.5, 0.5]
-        z[[2,4]] = [1,1.5]
         @test c == z
-        @test z == t[begin .+ (1:4)]
+        @test z == t[begin.+(1:4)]
+        z[[1, 3]] += [0.5, 0.5]
+        z[[2, 4]] = [1, 1.5]
+        @test c == z
+        @test z == t[begin.+(1:4)]
+        @test view(t, :) isa TSeries
+        @test view(t, :).values isa SubArray
+        @test view(t, :) == t
     end
 end
 
 @testset "show" begin
-    for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30], 
+    for (nrow, fd) = zip([3, 4, 5, 6, 7, 8, 22, 23, 24, 25, 26, 30],
         Iterators.cycle((qq(2010, 1), mm(2010, 1), yy(2010), 1U)))
         let io = IOBuffer()
             t = TSeries(fd, rand(24))
@@ -331,15 +339,15 @@ end
         end
     end
 end
-            
+
 @testset "math" begin
     tq = TSeries(2020Q1, rand(12))
     tm = TSeries(2020M1, copy(tq.values))
     tu = TSeries(11U, copy(tq.values))
 
     tmp = tq .* 5
-    @test 5tq isa TSeries{Quarterly{3}} 
-    @test tq * 5 isa TSeries{Quarterly{3}} 
+    @test 5tq isa TSeries{Quarterly{3}}
+    @test tq * 5 isa TSeries{Quarterly{3}}
     @test 5tq == tmp
     @test tq * 5 == tmp
     @test (5tm).values == (5tq).values && 5tm ≠ 5tq
@@ -357,7 +365,7 @@ end
     @test_throws MethodError tq + 5
     @test 5 .+ tq == tq .+ 5  # broadcasting works
     @test_throws ArgumentError tq + 5tm   # different frequencies not allowed
-    
+
     # shape errors
     @test_throws ArgumentError TimeSeriesEcon.shape_error(typeof(1), typeof(2))
     @test_throws ArgumentError TimeSeriesEcon.shape_error(1, 2)
@@ -365,7 +373,7 @@ end
     # maximum and minimum
     @test minimum(tq) == minimum(tq.values)
     @test maximum(tq) == maximum(tq.values)
-    halve(x) = x/2
+    halve(x) = x / 2
     @test minimum(halve, tq) == minimum(halve, tq.values)
     @test maximum(halve, tq) == maximum(halve, tq.values)
 end
@@ -402,7 +410,7 @@ end
     # partially out of boundary
     @test_throws BoundsError ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[qq(2018, 1):qq(2018, 4)]
     @test_throws BoundsError ts_q[qq(2017, 1):qq(2018, 4)] == ts_q[1:4]
-    
+
     @test_throws BoundsError ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[qq(2018, 4):qq(2020, 4)]
     @test_throws BoundsError ts_q[qq(2018, 4):qq(2021, 4)] == ts_q[4:12]
 
@@ -415,7 +423,7 @@ end
     @test ts_y[yy(2018):yy(2029)] == ts_y
 
     # access outside of ts boundaries
-    @test_throws BoundsError ts_y[yy(2017):yy(2017) + 100] == ts_y
+    @test_throws BoundsError ts_y[yy(2017):yy(2017)+100] == ts_y
 
     # partially out of boundary
     @test_throws BoundsError ts_y[yy(2017):yy(2018)] == ts_y[yy(2018):yy(2018)]
@@ -433,8 +441,8 @@ end
 @testset "Setting" begin
     begin
         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-        @test_throws BoundsError ts_m[mm(2019, 2):mm(2019, 4)] = 1;
-        ts_m[mm(2019, 2):mm(2019, 4)] .= 1;
+        @test_throws BoundsError ts_m[mm(2019, 2):mm(2019, 4)] = 1
+        ts_m[mm(2019, 2):mm(2019, 4)] .= 1
         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [1, 1, 1]
         @test ts_m.firstdate == mm(2018, 1)
         @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [1, 1, 1]))
@@ -442,8 +450,8 @@ end
 
     begin
         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-        @test_throws BoundsError ts_m[mm(2017, 10):mm(2017, 11)] = 1;
-        ts_m[mm(2017, 10):mm(2017, 11)] .= 1;
+        @test_throws BoundsError ts_m[mm(2017, 10):mm(2017, 11)] = 1
+        ts_m[mm(2017, 10):mm(2017, 11)] .= 1
         @test ts_m[mm(2017, 10):mm(2017, 11)].values == [1, 1]
         @test ts_m.firstdate == mm(2017, 10)
         @test isequal(ts_m.values, vcat([1, 1], [NaN], collect(1.0:12.0)))
@@ -451,7 +459,7 @@ end
 
     begin
         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-        ts_m[mm(2019, 2):mm(2019, 4)] = [9, 10, 11];
+        ts_m[mm(2019, 2):mm(2019, 4)] = [9, 10, 11]
         @test ts_m[mm(2019, 2):mm(2019, 4)].values == [9, 10, 11]
         @test ts_m.firstdate == mm(2018, 1)
         @test isequal(ts_m.values, vcat(collect(1.0:12.0), [NaN], [9, 10, 11]))
@@ -459,7 +467,7 @@ end
 
     begin
         ts_m = TSeries(mm(2018, 1):mm(2018, 12), collect(1.0:12.0))
-        ts_m[mm(2017, 10):mm(2017, 11)] = [9, 10];
+        ts_m[mm(2017, 10):mm(2017, 11)] = [9, 10]
         @test ts_m[mm(2017, 10):mm(2017, 11)].values == [9, 10]
         @test ts_m.firstdate == mm(2017, 10)
         @test isequal(ts_m.values, vcat([9, 10], [NaN], collect(1.0:12.0)))
@@ -480,7 +488,7 @@ end
 
     begin
         ts_m1 = TSeries(2018Q1:2019Q4, collect(1.0:8.0))
-        setindex!(ts_m1, [0.0, 1.0, 2.0, 3.0], StepRange(2018Q1, 1Q3-1Q1, 2019Q4))
+        setindex!(ts_m1, [0.0, 1.0, 2.0, 3.0], StepRange(2018Q1, 1Q3 - 1Q1, 2019Q4))
         @test ts_m1.values == [0.0, 2.0, 1.0, 4.0, 2.0, 6.0, 3.0, 8.0]
     end
 
@@ -503,9 +511,9 @@ end
 
 @testset "Iris" begin
     # IRIS based assignment of values from other TSeries
-    x = TSeries(qq(2020, 1), zeros(3));
-    y = TSeries(qq(2020, 1), ones(3));
-    x[qq(2020, 1):qq(2020, 2)] = y;
+    x = TSeries(qq(2020, 1), zeros(3))
+    y = TSeries(qq(2020, 1), ones(3))
+    x[qq(2020, 1):qq(2020, 2)] = y
     @test x == TSeries(qq(2020, 1), [1, 1, 0])
 
 
@@ -520,15 +528,15 @@ end
         t[6U:7U] = s
         @test t.values == [1, 0.8, 0.8, 0.7, 1, 1]
 
-        t[6U:7U] = [2,3]
+        t[6U:7U] = [2, 3]
         @test t.values == [1, 2, 3, 0.7, 1, 1]
 
         @test_throws ArgumentError t[6Y:7Y] = s  # mixed frequency in indexing range
         @test_throws ArgumentError t[6U:7U] = TSeries(6Y, s.values)  # mixed frequency of src and dest
     end
 
-        # IRIS related: shift
-    x = TSeries(qq(2020, 1), zeros(3));
+    # IRIS related: shift
+    x = TSeries(qq(2020, 1), zeros(3))
     @test shift(x, 1) == TSeries(qq(2019, 4), zeros(3))
 
     shift!(x, 1)
@@ -556,7 +564,7 @@ end
         z = y
         @test z === y
         y1 = lag(y)
-        @test rangeof(y1) === 1 .+ (rangeof(y))  && y1.values == y.values
+        @test rangeof(y1) === 1 .+ (rangeof(y)) && y1.values == y.values
         lag!(y)
         @test y1 == y && y1 !== y
         @test z === y
@@ -580,10 +588,10 @@ end
 @testset "overlay" begin
     # from FAME manual
     A, B = (TSeries(87Y, [1, 2, NaN, 4]), TSeries(87Y, [NaN, 6, 7, 8]))
-    @test overlay(A, B) == TSeries(87Y, [1,2,7,4])
-    @test overlay(B, A) == TSeries(87Y, [1,6,7,8])
+    @test overlay(A, B) == TSeries(87Y, [1, 2, 7, 4])
+    @test overlay(B, A) == TSeries(87Y, [1, 6, 7, 8])
     @test overlay(86Y:92Y, A, B) ≈ TSeries(86Y, [NaN, 1, 2, 7, 4, NaN, NaN]) nans = true
-    @test (C = overlay(A,B); overlay(C,A).values == C.values)
+    @test (C = overlay(A, B); overlay(C, A).values == C.values)
 end
 
 @testset "strip" begin
@@ -601,31 +609,31 @@ end
 @testset "recursive" begin
     ts = TSeries(1U, zeros(0))
     ts[1U] = ts[2U] = 1.0
-    @rec 3U:10U ts[t] = ts[t-1]+ts[t-2]
-            @test ts.values == [1.0,1,2,3,5,8,13,21,34,55]
-    t = zeros(10,7)
+    @rec 3U:10U ts[t] = ts[t-1] + ts[t-2]
+    @test ts.values == [1.0, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+    t = zeros(10, 7)
     r = rand(1, 7)
     t[1, :] = r
-    @rec s=2:10 t[s,:] = t[s-1,:] .* s
+    @rec s = 2:10 t[s, :] = t[s-1, :] .* s
     @test t ≈ factorial.(1:10) * r
     #
-    s = ones(15);
-    @rec i=3:15 s[i] = s[i-1] + s[i-2]
-    @test s == Float64[1,1,2,3,5,8,13,21,34,55,89,144,233,377,610]
+    s = ones(15)
+    @rec i = 3:15 s[i] = s[i-1] + s[i-2]
+    @test s == Float64[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610]
     s = TSeries(2020Q1:2021Q4)
     s[begin] = 0
     @test_throws UndefVarError @rec 2020Q1:2021Q2 s[i+1] = 1.0 + s[i]
-    @rec i=firstdate(s):2023Q2 s[i+1] = 1.0 + s[i]
+    @rec i = firstdate(s):2023Q2 s[i+1] = 1.0 + s[i]
     @test rangeof(s) == 2020Q1:2023Q3
     @test values(s) == Float64[0:14...]
     resize!(s, 2020Q1:2020Q2)
     @rec firstdate(s)+1:2022Q3 s[t+1] = 2.0 * s[t] + s[t-1]
     @test rangeof(s) == 2020Q1:2022Q4
-    @test values(s) == Float64[0,1,2,5,12,29,70,169,408,985,2378,5741]
-    
-        tt = TSeries(0U, ones(4))
-        @rec 1U:10U tt[t] = @_addone tt[t-1]
-        @test tt == TSeries(0U, 1:11)
+    @test values(s) == Float64[0, 1, 2, 5, 12, 29, 70, 169, 408, 985, 2378, 5741]
+
+    tt = TSeries(0U, ones(4))
+    @rec 1U:10U tt[t] = @_addone tt[t-1]
+    @test tt == TSeries(0U, 1:11)
 end
 
 @testset "various" begin
@@ -636,7 +644,7 @@ end
     @test TimeSeriesEcon.compare_equal(a.values, b.values) == true
     @test TimeSeriesEcon.compare_equal(a.values[1], b.values[2]) == true
 
-    c = TSeries(89Y, ones(7)*1.1)
+    c = TSeries(89Y, ones(7) * 1.1)
     @test TimeSeriesEcon.compare_equal(a, c) == false
     @test TimeSeriesEcon.compare_equal(a, c, atol=0.3) == true
 
@@ -644,20 +652,20 @@ end
     d = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
     e = TSeries(89Y, [1.5, 1.6, NaN, 1.8])
     @test TimeSeriesEcon.compare(d, e, nans=true, quiet=true) == true
-    
+
     # compare with different ranges
     A = TSeries(2020Q1, rand(20))
     B = A[begin+4:end-4]
     @test false == @compare A B quiet
-    @test true  == @compare A B quiet ignoremissing
-    @test false == @compare A B quiet trange=2019Q1:2025Q4
-    @test true  == @compare A B quiet trange=2019Q1:2025Q4 ignoremissing
-    @test true  == @compare A B quiet trange=2000Q1:2000Q4
-    @test true  == @compare A B quiet trange=2000Q1:2000Q4 ignoremissing
-       
+    @test true == @compare A B quiet ignoremissing
+    @test false == @compare A B quiet trange = 2019Q1:2025Q4
+    @test true == @compare A B quiet trange = 2019Q1:2025Q4 ignoremissing
+    @test true == @compare A B quiet trange = 2000Q1:2000Q4
+    @test true == @compare A B quiet trange = 2000Q1:2000Q4 ignoremissing
+
     #reindexing
-    ts = TSeries(2020Q1,randn(10))
-    ts2 = reindex(ts,2021Q1 => 1U; copy = true)
+    ts = TSeries(2020Q1, randn(10))
+    ts2 = reindex(ts, 2021Q1 => 1U; copy=true)
     @test ts2[3U] == ts[2021Q3]
     @test length(ts2) == 10
     @test ts2[-3U] == ts[2020Q1]
@@ -669,14 +677,14 @@ end
     @test diff(t1).values == [1, 2, 4]
     @test rangeof(diff(t1)) == 2001Y:2003Y
 
-    @test pct(t1).values == [100,100,100]
+    @test pct(t1).values == [100, 100, 100]
     @test rangeof(diff(t1)) == 2001Y:2003Y
 
-    @test pct(t1, -2).values == [300,300]
+    @test pct(t1, -2).values == [300, 300]
     @test rangeof(pct(t1, -2)) == 2002Y:2003Y
 
     t2 = TSeries(2000Y, log.([1, 2, 4, 8]))
-    @test pct(t2; islog=true).values ≈ [100,100,100]
+    @test pct(t2; islog=true).values ≈ [100, 100, 100]
     @test rangeof(pct(t2; islog=true)) == 2001Y:2003Y
 
     #annualized
