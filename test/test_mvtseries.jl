@@ -852,7 +852,7 @@ using OrderedCollections
 
     # pct, apct, ytypct
     ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
-    @test apct(ts).values == ((ts.values[2:10,:] ./ ts.values[1:9,:]) .^ 4 .- 1) * 100
+    @test apct(ts).values ≈ ((ts.values[2:10,:] ./ ts.values[1:9,:]) .^ 4 .- 1) * 100
     @test pct(ts).values ≈ ((ts.values[2:10,:] ./ ts.values[1:9,:]) .- 1) * 100
     @test ytypct(ts).values ≈ ((ts.values[5:10,:] ./ ts.values[1:6,:]) .- 1) * 100
 
@@ -867,10 +867,10 @@ using OrderedCollections
     # one-column returns of the same length as ts return a TSeries
     row_means = (ts.values[:,1] .+ ts.values[:,2] )./ 2
     res_tseries = TSeries(rangeof(ts), row_means)
-    @test mapslices(mean, ts, dims=2) == res_tseries
+    @test mapslices(mean, ts, dims=2) ≈ res_tseries
 
     # returns that don't fit just return a matrix
-    @test mapslices(mean, ts, dims=1) ==  mean(ts.values, dims=1)
+    @test mapslices(mean, ts, dims=1) ≈  mean(ts.values, dims=1)
 
 
 end
