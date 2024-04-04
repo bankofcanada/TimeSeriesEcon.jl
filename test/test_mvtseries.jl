@@ -87,7 +87,7 @@ end
     @test a[1, :] == [1, 6]
     @test a[1:3, :] == [1 6; 2 7; 3 8]
     @test a[:, 1:2] == a.values[:, 1:2]
-    # @test a[:, :] == a.values
+    @test a[:, :] == a
     for i = 1:5
         for j = 1:2
             x = a[i, j]
