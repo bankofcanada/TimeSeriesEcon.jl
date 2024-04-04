@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 # -------------------------------------------------------------------------------
@@ -183,6 +183,8 @@ Base.hash(t::TSeries, h::UInt) = hash((t.values, t.firstdate), h)
 
 # -------------------------------------------------------------------------------
 # Indexing with integers and booleans - same as vectors
+
+Base.getindex(x::TSeries, ::Colon) = x
 
 # indexing with integers is plain and simple
 Base.getindex(t::TSeries, i::Int) = getindex(t.values, i)
@@ -484,6 +486,8 @@ end
     fi = firstindex(t.values)
     TSeries(firstindex(t) + first(I) - one(first(I)), view(t.values, oftype(fi, first(I)):oftype(fi, last(I))))
 end
+
+Base.view(t::TSeries, ::Colon) = view(t, Base.axes1(t))
 
 """
     diff(x::TSeries)

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 
@@ -87,7 +87,7 @@ end
     @test a[1, :] == [1, 6]
     @test a[1:3, :] == [1 6; 2 7; 3 8]
     @test a[:, 1:2] == a.values[:, 1:2]
-    @test a[:, :] == a.values
+    @test a[:, :] == a
     for i = 1:5
         for j = 1:2
             x = a[i, j]
@@ -111,9 +111,9 @@ end
     @test_throws BoundsError a.c
     @test (a.a = TSeries(20Q1, 1:10); a.values[:, 1] == collect(1:10))
     @test (a.a = 1; a.values[:, 1] == ones(10))
-    b = MVTSeries(rangeof(a), (:a, ), rand)
-    @test (a.a = b; a.values[:, 1] == b.values[:,1])
-    @test (a[:,:] .= 6ones(size(a)...); all(a.values .== 6))
+    b = MVTSeries(rangeof(a), (:a,), rand)
+    @test (a.a = b; a.values[:, 1] == b.values[:, 1])
+    @test (a[:, :] .= 6ones(size(a)...); all(a.values .== 6))
 end
 
 @testset "MV" begin
@@ -270,10 +270,63 @@ end
         @test (sd[:a] .= dta2[:, 1]; sd[:b] = dta2[:, 2]; sd.values == dta2)
         @test (sd[nms] .= dta; sd.values == dta)
         @test (sd[nms] = dta2; sd.values == dta2)
-        @test (sd[nms] = sd2; sd[rangeof(sd2),:].values == sd2.values)
+        @test (sd[nms] = sd2; sd[rangeof(sd2), :].values == sd2.values)
         rand!(sd)
-        @test (sd[nms] .= sd2; sd[rangeof(sd2),:].values == sd2.values)
+        @test (sd[nms] .= sd2; sd[rangeof(sd2), :].values == sd2.values)
     end
+end
+
+@testset "MV views" begin
+    x = MVTSeries(2000Q1, (:a, :b, :c), rand(10, 3))
+
+    # first MIT, second list
+    @test x[2000Q1, (:a, :b)] == view(x, 2000Q1, (:a, :b))
+    @test view(x, 2000Q1, (:a, :b)) isa SubArray
+    # first MIT, second :
+    @test x[2001Q1, :] == view(x, 2001Q1, :)
+    @test view(x, 2001Q1, :) isa SubArray
+
+    # first MIT-range, second name
+    @test x[2000Q1:2001Q4, :b] isa TSeries
+    @test x[2000Q1:2001Q4, :b].values isa Vector
+    @test view(x, 2000Q1:2001Q4, :b) isa TSeries
+    @test view(x, 2000Q1:2001Q4, :b).values isa SubArray
+    @test x[2000Q1:2001Q4, :b] == view(x, 2000Q1:2001Q4, :b)
+
+    # first :, second name
+    @test x[:, :c] isa TSeries
+    # @test x[:, :c].values isa Vector
+    @test view(x, :, :c) isa TSeries
+    @test view(x, :, :c).values isa SubArray
+    @test x[:, :c] == view(x, :, :c)
+
+    # first MIT-range, second list
+    @test x[2000Q2:2001Q3, (:a, :c)] isa MVTSeries
+    @test x[2000Q2:2001Q3, (:a, :c)].values isa Matrix
+    @test view(x, 2000Q2:2001Q3, (:a, :c)) isa MVTSeries
+    @test view(x, 2000Q2:2001Q3, (:a, :c)).values isa SubArray
+    @test x[2000Q2:2001Q3, (:a, :c)] == view(x, 2000Q2:2001Q3, (:a, :c))
+
+    # first MIT-range, second :
+    @test x[2000Q1:2001Q3, :] isa MVTSeries
+    @test x[2000Q1:2001Q3, :].values isa Matrix
+    @test view(x, 2000Q1:2001Q3, :) isa MVTSeries
+    @test view(x, 2000Q1:2001Q3, :).values isa SubArray
+    @test x[2000Q1:2001Q3, :] == view(x, 2000Q1:2001Q3, :)
+
+    # first :, second list
+    @test x[:, (:b, :a)] isa MVTSeries
+    @test x[:, (:b, :a)].values isa Matrix
+    @test view(x, :, (:b, :a)) isa MVTSeries
+    @test view(x, :, (:b, :a)).values isa SubArray
+    @test x[:, (:b, :a)] == view(x, :, (:b, :a))
+
+    # first :, second :
+    @test x[:, :] isa MVTSeries
+    @test x[:, :].values isa Matrix
+    @test view(x, :, :) isa MVTSeries
+    @test view(x, :, :).values isa SubArray
+    @test x[:, :] == view(x, :, :)
 end
 
 @testset "MVTSeries show" begin
