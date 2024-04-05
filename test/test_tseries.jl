@@ -199,43 +199,55 @@ end
     @test Base.Broadcast.check_broadcast_shape((1U:10U,), ()) === nothing
     @test Base.Broadcast.preprocess(t2, 10.0) == 10
 
-    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    trng = 20Q1 .+ (0:9)
+    t4 = TSeries(20Q1, collect(1.0:10.0))
     v4 = [7.0, 2.0, 7.0, 4.0, 7.0, 6.0, 7.0, 8.0, 7.0, 10.0]
     t4[begin:2:end] .= 7.0
     @test t4.values == v4
     
-    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[1:2:10] .= 7.0
     @test t4.values == v4
     
     v5 = ones(5) .* 7.0
-    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[begin:2:end] = v5
     @test t4.values == v4
 
     v5 = ones(5) .* 7.0
-    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[begin:2:end] .= v5
     @test t4.values == v4
 
-    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    # assign with steprange of Int
+    t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[1:2:10] = v5
     @test t4.values == v4
-
-    t4 = TSeries(1U:10U, collect(1.0:10.0))
+    
+    # broadcast assignment with steprange of Int
+    t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[1:2:10] .= v5
     @test t4.values == v4
 
-    t4 = TSeries(1U:10U, collect(1.0:10.0))
-    t5 = fill(7.0, 1U:10U)
-    t5[begin+1:2:end] = t4
+    # assigning with non-unit-step ranges of MIT
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t5 = fill(7.0, rangeof(t4))
+    brng = firstdate(t4)+1:2:lastdate(t4)
+    t5[brng] = t4
     @test t5.values == v4
 
-    # TODO: fix broadcasting with non-unit-step ranges
-    # t4 = TSeries(1U:10U, collect(1.0:10.0))
-    # t5 = fill(7.0, 1U:10U)
-    # t5[begin+1:2:end] .= t4
-    # @test t5.values == v4
+    # broadcasting with non-unit-step ranges of MIT
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t5 = fill(7.0, rangeof(t4))
+    brng = firstdate(t4)+1:2:lastdate(t4)
+    t5[brng] .= t4   # rhs is a TSeries
+    @test t5.values == v4
+    
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t5 = fill(7.0, rangeof(t4))
+    brng = firstdate(t4)+1:2:lastdate(t4)
+    t5[brng] .= t4[brng] # rhs is a Vector
+    @test t5.values == v4
 
 end
 

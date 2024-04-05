@@ -726,13 +726,13 @@ Base.:(<)(l::MIT, r::Duration) = throw(ArgumentError("Illegal comparison of $(ty
 Base.:(<)(l::Duration, r::MIT) = throw(ArgumentError("Illegal comparison of $(typeof(l)) and $(typeof(r))."))
 
 # Comparison of Duration with Int is needed for indexing and iterating time series.
-# Base.:(<)(l::Int, r::Duration) = l < Int(r)
-# Base.:(<)(l::Duration, r::Int) = Int(l) < r
+Base.:(<)(l::Base.BitInteger, r::Duration) = l < Int(r)
+Base.:(<)(l::Duration, r::Base.BitInteger) = Int(l) < r
 
 # <= is expressed as < or == 
 Base.:(<=)(l::Union{MIT,Duration}, r::Union{MIT,Duration}) = (l < r) || (l == r)
-# Base.:(<=)(l::Duration, r::Int) = (l < r) || (l == r)
-# Base.:(<=)(l::Int, r::Duration) = (l < r) || (l == r)
+Base.:(<=)(l::Duration, r::Base.BitInteger) = (l < r) || (l == r)
+Base.:(<=)(l::Base.BitInteger, r::Duration) = (l < r) || (l == r)
 
 
 # -------------------
@@ -757,6 +757,7 @@ Base.:(+)(l::Integer, r::Union{MIT,Duration}) = oftype(r, l + Int(r))
 
 # checkindex, however, needs to work with an Int
 Base.checkindex(::Type{Bool}, inds::AbstractUnitRange{<:MIT}, i::Int) = 1 <= i <= length(inds)
+Base.checkindex(::Type{Bool}, inds::AbstractUnitRange{<:Duration}, i::Int) = 1 <= i <= Int(length(inds))
 
 # -------------------
 # one(x) is meant to be a dimensionless 1, so that's what we do
@@ -868,8 +869,8 @@ function rangeof_span end
 export rangeof_span
 
 _to_unitrange(x::MIT) = UnitRange(x, x)
-_to_unitrange(x::UnitRange) = x
-_to_unitrange(x::AbstractRange) = UnitRange(extrema(x)...)
+_to_unitrange(x::AbstractUnitRange{<:MIT}) = x
+_to_unitrange(x::AbstractArray{<:MIT}) = UnitRange(extrema(x)...)
 _to_unitrange(x) = applicable(rangeof, x) ? rangeof(x) : 1:0
 
 rangeof_span() = 1U:0U
