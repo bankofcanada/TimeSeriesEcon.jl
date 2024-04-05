@@ -113,6 +113,7 @@ end
     @test (a.a = 1; a.values[:, 1] == ones(10))
     b = MVTSeries(rangeof(a), (:a,), rand)
     @test (a.a = b; a.values[:, 1] == b.values[:, 1])
+    @test (a[:, :] = 6ones(size(a)...); all(a.values .== 6))
     @test (a[:, :] .= 6ones(size(a)...); all(a.values .== 6))
 end
 
@@ -595,22 +596,78 @@ end
     @test Base.Broadcast.preprocess(x2, 2.3) == 2.3
 
     mat3 = [7.0 7.0; 2.0 12.0; 7.0 7.0; 4.0 14.0; 7.0 7.0; 6.0 16.0; 7.0 7.0; 8.0 18.0; 7.0 7.0; 10.0 20.0]
+
+    ##################################################################################################
+    # broadcasting assignment of a Number using steprange index
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
     x3[20Q1:2:22Q2] .= 7.0
     @test x3.values == mat3
 
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
-    x3[1:2:10,:] .= 7.0
+    x3[1:2:10, :] .= 7.0
     @test x3.values == mat3
-    
-    mat4 = ones(5,2) .* 7
+
+    # direct assignment of a Matrix using steprange index
+    mat4 = ones(5, 2) .* 7
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
     x3[20Q1:2:22Q2] = mat4
     @test x3.values == mat3
 
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
-    x3[1:2:10,:] = mat4
+    x3[1:2:10, :] = mat4
     @test x3.values == mat3
+
+    # broadcasting assignment of a Matrix using steprange index
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] .= mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10, :] .= mat4
+    @test x3.values == mat3
+    
+    # direct assignment of a Matrix using Vector index
+    ind = collect(20Q1:2:22Q2)
+
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] = mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] .= mat4
+    @test x3.values == mat3
+
+
+    ##################################################################################################
+    # repeat, with second index (:)
+
+    for second_index in ((:,), ([:a, :b],), ())
+
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[20Q1:2:22Q2, second_index...] .= 7.0
+        @test x3.values == mat3
+
+        # direct assignment of a Matrix using steprange index
+        mat4 = ones(5, 2) .* 7
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[20Q1:2:22Q2, second_index...] = mat4
+        @test x3.values == mat3
+
+        # broadcasting assignment of a Matrix using steprange index
+        mat4 = ones(5, 2) .* 7
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[20Q1:2:22Q2, second_index...] .= mat4
+        @test x3.values == mat3
+    end
+
+    ##################################################################################################
+
+
+    
+    ##################################################################################################
+
 
     mat5 = [7.0 11.0 7.0; 2.0 12.0 22.0; 7.0 13.0 7.0; 4.0 14.0 24.0; 7.0 15.0 7.0; 6.0 16.0 26.0; 7.0 17.0 7.0; 8.0 18.0 28.0; 7.0 19.0 7.0; 10.0 20.0 30.0]
     x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
@@ -618,7 +675,7 @@ end
     @test x3.values == mat5
 
     x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
-    x3[1:2:10, [1,3]] .= 7.0
+    x3[1:2:10, [1, 3]] .= 7.0
     @test x3.values == mat5
 
 end
@@ -933,9 +990,9 @@ using OrderedCollections
 
     # pct, apct, ytypct
     ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
-    @test apct(ts).values ≈ ((ts.values[2:10,:] ./ ts.values[1:9,:]) .^ 4 .- 1) * 100
-    @test pct(ts).values ≈ ((ts.values[2:10,:] ./ ts.values[1:9,:]) .- 1) * 100
-    @test ytypct(ts).values ≈ ((ts.values[5:10,:] ./ ts.values[1:6,:]) .- 1) * 100
+    @test apct(ts).values ≈ ((ts.values[2:10, :] ./ ts.values[1:9, :]) .^ 4 .- 1) * 100
+    @test pct(ts).values ≈ ((ts.values[2:10, :] ./ ts.values[1:9, :]) .- 1) * 100
+    @test ytypct(ts).values ≈ ((ts.values[5:10, :] ./ ts.values[1:6, :]) .- 1) * 100
 
     # mapslices
     ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
@@ -946,12 +1003,12 @@ using OrderedCollections
     @test mapslices(x -> x .+ 1, ts, dims=2) == res_mvts
 
     # one-column returns of the same length as ts return a TSeries
-    row_means = (ts.values[:,1] .+ ts.values[:,2] )./ 2
+    row_means = (ts.values[:, 1] .+ ts.values[:, 2]) ./ 2
     res_tseries = TSeries(rangeof(ts), row_means)
     @test mapslices(mean, ts, dims=2) ≈ res_tseries
 
     # returns that don't fit just return a matrix
-    @test mapslices(mean, ts, dims=1) ≈  mean(ts.values, dims=1)
+    @test mapslices(mean, ts, dims=1) ≈ mean(ts.values, dims=1)
 
 
 end
