@@ -249,6 +249,32 @@ end
     t5[brng] .= t4[brng] # rhs is a Vector
     @test t5.values == v4
 
+    # broadcasting with an array of MIT indexes
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t5 = fill(7.0, rangeof(t4))
+    binds = collect(firstdate(t4)+1:2:lastdate(t4))
+    t5[binds] .= t4   # rhs is a TSeries
+    @test t5.values == v4
+    
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t5 = fill(7.0, rangeof(t4))
+    binds = collect(firstdate(t4)+1:2:lastdate(t4))
+    t5[binds] .= t4[binds] # rhs is a Vector
+    @test t5.values == v4
+
+    # assigning with an array of MIT indexes
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t5 = fill(7.0, rangeof(t4))
+    binds = collect(firstdate(t4)+1:2:lastdate(t4))
+    t5[binds] = t4   # rhs is a TSeries
+    @test t5.values == v4
+    
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t5 = fill(7.0, rangeof(t4))
+    binds = collect(firstdate(t4)+1:2:lastdate(t4))
+    t5[binds] = t4[binds] # rhs is a Vector
+    @test t5.values == v4
+
 end
 
 ts_u = TSeries(5)

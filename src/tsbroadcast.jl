@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 using Base.Broadcast
@@ -149,8 +149,8 @@ function Base.Broadcast.dotview(t::TSeries, rng::AbstractUnitRange{<:MIT})
 end
 
 Base.compute_stride1(s, inds, I::Tuple{AbstractRange{MIT{F}},Vararg{Any}}) where {F<:Frequency} = s * Int(step(I[1]))
-Base.compute_offset1(parent::TSeries, stride1::Integer, I::Tuple{AbstractRange{<:MIT}}) =
-    (@inline; Int(first(I[1]) - firstdate(parent) + 1) - stride1 * Int(first(Base.axes1(I[1]))))
+@inline Base.compute_offset1(parent::TSeries, stride1::Integer, I::Tuple{AbstractRange{<:MIT}}) =
+    Int(first(I[1]) - firstdate(parent) + 1) - stride1 * Int(first(Base.axes1(I[1])))
 
 function Base.Broadcast.dotview(t::TSeries, rng::AbstractArray{<:MIT})
     resize!(t, rangeof_span(t, rng))

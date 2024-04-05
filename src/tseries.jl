@@ -328,7 +328,7 @@ function _ts_values_inds(t, rng::StepRange{<:MIT})
     step = oftype(stop - start, Base.step(rng))
     return start:step:stop
 end
-function _ts_values_inds(t, rng::AbstractRange{<:MIT})
+function _ts_values_inds(t, rng::AbstractVector{<:MIT})
     @boundscheck checkbounds(t, rng)
     fd = firstdate(t)
     fi = firstindex(t.values, 1)
@@ -340,8 +340,8 @@ Base.getindex(t::TSeries, m::MIT) = mixed_freq_error(t, m)
     getindex(t.values, _ts_values_inds(t, m))
 end
 
-Base.getindex(t::TSeries, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
-function Base.getindex(t::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency}
+Base.getindex(t::TSeries, rng::AbstractVector{<:MIT}) = mixed_freq_error(t, rng)
+function Base.getindex(t::TSeries{F}, rng::AbstractVector{MIT{F}}) where {F<:Frequency}
     return getindex(t.values, _ts_values_inds(t, rng))
 end
 function Base.getindex(t::TSeries{F}, rng::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
@@ -361,8 +361,8 @@ end
 
 Base.setindex!(t::TSeries, from::TSeries, m::MIT) = setindex!(t, from[m], m)
 
-Base.setindex!(t::TSeries, ::AbstractVector{<:Number}, rng::AbstractRange{<:MIT}) = mixed_freq_error(t, rng)
-function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::AbstractRange{MIT{F}}) where {F<:Frequency}
+Base.setindex!(t::TSeries, ::AbstractVector{<:Number}, rng::AbstractArray{<:MIT}) = mixed_freq_error(t, rng)
+function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::AbstractArray{MIT{F}}) where {F<:Frequency}
     t_rng = rangeof(t)
     if !issubset(rng, t_rng)
         # !! resize!() doesn't work for TSeries out of the box. we implement it below. 
@@ -371,8 +371,8 @@ function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::Abstr
     setindex!(t.values, vec, _ts_values_inds(t, rng))
 end
 
-Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractRange{MIT{F3}}) where {F1<:Frequency,F2<:Frequency,F3<:Frequency} = mixed_freq_error(t, src, rng)
-Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractRange{MIT{F}}) where {F<:Frequency} = copyto!(t, rng, src)
+Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractVector{MIT{F3}}) where {F1<:Frequency,F2<:Frequency,F3<:Frequency} = mixed_freq_error(t, src, rng)
+Base.setindex!(t::TSeries{F}, src::TSeries{F}, rng::AbstractVector{MIT{F}}) where {F<:Frequency} = copyto!(t, rng, src)
 
 # findall and index iteration
 Base.nextind(::TSeries, i::Integer) = i + 1
@@ -464,7 +464,7 @@ Base.copyto!(dest::TSeries, src::TSeries) = mixed_freq_error(dest, src)
 Base.copyto!(dest::TSeries{F}, src::TSeries{F}) where {F<:Frequency} = copyto!(dest, rangeof(src), src)
 
 #
-Base.copyto!(dest::TSeries, drng::AbstractRange{<:MIT}, src::TSeries) = mixed_freq_error(dest, drng, src)
+Base.copyto!(dest::TSeries, drng::AbstractVector{<:MIT}, src::TSeries) = mixed_freq_error(dest, drng, src)
 function Base.copyto!(dest::TSeries{F}, drng::AbstractUnitRange{MIT{F}}, src::TSeries{F}) where {F<:Frequency}
     fullindex = rangeof_span(dest, drng)
     resize!(dest, fullindex)
@@ -475,7 +475,7 @@ function Base.copyto!(dest::TSeries{F}, drng::AbstractUnitRange{MIT{F}}, src::TS
     return dest
 end
 
-function Base.copyto!(dest::TSeries{F}, drng::AbstractRange{MIT{F}}, src::TSeries{F}) where {F<:Frequency} 
+function Base.copyto!(dest::TSeries{F}, drng::AbstractVector{MIT{F}}, src::TSeries{F}) where {F<:Frequency} 
     fullindex = rangeof_span(dest, drng)
     resize!(dest, fullindex)    
     copyto!(view(dest, drng), view(src, drng))
@@ -485,23 +485,23 @@ end
 # nothing
 
 # view with MIT indexing
-Base.view(t::TSeries, I::AbstractRange{<:MIT}) = mixed_freq_error(t, I)
+Base.view(t::TSeries, I::AbstractVector{<:MIT}) = mixed_freq_error(t, I)
 function Base.view(t::TSeries{F}, I::AbstractUnitRange{MIT{F}}) where {F<:Frequency}
     return TSeries(I, view(t.values, _ts_values_inds(t, I)))
 end
 
 # stepranges
-function Base.view(t::TSeries{F}, I::AbstractRange{MIT{F}}) where {F<:Frequency}
+function Base.view(t::TSeries{F}, I::AbstractVector{MIT{F}}) where {F<:Frequency}
     view(t.values, _ts_values_inds(t, I))
 end
 
 # view with Int indexing
-function Base.view(t::TSeries, I::AbstractUnitRange{TI}) where {TI<:Integer}
+function Base.view(t::TSeries, I::AbstractUnitRange{TI}) where {TI<:Base.BitInteger}
     TSeries(firstdate(t) + first(I) - one(TI), view(t.values, I))
 end
 
 # stepranges
-function Base.view(t::TSeries, I::AbstractRange{<:Integer})
+function Base.view(t::TSeries, I::AbstractVector{<:Base.BitInteger})
     view(t.values, I)
 end
 
