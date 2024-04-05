@@ -41,25 +41,23 @@ promotion of numerical types in Julia. Its range spans all of the ranges of
 the arguments, unless the optional `rng` is given in which case it becomes the
 range.
 """
-overlay(tseries::TSeries...) = overlay(rangeof_span(tseries...), tseries...)
-function overlay(rng::AbstractUnitRange{<:MIT}, tseries::TSeries...)
-    T = mapreduce(eltype, promote_type, tseries)
+overlay(x::TSeries, tseries::TSeries...) = overlay(rangeof_span(x, tseries...), x, tseries...)
+function overlay(rng::AbstractUnitRange{<:MIT}, x::TSeries, tseries::TSeries...)
+    T = Base.promote_eltype(x, tseries...)
     ret = TSeries(rng, typenan(T))
-    # todo = contains `true` for locations that don't yet contain valid values.
-    todo = trues(rng)
+    copyto!(ret, x)
     for ts in tseries
         # quit if nothing left to do
-        any(todo) || break
+        any(istypenan, ret) || break
         for (mit, val) in zip(rangeof(ts), ts.values)
+            # skip val if not valid
+            istypenan(val) && continue
             # skip if outside overlay range
             mit ∈ rng || continue
             # skip if already done
-            todo[mit] || continue
-            # skip if not valid
-            istypenan(val) && continue
-            # still here? assign and mark done
+            istypenan(ret[mit]) || continue
+            # still here? assign 
             ret[mit] = val
-            todo[mit] = false
         end
     end
     return ret
@@ -97,7 +95,7 @@ function overlay(args::MVTSeries...)
     isempty(args) && return MVTSeries()
     rng =rangeof_span(args...) 
     names = collect(mapfoldl(keys, union, args, init=OrderedSet{Symbol}()))
-    ET = mapreduce(eltype, promote_type, args)
+    ET = Base.promote_eltype(args...)
     ret = MVTSeries(rng, names, typenan(ET))
     for name in names
         ret[:, name] .= overlay(rng, (arg[name] for arg in args if name in keys(arg))...)

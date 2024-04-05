@@ -600,7 +600,7 @@ end
     @test x3.values == mat3
 
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
-    x3[1:2:10] .= 7.0
+    x3[1:2:10,:] .= 7.0
     @test x3.values == mat3
     
     mat4 = ones(5,2) .* 7
@@ -609,12 +609,16 @@ end
     @test x3.values == mat3
 
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
-    x3[1:2:10] = mat4
+    x3[1:2:10,:] = mat4
     @test x3.values == mat3
 
     mat5 = [7.0 11.0 7.0; 2.0 12.0 22.0; 7.0 13.0 7.0; 4.0 14.0 24.0; 7.0 15.0 7.0; 6.0 16.0 26.0; 7.0 17.0 7.0; 8.0 18.0 28.0; 7.0 19.0 7.0; 10.0 20.0 30.0]
     x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
     x3[20Q1:2:22Q2, (:a, :c)] .= 7.0
+    @test x3.values == mat5
+
+    x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+    x3[1:2:10, [1,3]] .= 7.0
     @test x3.values == mat5
 
 end

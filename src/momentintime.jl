@@ -775,8 +775,8 @@ Base.promote_rule(::Type{<:MIT}, ::Type{T}) where {T<:AbstractFloat} = T
 Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) = isless(ppy(x), ppy(y))
 
 # needed for comparisons
-Base.flipsign(x::Duration{F}, y::Duration{F}) where {F} = flipsign(Int(x), Int(y))
-Base.flipsign(x::MIT{F}, y::MIT{F}) where {F} = flipsign(Int(x), Int(y))
+Base.flipsign(x::Duration{F}, y::Duration{F}) where {F<:Frequency} = flipsign(Int(x), Int(y))
+Base.flipsign(x::MIT{F}, y::MIT{F}) where {F<:Frequency} = flipsign(Int(x), Int(y))
 
 # needed for plot math
 Base.:(/)(a::Duration, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
@@ -867,7 +867,7 @@ All arguments must be ranges of `MIT`` or `MIT` instances of the same frequency 
 function rangeof_span end
 export rangeof_span
 
-_to_unitrange(x::MIT) = UnitRange(x,x)
+_to_unitrange(x::MIT) = UnitRange(x, x)
 _to_unitrange(x::UnitRange) = x
 _to_unitrange(x::AbstractRange) = UnitRange(extrema(x)...)
 _to_unitrange(x) = applicable(rangeof, x) ? rangeof(x) : 1:0
@@ -878,7 +878,7 @@ function rangeof_span(x, args...)
     for arg in args
         arg_rng = _to_unitrange(arg)
         isempty(arg_rng) && continue
-        rng = UnitRange(min(first(rng), first(arg_rng)), max(last(rng),last(arg_rng)))
+        rng = UnitRange(min(first(rng), first(arg_rng)), max(last(rng), last(arg_rng)))
     end
     return rng
 end
@@ -888,9 +888,9 @@ end
 # Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = min(first(l), first(r)):max(last(l), last(r))
 
 # Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
-# Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)
+# Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = first(r) <= first(l) && last(l) <= last(r)
 
-Base.float(rng::UnitRange{MIT{F}}) where {F} = float(first(rng)):float(Duration{F}(1)):float(last(rng))
+Base.float(rng::UnitRange{MIT{F}}) where {F<:Frequency} = float(first(rng)):float(Duration{F}(1)):float(last(rng))
 
 #------------------------------
 # sort!() a list of MITs
