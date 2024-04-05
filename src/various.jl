@@ -37,12 +37,12 @@ for which [`istypenan`](@ref) returns `false`.
 
 All [`TSeries`](@ref) in the arguments list must be of the same frequency. The
 data type of the resulting [`TSeries`](@ref) is decided by the standard
-promotion of numerical types in Julia. Its range is the union of the ranges of
-the arguments, unless the optional `rng` is ginven in which case it becomes the
+promotion of numerical types in Julia. Its range spans all of the ranges of
+the arguments, unless the optional `rng` is given in which case it becomes the
 range.
 """
-overlay(tseries::TSeries...) = overlay(mapreduce(rangeof, union, tseries), tseries...)
-function overlay(rng::AbstractRange{<:MIT}, tseries::TSeries...)
+overlay(tseries::TSeries...) = overlay(rangeof_span(tseries...), tseries...)
+function overlay(rng::AbstractUnitRange{<:MIT}, tseries::TSeries...)
     T = mapreduce(eltype, promote_type, tseries)
     ret = TSeries(rng, typenan(T))
     # todo = contains `true` for locations that don't yet contain valid values.
@@ -89,13 +89,13 @@ end
 """
     overlay(data::MVTSeries, datan::MVTSeries...)
 
-When all arguments are `MVTSeries` the result is an `MVTSeries` of the overlayed
+When all arguments are `MVTSeries` the result is an `MVTSeries` of the overlaid
 range and the ordered union of the columns. Each column is an overlay of the
 corresponding `TSeries`.
 """
 function overlay(args::MVTSeries...)
     isempty(args) && return MVTSeries()
-    rng = mapreduce(rangeof, union, args)
+    rng =rangeof_span(args...) 
     names = collect(mapfoldl(keys, union, args, init=OrderedSet{Symbol}()))
     ET = mapreduce(eltype, promote_type, args)
     ret = MVTSeries(rng, names, typenan(ET))

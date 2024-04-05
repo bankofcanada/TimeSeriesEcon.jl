@@ -858,8 +858,34 @@ Base.:(:)(start::MIT{F}, step::Duration{F}, stop::MIT{F}) where {F<:Frequency} =
 Base.length(rng::UnitRange{<:MIT}) = convert(Int, last(rng) - first(rng) + 1)
 Base.step(rng::UnitRange{<:MIT}) = convert(Int, 1)
 
-Base.union(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = mixed_freq_error(l, r)
-Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = min(first(l), first(r)):max(last(l), last(r))
+"""
+    rangeof_span(args...)
+
+Construct and return a `UnitRange{MIT{F}}` instance that contains the ranges of all arguments.
+All arguments must be ranges of `MIT`` or `MIT` instances of the same frequency `F`.
+"""
+function rangeof_span end
+export rangeof_span
+
+_to_unitrange(x::MIT) = UnitRange(x,x)
+_to_unitrange(x::UnitRange) = x
+_to_unitrange(x::AbstractRange) = UnitRange(extrema(x)...)
+_to_unitrange(x) = applicable(rangeof, x) ? rangeof(x) : 1:0
+
+rangeof_span() = 1U:0U
+function rangeof_span(x, args...)
+    rng = _to_unitrange(x)
+    for arg in args
+        arg_rng = _to_unitrange(arg)
+        isempty(arg_rng) && continue
+        rng = UnitRange(min(first(rng), first(arg_rng)), max(last(rng),last(arg_rng)))
+    end
+    return rng
+end
+
+
+# Base.union(l::AbstractRange{<:MIT}, r::AbstractRange{<:MIT}) = mixed_freq_error(l, r)
+# Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = min(first(l), first(r)):max(last(l), last(r))
 
 # Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
 # Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)

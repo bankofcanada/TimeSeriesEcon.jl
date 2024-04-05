@@ -131,8 +131,9 @@ end
         @test rng[i] == m
     end
     @test_throws ArgumentError 2020Q1:2020M12
-    @test union(3U:5U, 4U:6U) === 3U:6U
-    @test_throws ArgumentError union(3U:5U, 4Q1:6Q1)
+
+    @test rangeof_span(3U:5U, 4U:6U) === 3U:6U
+    @test_throws ArgumentError rangeof_span(3U:5U, 4Q1:6Q1)
 
     # step ranges
     sr1 = 1Q1:1Q3-1Q1:4Q4

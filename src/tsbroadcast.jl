@@ -131,10 +131,8 @@ function Base.copyto!(dest::TSeries, bc::Base.Broadcast.Broadcasted{Nothing})
     return dest
 end
 
-function Base.Broadcast.dotview(t::TSeries, rng::AbstractUnitRange{<:MIT})
-    if rng ⊈ eachindex(t)
-        resize!(t, eachindex(t) ∪ rng)
-    end
-    return Base.maybeview(t, rng) 
+function Base.Broadcast.dotview(t::TSeries, rng::AbstractRange{<:MIT})
+    resize!(t, rangeof_span(t, rng))
+    return Base.maybeview(t, rng)
 end
 

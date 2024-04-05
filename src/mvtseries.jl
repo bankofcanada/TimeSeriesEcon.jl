@@ -219,6 +219,7 @@ firstdate(x::MVTSeries) = getfield(x, :firstdate)
 lastdate(x::MVTSeries) = firstdate(x) + size(_vals(x), 1) - one(firstdate(x))
 frequencyof(::Type{<:MVTSeries{F}}) where {F<:Frequency} = F
 rangeof(x::MVTSeries) = firstdate(x) .+ (0:size(_vals(x), 1)-1)
+_to_unitrange(x::MVTSeries) = rangeof(x)
 
 # -------------------------------------------------------------------------------
 # Make MVTSeries work properly as an AbstractArray
@@ -356,18 +357,13 @@ Base.fill(v, shape::_MVTSAxesType) = fill(v, shape...)
 # Empty (0 variables) from range
 function MVTSeries(rng::AbstractUnitRange{<:MIT}; args...)
     isempty(args) && return MVTSeries(rng, ())
-    keys, values = zip(args...)
     # figure out the element type
-    ET = mapreduce(eltype, Base.promote_eltype, values)
+    ET = reduce(Base.promote_eltype, values(args))
     MVTSeries(ET, rng; args...)
 end
 
 function MVTSeries(; args...)
-    isempty(args) && return MVTSeries(1U)
-    keys, values = zip(args...)
-    # range is the union of all ranges
-    rng = mapreduce(rangeof, union, filter(v -> applicable(rangeof, v), values))
-    return MVTSeries(rng; args...)
+    return MVTSeries(rangeof_span(values(args)...); args...)
 end
 
 # construct from a collection of TSeries
@@ -950,7 +946,7 @@ function undiff(dvar::MVTSeries, anchor::Pair{<:MIT,<:AbstractVecOrMat})
     if fromdate ∉ rangeof(dvar)
         # our anchor is outside, extend with zeros
         shape = axes(dvar)
-        new_range = union(fromdate:fromdate, shape[1])
+        new_range = rangeof_span(fromdate, shape[1])
         tmp = dvar
         dvar = fill(zero(ET), new_range, shape[2])
         dvar .= tmp
