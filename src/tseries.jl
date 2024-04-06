@@ -157,7 +157,8 @@ Base.size(t::TSeries) = size(t.values)
 Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
 Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
 
-Base.keys(t::TSeries) = firstdate(t):lastdate(t)
+# Base.keys(t::TSeries) = rangeof(t)
+Base.findall(t::TSeries{F,Bool}) where {F<:Frequency} = firstdate(t) - 1 .+ findall(t.values)
 
 # the following are needed for copy() and copyto!() (and a bunch of Julia internals that use them)
 Base.IndexStyle(::TSeries) = IndexLinear()

@@ -60,6 +60,7 @@ end
     tb = tt .> 0.5
     @test findall(tb) isa Vector{<:MIT}
     @test length(findall(tb)) == sum(tb)
+    @test findall(tb) == rangeof(tb)[findall(tb.values)]
     # findall works for MVTSeries
     tv = MVTSeries(2000Q1, (:a, :b, :c), rand(10, 3))
     tm = tv .> 0.5
