@@ -157,6 +157,8 @@ Base.size(t::TSeries) = size(t.values)
 Base.axes(t::TSeries) = (firstdate(t):lastdate(t),)
 Base.axes1(t::TSeries) = firstdate(t):lastdate(t)
 
+Base.keys(t::TSeries) = firstdate(t):lastdate(t)
+
 # the following are needed for copy() and copyto!() (and a bunch of Julia internals that use them)
 Base.IndexStyle(::TSeries) = IndexLinear()
 Base.dataids(t::TSeries) = Base.dataids(getfield(t, :values))
@@ -198,6 +200,7 @@ Base.getindex(t::TSeries, i::AbstractArray{Bool}) = getindex(t.values, values(i)
 Base.setindex!(t::TSeries, v, i::AbstractRange{Int}) = (setindex!(t.values, v, i); t)
 Base.setindex!(t::TSeries, v, i::AbstractArray{Int}) = (setindex!(t.values, v, values(i)); t)
 Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, values(i)); t)
+Base.setindex!(t::TSeries, v::TSeries, i::AbstractArray{Bool}) = (setindex!(t.values, v[i], values(i)); t)
 
 Base.getindex(x::AbstractVector{MIT{F1}}, i::TSeries{F2,Bool}) where {F1<:Frequency,F2<:Frequency} = mixed_freq_error(x, i)
 Base.getindex(x::AbstractVector{MIT{F}}, i::TSeries{F,Bool}) where {F<:Frequency} = getindex(x, values(i))

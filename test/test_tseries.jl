@@ -204,11 +204,11 @@ end
     v4 = [7.0, 2.0, 7.0, 4.0, 7.0, 6.0, 7.0, 8.0, 7.0, 10.0]
     t4[begin:2:end] .= 7.0
     @test t4.values == v4
-    
+
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[1:2:10] .= 7.0
     @test t4.values == v4
-    
+
     v5 = ones(5) .* 7.0
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[begin:2:end] = v5
@@ -223,7 +223,7 @@ end
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[1:2:10] = v5
     @test t4.values == v4
-    
+
     # broadcast assignment with steprange of Int
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[1:2:10] .= v5
@@ -242,7 +242,7 @@ end
     brng = firstdate(t4)+1:2:lastdate(t4)
     t5[brng] .= t4   # rhs is a TSeries
     @test t5.values == v4
-    
+
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t5 = fill(7.0, rangeof(t4))
     brng = firstdate(t4)+1:2:lastdate(t4)
@@ -255,7 +255,7 @@ end
     binds = collect(firstdate(t4)+1:2:lastdate(t4))
     t5[binds] .= t4   # rhs is a TSeries
     @test t5.values == v4
-    
+
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t5 = fill(7.0, rangeof(t4))
     binds = collect(firstdate(t4)+1:2:lastdate(t4))
@@ -268,11 +268,32 @@ end
     binds = collect(firstdate(t4)+1:2:lastdate(t4))
     t5[binds] = t4   # rhs is a TSeries
     @test t5.values == v4
-    
+
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t5 = fill(7.0, rangeof(t4))
     binds = collect(firstdate(t4)+1:2:lastdate(t4))
     t5[binds] = t4[binds] # rhs is a Vector
+    @test t5.values == v4
+
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    binds = similar(t4, Bool)
+    binds[begin:2:end] .= false
+    binds[begin+1:2:end] .= true
+
+    t5 = fill(7.0, rangeof(t4))
+    t5[binds] = t4   # rhs is a TSeries
+    @test t5.values == v4
+
+    t5 = fill(7.0, rangeof(t4))
+    t5[binds.values] = t4[binds.values]   # rhs is a Vector
+    @test t5.values == v4
+
+    t5 = fill(7.0, rangeof(t4))
+    t5[binds] .= t4   # rhs is a TSeries
+    @test t5.values == v4
+
+    t5 = fill(7.0, rangeof(t4))
+    t5[binds] .= t4[binds.values]   # rhs is a vector
     @test t5.values == v4
 
 end

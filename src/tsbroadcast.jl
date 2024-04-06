@@ -158,4 +158,6 @@ function Base.Broadcast.dotview(t::TSeries, rng::AbstractArray{<:MIT})
 end
 
 
+Base.Broadcast.dotview(t::TSeries, rng::AbstractArray{Bool}) = dotview(t, rangeof(t)[findall(rng)])
+Base.Broadcast.dotview(t::TSeries{F}, rng::TSeries{F,Bool}) where {F<:Frequency} = dotview(t, findall(rng))
 
