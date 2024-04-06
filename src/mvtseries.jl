@@ -586,23 +586,8 @@ end
 ####   Views
 
 Base.view(x::MVTSeries, I::_FallbackType...) = view(_vals(x), _vals.(I)...)
-# function Base.view(x::MVTSeries{F}, I::StepRange{MIT{F}}) where {F<:Frequency} 
-#     start, stop = _ind_range_check(x, I)
-#     view(_vals(x), start:Int(I.step):stop, :)
-# end
-# function Base.view(x::MVTSeries{F}, I::StepRange{<:Integer}) where {F<:Frequency} 
-#     view(_vals(x), I, :)
-# end
 
-# Base.view(::MVTSeries{F1}, ::TSeries{F2,Bool}, ::Colon=Colon()) where {F1<:Frequency,F2<:Frequency} = mixed_freq_error(F1, F2)
-# Base.view(x::MVTSeries{F}, ind::TSeries{F,Bool}, ::Colon=Colon()) where {F<:Frequency} = view(x, rangeof(ind)[_vals(ind)], :)
-
-Base.dotview(sd::MVTSeries, ::TSeries{F,Bool}) where {F<:Frequency} = mixed_freq_error(frequencyof(sd), F)
-Base.dotview(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where {F<:Frequency} = begin
-    @boundscheck checkbounds(sd, rangeof(ind))
-    dotview(_vals(sd), _vals(ind), :)
-end
-
+Base.view(x::MVTSeries, I::AbstractVector{Bool}) = view(_vals(x), _vals(I), :)
 
 Base.view(x::MVTSeries, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
@@ -615,7 +600,13 @@ function Base.view(x::MVTSeries, I::_MITOneOrVector, J::_SymbolOneOrCollection)
     _mvts_access(Base.view, x, I, J, i1, i2)
 end
 
-Base.Broadcast.dotview(x::MVTSeries, args...) = view(x, args...)
+# Base.Broadcast.dotview(x::MVTSeries, args...) = view(x, args...)
+# Base.dotview(sd::MVTSeries, ::TSeries{F,Bool}) where {F<:Frequency} = mixed_freq_error(frequencyof(sd), F)
+# Base.dotview(sd::MVTSeries{F}, ind::TSeries{F,Bool}) where {F<:Frequency} = begin
+#     @boundscheck checkbounds(sd, rangeof(ind))
+#     dotview(_vals(sd), _vals(ind), :)
+# end
+
 
 
 ####

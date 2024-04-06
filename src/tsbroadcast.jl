@@ -90,7 +90,7 @@ begin
     function ts_unwrap(ax::_TSAxesType, bc::Base.Broadcast.Broadcasted{Style}) where {Style}
         Base.Broadcast.Broadcasted{Style}(bc.f, ts_unwrap_args(ax, bc.args), bc.axes)
     end
-    ts_unwrap(ax::Tuple{<:AbstractVector{<:MIT}}, arg) = arg
+    ts_unwrap(ax::Tuple{AbstractVector{<:MIT}}, arg) = arg
     ts_unwrap(ax::Tuple{AbstractVector{<:MIT}}, arg::TSeries) = view(arg, ax[1])
 
     ts_unwrap_args(ax, ::Tuple{}) = ()
@@ -117,7 +117,7 @@ function Base.copyto!(dest::AbstractArray, bc::Base.Broadcast.Broadcasted{Nothin
 end
 
 function Base.copyto!(dest::SubArray{T,1,<:TSeries}, bc::Base.Broadcast.Broadcasted{Nothing,<:_TSAxesType}) where {T}
-    bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, ts_unwrap_args(dest.indices, bc.args), Base.axes(dest.indices[1]))
+    bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, ts_unwrap_args(dest.indices, bc.args), map(Base.axes1, dest.indices))
     copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
 end
 
@@ -152,7 +152,7 @@ Base.compute_stride1(s, inds, I::Tuple{AbstractRange{MIT{F}},Vararg{Any}}) where
 @inline Base.compute_offset1(parent::TSeries, stride1::Integer, I::Tuple{AbstractRange{<:MIT}}) =
     Int(first(I[1]) - firstdate(parent) + 1) - stride1 * Int(first(Base.axes1(I[1])))
 
-function Base.Broadcast.dotview(t::TSeries, rng::AbstractArray{<:MIT})
+function Base.Broadcast.dotview(t::TSeries, rng::AbstractVector{<:MIT})
     resize!(t, rangeof_span(t, rng))
     return SubArray(t, (rng,))
 end

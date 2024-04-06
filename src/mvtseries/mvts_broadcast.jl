@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 using Base.Broadcast
@@ -148,10 +148,14 @@ begin
         Base.Broadcast.Broadcasted{Style}(bc.f, mvts_unwrap_args(ax, bc.args), bc.axes)
     end
 
+    mvts_unwrap(ax::Tuple{<:AbstractVector{<:MIT},<:_MVTSAxes2}, arg) = arg
+    mvts_unwrap(ax::Tuple{<:AbstractVector{<:MIT},<:_MVTSAxes2}, arg::TSeries) = view(arg, ax[1])
+    mvts_unwrap(ax::Tuple{<:AbstractVector{<:MIT},<:_MVTSAxes2}, arg::MVTSeries) = view(arg, ax...)
+
     # Tuple recursion boilerplate
-    mvts_unwrap_args(ax::_MVTSAxesType, ::Tuple{}) = ()
-    mvts_unwrap_args(ax::_MVTSAxesType, a::Tuple{<:Any}) = (mvts_unwrap(ax, a[1]),)
-    mvts_unwrap_args(ax::_MVTSAxesType, a::Tuple) = (mvts_unwrap(ax, a[1]), mvts_unwrap_args(ax, Base.tail(a))...)
+    mvts_unwrap_args(ax, ::Tuple{}) = ()
+    mvts_unwrap_args(ax, a::Tuple{<:Any}) = (mvts_unwrap(ax, a[1]),)
+    mvts_unwrap_args(ax, a::Tuple) = (mvts_unwrap(ax, a[1]), mvts_unwrap_args(ax, Base.tail(a))...)
 
 end
 
@@ -175,6 +179,16 @@ function Base.copyto!(dest::AbstractArray, bc::Base.Broadcast.Broadcasted{Nothin
     bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, mvts_unwrap_args(bc.axes, bc.args), (1:length(rng), 1:length(nms),))
     copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
 end
+
+function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing,<:_MVTSAxesType}) where {T}
+    bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, mvts_unwrap_args(dest.indices, bc.args), map(Base.axes1, dest.indices))
+    copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
+end
+
+function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing}) where {T}
+    copyto!(view(dest.parent, dest.indices...), Base.Broadcast.preprocess(dest, bc))
+end
+
 
 
 function Base.copyto!(dest::MVTSeries, bc::Base.Broadcast.Broadcasted{Nothing})
@@ -226,3 +240,30 @@ function Base.copyto!(dest::MVTSeries, bc::Base.Broadcast.Broadcasted{Nothing})
     end
     return dest
 end
+
+#############################################################################
+
+function Base.reindex(index::Tuple{<:AbstractVector{<:MIT},<:AbstractVector{Symbol}}, sub::Tuple{Int,Int})
+    Base.@_propagate_inbounds_meta
+    return (index[1][sub[1]], index[2][sub[2]])
+end
+
+Base.OneTo{T}(r::Base.OneTo{<:Duration}) where {T<:Integer} = Base.OneTo{T}(T(r.stop))
+
+
+function Base.Broadcast.dotview(x::MVTSeries, rng::AbstractVector{<:MIT}, ::Colon=Colon())
+    return Base.Broadcast.dotview(x, rng, axes(x, 2))
+end
+
+function Base.Broadcast.dotview(x::MVTSeries, rng::Union{MIT, AbstractUnitRange{<:MIT}}, cols::_SymbolOneOrCollection)
+    return Base.maybeview(x, rng, cols)
+end
+
+@generated function Base.Broadcast.dotview(x::MVTSeries, rng::_MITOneOrVector, cols::_SymbolOneOrCollection)
+    if cols <: NTuple
+        return :(SubArray(x, (rng, collect(cols))))
+    else
+        return :(SubArray(x, (rng, cols)))
+    end
+end
+

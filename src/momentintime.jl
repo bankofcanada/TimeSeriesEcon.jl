@@ -786,6 +786,9 @@ Base.:(/)(a::Duration{F}, b::Duration{F}) where {F<:Frequency} = Int(a) / Int(b)
 Base.:(/)(a::MIT{F}, b::Duration{F}) where {F<:Frequency} = (a - MIT{F}(0)) / b
 Base.promote_rule(::Type{<:Duration}, ::Type{T}) where {T<:AbstractFloat} = T
 
+Base.:(*)(a::Base.BitInteger, b::Duration) = oftype(b, a*Int(b))
+Base.:(*)(a::Duration, b::Base.BitInteger) = oftype(a, b*Int(a))
+
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
 # ----------------------------------------
@@ -884,12 +887,6 @@ function rangeof_span(x, args...)
     return rng
 end
 
-
-# Base.union(l::AbstractRange{<:MIT}, r::AbstractRange{<:MIT}) = mixed_freq_error(l, r)
-# Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = min(first(l), first(r)):max(last(l), last(r))
-
-# Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
-# Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = first(r) <= first(l) && last(l) <= last(r)
 
 Base.float(rng::UnitRange{MIT{F}}) where {F<:Frequency} = float(first(rng)):float(Duration{F}(1)):float(last(rng))
 

@@ -58,7 +58,7 @@ end
     # findall works for TSeries
     tt = TSeries(2000Q1, rand(10))
     tb = tt .> 0.5
-    @test findall(tb) isa Vector{Int}
+    @test findall(tb) isa Vector{<:MIT}
     @test length(findall(tb)) == sum(tb)
     # findall works for MVTSeries
     tv = MVTSeries(2000Q1, (:a, :b, :c), rand(10, 3))
@@ -81,8 +81,11 @@ end
     @test (tv[tm] .= -1.0; tm == (tv .< 0.0))
 
     @test (tv[tb] == tv.values[tb.values, :])
+    @test (tv[tb,:] == tv.values[tb.values, :])
     @test (tv[tb] = -1000 * ones(sum(tb), 3); sum(tv[tb]) == -1000 * 3 * sum(tb))
-    @test (tv[tb] .= -1000; sum(tv[tb]) == -1000 * 3 * sum(tb))
+    @test (tv[tb,:] = -2000 * ones(sum(tb), 3); sum(tv[tb]) == -2000 * 3 * sum(tb))
+    @test (tv[tb] .= -3000; sum(tv[tb]) == -3000 * 3 * sum(tb))
+    @test (tv[tb,:] .= -4000; sum(tv[tb]) == -4000 * 3 * sum(tb))
 
 
 end
