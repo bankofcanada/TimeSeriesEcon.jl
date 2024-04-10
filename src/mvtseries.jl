@@ -429,18 +429,21 @@ end
 # some check bounds that plug MVTSeries into the Julia infrastructure for AbstractArrays
 Base.checkbounds(::Type{Bool}, x::MVTSeries, p::MIT) = checkindex(Bool, rangeof(x), p)
 Base.checkbounds(::Type{Bool}, x::MVTSeries, p::AbstractVector{<:MIT}) = checkindex(Bool, rangeof(x), p)
-Base.checkbounds(::Type{Bool}, x::MVTSeries, c::Symbol) = haskey(_cols(x), c)
-@inline function Base.checkbounds(::Type{Bool}, x::MVTSeries, INDS::_MVTSAxes2)
-    cols = _cols(x)
-    for c in INDS
-        haskey(cols, c) || return false
-    end
-    return true
-end
 
-function Base.checkbounds(::Type{Bool}, x::MVTSeries, p::Union{MIT,<:AbstractVector{<:MIT}}, c::Union{Symbol,_MVTSAxes2})
-    return checkbounds(Bool, x, p) && checkbounds(Bool, x, c)
-end
+# These checkbounds() methods are never called, since checking is now done in _col()
+#
+# Base.checkbounds(::Type{Bool}, x::MVTSeries, c::Symbol) = haskey(_cols(x), c)
+# @inline function Base.checkbounds(::Type{Bool}, x::MVTSeries, INDS::_MVTSAxes2)
+#     cols = _cols(x)
+#     for c in INDS
+#         haskey(cols, c) || return false
+#     end
+#     return true
+# end
+
+# function Base.checkbounds(::Type{Bool}, x::MVTSeries, p::Union{MIT,<:AbstractVector{<:MIT}}, c::Union{Symbol,_MVTSAxes2})
+#     return checkbounds(Bool, x, p) && checkbounds(Bool, x, c)
+# end
 
 # ---- single argument access
 
