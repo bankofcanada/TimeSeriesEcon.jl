@@ -67,5 +67,6 @@ jobs:
       - uses: codecov/codecov-action@v4
         with:
           file: lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }} # required
+          token: da026c64-b138-4251-ab82-4efb786e32ef
           verbose: true # optional (default = false)
+          
