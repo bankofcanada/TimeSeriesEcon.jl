@@ -760,21 +760,26 @@ end
         x7[rng, :b] .= x8.b
         @test x7.values == mat5
 
-        # error("Continue with debugging this part! ")
-        # x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
-        # r7 = [7.0 7.0]
-        # x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
-        # x8[first_index, second_index] .= r7
-        # @test x8[rng,:].values == mat5
-
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        for dims in ((1, ns), (nf, 1), (nf,), (nf, ns))
+            r7 = 7.0 * ones(dims)
+            x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+            if eltype(first_index) == Bool && !isa(first_index, TSeries) && length(first_index) != size(x8, 1)
+                @test_throws BoundsError x8[first_index, second_index] .= r7
+            else
+                x8[first_index, second_index] .= r7
+                @test x8[rng, :].values == mat5
+                x8[first_index, second_index] .+= zeros(dims)
+                @test x8[rng, :].values == mat5
+            end
+        end
 
     end
 
     x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
     x3[1:2:10, [1, 3]] .= 7.0
     @test x3.values == mat5
-    
-    x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+
 end
 
 @testset "MVTSeries math" begin

@@ -170,8 +170,13 @@ end
 #############################################################################
 
 
-function Base.Broadcast.materialize!(::MVTSeriesStyle, dest, bc::Base.Broadcast.Broadcasted)
+function Base.Broadcast.materialize!(::MVTSeriesStyle, dest, bc::Base.Broadcast.Broadcasted{Style}) where {Style <: Union{MVTSeriesStyle,TSeriesStyle}}
     return copyto!(dest, Base.Broadcast.instantiate(bc))
+end
+
+function Base.Broadcast.materialize!(::MVTSeriesStyle, dest, bc::Base.Broadcast.Broadcasted{Style}) where {Style}
+    bc1 = Base.Broadcast.Broadcasted{Style}(bc.f, bc.args, axes(dest))
+    return copyto!(dest, Base.Broadcast.instantiate(bc1))
 end
 
 
@@ -267,7 +272,7 @@ function Base.Broadcast.dotview(x::MVTSeries, rng::TSeries{F,Bool}, cols::Union{
 end
 
 function Base.Broadcast.dotview(x::MVTSeries, rng::AbstractVector{Bool}, cols::Union{Colon,_SymbolOneOrCollection}=Colon())
-    return Base.Broadcast.dotview(x, rangeof(x)[findall(rng)], cols)
+    return Base.Broadcast.dotview(x, rangeof(x)[rng], cols)
 end
 
 # function Base.Broadcast.dotview(x::MVTSeries, rng::Union{MIT, AbstractUnitRange{<:MIT}}, cols::_SymbolOneOrCollection)
