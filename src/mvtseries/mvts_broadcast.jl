@@ -9,6 +9,7 @@ struct MVTSeriesStyle{F<:Frequency} <: Broadcast.BroadcastStyle end
 @inline frequencyof(::Type{<:MVTSeriesStyle{F}}) where {F<:Frequency} = F
 
 @inline Base.Broadcast.BroadcastStyle(::Type{<:MVTSeries{F}}) where {F<:Frequency} = MVTSeriesStyle{F}()
+@inline Base.Broadcast.BroadcastStyle(::Type{<:SubArray{T,N,<:MVTSeries{F}}}) where {T,N,F<:Frequency} = MVTSeriesStyle{F}()
 @inline Base.Broadcast.BroadcastStyle(S1::MVTSeriesStyle, S2::MVTSeriesStyle) = mixed_freq_error(S1, S2)
 @inline Base.Broadcast.BroadcastStyle(S::MVTSeriesStyle{F}, ::MVTSeriesStyle{F}) where {F<:Frequency} = S
 
@@ -185,6 +186,12 @@ function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadc
     copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
 end
 
+function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing,<:_TSAxesType}) where {T}
+    bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, mvts_unwrap_args(dest.indices, bc.args), map(Base.axes1, dest.indices))
+    # bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, ts_unwrap_args((dest.indices[1],), bc.args), map(Base.axes1, dest.indices))
+    copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
+end
+
 function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing}) where {T}
     copyto!(view(dest.parent, dest.indices...), Base.Broadcast.preprocess(dest, bc))
 end
@@ -255,12 +262,22 @@ function Base.Broadcast.dotview(x::MVTSeries, rng::AbstractVector{<:MIT}, ::Colo
     return Base.Broadcast.dotview(x, rng, axes(x, 2))
 end
 
-function Base.Broadcast.dotview(x::MVTSeries, rng::Union{MIT, AbstractUnitRange{<:MIT}}, cols::_SymbolOneOrCollection)
-    return Base.maybeview(x, rng, cols)
+function Base.Broadcast.dotview(x::MVTSeries, rng::TSeries{F,Bool}, cols::Union{Colon,_SymbolOneOrCollection}=Colon()) where {F<:Frequency}
+    return Base.Broadcast.dotview(x, findall(rng), cols)
 end
 
+function Base.Broadcast.dotview(x::MVTSeries, rng::AbstractVector{Bool}, cols::Union{Colon,_SymbolOneOrCollection}=Colon())
+    return Base.Broadcast.dotview(x, rangeof(x)[findall(rng)], cols)
+end
+
+# function Base.Broadcast.dotview(x::MVTSeries, rng::Union{MIT, AbstractUnitRange{<:MIT}}, cols::_SymbolOneOrCollection)
+#     return Base.maybeview(x, rng, cols)
+# end
+
 @generated function Base.Broadcast.dotview(x::MVTSeries, rng::_MITOneOrVector, cols::_SymbolOneOrCollection)
-    if cols <: NTuple
+    if cols == Symbol
+        return :(SubArray(x, (rng, [cols,])))
+    elseif cols <: NTuple
         return :(SubArray(x, (rng, collect(cols))))
     else
         return :(SubArray(x, (rng, cols)))

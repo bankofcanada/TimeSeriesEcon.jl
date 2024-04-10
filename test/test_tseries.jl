@@ -199,6 +199,8 @@ end
     @test Base.Broadcast.check_broadcast_shape((1U:10U,), ()) === nothing
     @test Base.Broadcast.preprocess(t2, 10.0) == 10
 
+    # RHS = scalar
+
     t4 = TSeries(20Q1, collect(1.0:10.0))
     v4 = [7.0, 2.0, 7.0, 4.0, 7.0, 6.0, 7.0, 8.0, 7.0, 10.0]
     t4[begin:2:end] .= 7.0
@@ -216,6 +218,8 @@ end
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[begin:2:end] = v5
     @test t4.values == v4
+    t4[begin:2:end] += 0.0*v5
+    @test t4.values == v4
 
     v5 = ones(5) .* 7.0
     t4 = TSeries(20Q1, collect(1.0:10.0))
@@ -228,6 +232,8 @@ end
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t4[1:2:10] = v5
     @test t4.values == v4
+    t4[1:2:10] += 0.0*v5
+    @test t4.values == v4
 
     # broadcast assignment with steprange of Int
     t4 = TSeries(20Q1, collect(1.0:10.0))
@@ -237,6 +243,13 @@ end
     @test t4.values == v4
 
     # direct assign with non-unit-step ranges of MIT
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    brng = firstdate(t4):2:lastdate(t4)
+    t4[brng] .= 7.0
+    @test t4.values == v4
+    t4[brng] .+= 0.0
+    @test t4.values == v4
+
     t4 = TSeries(20Q1, collect(1.0:10.0))
     t5 = fill(7.0, rangeof(t4))
     brng = firstdate(t4)+1:2:lastdate(t4)
@@ -298,6 +311,18 @@ end
     binds = similar(t4, Bool)
     binds[begin:2:end] .= false
     binds[begin+1:2:end] .= true
+    
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t4[.!binds] .= 7.0
+    @test t5.values == v4
+    t4[.!binds] .+= 0.0
+    @test t5.values == v4
+
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t4[.!binds.values] .= 7.0
+    @test t5.values == v4
+    t4[.!binds.values] .+= 0.0
+    @test t5.values == v4
 
     t5 = fill(7.0, rangeof(t4))
     t5[binds] = t4   # rhs is a TSeries
@@ -306,9 +331,21 @@ end
     # @test t5.values == v4
 
     t5 = fill(7.0, rangeof(t4))
+    t5[binds.values] = t4   # rhs is a TSeries
+    @test t5.values == v4
+    # t5[binds] += 0.0t4   # rhs is a TSeries
+    # @test t5.values == v4
+
+    t5 = fill(7.0, rangeof(t4))
     t5[binds.values] = t4[binds.values]   # rhs is a Vector
     @test t5.values == v4
     t5[binds.values] += 0.0*t4[binds.values]   # rhs is a Vector
+    @test t5.values == v4
+
+    t5 = fill(7.0, rangeof(t4))
+    t5[binds] = t4[binds.values]   # rhs is a Vector
+    @test t5.values == v4
+    t5[binds] += 0.0*t4[binds.values]   # rhs is a Vector
     @test t5.values == v4
 
     t5 = fill(7.0, rangeof(t4))
@@ -322,6 +359,35 @@ end
     @test t5.values == v4
     t5[binds] .+= 0.0*t4[binds.values]   # rhs is a vector
     @test t5.values == v4
+
+    t5 = fill(7.0, rangeof(t4))
+    t5[binds.values] .= t4   # rhs is a TSeries
+    @test t5.values == v4
+    # t5[binds.values] .+= 0.0*t4 # rhs is a TSeries
+    # @test t5.values == v4
+
+    t5 = fill(7.0, rangeof(t4))
+    t5[binds.values] .= t4[binds.values]   # rhs is a vector
+    @test t5.values == v4
+    t5[binds.values] .+= 0.0*t4[binds.values]   # rhs is a vector
+    @test t5.values == v4
+
+    v4 = [7.0, 2.0, 7.0, 4.0, 7.0, 6.0, 7.0, 8.0, 7.0, 10.0]
+    t4 = TSeries(20Q1, collect(1.0:10.0))
+    t7 = fill(NaN, firstdate(t4)-4:lastdate(t4)+4)
+    t7[rangeof(t4)] .= 7
+    for binds in (firstdate(t4):2:lastdate(t4), collect(firstdate(t4):2:lastdate(t4)), (1:length(t4)) .% 2 .!= 0, TSeries(firstdate(t4), (1:length(t4)) .% 2 .!= 0))
+        binds! = eltype(binds) == Bool ? .!binds : binds .+ 1
+        t5 = rand!(similar(t4))
+        t5[binds!] = t4
+        t5[binds] = t7
+        @test t5.values == v4
+
+        t5 = rand!(similar(t4))
+        t5[binds!] .= t4
+        t5[binds] .= t7
+        @test t5.values == v4
+    end
 
 end
 

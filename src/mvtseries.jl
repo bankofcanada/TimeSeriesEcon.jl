@@ -275,6 +275,13 @@ const _FallbackType = Union{Base.BitInteger,Colon,AbstractArray{<:Base.BitIntege
 Base.getindex(sd::MVTSeries, i1::_FallbackType...) = getindex(_vals(sd), _vals.(i1)...)
 Base.setindex!(sd::MVTSeries, val, i1::_FallbackType...) = setindex!(_vals(sd), val, _vals.(i1)...)
 
+Base.setindex!(sd::MVTSeries, val::MVTSeries, i1::TSeries{F,Bool}, cols::Colon=Colon()) where {F<:Frequency} = setindex!(sd, val, findall(i1), cols)
+Base.setindex!(sd::MVTSeries, val::MVTSeries, i1::AbstractVector{Bool}, cols::Colon) = setindex!(sd, val, rangeof(sd)[i1], cols)
+Base.setindex!(sd::MVTSeries, val::MVTSeries, i1::AbstractVector{Bool}) = setindex!(sd, val, rangeof(sd)[i1], :)
+
+Base.getindex(sd::MVTSeries, idx::AbstractVector{Bool}) = length(idx) == size(sd, 1) ? getindex(_vals(sd), idx, :) : getindex(_vals(sd), idx)
+Base.setindex!(sd::MVTSeries, val, idx::AbstractVector{Bool}) = length(idx) == size(sd, 1) ? setindex!(_vals(sd), val, idx, :) : setindex!(_vals(sd), val, idx)
+
 Base.getindex(x::MVTSeries, ::Colon, ::Colon) = x
 
 # -------------------------------------------------------------
@@ -458,9 +465,7 @@ end
 end
 
 Base.setindex!(x::MVTSeries, val, rng::AbstractVector{<:MIT}) = mixed_freq_error(x, rng)
-@inline function Base.setindex!(x::MVTSeries{F}, val, rng::AbstractVector{MIT{F}}) where {F<:Frequency}
-    setindex!(_vals(x), val, _ts_values_inds(x, rng), :)
-end
+Base.setindex!(x::MVTSeries{F}, val, rng::AbstractVector{MIT{F}}) where {F<:Frequency} = setindex!(x, val, rng, axes(x, 2))
 
 # single argument - variable - return a TSeries of the column
 Base.getindex(x::MVTSeries, col::AbstractString) = _col(x, Symbol(col))
@@ -500,8 +505,8 @@ Base.setindex!(x::MVTSeries, val, p::_MITOneOrVector, ::_SymbolOneOrCollection) 
 Base.getindex(x::MVTSeries{F}, p::_MITOneOrVector{F}, ::Colon) where {F<:Frequency} = getindex(x, p)
 Base.getindex(x::MVTSeries, ::Colon, c::_SymbolOneOrCollection) = getindex(x, c)
 
-Base.setindex!(x::MVTSeries{F}, val, p::_MITOneOrVector{F}, ::Colon) where {F<:Frequency} = setindex!(x, val, p)
-Base.setindex!(x::MVTSeries, val, ::Colon, c::_SymbolOneOrCollection) = setindex!(x, val, c)
+Base.setindex!(x::MVTSeries{F}, val, p::_MITOneOrVector{F}, ::Colon) where {F<:Frequency} = setindex!(x, val, p, axes(x, 2))
+Base.setindex!(x::MVTSeries, val, ::Colon, c::_SymbolOneOrCollection) = setindex!(x, val, rangeof(x), c)
 
 # 
 
@@ -516,36 +521,28 @@ _mvts_access(access::Function, x::MVTSeries, p::AbstractUnitRange{<:MIT}, ::Symb
 # with an MIT range and a sequence of Symbol-s we return an MVTSeries
 _mvts_access(access::Function, x::MVTSeries, p::AbstractUnitRange{<:MIT}, ::_MVTSAxes2, i1, i2) = MVTSeries(first(p), axes(x, 2)[i2], access(_vals(x), i1, i2))
 
+@inline Base.getindex(x::MVTSeries, p::AbstractVector{Bool}, c::_SymbolOneOrCollection) = getindex(x, rangeof(x)[p], c)
+@inline Base.getindex(x::MVTSeries{F}, p::TSeries{F,Bool}, c::_SymbolOneOrCollection) where {F<:Frequency} = getindex(x, findall(p), c)
 @inline function Base.getindex(x::MVTSeries{F}, p::_MITOneOrVector{F}, c::_SymbolOneOrCollection) where {F<:Frequency}
     i1 = _ts_values_inds(x, p)
     i2 = _colind(x, c)
     _mvts_access(getindex, x, p, c, i1, i2)
 end
 
+
 # assignments
 
 # with a single MIT we assign a number or a row-Vector
+@inline Base.setindex!(x::MVTSeries, val, p::AbstractVector{Bool}, c::_SymbolOneOrCollection) = setindex!(x, val, rangeof(x)[p], c)
+@inline Base.setindex!(x::MVTSeries, val, p::TSeries{F,Bool}, c::_SymbolOneOrCollection) where {F<:Frequency} = setindex!(x, val, findall(p), c)
 @inline function Base.setindex!(x::MVTSeries{F}, val, p::_MITOneOrVector{F}, c::_SymbolOneOrCollection) where {F<:Frequency}
     i1 = _ts_values_inds(x, p)
     i2 = _colind(x, c)
     setindex!(_vals(x), val, i1, i2)
 end
 
-@inline function Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, r::MIT{F}, c::Symbol) where {F<:Frequency}
-    xi1 = _ts_values_inds(x, r)
-    xi2 = _colind(x, c)
-    vali1 = _ts_values_inds(val, r)
-    vali2 = _colind(val, c)
-    setindex!(_vals(x), _vals(val)[vali1, vali2], xi1, xi2)
-end
-
-@inline function Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, r::_MITOneOrVector{F}, c::_SymbolOneOrCollection) where {F<:Frequency}
-    xi1 = _ts_values_inds(x, r)
-    xi2 = _colind(x, c)
-    vali1 = _ts_values_inds(val, r)
-    vali2 = _colind(val, c)
-    setindex!(_vals(x), view(_vals(val), vali1, vali2), xi1, xi2)
-end
+@inline Base.setindex!(x::MVTSeries{F}, val::TSeries{F}, r::_MITOneOrVector{F}, c::_SymbolOneOrCollection) where {F<:Frequency} = setindex!(x, _vals(val[r]), r, c)
+@inline Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, r::_MITOneOrVector{F}, c::_SymbolOneOrCollection) where {F<:Frequency} = setindex!(x, _vals(val[r, c]), r, c)
 
 # -------------------------------------------------------------------------------
 

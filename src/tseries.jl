@@ -201,7 +201,7 @@ Base.getindex(t::TSeries, i::AbstractArray{Bool}) = getindex(t.values, values(i)
 Base.setindex!(t::TSeries, v, i::AbstractRange{Int}) = (setindex!(t.values, v, i); t)
 Base.setindex!(t::TSeries, v, i::AbstractArray{Int}) = (setindex!(t.values, v, values(i)); t)
 Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, values(i)); t)
-Base.setindex!(t::TSeries, v::TSeries, i::AbstractArray{Bool}) = (setindex!(t.values, v[i], values(i)); t)
+Base.setindex!(t::TSeries, v::TSeries, i::AbstractArray{Bool}) = (setindex!(t.values, v[rangeof(t)[values(i)]], values(i)); t)
 
 Base.getindex(x::AbstractVector{MIT{F1}}, i::TSeries{F2,Bool}) where {F1<:Frequency,F2<:Frequency} = mixed_freq_error(x, i)
 Base.getindex(x::AbstractVector{MIT{F}}, i::TSeries{F,Bool}) where {F<:Frequency} = getindex(x, values(i))
