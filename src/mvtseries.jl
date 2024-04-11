@@ -651,14 +651,18 @@ end
 
 ####  sum(x::MVTSeries; dims=2) -> TSeries
 
-for (mod, funcs) in ((Base, (:sum, :prod, :minimum, :maximum, :any, :all)), (Statistics, (:median, :mean)))
+for (mod, funcs) in ((Base, (:sum, :prod, :minimum, :maximum, :any, :all)), (Statistics, (:median, :mean, :std, :var)))
     for func in funcs
 
-        @eval @inline $mod.$func(x::MVTSeries; dims=:) =
-            dims == 2 ? TSeries(firstdate(x), $func(rawdata(x); dims=dims)[:]) : $func(rawdata(x); dims=dims)
+        @eval @inline $mod.$func(x::MVTSeries; dims=:, kwargs...) = (
+            fx = $func(rawdata(x); dims, kwargs...);
+            dims == 2 ? TSeries(firstdate(x), vec(fx)) : fx
+        )
 
-        @eval @inline $mod.$func(f, x::MVTSeries; dims=:) =
-            dims == 2 ? TSeries(firstdate(x), $func(f, rawdata(x); dims=dims)[:]) : $func(f, rawdata(x); dims=dims)
+        @eval @inline $mod.$func(f::Function, x::MVTSeries; dims=:, kwargs...) = (
+            fx = $func(f, rawdata(x); dims, kwargs...);
+            dims == 2 ? TSeries(firstdate(x), vec(fx)) : fx
+        )
 
     end
 end

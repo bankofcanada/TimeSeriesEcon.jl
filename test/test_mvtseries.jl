@@ -1063,7 +1063,37 @@ end
     end
 end
 
-
+@testset "reducers" begin
+    x = MVTSeries(MIT{Monthly}(rand(1:10_000)), collect("abcd"), rand(20, 4))
+    for func = (sum, prod, minimum, maximum, mean, median, std, var)
+        @test func(x) isa Number
+        @test func(x) ≈ func(x.values)
+        @test func(x; dims=1) isa Array
+        @test func(x; dims=1) ≈ func(x.values; dims=1)
+        @test func(x; dims=2) isa TSeries
+        @test func(x; dims=2) ≈ let x = func(x.values; dims=2)
+            size(x, 2) == 1 ? vec(x) : x
+        end
+    end
+    oper = x -> x + 6
+    for func = (sum, prod, minimum, maximum, mean)
+        @test func(oper, x) isa Number
+        @test func(oper, x) ≈ func(oper, x.values)
+        @test func(oper, x; dims=1) isa Array
+        @test func(oper, x; dims=1) ≈ func(oper, x.values; dims=1)
+        @test func(oper, x; dims=2) isa TSeries
+        @test func(oper, x; dims=2) ≈ vec(func(oper, x.values; dims=2))
+    end
+    pred = x -> x < 0.6
+    for func = (any, all)
+        @test func(pred, x) isa Number
+        @test func(pred, x) ≈ func(pred, x.values)
+        @test func(pred, x; dims=1) isa Array
+        @test func(pred, x; dims=1) ≈ func(pred, x.values; dims=1)
+        @test func(pred, x; dims=2) isa TSeries
+        @test func(pred, x; dims=2) ≈ vec(func(pred, x.values; dims=2))
+    end
+end
 
 using OrderedCollections
 
