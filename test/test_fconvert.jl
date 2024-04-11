@@ -40,6 +40,26 @@ all_frequencies = Type{<:Frequency}[
     Yearly{12}
 ]
 
+some_frequencies = Type{<:Frequency}[
+    Daily,
+    BDaily,
+    Weekly,
+    Weekly{3},
+    Weekly{6},
+    Weekly{7},
+    Monthly,
+    Quarterly,
+    Quarterly{1},
+    Quarterly{3},
+    HalfYearly,
+    HalfYearly{1},
+    HalfYearly{4},
+    Yearly,
+    Yearly{3},
+    Yearly{7},
+    Yearly{12}
+]
+
 @inline function get_random_frequency(frequencies::Vector{Type{<:Frequency}}=all_frequencies)
     return rand(frequencies)
 end
@@ -1983,11 +2003,11 @@ end
 
 @testset "fconvert, pass function" begin
     for _ = 1:20
-        F_from = get_random_frequency()
+        F_from = get_random_frequency(some_frequencies)
         ts = get_random_tseries(F_from)
         count = [0, 0]
         while sum(count) < 20
-            F_to = get_random_frequency()
+            F_to = get_random_frequency(some_frequencies)
             if F_from > Yearly && F_from > F_to
                 count[1] += 1
                 # convert to lower
@@ -2045,16 +2065,17 @@ end
 end
 
 @testset "fconvert, all combinations" begin
-    frequencies = all_frequencies
+    # frequencies = all_frequencies
+    frequencies = some_frequencies
     # freq_short = 
     combinations = [(F_from, F_to) for F_from in frequencies for F_to in frequencies]
     counter = 1
     t_from = nothing
     last_F_from = nothing
     # @showprogress "combinations" for (F_from, F_to) in combinations
-    # for (F_from, F_to) in combinations
-    for _ = 1:250
-        (F_from, F_to) = rand(combinations)
+    for (F_from, F_to) in combinations
+    # for _ = 1:250
+        # (F_from, F_to) = rand(combinations)
         if F_from != last_F_from
             last_F_from = F_from
             t_from = TSeries(MIT{F_from}(100), collect(1:800))

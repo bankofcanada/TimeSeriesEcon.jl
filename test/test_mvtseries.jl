@@ -113,6 +113,7 @@ end
     @test (a.a = 1; a.values[:, 1] == ones(10))
     b = MVTSeries(rangeof(a), (:a,), rand)
     @test (a.a = b; a.values[:, 1] == b.values[:, 1])
+    @test (a[:, :] = 6ones(size(a)...); all(a.values .== 6))
     @test (a[:, :] .= 6ones(size(a)...); all(a.values .== 6))
 end
 
@@ -260,7 +261,6 @@ end
             sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
             sd[2001Q1:2001Q4, [:a, :b]] = sd2
             @test (sd[2001Q1:2001Q4, :].values == sd2[2001Q1:2001Q4, :].values)
-
         end
 
         # https://github.com/bankofcanada/TimeSeriesEcon.jl/pull/49
@@ -593,6 +593,193 @@ end
     @test Base.Broadcast.preprocess(x2, t2).keeps == (true,)
     @test Base.Broadcast.preprocess(x2, t2).defaults == (1,)
     @test Base.Broadcast.preprocess(x2, 2.3) == 2.3
+
+    mat3 = [7.0 7.0; 2.0 12.0; 7.0 7.0; 4.0 14.0; 7.0 7.0; 6.0 16.0; 7.0 7.0; 8.0 18.0; 7.0 7.0; 10.0 20.0]
+
+    ##################################################################################################
+    # broadcasting assignment of a Number using steprange index
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] .= 7.0
+    @test x3.values == mat3
+    x3[20Q1:2:22Q2] .+= 0.0
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10, :] .= 7.0
+    @test x3.values == mat3
+    x3[1:2:10, :] .+= 0.0
+    @test x3.values == mat3
+
+    # direct assignment of a Matrix using steprange index
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] = mat4
+    @test x3.values == mat3
+    x3[20Q1:2:22Q2] += 0.0 * mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10, :] = mat4
+    @test x3.values == mat3
+    x3[1:2:10, :] += 0.0 * mat4
+    @test x3.values == mat3
+
+    # broadcasting assignment of a Matrix using steprange index
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] .= mat4
+    @test x3.values == mat3
+    x3[20Q1:2:22Q2] .+= 0.0 * mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10, :] .= mat4
+    @test x3.values == mat3
+    x3[1:2:10, :] .+= 0.0 * mat4
+    @test x3.values == mat3
+
+    # direct assignment of a Matrix using Vector index
+    ind = collect(20Q1:2:22Q2)
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] .= 7.0
+    @test x3.values == mat3
+    x3[ind] .+= 0.0
+    @test x3.values == mat3
+
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] = mat4
+    @test x3.values == mat3
+    x3[ind] += 0.0 * mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] .= mat4
+    @test x3.values == mat3
+    x3[ind] .+= 0.0 * mat4
+    @test x3.values == mat3
+
+
+    ##################################################################################################
+    # repeat, with second index (:)
+
+    for first_index in (20Q1:2:22Q2, collect(20Q1:2:22Q2), TSeries(20Q1, (1:10) .% 2 .== 1), (1:10) .% 2 .== 1),
+        second_index in ((:,), ([:a, :b],), ())
+
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[first_index, second_index...] .= 7.0
+        @test x3.values == mat3
+        x3[first_index, second_index...] .+= 0.0
+        @test x3.values == mat3
+
+        # direct assignment of a Matrix using steprange index
+        mat4 = ones(5, 2) .* 7
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[first_index, second_index...] = mat4
+        @test x3.values == mat3
+        x3[first_index, second_index...] += 0.0 * mat4
+        @test x3.values == mat3
+
+        # broadcasting assignment of a Matrix using steprange index
+        mat4 = ones(5, 2) .* 7
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[first_index, second_index...] .= mat4
+        @test x3.values == mat3
+        x3[first_index, second_index...] .+= 0.0 * mat4
+        @test x3.values == mat3
+
+        first_index! = (eltype(first_index) == Bool) ? (.!first_index) : (first_index .+ 1)
+
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x7 = fill!(similar(x3), 7)
+        x7[first_index!, second_index...] = x3
+        @test x7.values == mat3
+
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x7 = fill!(similar(x3), 7)
+        x7[first_index!, second_index...] .= x3
+        @test x7.values == mat3
+    end
+
+    ##################################################################################################
+
+    mat5 = [7.0 11.0 7.0; 2.0 12.0 22.0; 7.0 13.0 7.0; 4.0 14.0 24.0; 7.0 15.0 7.0; 6.0 16.0 26.0; 7.0 17.0 7.0; 8.0 18.0 28.0; 7.0 19.0 7.0; 10.0 20.0 30.0]
+    for first_index in (20Q1:2:22Q2, collect(20Q1:2:22Q2), TSeries(20Q1, (1:10) .% 2 .== 1), (1:10) .% 2 .== 1),
+        second_index in ([:a, :c], (:a, :c))
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x3[first_index, second_index] .= 7.0
+        @test x3.values == mat5
+        x3[first_index, second_index] .+= 0.0
+        @test x3.values == mat5
+
+        rng = rangeof(x3)
+        nf = eltype(first_index) <: Bool ? sum(first_index) : length(first_index)
+        ns = length(second_index)
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x3[first_index, second_index] = 7.0 * ones(nf, ns)
+        @test x3.values == mat5
+        x3[first_index, second_index] += zeros(nf, ns)
+        @test x3.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x3[first_index, second_index] .= 7.0 * ones(nf, ns)
+        @test x3.values == mat5
+        x3[first_index, second_index] .+= zeros(nf, ns)
+        @test x3.values == mat5
+
+        first_index! = (eltype(first_index) == Bool) ? (.!first_index) : (first_index .+ 1)
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] = x8
+        x7[rng, :b] = x8
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] = x8
+        x7[rng, :b] = x8.b
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] .= x8
+        x7[rng, :b] .= x8
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] .= x8
+        x7[rng, :b] .= x8.b
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        for dims in ((1, ns), (nf, 1), (nf,), (nf, ns))
+            r7 = 7.0 * ones(dims)
+            x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+            if eltype(first_index) == Bool && !isa(first_index, TSeries) && length(first_index) != size(x8, 1)
+                @test_throws BoundsError x8[first_index, second_index] .= r7
+            else
+                x8[first_index, second_index] .= r7
+                @test x8[rng, :].values == mat5
+                x8[first_index, second_index] .+= zeros(dims)
+                @test x8[rng, :].values == mat5
+            end
+        end
+
+    end
+
+    x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+    x3[1:2:10, [1, 3]] .= 7.0
+    @test x3.values == mat5
+
 end
 
 @testset "MVTSeries math" begin
@@ -905,9 +1092,9 @@ using OrderedCollections
 
     # pct, apct, ytypct
     ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
-    @test apct(ts).values ≈ ((ts.values[2:10,:] ./ ts.values[1:9,:]) .^ 4 .- 1) * 100
-    @test pct(ts).values ≈ ((ts.values[2:10,:] ./ ts.values[1:9,:]) .- 1) * 100
-    @test ytypct(ts).values ≈ ((ts.values[5:10,:] ./ ts.values[1:6,:]) .- 1) * 100
+    @test apct(ts).values ≈ ((ts.values[2:10, :] ./ ts.values[1:9, :]) .^ 4 .- 1) * 100
+    @test pct(ts).values ≈ ((ts.values[2:10, :] ./ ts.values[1:9, :]) .- 1) * 100
+    @test ytypct(ts).values ≈ ((ts.values[5:10, :] ./ ts.values[1:6, :]) .- 1) * 100
 
     # mapslices
     ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
@@ -918,12 +1105,12 @@ using OrderedCollections
     @test mapslices(x -> x .+ 1, ts, dims=2) == res_mvts
 
     # one-column returns of the same length as ts return a TSeries
-    row_means = (ts.values[:,1] .+ ts.values[:,2] )./ 2
+    row_means = (ts.values[:, 1] .+ ts.values[:, 2]) ./ 2
     res_tseries = TSeries(rangeof(ts), row_means)
     @test mapslices(mean, ts, dims=2) ≈ res_tseries
 
     # returns that don't fit just return a matrix
-    @test mapslices(mean, ts, dims=1) ≈  mean(ts.values, dims=1)
+    @test mapslices(mean, ts, dims=1) ≈ mean(ts.values, dims=1)
 
 
 end

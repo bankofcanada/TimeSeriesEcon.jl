@@ -68,7 +68,7 @@ function Base.eltype(w::Workspace)
     return Pair{Symbol,ET}
 end
 
-Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args..., (k => v for (k,v) in kwargs)...); w)
+Base.push!(w::Workspace, args...; kwargs...) = (push!(_c(w), args..., (k => v for (k, v) in kwargs)...); w)
 Base.delete!(w::Workspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
 
 @inline Base.in(name, w::Workspace) = convert(Symbol, name) ∈ keys(_c(w))
@@ -76,17 +76,24 @@ Base.get(f::Function, w::Workspace, key) = get(f, _c(w), key)
 Base.get!(f::Function, w::Workspace, key) = get!(f, _c(w), key)
 
 """
-    rangeof(w)
+    rangeof(w; method=intersect)
 
 Calculate the range of a [`Workspace`](@ref) as the intersection of the ranges
 of all [`TSeries`](@ref), [`MVTSeries`](@ref) and [`Workspace`](@ref) members of
 `w`. If there are objects of different frequencies there will be a
 mixed-frequency error.
+
+Optionally, parameter `method=` can be set to a custom function that combines
+two UnitRanges into one UnitRange. If not specified, it defaults to `intersect`.
+
+If you want the range that spans the ranges of all members of `w` it would be
+better to call `rangeof_span(values(m)...)`.
 """
 rangeof(w::Workspace; method=intersect) = (
-    iterable = (v for v in values(w) if hasmethod(rangeof, (typeof(v),)));
+    iterable = (v for v in values(w) if applicable(rangeof, v));
     mapreduce(rangeof, method, iterable)
 )
+_to_unitrange(x::Workspace) = rangeof(x)
 
 _has_frequencyof(::Type{Workspace}) = true
 _has_frequencyof(::T) where {T} = _has_frequencyof(T)
