@@ -667,6 +667,23 @@ for (mod, funcs) in ((Base, (:sum, :prod, :minimum, :maximum, :any, :all)), (Sta
     end
 end
 
+for (mod, funcs) in ((Base, (:sum!, :prod!, :maximum!, :minimum!, :any!, :all!)),)
+    for func in funcs
+        @eval begin
+            $mod.$func(f::Function, R::AbstractArray, A::MVTSeries; init::Bool=true) = $mod.$func(f, R, _vals(A); init)
+            function $mod.$func(f::Function, R::TSeries, A::MVTSeries; init::Bool=true)
+                if rangeof(R) == rangeof(A)
+                    $mod.$func(f, _vals(R), _vals(A); init)
+                else
+                    rng = intersect(rangeof(R), rangeof(A))
+                    $mod.$func(f, view(R, rng), view(A, rng, :); init)
+                end
+                return R
+            end
+        end
+    end
+end
+
 ####  reshape
 
 # reshaped arrays are slow with MVTSeries. We must avoid them at all costs

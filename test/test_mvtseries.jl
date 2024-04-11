@@ -1093,6 +1093,58 @@ end
         @test func(pred, x; dims=2) isa TSeries
         @test func(pred, x; dims=2) ≈ vec(func(pred, x.values; dims=2))
     end
+
+    o1 = fill(NaN, 1)
+    o2 = fill(NaN, 1, 1)
+    v = fill(NaN, size(x, 1))
+    m1 = fill(NaN, size(x, 1), 1)
+    m2 = fill(NaN, 1, size(x, 2))
+    m12 = fill(NaN, size(x))
+    rng = rangeof(x)
+    z = TSeries(rng, NaN)
+    rng1 = first(rng)-2:last(rng)-2
+    z1 = TSeries(rng1, NaN)
+    rng2 = first(rng)+3:last(rng)+1
+    z2 = TSeries(rng2, NaN)
+    rng3 = first(rng)+3:last(rng)-4
+    z3 = TSeries(rng3, NaN)
+    rng4 = first(rng)-4:last(rng)+3
+    z4 = TSeries(rng4, NaN)
+    for (func, func!) = ((sum, sum!), (prod, prod!), (maximum, maximum!), (minimum, minimum!)) #, any!, all!)
+        for (q, d) = ((o1, (1, 2)), (o2, (1, 2)), (v, 2), (m1, 2), (m2, 1), (m12, ()))
+            if q isa AbstractVector
+                fill!(q, NaN)
+                @test (func!(q, x); q == vec(func(x.values, dims=d)))
+                fill!(q, NaN)
+                @test (func!(oper, q, x); q == vec(func(oper, x.values, dims=d)))
+            else
+                fill!(q, NaN)
+                @test (func!(q, x); q == func(x.values, dims=d))
+                fill!(q, NaN)
+                @test (func!(oper, q, x); q == func(oper, x.values, dims=d))
+            end
+        end
+        fill!(z, NaN)
+        fill!(z1, NaN)
+        fill!(z2, NaN)
+        fill!(z3, NaN)
+        fill!(z4, NaN)
+        @test (func!(z, x); z == func(x, dims=2))
+        @test (func!(z1, x); all(isnan, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(z2, x); all(isnan, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(z3, x); z3.values == z.values[4:end-4])
+        @test (func!(z4, x); all(isnan, z4.values[1:4]) && all(isnan, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+        fill!(z, NaN)
+        fill!(z1, NaN)
+        fill!(z2, NaN)
+        fill!(z3, NaN)
+        fill!(z4, NaN)
+        @test (func!(oper, z, x); z == func(oper, x, dims=2))
+        @test (func!(oper, z1, x); all(isnan, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(oper, z2, x); all(isnan, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(oper, z3, x); z3.values == z.values[4:end-4])
+        @test (func!(oper, z4, x); all(isnan, z4.values[1:4]) && all(isnan, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+    end
 end
 
 using OrderedCollections
