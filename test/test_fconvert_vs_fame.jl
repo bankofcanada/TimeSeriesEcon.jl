@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2024, Bank of Canada
+# All rights reserved.
+
 ## Note: this file will not run as part of the standard tests as it relies on other packages
 
 using Revise

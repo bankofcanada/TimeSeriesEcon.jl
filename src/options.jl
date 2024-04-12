@@ -5,8 +5,7 @@ using TOML
 options = Dict{Symbol,Any}(
     :bdaily_holidays_map => nothing,
     :bdaily_creation_bias => :strict,
-    # :bdaily_skip_nans => false, 
-    # :bdaily_skip_holidays => false
+    :x13path => "",
 )
 
 """
@@ -18,10 +17,11 @@ Current available options are:
 * `:bdaily_holidays_map`: This option holds a tseries of boolean values spanning from 1970-01-01 to 2049-12-31. Values on dates
     with a `false` entry will not be returned when calling the `values` function on a BDaily TSeries 
     with the holidays=true option.
-* `:bdaily_skip_nans`: This option controls the treatment of NaN values in BDaily arrays when performing
-    `shift`, `lag`,`diff`, and `pct` functions on them. When true, NaNs are replaced with the most relevant non-NaN value when available.
-* `:bdaily_skip_holidays`: When true, the values function will always be called with holidays=true for BDaily series. 
-    This also controls the behavior of the `shift`, `lag`, `diff`, and `pct` functions, but only NaNs falling on holidays are replaced.
+* `:bdaily_creation_bias`: This option controls the resulting business daily MIT when created from a date landing on a weekend.
+    Available options are `:strict`, `:previous`, `:next`, or `:nearest`. The `:strict` option will throw an error when the 
+    received date is on a weekend.
+* `:x13path`: The path to the x13as_ascii executable. Necessary on windows if the exe is not in your PATH. Default is "x13as_ascii.exe".
+    Can also be used on Linux to use a different executable than the one bundled with TimeSeriesEcon.
     
 """
 function setoption(option::Symbol, value)

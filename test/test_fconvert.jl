@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2024, Bank of Canada
+# All rights reserved.
+
 using Suppressor
 using Statistics
 import Dates

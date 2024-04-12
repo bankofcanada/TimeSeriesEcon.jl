@@ -88,6 +88,9 @@ include("various.jl")
 
 include("linalg.jl")
 
+include("x13/X13.jl")
+export X13, run
+
 """
     rangeof(s; drop::Integer)
 
@@ -118,7 +121,7 @@ julia> q
     21Q4 : 21.0
 ```
 """
-@inline function rangeof(x::Union{TSeries,MVTSeries,Workspace}; drop::Integer)
+@inline function rangeof(x::Union{TSeries,MVTSeries,<:AbstractWorkspace}; drop::Integer)
     rng = rangeof(x)
     return drop > 0 ? (first(rng)+drop:last(rng)) : (first(rng):last(rng)+drop)
 end
