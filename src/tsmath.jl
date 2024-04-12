@@ -283,13 +283,13 @@ end
 # Statistics, MVTSeries
 # Statistics.mean(x::MVTSeries; kwargs...) = mean(x.values; kwargs...)
 # Statistics.mean(f, x::MVTSeries; kwargs...) = mean(f, x.values; kwargs...)
-Statistics.std(x::MVTSeries; kwargs...) = std(x.values; kwargs...)
-Statistics.var(x::MVTSeries; kwargs...) = var(x.values; kwargs...)
+# Statistics.std(x::MVTSeries; kwargs...) = std(x.values; kwargs...)
+# Statistics.var(x::MVTSeries; kwargs...) = var(x.values; kwargs...)
 # Statistics.median(x::MVTSeries; kwargs...) = median(x.values; kwargs...)
-Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...)
-Statistics.cov(x::MVTSeries; kwargs...) = cov(x.values; kwargs...)
+# Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...)
+# Statistics.cov(x::MVTSeries; kwargs...) = cov(x.values; kwargs...)
 
-Statistics.mean(f, x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.mean(f::Function, x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
 Statistics.mean(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = mean(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
 Statistics.std(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = std(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
 Statistics.var(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = var(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
