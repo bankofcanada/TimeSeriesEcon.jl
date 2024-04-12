@@ -726,13 +726,13 @@ Base.:(<)(l::MIT, r::Duration) = throw(ArgumentError("Illegal comparison of $(ty
 Base.:(<)(l::Duration, r::MIT) = throw(ArgumentError("Illegal comparison of $(typeof(l)) and $(typeof(r))."))
 
 # Comparison of Duration with Int is needed for indexing and iterating time series.
-# Base.:(<)(l::Int, r::Duration) = l < Int(r)
-# Base.:(<)(l::Duration, r::Int) = Int(l) < r
+Base.:(<)(l::Base.BitInteger, r::Duration) = l < Int(r)
+Base.:(<)(l::Duration, r::Base.BitInteger) = Int(l) < r
 
 # <= is expressed as < or == 
 Base.:(<=)(l::Union{MIT,Duration}, r::Union{MIT,Duration}) = (l < r) || (l == r)
-# Base.:(<=)(l::Duration, r::Int) = (l < r) || (l == r)
-# Base.:(<=)(l::Int, r::Duration) = (l < r) || (l == r)
+Base.:(<=)(l::Duration, r::Base.BitInteger) = (l < r) || (l == r)
+Base.:(<=)(l::Base.BitInteger, r::Duration) = (l < r) || (l == r)
 
 
 # -------------------
@@ -757,6 +757,7 @@ Base.:(+)(l::Integer, r::Union{MIT,Duration}) = oftype(r, l + Int(r))
 
 # checkindex, however, needs to work with an Int
 Base.checkindex(::Type{Bool}, inds::AbstractUnitRange{<:MIT}, i::Int) = 1 <= i <= length(inds)
+Base.checkindex(::Type{Bool}, inds::AbstractUnitRange{<:Duration}, i::Int) = 1 <= i <= Int(length(inds))
 
 # -------------------
 # one(x) is meant to be a dimensionless 1, so that's what we do
@@ -775,8 +776,8 @@ Base.promote_rule(::Type{<:MIT}, ::Type{T}) where {T<:AbstractFloat} = T
 Base.isless(x::Type{<:Frequency}, y::Type{<:Frequency}) = isless(ppy(x), ppy(y))
 
 # needed for comparisons
-Base.flipsign(x::Duration{F}, y::Duration{F}) where {F} = flipsign(Int(x), Int(y))
-Base.flipsign(x::MIT{F}, y::MIT{F}) where {F} = flipsign(Int(x), Int(y))
+Base.flipsign(x::Duration{F}, y::Duration{F}) where {F<:Frequency} = flipsign(Int(x), Int(y))
+Base.flipsign(x::MIT{F}, y::MIT{F}) where {F<:Frequency} = flipsign(Int(x), Int(y))
 
 # needed for plot math
 Base.:(/)(a::Duration, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
@@ -784,6 +785,9 @@ Base.:(/)(a::MIT, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
 Base.:(/)(a::Duration{F}, b::Duration{F}) where {F<:Frequency} = Int(a) / Int(b)
 Base.:(/)(a::MIT{F}, b::Duration{F}) where {F<:Frequency} = (a - MIT{F}(0)) / b
 Base.promote_rule(::Type{<:Duration}, ::Type{T}) where {T<:AbstractFloat} = T
+
+Base.:(*)(a::Base.BitInteger, b::Duration) = oftype(b, a*Int(b))
+Base.:(*)(a::Duration, b::Base.BitInteger) = oftype(a, b*Int(a))
 
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
@@ -858,13 +862,33 @@ Base.:(:)(start::MIT{F}, step::Duration{F}, stop::MIT{F}) where {F<:Frequency} =
 Base.length(rng::UnitRange{<:MIT}) = convert(Int, last(rng) - first(rng) + 1)
 Base.step(rng::UnitRange{<:MIT}) = convert(Int, 1)
 
-Base.union(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = mixed_freq_error(l, r)
-Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where {F<:Frequency} = min(first(l), first(r)):max(last(l), last(r))
+"""
+    rangeof_span(args...)
 
-# Base.issubset(l::UnitRange{<:MIT}, r::UnitRange{<:MIT}) = false
-# Base.issubset(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = first(r) <= first(l) && last(l) <= last(r)
+Construct and return a `UnitRange{MIT{F}}` instance that contains the ranges of all arguments.
+All arguments must be ranges of `MIT`` or `MIT` instances of the same frequency `F`.
+"""
+function rangeof_span end
+export rangeof_span
 
-Base.float(rng::UnitRange{MIT{F}}) where {F} = float(first(rng)):float(Duration{F}(1)):float(last(rng))
+_to_unitrange(x::MIT) = UnitRange(x, x)
+_to_unitrange(x::AbstractUnitRange{<:MIT}) = x
+_to_unitrange(x::AbstractArray{<:MIT}) = UnitRange(extrema(x)...)
+_to_unitrange(x) = applicable(rangeof, x) ? rangeof(x) : 1:0
+
+rangeof_span() = 1U:0U
+function rangeof_span(x, args...)
+    rng = _to_unitrange(x)
+    for arg in args
+        arg_rng = _to_unitrange(arg)
+        isempty(arg_rng) && continue
+        rng = UnitRange(min(first(rng), first(arg_rng)), max(last(rng), last(arg_rng)))
+    end
+    return rng
+end
+
+
+Base.float(rng::UnitRange{MIT{F}}) where {F<:Frequency} = float(first(rng)):float(Duration{F}(1)):float(last(rng))
 
 #------------------------------
 # sort!() a list of MITs

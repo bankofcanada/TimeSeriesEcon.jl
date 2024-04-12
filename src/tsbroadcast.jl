@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 using Base.Broadcast
@@ -8,6 +8,7 @@ struct TSeriesStyle{F<:Frequency} <: Broadcast.BroadcastStyle end
 frequencyof(::Type{<:TSeriesStyle{F}}) where {F<:Frequency} = F
 
 Base.Broadcast.BroadcastStyle(::Type{<:TSeries{F}}) where {F<:Frequency} = TSeriesStyle{F}()
+Base.Broadcast.BroadcastStyle(::Type{<:SubArray{T,1,<:TSeries{F}}}) where {T,F<:Frequency} = TSeriesStyle{F}()
 Base.Broadcast.BroadcastStyle(S1::TSeriesStyle, S2::TSeriesStyle) = mixed_freq_error(S1, S2)
 Base.Broadcast.BroadcastStyle(S::TSeriesStyle{F}, ::TSeriesStyle{F}) where {F<:Frequency} = S
 Base.Broadcast.BroadcastStyle(S::TSeriesStyle, AS::Broadcast.AbstractArrayStyle{N}) where {N} = N <= 1 ? S : AS
@@ -89,10 +90,12 @@ begin
     function ts_unwrap(ax::_TSAxesType, bc::Base.Broadcast.Broadcasted{Style}) where {Style}
         Base.Broadcast.Broadcasted{Style}(bc.f, ts_unwrap_args(ax, bc.args), bc.axes)
     end
+    ts_unwrap(ax::Tuple{AbstractVector{<:MIT}}, arg) = arg
+    ts_unwrap(ax::Tuple{AbstractVector{<:MIT}}, arg::TSeries) = view(arg, ax[1])
 
-    ts_unwrap_args(ax::_TSAxesType, ::Tuple{}) = ()
-    ts_unwrap_args(ax::_TSAxesType, a::Tuple{<:Any}) = (ts_unwrap(ax, a[1]),)
-    ts_unwrap_args(ax::_TSAxesType, a::Tuple) = (ts_unwrap(ax, a[1]), ts_unwrap_args(ax, Base.tail(a))...)
+    ts_unwrap_args(ax, ::Tuple{}) = ()
+    ts_unwrap_args(ax, a::Tuple{<:Any}) = (ts_unwrap(ax, a[1]),)
+    ts_unwrap_args(ax, a::Tuple) = (ts_unwrap(ax, a[1]), ts_unwrap_args(ax, Base.tail(a))...)
 end
 
 function Base.Broadcast.preprocess(dest::TSeries, bc::Base.Broadcast.Broadcasted)
@@ -111,6 +114,15 @@ function Base.copyto!(dest::AbstractArray, bc::Base.Broadcast.Broadcasted{Nothin
     rng = bc.axes[1]
     bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, ts_unwrap_args(bc.axes, bc.args), (1:length(rng),))
     copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
+end
+
+function Base.copyto!(dest::SubArray{T,1,<:TSeries}, bc::Base.Broadcast.Broadcasted{Nothing,<:_TSAxesType}) where {T}
+    bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, ts_unwrap_args(dest.indices, bc.args), map(Base.axes1, dest.indices))
+    copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
+end
+
+function Base.copyto!(dest::SubArray{T,1,<:TSeries}, bc::Base.Broadcast.Broadcasted{Nothing}) where {T}
+    copyto!(view(dest.parent, dest.indices...), Base.Broadcast.preprocess(dest, bc))
 end
 
 function Base.copyto!(dest::TSeries, bc::Base.Broadcast.Broadcasted{Nothing})
@@ -132,9 +144,20 @@ function Base.copyto!(dest::TSeries, bc::Base.Broadcast.Broadcasted{Nothing})
 end
 
 function Base.Broadcast.dotview(t::TSeries, rng::AbstractUnitRange{<:MIT})
-    if rng ⊈ eachindex(t)
-        resize!(t, eachindex(t) ∪ rng)
-    end
-    return Base.maybeview(t, rng) 
+    resize!(t, rangeof_span(t, rng))
+    return Base.maybeview(t, rng)
 end
+
+Base.compute_stride1(s, inds, I::Tuple{AbstractRange{MIT{F}},Vararg{Any}}) where {F<:Frequency} = s * Int(step(I[1]))
+@inline Base.compute_offset1(parent::TSeries, stride1::Integer, I::Tuple{AbstractRange{<:MIT}}) =
+    Int(first(I[1]) - firstdate(parent) + 1) - stride1 * Int(first(Base.axes1(I[1])))
+
+function Base.Broadcast.dotview(t::TSeries, rng::AbstractVector{<:MIT})
+    resize!(t, rangeof_span(t, rng))
+    return SubArray(t, (rng,))
+end
+
+
+Base.Broadcast.dotview(t::TSeries, rng::AbstractArray{Bool}) = dotview(t, rangeof(t)[findall(rng)])
+Base.Broadcast.dotview(t::TSeries{F}, rng::TSeries{F,Bool}) where {F<:Frequency} = dotview(t, findall(rng))
 

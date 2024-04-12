@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 
@@ -87,7 +87,7 @@ end
     @test a[1, :] == [1, 6]
     @test a[1:3, :] == [1 6; 2 7; 3 8]
     @test a[:, 1:2] == a.values[:, 1:2]
-    @test a[:, :] == a.values
+    @test a[:, :] == a
     for i = 1:5
         for j = 1:2
             x = a[i, j]
@@ -111,9 +111,10 @@ end
     @test_throws BoundsError a.c
     @test (a.a = TSeries(20Q1, 1:10); a.values[:, 1] == collect(1:10))
     @test (a.a = 1; a.values[:, 1] == ones(10))
-    b = MVTSeries(rangeof(a), (:a, ), rand)
-    @test (a.a = b; a.values[:, 1] == b.values[:,1])
-    @test (a[:,:] .= 6ones(size(a)...); all(a.values .== 6))
+    b = MVTSeries(rangeof(a), (:a,), rand)
+    @test (a.a = b; a.values[:, 1] == b.values[:, 1])
+    @test (a[:, :] = 6ones(size(a)...); all(a.values .== 6))
+    @test (a[:, :] .= 6ones(size(a)...); all(a.values .== 6))
 end
 
 @testset "MV" begin
@@ -260,7 +261,6 @@ end
             sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
             sd[2001Q1:2001Q4, [:a, :b]] = sd2
             @test (sd[2001Q1:2001Q4, :].values == sd2[2001Q1:2001Q4, :].values)
-
         end
 
         # https://github.com/bankofcanada/TimeSeriesEcon.jl/pull/49
@@ -270,10 +270,63 @@ end
         @test (sd[:a] .= dta2[:, 1]; sd[:b] = dta2[:, 2]; sd.values == dta2)
         @test (sd[nms] .= dta; sd.values == dta)
         @test (sd[nms] = dta2; sd.values == dta2)
-        @test (sd[nms] = sd2; sd[rangeof(sd2),:].values == sd2.values)
+        @test (sd[nms] = sd2; sd[rangeof(sd2), :].values == sd2.values)
         rand!(sd)
-        @test (sd[nms] .= sd2; sd[rangeof(sd2),:].values == sd2.values)
+        @test (sd[nms] .= sd2; sd[rangeof(sd2), :].values == sd2.values)
     end
+end
+
+@testset "MV views" begin
+    x = MVTSeries(2000Q1, (:a, :b, :c), rand(10, 3))
+
+    # first MIT, second list
+    @test x[2000Q1, (:a, :b)] == view(x, 2000Q1, (:a, :b))
+    @test view(x, 2000Q1, (:a, :b)) isa SubArray
+    # first MIT, second :
+    @test x[2001Q1, :] == view(x, 2001Q1, :)
+    @test view(x, 2001Q1, :) isa SubArray
+
+    # first MIT-range, second name
+    @test x[2000Q1:2001Q4, :b] isa TSeries
+    @test x[2000Q1:2001Q4, :b].values isa Vector
+    @test view(x, 2000Q1:2001Q4, :b) isa TSeries
+    @test view(x, 2000Q1:2001Q4, :b).values isa SubArray
+    @test x[2000Q1:2001Q4, :b] == view(x, 2000Q1:2001Q4, :b)
+
+    # first :, second name
+    @test x[:, :c] isa TSeries
+    # @test x[:, :c].values isa Vector
+    @test view(x, :, :c) isa TSeries
+    @test view(x, :, :c).values isa SubArray
+    @test x[:, :c] == view(x, :, :c)
+
+    # first MIT-range, second list
+    @test x[2000Q2:2001Q3, (:a, :c)] isa MVTSeries
+    @test x[2000Q2:2001Q3, (:a, :c)].values isa Matrix
+    @test view(x, 2000Q2:2001Q3, (:a, :c)) isa MVTSeries
+    @test view(x, 2000Q2:2001Q3, (:a, :c)).values isa SubArray
+    @test x[2000Q2:2001Q3, (:a, :c)] == view(x, 2000Q2:2001Q3, (:a, :c))
+
+    # first MIT-range, second :
+    @test x[2000Q1:2001Q3, :] isa MVTSeries
+    @test x[2000Q1:2001Q3, :].values isa Matrix
+    @test view(x, 2000Q1:2001Q3, :) isa MVTSeries
+    @test view(x, 2000Q1:2001Q3, :).values isa SubArray
+    @test x[2000Q1:2001Q3, :] == view(x, 2000Q1:2001Q3, :)
+
+    # first :, second list
+    @test x[:, (:b, :a)] isa MVTSeries
+    @test x[:, (:b, :a)].values isa Matrix
+    @test view(x, :, (:b, :a)) isa MVTSeries
+    @test view(x, :, (:b, :a)).values isa SubArray
+    @test x[:, (:b, :a)] == view(x, :, (:b, :a))
+
+    # first :, second :
+    @test x[:, :] isa MVTSeries
+    @test x[:, :].values isa Matrix
+    @test view(x, :, :) isa MVTSeries
+    @test view(x, :, :).values isa SubArray
+    @test x[:, :] == view(x, :, :)
 end
 
 @testset "MVTSeries show" begin
@@ -540,6 +593,193 @@ end
     @test Base.Broadcast.preprocess(x2, t2).keeps == (true,)
     @test Base.Broadcast.preprocess(x2, t2).defaults == (1,)
     @test Base.Broadcast.preprocess(x2, 2.3) == 2.3
+
+    mat3 = [7.0 7.0; 2.0 12.0; 7.0 7.0; 4.0 14.0; 7.0 7.0; 6.0 16.0; 7.0 7.0; 8.0 18.0; 7.0 7.0; 10.0 20.0]
+
+    ##################################################################################################
+    # broadcasting assignment of a Number using steprange index
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] .= 7.0
+    @test x3.values == mat3
+    x3[20Q1:2:22Q2] .+= 0.0
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10, :] .= 7.0
+    @test x3.values == mat3
+    x3[1:2:10, :] .+= 0.0
+    @test x3.values == mat3
+
+    # direct assignment of a Matrix using steprange index
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] = mat4
+    @test x3.values == mat3
+    x3[20Q1:2:22Q2] += 0.0 * mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10, :] = mat4
+    @test x3.values == mat3
+    x3[1:2:10, :] += 0.0 * mat4
+    @test x3.values == mat3
+
+    # broadcasting assignment of a Matrix using steprange index
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[20Q1:2:22Q2] .= mat4
+    @test x3.values == mat3
+    x3[20Q1:2:22Q2] .+= 0.0 * mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[1:2:10, :] .= mat4
+    @test x3.values == mat3
+    x3[1:2:10, :] .+= 0.0 * mat4
+    @test x3.values == mat3
+
+    # direct assignment of a Matrix using Vector index
+    ind = collect(20Q1:2:22Q2)
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] .= 7.0
+    @test x3.values == mat3
+    x3[ind] .+= 0.0
+    @test x3.values == mat3
+
+    mat4 = ones(5, 2) .* 7
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] = mat4
+    @test x3.values == mat3
+    x3[ind] += 0.0 * mat4
+    @test x3.values == mat3
+
+    x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+    x3[ind] .= mat4
+    @test x3.values == mat3
+    x3[ind] .+= 0.0 * mat4
+    @test x3.values == mat3
+
+
+    ##################################################################################################
+    # repeat, with second index (:)
+
+    for first_index in (20Q1:2:22Q2, collect(20Q1:2:22Q2), TSeries(20Q1, (1:10) .% 2 .== 1), (1:10) .% 2 .== 1),
+        second_index in ((:,), ([:a, :b],), ())
+
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[first_index, second_index...] .= 7.0
+        @test x3.values == mat3
+        x3[first_index, second_index...] .+= 0.0
+        @test x3.values == mat3
+
+        # direct assignment of a Matrix using steprange index
+        mat4 = ones(5, 2) .* 7
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[first_index, second_index...] = mat4
+        @test x3.values == mat3
+        x3[first_index, second_index...] += 0.0 * mat4
+        @test x3.values == mat3
+
+        # broadcasting assignment of a Matrix using steprange index
+        mat4 = ones(5, 2) .* 7
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x3[first_index, second_index...] .= mat4
+        @test x3.values == mat3
+        x3[first_index, second_index...] .+= 0.0 * mat4
+        @test x3.values == mat3
+
+        first_index! = (eltype(first_index) == Bool) ? (.!first_index) : (first_index .+ 1)
+
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x7 = fill!(similar(x3), 7)
+        x7[first_index!, second_index...] = x3
+        @test x7.values == mat3
+
+        x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
+        x7 = fill!(similar(x3), 7)
+        x7[first_index!, second_index...] .= x3
+        @test x7.values == mat3
+    end
+
+    ##################################################################################################
+
+    mat5 = [7.0 11.0 7.0; 2.0 12.0 22.0; 7.0 13.0 7.0; 4.0 14.0 24.0; 7.0 15.0 7.0; 6.0 16.0 26.0; 7.0 17.0 7.0; 8.0 18.0 28.0; 7.0 19.0 7.0; 10.0 20.0 30.0]
+    for first_index in (20Q1:2:22Q2, collect(20Q1:2:22Q2), TSeries(20Q1, (1:10) .% 2 .== 1), (1:10) .% 2 .== 1),
+        second_index in ([:a, :c], (:a, :c))
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x3[first_index, second_index] .= 7.0
+        @test x3.values == mat5
+        x3[first_index, second_index] .+= 0.0
+        @test x3.values == mat5
+
+        rng = rangeof(x3)
+        nf = eltype(first_index) <: Bool ? sum(first_index) : length(first_index)
+        ns = length(second_index)
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x3[first_index, second_index] = 7.0 * ones(nf, ns)
+        @test x3.values == mat5
+        x3[first_index, second_index] += zeros(nf, ns)
+        @test x3.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x3[first_index, second_index] .= 7.0 * ones(nf, ns)
+        @test x3.values == mat5
+        x3[first_index, second_index] .+= zeros(nf, ns)
+        @test x3.values == mat5
+
+        first_index! = (eltype(first_index) == Bool) ? (.!first_index) : (first_index .+ 1)
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] = x8
+        x7[rng, :b] = x8
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] = x8
+        x7[rng, :b] = x8.b
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] .= x8
+        x7[rng, :b] .= x8
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        x7 = MVTSeries(rng, colnames(x3), 7.0)
+        x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+        x7[first_index!, second_index] .= x8
+        x7[rng, :b] .= x8.b
+        @test x7.values == mat5
+
+        x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+        for dims in ((1, ns), (nf, 1), (nf,), (nf, ns))
+            r7 = 7.0 * ones(dims)
+            x8 = copyto!(MVTSeries(first(rng)-4:last(rng)+4, colnames(x3), NaN), x3)
+            if eltype(first_index) == Bool && !isa(first_index, TSeries) && length(first_index) != size(x8, 1)
+                @test_throws BoundsError x8[first_index, second_index] .= r7
+            else
+                x8[first_index, second_index] .= r7
+                @test x8[rng, :].values == mat5
+                x8[first_index, second_index] .+= zeros(dims)
+                @test x8[rng, :].values == mat5
+            end
+        end
+
+    end
+
+    x3 = MVTSeries(20Q1, (:a, :b, :c), [collect(1.0:10) collect(11.0:20) collect(21.0:30)])
+    x3[1:2:10, [1, 3]] .= 7.0
+    @test x3.values == mat5
+
 end
 
 @testset "MVTSeries math" begin
@@ -823,7 +1063,149 @@ end
     end
 end
 
+@testset "reducers" begin
+    x = MVTSeries(MIT{Monthly}(rand(1:10_000)), collect("abcd"), rand(20, 4))
+    for func = (sum, prod, minimum, maximum, mean, median, std, var)
+        @test func(x) isa Number
+        @test func(x) ≈ func(x.values)
+        @test func(x; dims=1) isa Array
+        @test func(x; dims=1) ≈ func(x.values; dims=1)
+        @test func(x; dims=2) isa TSeries
+        @test func(x; dims=2) ≈ let x = func(x.values; dims=2)
+            size(x, 2) == 1 ? vec(x) : x
+        end
+    end
+    oper = x -> x + 6
+    for func = (sum, prod, minimum, maximum, mean)
+        @test func(oper, x) isa Number
+        @test func(oper, x) ≈ func(oper, x.values)
+        @test func(oper, x; dims=1) isa Array
+        @test func(oper, x; dims=1) ≈ func(oper, x.values; dims=1)
+        @test func(oper, x; dims=2) isa TSeries
+        @test func(oper, x; dims=2) ≈ vec(func(oper, x.values; dims=2))
+    end
+    pred = x -> x < 0.6
+    for func = (any, all)
+        @test func(pred, x) isa Number
+        @test func(pred, x) ≈ func(pred, x.values)
+        @test func(pred, x; dims=1) isa Array
+        @test func(pred, x; dims=1) ≈ func(pred, x.values; dims=1)
+        @test func(pred, x; dims=2) isa TSeries
+        @test func(pred, x; dims=2) ≈ vec(func(pred, x.values; dims=2))
+    end
 
+    o1 = fill(NaN, 1)
+    o2 = fill(NaN, 1, 1)
+    v = fill(NaN, size(x, 1))
+    m1 = fill(NaN, size(x, 1), 1)
+    m2 = fill(NaN, 1, size(x, 2))
+    m12 = fill(NaN, size(x))
+    rng = rangeof(x)
+    z = TSeries(rng, NaN)
+    rng1 = first(rng)-2:last(rng)-2
+    z1 = TSeries(rng1, NaN)
+    rng2 = first(rng)+3:last(rng)+1
+    z2 = TSeries(rng2, NaN)
+    rng3 = first(rng)+3:last(rng)-4
+    z3 = TSeries(rng3, NaN)
+    rng4 = first(rng)-4:last(rng)+3
+    z4 = TSeries(rng4, NaN)
+    for (func, func!) = ((sum, sum!), (prod, prod!), (maximum, maximum!), (minimum, minimum!))
+        for (q, d) = ((o1, (1, 2)), (o2, (1, 2)), (v, 2), (m1, 2), (m2, 1), (m12, ()))
+            if q isa AbstractVector
+                fill!(q, NaN)
+                @test (func!(q, x); q == vec(func(x.values, dims=d)))
+                # NOTE: there is a bug in Julia 1.7 in `minimum!(oper, z, x)`, so we skip those tests
+                func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
+                fill!(q, NaN)
+                @test (func!(oper, q, x); q == vec(func(oper, x.values, dims=d)))
+            else
+                fill!(q, NaN)
+                @test (func!(q, x); q == func(x.values, dims=d))
+                # NOTE: there is a bug in Julia 1.7 in `minimum!(oper, z, x)`, so we skip those tests
+                func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
+                fill!(q, NaN)
+                @test (func!(oper, q, x); q == func(oper, x.values, dims=d))
+            end
+        end
+        fill!(z, NaN)
+        fill!(z1, NaN)
+        fill!(z2, NaN)
+        fill!(z3, NaN)
+        fill!(z4, NaN)
+        @test (func!(z, x); z == func(x, dims=2))
+        @test (func!(z1, x); all(isnan, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(z2, x); all(isnan, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(z3, x); z3.values == z.values[4:end-4])
+        @test (func!(z4, x); all(isnan, z4.values[1:4]) && all(isnan, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+        # NOTE: there is a bug in Julia 1.7 in `minimum!(oper, z, x)`, so we skip those tests
+        func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
+        fill!(z, NaN)
+        fill!(z1, NaN)
+        fill!(z2, NaN)
+        fill!(z3, NaN)
+        fill!(z4, NaN)
+        @test (func!(oper, z, x); z == func(oper, x, dims=2))
+        @test (func!(oper, z1, x); all(isnan, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(oper, z2, x); all(isnan, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(oper, z3, x); z3.values == z.values[4:end-4])
+        @test (func!(oper, z4, x); all(isnan, z4.values[1:4]) && all(isnan, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+    end
+
+    o1 = fill(false, 1)
+    o2 = fill(false, 1, 1)
+    v = fill(false, size(x, 1))
+    m1 = fill(false, size(x, 1), 1)
+    m2 = fill(false, 1, size(x, 2))
+    m12 = fill(false, size(x))
+    rng = rangeof(x)
+    z = TSeries(rng, false)
+    rng1 = first(rng)-2:last(rng)-2
+    z1 = TSeries(rng1, false)
+    rng2 = first(rng)+3:last(rng)+1
+    z2 = TSeries(rng2, false)
+    rng3 = first(rng)+3:last(rng)-4
+    z3 = TSeries(rng3, false)
+    rng4 = first(rng)-4:last(rng)+3
+    z4 = TSeries(rng4, false)
+    for (func, func!) = ((any, any!), (all, all!))
+        for (q, d) = ((o1, (1, 2)), (o2, (1, 2)), (v, 2), (m1, 2), (m2, 1), (m12, ()))
+            if q isa AbstractVector
+                fill!(q, false)
+                @test (func!(q, pred.(x)); q == vec(func(pred.(x.values), dims=d)))
+                fill!(q, false)
+                @test (func!(pred, q, x); q == vec(func(pred, x.values, dims=d)))
+            else
+                fill!(q, false)
+                @test (func!(q, pred.(x)); q == func(pred.(x.values), dims=d))
+                # NOTE: there is a bug in Julia 1.7 in `minimum!(pred, z, x)`, so we skip those tests
+                func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
+                fill!(q, false)
+                @test (func!(pred, q, x); q == func(pred, x.values, dims=d))
+            end
+        end
+        fill!(z, false)
+        fill!(z1, false)
+        fill!(z2, false)
+        fill!(z3, false)
+        fill!(z4, false)
+        @test (func!(z, pred.(x)); z == func(pred.(x), dims=2))
+        @test (func!(z1, pred.(x)); all(!, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(z2, pred.(x)); all(!, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(z3, pred.(x)); z3.values == z.values[4:end-4])
+        @test (func!(z4, pred.(x)); all(!, z4.values[1:4]) && all(!, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+        fill!(z, false)
+        fill!(z1, false)
+        fill!(z2, false)
+        fill!(z3, false)
+        fill!(z4, false)
+        @test (func!(pred, z, x); z == func(pred, x, dims=2))
+        @test (func!(pred, z1, x); all(!, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(pred, z2, x); all(!, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(pred, z3, x); z3.values == z.values[4:end-4])
+        @test (func!(pred, z4, x); all(!, z4.values[1:4]) && all(!, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+    end
+end
 
 using OrderedCollections
 
@@ -849,6 +1231,30 @@ using OrderedCollections
     for c in colnames(a)
         @test a[c].values == [1, 2, 3, x[c]...]
     end
+
+    # pct, apct, ytypct
+    ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
+    @test apct(ts).values ≈ ((ts.values[2:10, :] ./ ts.values[1:9, :]) .^ 4 .- 1) * 100
+    @test pct(ts).values ≈ ((ts.values[2:10, :] ./ ts.values[1:9, :]) .- 1) * 100
+    @test ytypct(ts).values ≈ ((ts.values[5:10, :] ./ ts.values[1:6, :]) .- 1) * 100
+
+    # mapslices
+    ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
+    res1 = mapslices(x -> x .+ 1, ts, dims=1)
+    res_matrix = copy(ts.values) .+ 1
+    res_mvts = MVTSeries(rangeof(ts), colnames(ts), res_matrix)
+    @test mapslices(x -> x .+ 1, ts, dims=1) == res_mvts
+    @test mapslices(x -> x .+ 1, ts, dims=2) == res_mvts
+
+    # one-column returns of the same length as ts return a TSeries
+    row_means = (ts.values[:, 1] .+ ts.values[:, 2]) ./ 2
+    res_tseries = TSeries(rangeof(ts), row_means)
+    @test mapslices(mean, ts, dims=2) ≈ res_tseries
+
+    # returns that don't fit just return a matrix
+    @test mapslices(mean, ts, dims=1) ≈ mean(ts.values, dims=1)
+
+
 end
 
 @testset "hcat" begin

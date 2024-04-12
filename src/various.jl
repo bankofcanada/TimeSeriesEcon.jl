@@ -37,29 +37,27 @@ for which [`istypenan`](@ref) returns `false`.
 
 All [`TSeries`](@ref) in the arguments list must be of the same frequency. The
 data type of the resulting [`TSeries`](@ref) is decided by the standard
-promotion of numerical types in Julia. Its range is the union of the ranges of
-the arguments, unless the optional `rng` is ginven in which case it becomes the
+promotion of numerical types in Julia. Its range spans all of the ranges of
+the arguments, unless the optional `rng` is given in which case it becomes the
 range.
 """
-overlay(tseries::TSeries...) = overlay(mapreduce(rangeof, union, tseries), tseries...)
-function overlay(rng::AbstractRange{<:MIT}, tseries::TSeries...)
-    T = mapreduce(eltype, promote_type, tseries)
+overlay(x::TSeries, tseries::TSeries...) = overlay(rangeof_span(x, tseries...), x, tseries...)
+function overlay(rng::AbstractUnitRange{<:MIT}, x::TSeries, tseries::TSeries...)
+    T = Base.promote_eltype(x, tseries...)
     ret = TSeries(rng, typenan(T))
-    # todo = contains `true` for locations that don't yet contain valid values.
-    todo = trues(rng)
+    copyto!(ret, x)
     for ts in tseries
         # quit if nothing left to do
-        any(todo) || break
+        any(istypenan, ret) || break
         for (mit, val) in zip(rangeof(ts), ts.values)
+            # skip val if not valid
+            istypenan(val) && continue
             # skip if outside overlay range
             mit ∈ rng || continue
             # skip if already done
-            todo[mit] || continue
-            # skip if not valid
-            istypenan(val) && continue
-            # still here? assign and mark done
+            istypenan(ret[mit]) || continue
+            # still here? assign 
             ret[mit] = val
-            todo[mit] = false
         end
     end
     return ret
@@ -89,15 +87,15 @@ end
 """
     overlay(data::MVTSeries, datan::MVTSeries...)
 
-When all arguments are `MVTSeries` the result is an `MVTSeries` of the overlayed
+When all arguments are `MVTSeries` the result is an `MVTSeries` of the overlaid
 range and the ordered union of the columns. Each column is an overlay of the
 corresponding `TSeries`.
 """
 function overlay(args::MVTSeries...)
     isempty(args) && return MVTSeries()
-    rng = mapreduce(rangeof, union, args)
+    rng =rangeof_span(args...) 
     names = collect(mapfoldl(keys, union, args, init=OrderedSet{Symbol}()))
-    ET = mapreduce(eltype, promote_type, args)
+    ET = Base.promote_eltype(args...)
     ret = MVTSeries(rng, names, typenan(ET))
     for name in names
         ret[:, name] .= overlay(rng, (arg[name] for arg in args if name in keys(arg))...)
@@ -383,10 +381,17 @@ function clean_old_frequencies(m::MIT)
     end
     return m
 end
+function clean_old_frequencies(r::UnitRange{<:MIT})
+    sanitized_frequency = sanitize_frequency(frequencyof(r))
+    if sanitized_frequency !== frequencyof(r)
+        return MIT{sanitized_frequency}(Int(first(r))):MIT{sanitized_frequency}(Int(first(r)) + length(r) - 1)
+    end
+    return r
+end
 function clean_old_frequencies(ts::TSeries)
     new_firstdate = clean_old_frequencies(ts.firstdate)
     if frequencyof(new_firstdate) !== frequencyof(ts.firstdate)
-        new_lastdate = new_firstdate + length(rangeof(ts)) - 1
+        new_lastdate = new_firstdate + length(ts) - 1
         return copyto!(TSeries(eltype(values(ts)), new_firstdate:new_lastdate), values(ts))
     end
     return ts

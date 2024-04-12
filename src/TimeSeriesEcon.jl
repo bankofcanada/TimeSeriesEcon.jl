@@ -62,8 +62,6 @@ export firstdate, lastdate, rangeof
 export typenan, istypenan
 
 include("tsbroadcast.jl")
-include("tsmath.jl")
-export shift, shift!, lag, lag!, lead, lead!
 
 include("fconvert/fconvert_helpers.jl")
 include("fconvert/fconvert_mit.jl")
@@ -73,6 +71,9 @@ export overlay, fconvert
 include("mvtseries.jl")
 export MVTSeries
 export rawdata, colnames, columns, cleanedvalues
+
+include("tsmath.jl")
+export shift, shift!, lag, lag!, lead, lead!
 
 include("recursive.jl")
 export @rec

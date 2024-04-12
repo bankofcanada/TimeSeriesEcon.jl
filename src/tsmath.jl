@@ -279,6 +279,97 @@ function Statistics.cov(x::TSeries{BDaily}, y::TSeries{BDaily}; skip_all_nans::B
     end
 end
 
-# TODO: cor for MVTS
 
-# stdm, varm
+# Statistics, MVTSeries
+# Statistics.mean(x::MVTSeries; kwargs...) = mean(x.values; kwargs...)
+# Statistics.mean(f, x::MVTSeries; kwargs...) = mean(f, x.values; kwargs...)
+# Statistics.std(x::MVTSeries; kwargs...) = std(x.values; kwargs...)
+# Statistics.var(x::MVTSeries; kwargs...) = var(x.values; kwargs...)
+# Statistics.median(x::MVTSeries; kwargs...) = median(x.values; kwargs...)
+# Statistics.cor(x::MVTSeries; kwargs...) = cor(x.values; kwargs...)
+# Statistics.cov(x::MVTSeries; kwargs...) = cov(x.values; kwargs...)
+
+Statistics.mean(f::Function, x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = mean(f, cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.mean(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = mean(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.std(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = std(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.var(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = var(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.median(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = median(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map); kwargs...)
+Statistics.cor(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = cor(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+Statistics.cov(x::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing, kwargs...) = cov(cleanedvalues(x, skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map), kwargs...)
+
+
+"""
+    pct(x::Union{TSeries,MVTSeries}; shift_value::Int=-1; islog=false)
+
+Observation-to-observation percent rate of change in x.
+"""
+function pct(ts::Union{TSeries,MVTSeries}, shift_value::Int=-1; islog::Bool=false)
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value)
+    else
+        a = ts
+        b = shift(ts, shift_value)
+    end
+
+    result = @. ((a - b) / b) * 100
+    return result
+end
+function pct(ts::Union{TSeries{BDaily},MVTSeries{BDaily}}, shift_value::Int=-1; islog::Bool=false, skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing)
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+    else
+        a = ts
+        b = shift(ts, shift_value; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+    end
+
+    result = @. ((a - b) / b) * 100
+    return result
+end
+
+export pct
+
+"""
+    apct(x::Union{TSeries,MVTSeries}, islog::Bool)
+
+Annualised percent rate of change in `x`.
+
+Examples
+```julia-repl
+julia> x = TSeries(qq(2018, 1), Vector(1:8));
+
+julia> apct(x)
+TSeries{Quarterly{3}} of length 7
+2018Q2: 1500.0
+2018Q3: 406.25
+2018Q4: 216.04938271604937
+2019Q1: 144.140625
+2019Q2: 107.35999999999999
+2019Q3: 85.26234567901243
+2019Q4: 70.59558517284461
+```
+
+See also: [`pct`](@ref)
+"""
+function apct(ts::Union{TSeries{<:YPFrequency{N}},MVTSeries{<:YPFrequency{N}}}, islog::Bool=false) where {N}
+    if islog
+        a = exp.(ts)
+        b = shift(exp.(ts), -1)
+    else
+        a = ts
+        b = shift(ts, -1)
+    end
+    return ((a ./ b) .^ N .- 1) * 100
+end
+export apct
+apct(ts::Union{TSeries,MVTSeries}, args...) = error("apct for frequency $(frequencyof(ts)) not implemented")
+
+
+"""
+    ytypct(x) 
+
+Year-to-year percent change in x. 
+"""
+ytypct(x::Union{TSeries{<:YPFrequency{N}},MVTSeries{<:YPFrequency{N}}}) where N = 100 * (x ./ shift(x, -ppy(x)) .- 1)
+export ytypct

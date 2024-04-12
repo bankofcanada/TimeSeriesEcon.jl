@@ -283,7 +283,11 @@ DE.closedaec!(de)
         push!(a, name => copy(ts))
     end
     b = get!(db, :b, Workspace())
-    names = map(i -> Symbol(rand('A':'Z', 5)...), 1:400)
+    names = Set{Symbol}()
+    while length(names) < 400
+        push!(names, Symbol(rand('A':'Z', 5)...))
+    end
+    names = collect(names)
     mvts = MVTSeries(2000Y{4}, names, rand(400, length(names)))
     for i = 1:100  # like writing 40_000 TSeries of length 400
         name = Symbol(:v, i)
