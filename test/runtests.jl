@@ -17,7 +17,7 @@ include("test_serialize.jl")
 include("test_various.jl")
 include("test_22.jl")
 include("test_x13spec.jl")
-if !Sys.isapple()
+if !Sys.isapple() && !Sys.iswindows()
     include("test_x13run.jl")
 end
 
