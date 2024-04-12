@@ -1110,16 +1110,20 @@ end
     z3 = TSeries(rng3, NaN)
     rng4 = first(rng)-4:last(rng)+3
     z4 = TSeries(rng4, NaN)
-    for (func, func!) = ((sum, sum!), (prod, prod!), (maximum, maximum!), (minimum, minimum!)) #, any!, all!)
+    for (func, func!) = ((sum, sum!), (prod, prod!), (maximum, maximum!), (minimum, minimum!))
         for (q, d) = ((o1, (1, 2)), (o2, (1, 2)), (v, 2), (m1, 2), (m2, 1), (m12, ()))
             if q isa AbstractVector
                 fill!(q, NaN)
                 @test (func!(q, x); q == vec(func(x.values, dims=d)))
+                # NOTE: there is a bug in Julia 1.7 in `minimum!(oper, z, x)`, so we skip those tests
+                func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
                 fill!(q, NaN)
                 @test (func!(oper, q, x); q == vec(func(oper, x.values, dims=d)))
             else
                 fill!(q, NaN)
                 @test (func!(q, x); q == func(x.values, dims=d))
+                # NOTE: there is a bug in Julia 1.7 in `minimum!(oper, z, x)`, so we skip those tests
+                func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
                 fill!(q, NaN)
                 @test (func!(oper, q, x); q == func(oper, x.values, dims=d))
             end
@@ -1134,6 +1138,8 @@ end
         @test (func!(z2, x); all(isnan, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
         @test (func!(z3, x); z3.values == z.values[4:end-4])
         @test (func!(z4, x); all(isnan, z4.values[1:4]) && all(isnan, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+        # NOTE: there is a bug in Julia 1.7 in `minimum!(oper, z, x)`, so we skip those tests
+        func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
         fill!(z, NaN)
         fill!(z1, NaN)
         fill!(z2, NaN)
