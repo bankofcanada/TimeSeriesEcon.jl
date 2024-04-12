@@ -1810,9 +1810,9 @@ end
         @test res.other[key] isa AbstractWorkspace
     end
 
-        # Manual example 3
-        # broken on windows testrunner
-        if !Sys.iswindows()
+    # Manual example 3
+    # broken on windows testrunner
+    if !Sys.iswindows()
         ts = TSeries(1967Q1, mvsales[250:500])
         xts = X13.series(ts, title="Quarterly housing starts")
         spec = X13.newspec(xts)
