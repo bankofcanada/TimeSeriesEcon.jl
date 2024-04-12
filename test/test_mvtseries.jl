@@ -1151,6 +1151,60 @@ end
         @test (func!(oper, z3, x); z3.values == z.values[4:end-4])
         @test (func!(oper, z4, x); all(isnan, z4.values[1:4]) && all(isnan, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
     end
+
+    o1 = fill(false, 1)
+    o2 = fill(false, 1, 1)
+    v = fill(false, size(x, 1))
+    m1 = fill(false, size(x, 1), 1)
+    m2 = fill(false, 1, size(x, 2))
+    m12 = fill(false, size(x))
+    rng = rangeof(x)
+    z = TSeries(rng, false)
+    rng1 = first(rng)-2:last(rng)-2
+    z1 = TSeries(rng1, false)
+    rng2 = first(rng)+3:last(rng)+1
+    z2 = TSeries(rng2, false)
+    rng3 = first(rng)+3:last(rng)-4
+    z3 = TSeries(rng3, false)
+    rng4 = first(rng)-4:last(rng)+3
+    z4 = TSeries(rng4, false)
+    for (func, func!) = ((any, any!), (all, all!))
+        for (q, d) = ((o1, (1, 2)), (o2, (1, 2)), (v, 2), (m1, 2), (m2, 1), (m12, ()))
+            if q isa AbstractVector
+                fill!(q, false)
+                @test (func!(q, pred.(x)); q == vec(func(pred.(x.values), dims=d)))
+                fill!(q, false)
+                @test (func!(pred, q, x); q == vec(func(pred, x.values, dims=d)))
+            else
+                fill!(q, false)
+                @test (func!(q, pred.(x)); q == func(pred.(x.values), dims=d))
+                # NOTE: there is a bug in Julia 1.7 in `minimum!(pred, z, x)`, so we skip those tests
+                func! isa typeof(minimum!) && (v"1.7" <= VERSION < v"1.8") && continue
+                fill!(q, false)
+                @test (func!(pred, q, x); q == func(pred, x.values, dims=d))
+            end
+        end
+        fill!(z, false)
+        fill!(z1, false)
+        fill!(z2, false)
+        fill!(z3, false)
+        fill!(z4, false)
+        @test (func!(z, pred.(x)); z == func(pred.(x), dims=2))
+        @test (func!(z1, pred.(x)); all(!, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(z2, pred.(x)); all(!, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(z3, pred.(x)); z3.values == z.values[4:end-4])
+        @test (func!(z4, pred.(x)); all(!, z4.values[1:4]) && all(!, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+        fill!(z, false)
+        fill!(z1, false)
+        fill!(z2, false)
+        fill!(z3, false)
+        fill!(z4, false)
+        @test (func!(pred, z, x); z == func(pred, x, dims=2))
+        @test (func!(pred, z1, x); all(!, z1.values[1:2]) && z1.values[3:end] == z.values[1:end-2])
+        @test (func!(pred, z2, x); all(!, z2.values[end:end]) && z2.values[1:end-1] == z.values[4:end])
+        @test (func!(pred, z3, x); z3.values == z.values[4:end-4])
+        @test (func!(pred, z4, x); all(!, z4.values[1:4]) && all(!, z4.values[end-2:end]) && z4.values[5:end-3] == z.values)
+    end
 end
 
 using OrderedCollections
