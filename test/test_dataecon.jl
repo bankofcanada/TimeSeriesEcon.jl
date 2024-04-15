@@ -120,9 +120,10 @@ end
 
     # we can write them 
     for (name, value) in pairs(db)
-        id = DE.store_scalar(de, pid, name, value)
+        id = -1
+        @test (id = DE.store_scalar(de, pid, name, value); true)
         @test id == DE.find_fullpath(de, "/$cata/$name")
-        attr = DE.get_all_attributes(de, id)
+        attr = DE.get_all_attributes(de, "/$cata/$name")
         _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
@@ -204,9 +205,10 @@ end
 
     # we can write them 
     for (name, value) in pairs(db)
-        id = DE.store_tseries(de, pid, name, value)
+        id = -1
+        @test (id = DE.store_tseries(de, pid, name, value); true)
         @test id == DE.find_fullpath(de, "/$cata/$name")
-        attr = DE.get_all_attributes(de, id)
+        attr = DE.get_all_attributes(de, "/$cata/$name")
         _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
@@ -245,6 +247,7 @@ end
         sm2=[:this :is :What; :I :always :said],
         mv1=MVTSeries(2020Q1, (:a, :b, :c), rand(Float32, 8, 3)),
         mv2=MVTSeries(w"2020-01-17"5, (:a, :b), rand(Bool, 18, 2)),
+        # special matrices
         diag=Diagonal(rand(17)),
         tran=transpose(rand(22, 11)),
         adj=adjoint(rand(ComplexF64, 13, 34)),
@@ -259,9 +262,26 @@ end
         pid = DE.new_catalog(de, "2d")
     end
 
+    # excluding special matrices from these two 
+    has_jtype = []
+    has_jeltype = [:sm2, :mv2]
+
     # we can write them 
     for (name, value) in pairs(db)
-        @test (DE.store_mvtseries(de, pid, name, value); true)
+        id = -1
+        @test (id = DE.store_mvtseries(de, pid, name, value); true)
+        @test id == DE.find_fullpath(de, "/2d/$name")
+        attr = DE.get_all_attributes(de, "/2d/$name")
+        if value isa LinearAlgebra.AdjOrTrans
+            # special check for special matrices
+            @test ismissing(DE.get_attribute(de, "/2d/$name", "jtype"))
+        elseif value isa Union{Diagonal,LinearAlgebra.HermOrSym}
+            # special check for special matrices
+            @test DE.get_attribute(de, "/2d/$name", "jtype") == string(nameof(typeof(value)))
+        else
+            # standard check for "non-special" matrices
+            _check_attributes(name, value, attr, has_jtype, has_jeltype)
+        end
     end
 
     ldb = Workspace()
