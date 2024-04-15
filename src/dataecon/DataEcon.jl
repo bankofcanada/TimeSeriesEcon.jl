@@ -16,6 +16,7 @@ export writedb, write_data
 export readdb, read_data
 
 using ..TimeSeriesEcon
+using ..MacroTools
 
 include("C.jl")
 
@@ -214,12 +215,24 @@ end
 # import ..LittleDict
 
 """
-    get_all_attributes(de, object_id)
+    get_all_attributes(de, object_id; delim)
+    get_all_attributes(de, fullpath; delim)
+    get_all_attributes(de, parent, obj_name; delim)
 
-Retrieve the names and value of all attributes of the object with the given id.
+Retrieve the names and value of all attributes of the given object.
 They are returned in a dictionary.
+
+Note: The optional keyword parameter `delim` can be used to override the default
+delimiter, which is set to `delim="‖"` and works correctly for all attributes
+used internally by this connector. You may need to override this default value
+if you set custom attributes where an attribute name or value may contain the
+default delimiter string. Explanation: all attributes of the given object are
+read from the database in a single string delimited by `delim`. The correct
+splitting of this string into individual names and values requires that none of
+them contain the delimiter.
+
 """
-function get_all_attributes(de::DEFile, id::C.obj_id_t; delim="‖")
+function get_all_attributes(de::DEFile, id::C.obj_id_t; delim::String="‖")
     number = Ref{Int64}()
     names = Ref{Ptr{Cchar}}()
     values = Ref{Ptr{Cchar}}()
@@ -238,13 +251,15 @@ end
 
 """
     get_attribute(de, object_id, attr_name)
+    get_attribute(de, fullpath, attr_name)
+    get_attribute(de, parent, obj_name, attr_name)
 
 Retrieve the value of the named attribute for the object with the given id. The
 return value is either a `String` or `missing`.
 """
-function get_attribute(de::DEFile, id::C.obj_id_t, name::String)
+function get_attribute(de::DEFile, id::C.obj_id_t, attr_name::String)
     value = Ref{Ptr{Cchar}}()
-    rc = C.de_get_attribute(de, id, name, value)
+    rc = C.de_get_attribute(de, id, attr_name, value)
     if rc == C.DE_MIS_ATTR
         C.de_clear_error()
         return missing
@@ -255,12 +270,14 @@ end
 
 """
     set_attribute(de, object_id, attr_name, attr_value)
+    set_attribute(de, fullpath, attr_name, attr_value)
+    set_attribute(de, parent, obj_name, attr_name, attr_value)
 
 Write the given attribute for the object with the given id. If an attribute with
 the given name already exists, it is overwritten.
 """
-function set_attribute(de::DEFile, id::C.obj_id_t, name::String, value::String)
-    I._check(C.de_set_attribute(de, id, name, value))
+function set_attribute(de::DEFile, id::C.obj_id_t, name::String, attr_value::String)
+    I._check(C.de_set_attribute(de, id, name, attr_value))
     return nothing
 end
 
@@ -599,28 +616,32 @@ read_data(de::DEFile, id::C.obj_id_t) = I._read_data(de, id)
 #############################################################################
 # closing remarks :)
 
-for func in (:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data, :new_catalog)
-    if func != :new_catalog
+for func in (:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data)
+    @eval begin
+        $func(de::DEFile, pid::C.obj_id_t, name::String) = $func(de, find_object(de, pid, name))
+    end
+end
+get_attribute(de::DEFile, pid::C.obj_id_t, name::String, attr_name) = get_attribute(de, find_object(de, pid, name), string(attr_name))
+set_attribute(de::DEFile, pid::C.obj_id_t, name::String, attr_name, attr_val) = set_attribute(de, find_object(de, pid, name), string(attr_name), string(attr_val))
+get_all_attributes(de::DEFile, pid::C.obj_id_t, name::String; delim="‖") = get_all_attributes(de, find_object(de, pid, name); delim=string(delim))
+
+for (funcs, iargs, ikwargs) in (
+    ((:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data, :new_catalog), (), ()),
+    ((:store_scalar, :store_tseries, :store_mvtseries, :write_data), (:value,), ()),
+    ((:get_attribute,), (:attr_name,), ()),
+    ((:set_attribute,), (:attr_name, :attr_val,), ()),
+    ((:get_all_attributes,), (), (Expr(:kw, :delim, "‖"),)),
+)
+    for func in funcs
+        oargs = map(MacroTools.namify, iargs)
+        okwargs = map(MacroTools.namify, ikwargs)
         @eval begin
-            $func(de::DEFile, pid::C.obj_id_t, name::String) = $func(de, find_object(de, pid, name))
-            $func(de::DEFile, pid::C.obj_id_t, name::Symbol) = $func(de, find_object(de, pid, string(name)))
+            $func(de::DEFile, pid::C.obj_id_t, name::Symbol, $(iargs...); $(ikwargs...)) = $func(de, pid, string(name), $(oargs...); $(okwargs...))
+            $func(de::DEFile, name::Symbol, $(iargs...); $(ikwargs...)) = $func(de, root_id, string(name), $(oargs...); $(okwargs...))
+            $func(de::DEFile, name::AbstractString, $(iargs...); $(ikwargs...)) = $func(de, splitdir(name)..., $(oargs...); $(okwargs...))
+            $func(de::DEFile, parent::AbstractString, name::StrOrSym, $(iargs...); $(ikwargs...)) = $func(de, find_fullpath(de, parent), string(name), $(oargs...); $(okwargs...))
         end
     end
-    @eval begin
-        $func(de::DEFile, name::Symbol) = $func(de, root_id, string(name))
-        $func(de::DEFile, name::AbstractString) = $func(de, splitdir(name)...)
-        $func(de::DEFile, parent::AbstractString, name::StrOrSym) = $func(de, find_fullpath(de, parent), string(name))
-    end
 end
-
-for func in (:store_scalar, :store_tseries, :store_mvtseries, :write_data)
-    @eval begin
-        $func(de::DEFile, pid::C.obj_id_t, name::Symbol, value) = $func(de, pid, string(name), value)
-        $func(de::DEFile, name::Symbol, value) = $func(de, root_id, string(name), value)
-        $func(de::DEFile, name::AbstractString, value) = $func(de, splitdir(name)..., value)
-        $func(de::DEFile, parent::AbstractString, name::StrOrSym, value) = $func(de, find_fullpath(de, parent), string(name), value)
-    end
-end
-
 
 end
