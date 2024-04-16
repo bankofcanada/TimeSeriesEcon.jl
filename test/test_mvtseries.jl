@@ -1336,3 +1336,28 @@ end
     @test isapprox(cov(mvtsd), [var(tsd) mvtsdcov; mvtsdcov var(noisy_tsd)])
 
 end
+
+@testset "MV rename" begin
+    A = MVTSeries(2001Y, collect('A' .+ (0:7)), rand(Float32, 20, 8))
+
+    @test A === rename_columns!(A, (; A=:a, C=:c))
+    @test axes(A, 2) == [:a, :B, :c, :D, :E, :F, :G, :H]
+    
+    @test A === rename_columns!(A) do x
+        Symbol(x, :_1)
+    end
+    @test axes(A, 2) == [:a_1, :B_1, :c_1, :D_1, :E_1, :F_1, :G_1, :H_1]
+    
+    @test A === rename_columns!(A; replace=("_1" => "_2"))
+    @test axes(A, 2) == [:a_2, :B_2, :c_2, :D_2, :E_2, :F_2, :G_2, :H_2]
+    
+    @test A === rename_columns!(A; replace=("_2" => "_1"), suffix="_2")
+    @test axes(A, 2) == [:a_1_2, :B_1_2, :c_1_2, :D_1_2, :E_1_2, :F_1_2, :G_1_2, :H_1_2]
+    
+    Random.seed!(0x007)
+    random_colnames = Symbol.([join(rand('A':'Z', 15)) for i = 1:size(A,2)])
+    @test A === rename_columns!(A, random_colnames)
+    @test axes(A, 2) == random_colnames
+
+end
+
