@@ -4,6 +4,7 @@
 # This module contains functions that are internal
 module I
 
+using LinearAlgebra
 using Dates
 
 using ..C
@@ -101,8 +102,8 @@ _to_de_scalar_type(::Type{T}) where {T<:Complex{<:Base.IEEEFloat}} = C.type_comp
 _to_de_scalar_type(::Type{T}) where {T<:StrOrSym} = C.type_string
 
 _to_de_scalar_freq(@nospecialize(val)) = C.freq_none
-_to_de_scalar_freq(::MIT{F}) where{F} = _to_de_scalar_freq(F)
-_to_de_scalar_freq(::Duration{F}) where{F} = _to_de_scalar_freq(F)
+_to_de_scalar_freq(::MIT{F}) where {F} = _to_de_scalar_freq(F)
+_to_de_scalar_freq(::Duration{F}) where {F} = _to_de_scalar_freq(F)
 _to_de_scalar_freq(::Type{Unit}) = C.freq_unit
 _to_de_scalar_freq(::Type{Daily}) = C.freq_daily
 _to_de_scalar_freq(::Type{BDaily}) = C.freq_bdaily
@@ -205,6 +206,8 @@ end
 
 _apply_jtype(::Type{Symbol}, value) = Symbol(value)
 _apply_jtype(::Type{T}, value) where {T} = convert(T, value)
+_apply_jtype(::Type{T}, value::Matrix) where {T<:Diagonal} = T(diag(value))
+_apply_jtype(::Type{T}, value::Matrix) where {T<:LinearAlgebra.HermOrSym} = T(value)
 _apply_jtype(::Type{Dates.Date}, value) = convert(Dates.Date, Dates.unix2datetime(value))
 _apply_jtype(::Type{Dates.DateTime}, value) = Dates.unix2datetime(value)
 
@@ -275,14 +278,16 @@ _to_de_array(::Val{true}, value::AbstractVecOrMat{ET}) where {ET} = _de_array_da
     val=C_NULL
 )
 
-# vector of numbers
-function _to_de_array(::Val{false}, value::AbstractVecOrMat{ET}) where {ET<:Number}
+# Arrays of numbers
+function _to_de_array(::Val{false}, value::VecOrMat{ET}) where {ET<:Number}
     val = value
     nbytes = length(value) * _to_de_scalar_nbytes(ET)
     return _de_array_data(; _eltypefreq(ET)...,
         obj_type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
 end
+_to_de_array(::Val{false}, value::AbstractMatrix{ET}) where {ET<:Number} = _to_de_array(Val(false), Matrix{ET}(value))
 
+# Arrays of strings
 _to_de_array(::Val{false}, value::AbstractVecOrMat{ET}) where {ET<:StrOrSym} = _to_de_array(Val(false), map(string, value))
 function _to_de_array(::Val{false}, value::VecOrMat{String})
     nel = length(value)
@@ -315,12 +320,19 @@ function _should_store_eltype(arr, value::AbstractArray{ET}) where {ET}
     return ET != _to_julia_scalar_type(Val(arr.eltype), Val(arr.elfreq), Val(sizeof(ET)))
 end
 
-@inline _should_store_type(v::Val, a::Any) = (@nospecialize(v, a); true)
-@inline _should_store_type(::Val{C.type_range}, ::UnitRange) = false
-@inline _should_store_type(::Val{C.type_vector}, ::Vector) = false
-@inline _should_store_type(::Val{C.type_tseries}, ::TSeries) = false
-@inline _should_store_type(::Val{C.type_matrix}, ::Matrix) = false
-@inline _should_store_type(::Val{C.type_mvtseries}, ::MVTSeries) = false
+@inline _store_type(v::Val, value::Any) = (@nospecialize(v, value); string(typeof(value)))
+@inline _store_type(::Val{C.type_range}, ::UnitRange) = ""
+@inline _store_type(::Val{C.type_vector}, ::Vector) = ""
+@inline _store_type(::Val{C.type_tseries}, ::TSeries) = ""
+# Matrix is the default Julia type for C.type_matrix
+@inline _store_type(::Val{C.type_matrix}, ::Matrix) = ""
+# Diagonal, Symmetric and Hermitian are marked as such in attribute jtype and restored at load time
+@inline _store_type(::Val{C.type_matrix}, ::Diagonal) = "Diagonal"
+@inline _store_type(::Val{C.type_matrix}, ::T) where {T<:LinearAlgebra.HermOrSym} = string(nameof(T))
+# Transposed and Adjoint are not not marked in an attribute, so it's loaded as a plain Matrix.
+@inline _store_type(::Val{C.type_matrix}, ::T) where {T<:LinearAlgebra.AdjOrTrans} = ""
+# default Julia type for C.MVTSeries is MVTSeries
+@inline _store_type(::Val{C.type_mvtseries}, ::MVTSeries) = ""
 
 _do_store_array(::Val{1}, args...) = C.de_store_tseries(args...)
 _do_store_array(::Val{2}, args...) = C.de_store_mvtseries(args...)
@@ -337,12 +349,13 @@ function _store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{N,
     GC.@preserve arr begin
         ptr = arr.nbytes == 0 ? C_NULL : pointer(arr.val)
         _check(_do_store_array(Val(N), de, pid, name, arr.obj_type, arr.eltype, arr.elfreq, axes..., arr.nbytes, ptr, id))
-    end
-    if _should_store_eltype(arr, value)
-        set_attribute(de, id[], "jeltype", string(ET))
-    end
-    if _should_store_type(Val(arr.obj_type), value)
-        set_attribute(de, id[], "jtype", string(typeof(value)))
+        if _should_store_eltype(arr, value)
+            set_attribute(de, id[], "jeltype", string(ET))
+        end
+        jtype = _store_type(Val(arr.obj_type), value)
+        if !isempty(jtype)
+            set_attribute(de, id[], "jtype", jtype)
+        end
     end
     return id[]
 end
@@ -355,7 +368,7 @@ function _to_julia_array(de, id, arr)
     jtype = get_attribute(de, id, "jtype")
     if !ismissing(jtype)
         T = Core.eval(Main, Meta.parse(jtype))
-        return convert(T, value)
+        return _apply_jtype(T, value)
     end
     jeltype = get_attribute(de, id, "jeltype")
     if !ismissing(jeltype)
