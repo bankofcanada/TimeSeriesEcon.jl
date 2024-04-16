@@ -572,11 +572,11 @@ end
 
 function Base.hcat(x::MVTSeries, y::MVTSeries...; KW...)
     T = Base.promote_eltype(x, y..., values(KW)...)
-    kw = LittleDict{Symbol,Any}()
+    kw = LittleDict{Symbol,Any}(pairs(x)...)
     for yy in y
         push!(kw, pairs(yy)...)
     end
-    return MVTSeries(T, rangeof(x); pairs(x)..., kw..., KW...)
+    return MVTSeries(T, rangeof_span(values(kw)..., values(KW)...); kw..., KW...)
 end
 
 function Base.vcat(x::MVTSeries, args::AbstractVecOrMat...)
@@ -703,7 +703,13 @@ end
 ####  diff and cumsum
 
 shift(x::MVTSeries, k::Integer) = shift!(copy(x), k)
-shift!(x::MVTSeries, k::Integer) = (x.firstdate -= k; x)
+function shift!(x::MVTSeries, k::Integer)
+    x.firstdate -= k
+    for series in values(_cols(x))
+        series.firstdate -= k
+    end
+    return x
+end
 lag(x::MVTSeries, k::Integer=1) = shift(x, -k)
 lag!(x::MVTSeries, k::Integer=1) = shift!(x, -k)
 lead(x::MVTSeries, k::Integer=1) = shift(x, k)
