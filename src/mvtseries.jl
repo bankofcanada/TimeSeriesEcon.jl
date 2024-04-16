@@ -978,29 +978,25 @@ function rename_columns!(A::MVTSeries, names_map::Union{NamedTuple,AbstractDict}
     return A
 end
 
-rename_columns!(A::MVTSeries; replace=nothing, prefix=nothing, suffix=nothing) = rename_columns!(_rename_func(replace, prefix, suffix), A)
-_rename_func(replace, prefix, suffix) = _RenameColumns(replace, prefix, suffix)
+rename_columns!(A::MVTSeries; replace=nothing, prefix=nothing, suffix=nothing) = rename_columns!(_rename_columns_func(replace, prefix, suffix), A)
+
+_rename_columns_func(replace, prefix, suffix) = _RenameColumns(replace, prefix, suffix)
 struct _RenameColumns{R,P<:Union{Nothing,AbstractString},S<:Union{Nothing,AbstractString}} <: Function
     replace::R
     prefix::P
     suffix::S
     function _RenameColumns(replace, suffix, prefix)
         something(replace, suffix, prefix)
-        if replace isa Pair
-            replace = (replace,)
-        end
-        if !(prefix isa Union{Nothing,AbstractString})
-            prefix = string(prefix)
-        end
-        if !(suffix isa Union{Nothing,AbstractString})
-            suffix = string(suffix)
-        end
+        replace isa Pair && (replace = (replace,))
+        prefix isa Union{Nothing,AbstractString} || (prefix = string(prefix))
+        suffix isa Union{Nothing,AbstractString} || (suffix = string(suffix))
         new{typeof(replace),typeof(suffix),typeof(prefix)}(replace, suffix, prefix)
     end
 end
 (_rc::_RenameColumns{R,Nothing,Nothing})(x::Symbol) where {R} = Symbol(replace(string(x), _rc.replace...))
 (_rc::_RenameColumns{R,P,Nothing})(x::Symbol) where {R,P<:AbstractString} = Symbol(_rc.prefix, replace(string(x), _rc.replace...))
 (_rc::_RenameColumns{R,Nothing,S})(x::Symbol) where {R,S<:AbstractString} = Symbol(replace(string(x), _rc.replace...), _rc.suffix)
+(_rc::_RenameColumns{R,P,S})(x::Symbol) where {R,P<:AbstractString,S<:AbstractString} = Symbol(_rc.prefix, replace(string(x), _rc.replace...), _rc.suffix)
 (_rc::_RenameColumns{Nothing,P,Nothing})(x::Symbol) where {P<:AbstractString} = Symbol(_rc.prefix, string(x))
 (_rc::_RenameColumns{Nothing,Nothing,S})(x::Symbol) where {S<:AbstractString} = Symbol(string(x), _rc.suffix)
 (_rc::_RenameColumns{Nothing,P,S})(x::Symbol) where {P<:AbstractString,S<:AbstractString} = Symbol(_rc.prefix, string(x), _rc.suffix)

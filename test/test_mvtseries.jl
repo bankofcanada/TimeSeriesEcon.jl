@@ -1342,22 +1342,41 @@ end
 
     @test A === rename_columns!(A, (; A=:a, C=:c))
     @test axes(A, 2) == [:a, :B, :c, :D, :E, :F, :G, :H]
-    
+
     @test A === rename_columns!(A) do x
         Symbol(x, :_1)
     end
     @test axes(A, 2) == [:a_1, :B_1, :c_1, :D_1, :E_1, :F_1, :G_1, :H_1]
-    
+
+    @test_throws ArgumentError rename_columns!(A; replace=nothing)
+
     @test A === rename_columns!(A; replace=("_1" => "_2"))
     @test axes(A, 2) == [:a_2, :B_2, :c_2, :D_2, :E_2, :F_2, :G_2, :H_2]
-    
-    @test A === rename_columns!(A; replace=("_2" => "_1"), suffix="_2")
+
+    @test A === rename_columns!(A; replace=("_2" => "_1"), suffix=:_2)
     @test axes(A, 2) == [:a_1_2, :B_1_2, :c_1_2, :D_1_2, :E_1_2, :F_1_2, :G_1_2, :H_1_2]
-    
+
+    @test A === rename_columns!(A; replace=("_1" => ""), prefix=:Q__)
+    @test axes(A, 2) == [:Q__a_2, :Q__B_2, :Q__c_2, :Q__D_2, :Q__E_2, :Q__F_2, :Q__G_2, :Q__H_2]
+
+    @test A === rename_columns!(A; prefix="O_", replace=("Q__" => "", "_2" => ""), suffix=:_x)
+    @test axes(A, 2) == [:O_a_x, :O_B_x, :O_c_x, :O_D_x, :O_E_x, :O_F_x, :O_G_x, :O_H_x]
+
+    @test A === rename_columns!(A; prefix="O_", )
+    @test axes(A, 2) == [:O_O_a_x, :O_O_B_x, :O_O_c_x, :O_O_D_x, :O_O_E_x, :O_O_F_x, :O_O_G_x, :O_O_H_x]
+
+    @test A === rename_columns!(A; suffix="_x", )
+    @test axes(A, 2) == [:O_O_a_x_x, :O_O_B_x_x, :O_O_c_x_x, :O_O_D_x_x, :O_O_E_x_x, :O_O_F_x_x, :O_O_G_x_x, :O_O_H_x_x]
+
+    @test A === rename_columns!(A; prefix=:O, suffix="x", )
+    @test axes(A, 2) == [:OO_O_a_x_xx, :OO_O_B_x_xx, :OO_O_c_x_xx, :OO_O_D_x_xx, :OO_O_E_x_xx, :OO_O_F_x_xx, :OO_O_G_x_xx, :OO_O_H_x_xx]
+
     Random.seed!(0x007)
-    random_colnames = Symbol.([join(rand('A':'Z', 15)) for i = 1:size(A,2)])
+    random_colnames = Symbol.([join(rand('A':'Z', 15)) for i = 1:size(A, 2)])
     @test A === rename_columns!(A, random_colnames)
     @test axes(A, 2) == random_colnames
+
+    @test_throws ArgumentError rename_columns!(A, Symbol[])
 
 end
 
