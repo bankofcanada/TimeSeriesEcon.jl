@@ -914,22 +914,28 @@ end
         shifted_x2 = shift(x2, 1)
         @test rangeof(shifted_x2) == 0U:2U
         @test shifted_x2.values == x2.values
-
+        @test rangeof(shifted_x2) == rangeof(shifted_x2.a) == rangeof(shifted_x2.b)
+        
         @test lead(x2) == shift(x2, 1)
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test lag(x2) == shift(x2, -1)
-
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
+        
         x2 = copy(x2_orig)
         shift!(x2, 1)
         @test rangeof(x2) == 0U:2U
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test x2.values == x2_orig.values
-
+        
         x2 = copy(x2_orig)
         lead!(x2)
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test rangeof(x2) == 0U:2U
         @test x2.values == x2_orig.values
-
+        
         x2 = copy(x2_orig)
         lag!(x2)
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test rangeof(x2) == 2U:4U
         @test x2.values == x2_orig.values
 
@@ -1273,6 +1279,16 @@ end
     @test hcat(xx, yy; d=rand(15)) isa MVTSeries
     @test axes(hcat(xx, yy; d=rand(15))) == (axes(xx, 1), [axes(xx, 2)..., axes(yy, 2)..., :d])
     @test hcat(xx, yy; d=rand(15))[axes(xx, 2)] ≈ xx
+end
+
+@testset "hcat 2" begin
+    A = MVTSeries(2000Y, (:a, :b, :c), rand(8, 3))
+    B = MVTSeries(1998Y, (:x, :y, ), rand(6, 2))
+    C = MVTSeries(2002Y, (:m, :n, ), rand(11, 2))
+    # test for bug that makes the rangeof the result equal to the first, rather than the span of all
+    @test rangeof(hcat(A, B)) == rangeof(hcat(B, A))
+    # make sure keyword arguments are taken into account when computing the range
+    @test rangeof(hcat(A, B; pairs(C)...)) == rangeof(hcat(A, B, C))
 end
 
 @testset "Statistics" begin
