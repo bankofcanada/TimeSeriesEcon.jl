@@ -1241,6 +1241,8 @@ using OrderedCollections
     # mapslices
     ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
     res1 = mapslices(x -> x .+ 1, ts, dims=1)
+    @test res1 isa MVTSeries && axes(res1) == axes(ts)
+    @test res1.y1.values == res1.values[:,1]
     res_matrix = copy(ts.values) .+ 1
     res_mvts = MVTSeries(rangeof(ts), colnames(ts), res_matrix)
     @test mapslices(x -> x .+ 1, ts, dims=1) == res_mvts
@@ -1249,10 +1251,14 @@ using OrderedCollections
     # one-column returns of the same length as ts return a TSeries
     row_means = (ts.values[:, 1] .+ ts.values[:, 2]) ./ 2
     res_tseries = TSeries(rangeof(ts), row_means)
-    @test mapslices(mean, ts, dims=2) ≈ res_tseries
+    res2 = mapslices(mean, ts, dims=[2])
+    @test res2 isa TSeries && axes(res2) == (rangeof(ts),)
+    @test res2 ≈ res_tseries
 
     # returns that don't fit just return a matrix
-    @test mapslices(mean, ts, dims=1) ≈ mean(ts.values, dims=1)
+    res3 = mapslices(mean, ts, dims=1)
+    @test res3 isa Matrix
+    @test res3 ≈ mean(ts.values, dims=1)
 
 
 end
