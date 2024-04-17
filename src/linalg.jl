@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2022, Bank of Canada
+# Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
 # overload matrix-matrix and matrix-vector operations
@@ -26,3 +26,5 @@ end
 Base.adjoint(A::MVTSeries) = adjoint(_vals(A))
 Base.adjoint(A::TSeries) = adjoint(_vals(A))
 
+Base.transpose(A::MVTSeries) = transpose(_vals(A))
+Base.transpose(A::TSeries) = transpose(_vals(A))
