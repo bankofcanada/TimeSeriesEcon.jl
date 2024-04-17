@@ -329,6 +329,104 @@ end
     @test x[:, :] == view(x, :, :)
 end
 
+@testset "MV bool access" begin
+    A = MVTSeries(2000Y, collect('a' .+ (0:7)), rand(12, 8))
+    B = copy(A.values)
+    m, n = size(A)
+    
+    # access with a Bool vectors that are the same length as the axes of A    
+    tf = rand(Bool, m)  # for the rows
+    tf2 = rand(Bool, n) # for the columns
+    tstf = TSeries(rangeof(A), tf)
+    m1 = sum(tf)
+    n1 = sum(tf2)
+    
+    # getindex
+    @test A[tf] == B[tf, :]
+    @test A[tf, :] == B[tf, :]
+    @test A[tf, (:a, :c)] == B[tf, [1,3]]
+    @test A[tf, tf2] == B[tf, tf2]
+    # setinex
+    @test (A[tf] = ones(m1, n); B[tf, :] = ones(m1, n); A.values == B) 
+    @test (A[tf, :] = 2*ones(m1, n); B[tf, :] = 2*ones(m1, n); A.values == B) 
+    @test (A[tf, (:b, :c)] = 3*ones(m1, 2); B[tf, [2,3]] = 3*ones(m1, 2); A.values == B) 
+    @test (A[tf, tf2] = 4*ones(m1, n1); B[tf, tf2] = 4*ones(m1, n1); A.values == B) 
+    copyto!(B, copyto!(A, rand(m, n)))
+    # view
+    @test (v = view(A, tf); v.parent isa Matrix && size(v) == (m1, n) && v == B[tf,:])
+    @test (v = view(A, tf, :); v.parent isa Matrix && size(v) == (m1, n) && v == B[tf,:])
+    @test (v = view(A, tf, (:a,:d)); v.parent isa Matrix && size(v) == (m1, 2) && v == B[tf,[1,4]])
+    @test (v = view(A, tf, tf2); v.parent isa Matrix && size(v) == (m1, n1) && v == B[tf,tf2])
+    # broadcast arithmetic
+    tmp = rand(m1, n)
+    @test (A[tf] .+ 1 == B[tf,:] .+ 1)
+    @test (A[tf] .+ 1tmp == B[tf,:] .+ 1tmp)
+    @test (A[tf] .+ 1tmp[1:1,:] == B[tf,:] .+ 1tmp[1:1,:])
+    @test (A[tf] .+ 1tmp[:,1:1] == B[tf,:] .+ 1tmp[:,1:1])
+    @test (A[tf] .+ 1tmp[:,1] == B[tf,:] .+ 1tmp[:,1])
+    tmp = rand(m1, n)
+    @test (A[tf,:] .+ 2 == B[tf,:] .+ 2)
+    @test (A[tf,:] .+ 2tmp == B[tf,:] .+ 2tmp)
+    @test (A[tf,:] .+ 2tmp[1:1,:] == B[tf,:] .+ 2tmp[1:1,:])
+    @test (A[tf,:] .+ 2tmp[:,1:1] == B[tf,:] .+ 2tmp[:,1:1])
+    @test (A[tf,:] .+ 2tmp[:,1] == B[tf,:] .+ 2tmp[:,1])
+    tmp = rand(m1, 3)
+    @test (A[tf,(:a, :d, :c)] .+ 3 == B[tf,[1,4,3]] .+ 3)
+    @test (A[tf,(:a, :d, :c)] .+ 3tmp == B[tf,[1,4,3]] .+ 3tmp)
+    @test (A[tf,(:a, :d, :c)] .+ 3tmp[1:1,:] == B[tf,[1,4,3]] .+ 3tmp[1:1,:])
+    @test (A[tf,(:a, :d, :c)] .+ 3tmp[:,1:1] == B[tf,[1,4,3]] .+ 3tmp[:,1:1])
+    @test (A[tf,(:a, :d, :c)] .+ 3tmp[:,1] == B[tf,[1,4,3]] .+ 3tmp[:,1])
+    tmp = rand(m1, n1)
+    @test (A[tf,tf2] .+ 4 == B[tf,tf2] .+ 4)
+    @test (A[tf,tf2] .+ 4tmp == B[tf,tf2] .+ 4tmp)
+    @test (A[tf,tf2] .+ 4tmp[1:1,:] == B[tf,tf2] .+ 4tmp[1:1,:])
+    @test (A[tf,tf2] .+ 4tmp[:,1:1] == B[tf,tf2] .+ 4tmp[:,1:1])
+    @test (A[tf,tf2] .+ 4tmp[:,1] == B[tf,tf2] .+ 4tmp[:,1])
+    # broadcast assignment
+    copyto!(B, copyto!(A, rand(m, n)))
+    tmp = rand(m1, n)
+    @test (A[tf] .+= 1; B[tf,:] .+= 1; A.values == B)
+    @test (A[tf] .+= 1tmp; B[tf,:] .+= 1tmp; A.values == B)
+    @test (A[tf] .+= 1tmp[1:1,:]; B[tf,:] .+= 1tmp[1:1,:]; A.values == B)
+    @test (A[tf] .+= 1tmp[:,1:1]; B[tf,:] .+= 1tmp[:,1:1]; A.values == B)
+    @test (A[tf] .+= 1tmp[:,1]; B[tf,:] .+= 1tmp[:,1]; A.values == B)
+    tmp = rand(m1, n)
+    @test (A[tf,:] .+= 2; B[tf,:] .+= 2; A.values == B)
+    @test (A[tf,:] .+= 2tmp; B[tf,:] .+= 2tmp; A.values == B)
+    @test (A[tf,:] .+= 2tmp[1:1,:]; B[tf,:] .+= 2tmp[1:1,:]; A.values == B)
+    @test (A[tf,:] .+= 2tmp[:,1:1]; B[tf,:] .+= 2tmp[:,1:1]; A.values == B)
+    @test (A[tf,:] .+= 2tmp[:,1]; B[tf,:] .+= 2tmp[:,1]; A.values == B)
+    tmp = rand(m1, 3)
+    @test (A[tf,(:d,:a,:c)] .+= 3; B[tf,[4,1,3]] .+= 3; A.values == B)
+    @test (A[tf,(:d,:a,:c)] .+= 3tmp; B[tf,[4,1,3]] .+= 3tmp; A.values == B)
+    @test (A[tf,(:d,:a,:c)] .+= 3tmp[1:1,:]; B[tf,[4,1,3]] .+= 3tmp[1:1,:]; A.values == B)
+    @test (A[tf,(:d,:a,:c)] .+= 3tmp[:,1:1]; B[tf,[4,1,3]] .+= 3tmp[:,1:1]; A.values == B)
+    @test (A[tf,(:d,:a,:c)] .+= 3tmp[:,1]; B[tf,[4,1,3]] .+= 3tmp[:,1]; A.values == B)
+    tmp = rand(m1, n1)
+    @test (A[tf,tf2] .+= 4; B[tf,tf2] .+= 4; A.values == B)
+    @test (A[tf,tf2] .+= 4tmp; B[tf,tf2] .+= 4tmp; A.values == B)
+    @test (A[tf,tf2] .+= 4tmp[1:1,:]; B[tf,tf2] .+= 4tmp[1:1,:]; A.values == B)
+    @test (A[tf,tf2] .+= 4tmp[:,1:1]; B[tf,tf2] .+= 4tmp[:,1:1]; A.values == B)
+    @test (A[tf,tf2] .+= 4tmp[:,1]; B[tf,tf2] .+= 4tmp[:,1]; A.values == B)
+    
+    # access with a single bool vector that is the same length as all of A
+    sg = rand(Bool, length(A))
+    k = sum(sg)
+    # getindex
+    @test A[sg] == B[sg]
+    # setindex
+    tmp = rand(k)
+    @test (A[sg] = 1tmp; B[sg] = 1tmp; A.values == B)
+    # view
+    @test (q = view(A, sg); q.parent isa Vector && size(q) == (k,) && q == B[sg])
+    # broadcast arithmetic
+    @test (A[sg] .* 2 ≈ B[sg] .* 2)
+    # broadcast assignment
+    tmp = rand(k)
+    @test (A[sg] .*= 3; B[sg] .*= 3; A.values == B)
+    @test (A[sg] .*= 4tmp; B[sg] .*= 4tmp; A.values == B)
+end
+
 @testset "MVTSeries show" begin
     # test the case when column labels are longer than the numbers
     let io = IOBuffer(), x = MVTSeries(1U, (:verylongandsuperboringnameitellya, :anothersuperlongnamethisisridiculous, :a), rand(20, 3) .* 100)

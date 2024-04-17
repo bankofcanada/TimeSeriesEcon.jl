@@ -587,7 +587,9 @@ end
 
 Base.view(x::MVTSeries, I::_FallbackType...) = view(_vals(x), _vals.(I)...)
 
-Base.view(x::MVTSeries, I::AbstractVector{Bool}) = view(_vals(x), _vals(I), :)
+Base.view(x::MVTSeries, I::AbstractVector{Bool}) = length(I) == size(x, 1) ? view(_vals(x), I, :) : view(_vals(x), I)
+Base.view(x::MVTSeries, I::AbstractVector{Bool}, J::_SymbolOneOrCollection) = view(x, rangeof(x)[I], J)
+
 
 Base.view(x::MVTSeries, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
