@@ -74,18 +74,16 @@ function cleanup()
 end
 
 function get_cleanup_folders()
-    folder = mktempdir(; prefix="x13_", cleanup=true)
-    parent = joinpath(splitpath(folder)[1:end-1])
+    parent = tempdir()
     all_folders_and_files = readdir(parent, join=false)
     folders_to_remove = Vector{String}()
+    myuid = Libc.getuid()
     for f in all_folders_and_files
-        if findfirst("x13_", f) == 1:4 && isdir(joinpath(parent, f))
-            stats = stat(joinpath(parent,f))
-            if stats.uid == Libc.getuid()
-                path = joinpath(parent,f)
-                push!(folders_to_remove, path)
-            end
-        end
+        startswith(f, "x13_") || continue
+        fpath = joinpath(parent, f)
+        isdir(fpath) || continue
+        stat(fpath).uid == myuid || continue
+        push!(folders_to_remove, fpath)
     end
     
     return folders_to_remove

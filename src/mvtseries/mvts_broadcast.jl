@@ -170,7 +170,7 @@ end
 #############################################################################
 
 
-function Base.Broadcast.materialize!(::MVTSeriesStyle, dest, bc::Base.Broadcast.Broadcasted{Style}) where {Style <: Union{MVTSeriesStyle,TSeriesStyle}}
+function Base.Broadcast.materialize!(::MVTSeriesStyle, dest, bc::Base.Broadcast.Broadcasted{Style}) where {Style<:Union{MVTSeriesStyle,TSeriesStyle}}
     return copyto!(dest, Base.Broadcast.instantiate(bc))
 end
 
@@ -271,8 +271,16 @@ function Base.Broadcast.dotview(x::MVTSeries, rng::TSeries{F,Bool}, cols::Union{
     return Base.Broadcast.dotview(x, findall(rng), cols)
 end
 
-function Base.Broadcast.dotview(x::MVTSeries, rng::AbstractVector{Bool}, cols::Union{Colon,_SymbolOneOrCollection}=Colon())
-    return Base.Broadcast.dotview(x, rangeof(x)[rng], cols)
+function Base.Broadcast.dotview(x::MVTSeries, I::AbstractVector{Bool})
+    if length(I) == size(x, 1)
+        return Base.Broadcast.dotview(x, rangeof(x)[I], :)
+    else
+        return Base.Broadcast.dotview(_vals(x), I)
+    end
+end
+
+function Base.Broadcast.dotview(x::MVTSeries, I::AbstractVector{Bool}, J::Union{Colon,_SymbolOneOrCollection})
+    return Base.Broadcast.dotview(x, rangeof(x)[I], J)
 end
 
 # function Base.Broadcast.dotview(x::MVTSeries, rng::Union{MIT, AbstractUnitRange{<:MIT}}, cols::_SymbolOneOrCollection)
