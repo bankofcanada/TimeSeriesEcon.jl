@@ -572,11 +572,11 @@ end
 
 function Base.hcat(x::MVTSeries, y::MVTSeries...; KW...)
     T = Base.promote_eltype(x, y..., values(KW)...)
-    kw = LittleDict{Symbol,Any}()
+    kw = LittleDict{Symbol,Any}(pairs(x)...)
     for yy in y
         push!(kw, pairs(yy)...)
     end
-    return MVTSeries(T, rangeof(x); pairs(x)..., kw..., KW...)
+    return MVTSeries(T, rangeof_span(values(kw)..., values(KW)...); kw..., KW...)
 end
 
 function Base.vcat(x::MVTSeries, args::AbstractVecOrMat...)
@@ -703,7 +703,13 @@ end
 ####  diff and cumsum
 
 shift(x::MVTSeries, k::Integer) = shift!(copy(x), k)
-shift!(x::MVTSeries, k::Integer) = (x.firstdate -= k; x)
+function shift!(x::MVTSeries, k::Integer)
+    x.firstdate -= k
+    for series in values(_cols(x))
+        series.firstdate -= k
+    end
+    return x
+end
 lag(x::MVTSeries, k::Integer=1) = shift(x, -k)
 lag!(x::MVTSeries, k::Integer=1) = shift!(x, -k)
 lead(x::MVTSeries, k::Integer=1) = shift(x, k)
@@ -913,4 +919,90 @@ function Base.mapslices(f, A::MVTSeries; dims)
     end
     return res
 end
+
+########
+
+
+"""
+    rename_columns!(A::MVTSeries, new_names)
+    rename_columns!(A::MVTSeries, names_map)
+    rename_columns!(f::Function, A::MVTSeries)
+    rename_columns!(A::MVTSeries; prefix, suffix, replace)
+
+Rename the columns of an `MVTSeries` instance in-place. 
+* The new names can be specified in a list `new_names` (e.g., `Vector{Symbol}`
+  or `NTuple{N,Symbol}`), which must be of the exact length.
+* The new names can be given as a map (e.g., a dictionary or a named tuple),
+  where the old names are the keys and the new names are the values of
+  `names_map`. This makes it easy to rename only a few columns.
+* The new names can also be determined by a function `f(::Symbol) -> Symbol`
+  that transforms the old names into new names.
+* Some typical cases can be done using the keyword parameters `prefix`, `suffix`
+  and `replace`. In case `replace` is given together with one or both of
+  `suffix` and `prefix`, the replacement is applied first on the original name
+  and any suffix or prefix are applied after.
+"""
+function rename_columns! end
+export rename_columns!
+
+function rename_columns!(A::MVTSeries, newcolnames::_MVTSAxes2)
+    if size(A, 2) != length(newcolnames)
+        throw(ArgumentError("Incompatible number of new column names. Expected $(size(A,2)), got $(length(newcolnames))"))
+    end
+    # We make a new dictionary for the A.columns field. 
+    # We keep the existing values (TSeries containing views into A.values), but assign them to new keys (the new column names)
+    columns = getfield(A, :columns)
+    new_columns = typeof(columns)()
+    for (new_name, series) = zip(newcolnames, values(columns))
+        push!(new_columns, new_name => series)
+    end
+    setfield!(A, :columns, new_columns)
+    return A
+end
+
+function rename_columns!(f::Function, A::MVTSeries)
+    columns = getfield(A, :columns)
+    new_columns = typeof(columns)()
+    for (old_name, series) = pairs(columns)
+        new_name = f(old_name)
+        push!(new_columns, new_name => series)
+    end
+    setfield!(A, :columns, new_columns)
+    return A
+end
+
+function rename_columns!(A::MVTSeries, names_map::Union{NamedTuple,AbstractDict})
+    columns = getfield(A, :columns)
+    new_columns = typeof(columns)()
+    for (old_name, series) = pairs(columns)
+        new_name = get(names_map, old_name, old_name)
+        push!(new_columns, new_name => series)
+    end
+    setfield!(A, :columns, new_columns)
+    return A
+end
+
+rename_columns!(A::MVTSeries; replace=nothing, prefix=nothing, suffix=nothing) = rename_columns!(_rename_columns_func(replace, prefix, suffix), A)
+
+_rename_columns_func(replace, prefix, suffix) = _RenameColumns(replace, prefix, suffix)
+struct _RenameColumns{R,P<:Union{Nothing,AbstractString},S<:Union{Nothing,AbstractString}} <: Function
+    replace::R
+    prefix::P
+    suffix::S
+    function _RenameColumns(replace, suffix, prefix)
+        something(replace, suffix, prefix)
+        replace isa Pair && (replace = (replace,))
+        prefix isa Union{Nothing,AbstractString} || (prefix = string(prefix))
+        suffix isa Union{Nothing,AbstractString} || (suffix = string(suffix))
+        new{typeof(replace),typeof(suffix),typeof(prefix)}(replace, suffix, prefix)
+    end
+end
+(_rc::_RenameColumns{R,Nothing,Nothing})(x::Symbol) where {R} = Symbol(replace(string(x), _rc.replace...))
+(_rc::_RenameColumns{R,P,Nothing})(x::Symbol) where {R,P<:AbstractString} = Symbol(_rc.prefix, replace(string(x), _rc.replace...))
+(_rc::_RenameColumns{R,Nothing,S})(x::Symbol) where {R,S<:AbstractString} = Symbol(replace(string(x), _rc.replace...), _rc.suffix)
+(_rc::_RenameColumns{R,P,S})(x::Symbol) where {R,P<:AbstractString,S<:AbstractString} = Symbol(_rc.prefix, replace(string(x), _rc.replace...), _rc.suffix)
+(_rc::_RenameColumns{Nothing,P,Nothing})(x::Symbol) where {P<:AbstractString} = Symbol(_rc.prefix, string(x))
+(_rc::_RenameColumns{Nothing,Nothing,S})(x::Symbol) where {S<:AbstractString} = Symbol(string(x), _rc.suffix)
+(_rc::_RenameColumns{Nothing,P,S})(x::Symbol) where {P<:AbstractString,S<:AbstractString} = Symbol(_rc.prefix, string(x), _rc.suffix)
+
 

@@ -914,22 +914,28 @@ end
         shifted_x2 = shift(x2, 1)
         @test rangeof(shifted_x2) == 0U:2U
         @test shifted_x2.values == x2.values
-
+        @test rangeof(shifted_x2) == rangeof(shifted_x2.a) == rangeof(shifted_x2.b)
+        
         @test lead(x2) == shift(x2, 1)
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test lag(x2) == shift(x2, -1)
-
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
+        
         x2 = copy(x2_orig)
         shift!(x2, 1)
         @test rangeof(x2) == 0U:2U
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test x2.values == x2_orig.values
-
+        
         x2 = copy(x2_orig)
         lead!(x2)
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test rangeof(x2) == 0U:2U
         @test x2.values == x2_orig.values
-
+        
         x2 = copy(x2_orig)
         lag!(x2)
+        @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test rangeof(x2) == 2U:4U
         @test x2.values == x2_orig.values
 
@@ -1281,6 +1287,16 @@ end
     @test hcat(xx, yy; d=rand(15))[axes(xx, 2)] ≈ xx
 end
 
+@testset "hcat 2" begin
+    A = MVTSeries(2000Y, (:a, :b, :c), rand(8, 3))
+    B = MVTSeries(1998Y, (:x, :y, ), rand(6, 2))
+    C = MVTSeries(2002Y, (:m, :n, ), rand(11, 2))
+    # test for bug that makes the rangeof the result equal to the first, rather than the span of all
+    @test rangeof(hcat(A, B)) == rangeof(hcat(B, A))
+    # make sure keyword arguments are taken into account when computing the range
+    @test rangeof(hcat(A, B; pairs(C)...)) == rangeof(hcat(A, B, C))
+end
+
 @testset "Statistics" begin
     # Test MVTS Daily
     bonds_data = [NaN, 0.68, 0.7, 0.75, 0.79, 0.81, 0.83, 0.84, 0.81, 0.86, 0.81, 0.8, 0.8, 0.83, 0.87, 0.84, 0.81, 0.82, 0.8, 0.82, 0.84, 0.88, 0.91, 0.94, 0.96, 1, 1.01, 0.99, 0.99, 0.99, 1.03, NaN, 1.12, 1.11, 1.14, 1.21, 1.23, 1.26, 1.31, 1.46, 1.35, 1.35, 1.33, 1.4, 1.49, 1.5, 1.53, 1.45, 1.41, 1.43, 1.58, 1.54, 1.56, 1.58, 1.61, 1.59, 1.55, 1.49, 1.47, 1.46, 1.49, 1.53, 1.53, 1.55, 1.51, NaN, 1.56, 1.49, 1.5, 1.46, 1.5, 1.51, 1.5, 1.53, 1.45, 1.53, 1.53, 1.5, 1.52, 1.52, 1.51, 1.53, 1.56, 1.53, 1.56, 1.54, 1.52, 1.53, 1.51, 1.51, 1.49, 1.51, 1.54, 1.59, 1.56, 1.55, 1.57, 1.56, 1.58, 1.54, 1.54, NaN, 1.46, 1.45, 1.49, 1.49, 1.49, 1.5, 1.49, 1.52, 1.46, 1.47, 1.45, 1.41, 1.38, 1.38, 1.39, 1.38, 1.44, 1.4, 1.37, 1.41, 1.4, 1.42, 1.41, 1.45, 1.41, 1.42, 1.39, NaN, 1.37, 1.4, 1.32, 1.29, 1.26, 1.32, 1.32, 1.34, 1.29, 1.26, 1.24, 1.14, 1.17, 1.22, 1.19, 1.21, 1.22, 1.16, 1.17, 1.19, 1.2, NaN, 1.12, 1.13, 1.16, 1.24, 1.25, 1.27, 1.26, 1.25, 1.19, 1.16, 1.15, 1.16, 1.13, 1.14, 1.16, 1.18, 1.25, 1.23, 1.2, 1.18, 1.22, 1.18, 1.15, 1.19, NaN, 1.23, 1.2, 1.17, 1.23, 1.22, 1.17, 1.22, 1.23, 1.29, 1.22, 1.22, 1.21, 1.33, 1.38, 1.41, 1.5, 1.51, NaN, 1.47, 1.49, 1.53, 1.5, 1.56, 1.62, NaN, 1.62, 1.61, 1.53, 1.58, 1.58, 1.63, 1.63, 1.68, 1.65, 1.65, 1.63, 1.6, 1.66, 1.72, 1.74, 1.72, 1.71, 1.64, 1.59, 1.63, 1.59, 1.68, NaN, 1.67, 1.72, 1.77, 1.7, 1.69, 1.66, 1.76, 1.81, 1.77, 1.77, 1.59, 1.61, 1.58, 1.5, 1.49, 1.45, 1.51, 1.58, 1.56, 1.5, 1.47, 1.4, 1.43, 1.41, 1.35, 1.32, 1.38, 1.44, 1.42, 1.44, 1.46, NaN, NaN, 1.47, 1.45, 1.42,]
@@ -1342,3 +1358,47 @@ end
     @test isapprox(cov(mvtsd), [var(tsd) mvtsdcov; mvtsdcov var(noisy_tsd)])
 
 end
+
+@testset "MV rename" begin
+    A = MVTSeries(2001Y, collect('A' .+ (0:7)), rand(Float32, 20, 8))
+
+    @test A === rename_columns!(A, (; A=:a, C=:c))
+    @test axes(A, 2) == [:a, :B, :c, :D, :E, :F, :G, :H]
+
+    @test A === rename_columns!(A) do x
+        Symbol(x, :_1)
+    end
+    @test axes(A, 2) == [:a_1, :B_1, :c_1, :D_1, :E_1, :F_1, :G_1, :H_1]
+
+    @test_throws ArgumentError rename_columns!(A; replace=nothing)
+
+    @test A === rename_columns!(A; replace=("_1" => "_2"))
+    @test axes(A, 2) == [:a_2, :B_2, :c_2, :D_2, :E_2, :F_2, :G_2, :H_2]
+
+    @test A === rename_columns!(A; replace=("_2" => "_1"), suffix=:_2)
+    @test axes(A, 2) == [:a_1_2, :B_1_2, :c_1_2, :D_1_2, :E_1_2, :F_1_2, :G_1_2, :H_1_2]
+
+    @test A === rename_columns!(A; replace=("_1" => ""), prefix=:Q__)
+    @test axes(A, 2) == [:Q__a_2, :Q__B_2, :Q__c_2, :Q__D_2, :Q__E_2, :Q__F_2, :Q__G_2, :Q__H_2]
+
+    @test A === rename_columns!(A; prefix="O_", replace=("Q__" => "", "_2" => ""), suffix=:_x)
+    @test axes(A, 2) == [:O_a_x, :O_B_x, :O_c_x, :O_D_x, :O_E_x, :O_F_x, :O_G_x, :O_H_x]
+
+    @test A === rename_columns!(A; prefix="O_", )
+    @test axes(A, 2) == [:O_O_a_x, :O_O_B_x, :O_O_c_x, :O_O_D_x, :O_O_E_x, :O_O_F_x, :O_O_G_x, :O_O_H_x]
+
+    @test A === rename_columns!(A; suffix="_x", )
+    @test axes(A, 2) == [:O_O_a_x_x, :O_O_B_x_x, :O_O_c_x_x, :O_O_D_x_x, :O_O_E_x_x, :O_O_F_x_x, :O_O_G_x_x, :O_O_H_x_x]
+
+    @test A === rename_columns!(A; prefix=:O, suffix="x", )
+    @test axes(A, 2) == [:OO_O_a_x_xx, :OO_O_B_x_xx, :OO_O_c_x_xx, :OO_O_D_x_xx, :OO_O_E_x_xx, :OO_O_F_x_xx, :OO_O_G_x_xx, :OO_O_H_x_xx]
+
+    Random.seed!(0x007)
+    random_colnames = Symbol.([join(rand('A':'Z', 15)) for i = 1:size(A, 2)])
+    @test A === rename_columns!(A, random_colnames)
+    @test axes(A, 2) == random_colnames
+
+    @test_throws ArgumentError rename_columns!(A, Symbol[])
+
+end
+
