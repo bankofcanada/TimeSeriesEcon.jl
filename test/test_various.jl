@@ -82,11 +82,11 @@ end
     @test (tv[tm] .= -1.0; tm == (tv .< 0.0))
 
     @test (tv[tb] == tv.values[tb.values, :])
-    @test (tv[tb,:] == tv.values[tb.values, :])
+    @test (tv[tb, :] == tv.values[tb.values, :])
     @test (tv[tb] = -1000 * ones(sum(tb), 3); sum(tv[tb]) == -1000 * 3 * sum(tb))
-    @test (tv[tb,:] = -2000 * ones(sum(tb), 3); sum(tv[tb]) == -2000 * 3 * sum(tb))
+    @test (tv[tb, :] = -2000 * ones(sum(tb), 3); sum(tv[tb]) == -2000 * 3 * sum(tb))
     @test (tv[tb] .= -3000; sum(tv[tb]) == -3000 * 3 * sum(tb))
-    @test (tv[tb,:] .= -4000; sum(tv[tb]) == -4000 * 3 * sum(tb))
+    @test (tv[tb, :] .= -4000; sum(tv[tb]) == -4000 * 3 * sum(tb))
 
 
 end
@@ -116,8 +116,8 @@ end
         NaN 10.1 10.1 10.1 10.1]
     @test isapprox(c, mat1, nans=true)
     @test isapprox(mat1, c, nans=true)
-    @test isapprox(c.a, mat1[:,1], nans=true)
-    @test isapprox(mat1[:,1], c.a, nans=true)
+    @test isapprox(c.a, mat1[:, 1], nans=true)
+    @test isapprox(mat1[:, 1], c.a, nans=true)
     d = overlay(b, a)
     @test c isa MVTSeries
     @test frequencyof(d) == frequencyof(b) == frequencyof(a)
@@ -138,4 +138,25 @@ end
             10.1 10.1 10.1 10.1 NaN
             10.1 10.1 10.1 10.1 NaN
             10.1 10.1 10.1 10.1 NaN], nans=true)
+end
+
+@testset "misc" begin
+
+    o = ones(20, 3)
+    X = MVTSeries(2000Y, (:x, :y, :z), o)
+
+    @test parent(X) === o
+    @test parent(X.x) === view(o, :, 1)
+
+    @test transpose(X) === transpose(o)
+    @test transpose(X.x) === transpose(view(o, :, 1))
+
+    Z = MVTSeries(2000Y, (:x, :y, :z), ones(15, 3))
+
+    @test compare(X.values, Z.values, quiet=true) == false
+    @test compare(X, Z, quiet=true, ignoremissing=false) == false
+    @test compare(X, Z, quiet=true, ignoremissing=true) == true
+
+    @test Base.axes1(X) === axes(X,1)
+
 end

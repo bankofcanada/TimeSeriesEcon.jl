@@ -142,7 +142,7 @@ export compare, @compare
 
 @inline compare_equal(x, y; kwargs...) = isequal(x, y)
 @inline compare_equal(x::Number, y::Number; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
-@inline compare_equal(x::AbstractArray{<:Number}, y::AbstractArray{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = isapprox(x, y; atol, rtol, nans)
+@inline compare_equal(x::AbstractArray{<:Number}, y::AbstractArray{<:Number}; atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...) = size(x) == size(y) && isapprox(x, y; atol, rtol, nans)
 function compare_equal(x::TSeries, y::TSeries; ignoremissing=false, trange::Union{Nothing,AbstractUnitRange{<:MIT}}=nothing, atol=0, rtol=atol > 0 ? 0.0 : √eps(), nans::Bool=false, kwargs...)
     if frequencyof(x) != frequencyof(y)
         return false
