@@ -24,13 +24,18 @@ mit_offset(::Val{:right}, ::Type{<:YPFrequency{N}}) where {N} = 1.0 / N
 
 function mit_formatter(V::Val, F::Type{<:YPFrequency{N}}) where {N}
     offset = mit_offset(V, F)
-    # @info "Creating formatter for $F $V" offset
-    return x -> begin
+    warned = false
+    return function (x)
         yr = floor(Int, x - offset)
         per = 1 + floor(Int, N * (x - yr - offset))
-        ret = string(MIT{F}(yr, per))
-        # println("formatter: ", x, " -> ", ret)
-        ret
+        xmit = MIT{F}(yr, per)
+        if (N * abs(x - xmit) > 0.1) 
+            # x is more than one tenth of a period away from xmit
+            warned || @warn "xticks marked with (+) are not aligned with $(nameof(F)) MITs."
+            warned = true
+            return string(xmit) * "⁺"
+        end
+        string(xmit)
     end
 end
 
@@ -45,12 +50,15 @@ end
     rng = get(plotattributes, :trange, x)
     rng = intersect(rng, rangeof(y))
     y := values(y[rng])
-    x := Float64.(rng) .+ mit_offset(Val(mit_loc), frequencyof(rng))
+    x := float.(rng) .+ mit_offset(Val(mit_loc), frequencyof(rng))
     if frequencyof(x) <: YPFrequency
         xformatter --> mit_formatter(Val(mit_loc), frequencyof(rng))
     elseif frequencyof(x) <: Union{BDaily,Daily,<:Weekly}
         x := [Date(MIT{frequencyof(x)}(Int64(i))) for i in rng]
     end
+    # xt, xl, xh = Plots.optimize_ticks(first(x), last(x); k_min=4, k_max=8)
+    # xticks := xt
+    # xlim := (xl, xh)
     # restore the original seriestype
     st = plotattributes[:_org_st]
     seriestype := st
