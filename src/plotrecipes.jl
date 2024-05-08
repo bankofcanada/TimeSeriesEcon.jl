@@ -29,9 +29,11 @@ function mit_formatter(V::Val, F::Type{<:YPFrequency{N}}) where {N}
         yr = floor(Int, x - offset)
         per = 1 + floor(Int, N * (x - yr - offset))
         xmit = MIT{F}(yr, per)
-        if !warned && (N * abs(x - xmit) > 0.1)
-            @warn "Some xtick may be out of alignment."
+        if (N * abs(x - xmit) > 0.1) 
+            # x is more than one tenth of a period away from xmit
+            warned || @warn "xticks marked with (+) are not aligned with $(nameof(F)) MITs."
             warned = true
+            return string(xmit) * "⁺"
         end
         string(xmit)
     end
