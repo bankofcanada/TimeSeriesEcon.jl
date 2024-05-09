@@ -469,6 +469,9 @@ end
 
 Base.setindex!(x::MVTSeries, val, rng::AbstractVector{<:MIT}) = mixed_freq_error(x, rng)
 Base.setindex!(x::MVTSeries{F}, val, rng::AbstractVector{MIT{F}}) where {F<:Frequency} = setindex!(x, val, rng, axes(x, 2))
+function Base.setindex!(x::MVTSeries{F}, val::MVTSeries{F}, rng::AbstractVector{MIT{F}}) where {F<:Frequency}
+    setindex!(x, val, rng, Symbol[c for c in keys(_cols(x)) if haskey(_cols(val), c)])
+end
 
 # single argument - variable - return a TSeries of the column
 Base.getindex(x::MVTSeries, col::AbstractString) = _col(x, Symbol(col))
@@ -508,7 +511,7 @@ Base.setindex!(x::MVTSeries, val, p::_MITOneOrVector, ::_SymbolOneOrCollection) 
 Base.getindex(x::MVTSeries{F}, p::_MITOneOrVector{F}, ::Colon) where {F<:Frequency} = getindex(x, p)
 Base.getindex(x::MVTSeries, ::Colon, c::_SymbolOneOrCollection) = getindex(x, c)
 
-Base.setindex!(x::MVTSeries{F}, val, p::_MITOneOrVector{F}, ::Colon) where {F<:Frequency} = setindex!(x, val, p, axes(x, 2))
+Base.setindex!(x::MVTSeries{F}, val, p::_MITOneOrVector{F}, ::Colon) where {F<:Frequency} = setindex!(x, val, p)
 Base.setindex!(x::MVTSeries, val, ::Colon, c::_SymbolOneOrCollection) = setindex!(x, val, rangeof(x), c)
 
 # 

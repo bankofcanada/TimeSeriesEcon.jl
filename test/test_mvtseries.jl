@@ -261,6 +261,15 @@ end
             sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
             sd[2001Q1:2001Q4, [:a, :b]] = sd2
             @test (sd[2001Q1:2001Q4, :].values == sd2[2001Q1:2001Q4, :].values)
+            dA = rand(36,3)
+            A = MVTSeries(2020M1, (:a, :b, :c), copy(dA))
+            B = MVTSeries(2021M1, (:a, :c), ones(36, 2))
+            @test (A[2021M1:2021M12] = B; true)
+            @test A[:,:b] ≈ dA[:,2]
+            @test A[2020M1:2020M12,:] ≈ dA[1:12,:]
+            @test A[2022M1:2022M12,:] ≈ dA[25:36,:]
+            @test A[2021M1:2021M12,:a] ≈ ones(12)
+            @test A[2021M1:2021M12,:c] ≈ ones(12)
         end
 
         # https://github.com/bankofcanada/TimeSeriesEcon.jl/pull/49
@@ -878,11 +887,21 @@ end
     x3[1:2:10, [1, 3]] .= 7.0
     @test x3.values == mat5
 
+    begin
+        dA = rand(36,3)
+        A = MVTSeries(2020M1, (:a, :b, :c), copy(dA))
+        B = MVTSeries(2021M1, (:a, :c), ones(36, 2))
+        @test (A[2021M1:2021M12] .= B; true)
+        @test A[:,:b] ≈ dA[:,2]
+        @test A[2020M1:2020M12,:] ≈ dA[1:12,:]
+        @test A[2022M1:2022M12,:] ≈ dA[25:36,:]
+        @test A[2021M1:2021M12,:a] ≈ ones(12)
+        @test A[2021M1:2021M12,:c] ≈ ones(12)
+    end
+
 end
 
 @testset "MVTSeries math" begin
-
-
     #promote shape
     x = MVTSeries(20Q1, (:a, :b), rand(10, 2))
     y = MVTSeries(21Q1, (:a, :b), rand(10, 2))
