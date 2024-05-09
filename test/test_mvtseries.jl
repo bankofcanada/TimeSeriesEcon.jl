@@ -938,10 +938,20 @@ end
         @test_throws BoundsError A[rangeof(A), [:a, :c]] .= TSeries(sfoo, 16)
         A .= dA
         A[[:a, :c]] .= TSeries(sfoo, 16)
+        @test (A[_!sfoo, :] ≈ dA[_!foo,:])
         @test all(A[sfoo, [:a, :c]] .== 16)
         A .= dA
         A[:, [:a, :c]] .= TSeries(sfoo, 16)
+        @test (A[_!sfoo, :] ≈ dA[_!foo,:])
         @test all(A[sfoo, [:a, :c]] .== 16)
+        A .= dA
+        A[sfoo, :] .= TSeries(sfoo, 16)
+        @test (A[_!sfoo, :] ≈ dA[_!foo,:])
+        @test all(A[sfoo, :] .== 16)
+        A .= dA
+        A[:, :] .= TSeries(sfoo, 16)
+        @test (A[_!sfoo, :] ≈ dA[_!foo,:])
+        @test all(A[sfoo, :] .== 16)
 
     end
 
