@@ -261,15 +261,15 @@ end
             sd2 = MVTSeries(2001Q1, nms, rand(8, length(nms)))
             sd[2001Q1:2001Q4, [:a, :b]] = sd2
             @test (sd[2001Q1:2001Q4, :].values == sd2[2001Q1:2001Q4, :].values)
-            dA = rand(36,3)
+            dA = rand(36, 3)
             A = MVTSeries(2020M1, (:a, :b, :c), copy(dA))
             B = MVTSeries(2021M1, (:a, :c), ones(36, 2))
             @test (A[2021M1:2021M12] = B; true)
-            @test A[:,:b] ≈ dA[:,2]
-            @test A[2020M1:2020M12,:] ≈ dA[1:12,:]
-            @test A[2022M1:2022M12,:] ≈ dA[25:36,:]
-            @test A[2021M1:2021M12,:a] ≈ ones(12)
-            @test A[2021M1:2021M12,:c] ≈ ones(12)
+            @test A[:, :b] ≈ dA[:, 2]
+            @test A[2020M1:2020M12, :] ≈ dA[1:12, :]
+            @test A[2022M1:2022M12, :] ≈ dA[25:36, :]
+            @test A[2021M1:2021M12, :a] ≈ ones(12)
+            @test A[2021M1:2021M12, :c] ≈ ones(12)
         end
 
         # https://github.com/bankofcanada/TimeSeriesEcon.jl/pull/49
@@ -342,82 +342,82 @@ end
     A = MVTSeries(2000Y, collect('a' .+ (0:7)), rand(12, 8))
     B = copy(A.values)
     m, n = size(A)
-    
+
     # access with a Bool vectors that are the same length as the axes of A    
     tf = rand(Bool, m)  # for the rows
     tf2 = rand(Bool, n) # for the columns
     tstf = TSeries(rangeof(A), tf)
     m1 = sum(tf)
     n1 = sum(tf2)
-    
+
     # getindex
     @test A[tf] == B[tf, :]
     @test A[tf, :] == B[tf, :]
-    @test A[tf, (:a, :c)] == B[tf, [1,3]]
+    @test A[tf, (:a, :c)] == B[tf, [1, 3]]
     @test A[tf, tf2] == B[tf, tf2]
     # setinex
-    @test (A[tf] = ones(m1, n); B[tf, :] = ones(m1, n); A.values == B) 
-    @test (A[tf, :] = 2*ones(m1, n); B[tf, :] = 2*ones(m1, n); A.values == B) 
-    @test (A[tf, (:b, :c)] = 3*ones(m1, 2); B[tf, [2,3]] = 3*ones(m1, 2); A.values == B) 
-    @test (A[tf, tf2] = 4*ones(m1, n1); B[tf, tf2] = 4*ones(m1, n1); A.values == B) 
+    @test (A[tf] = ones(m1, n); B[tf, :] = ones(m1, n); A.values == B)
+    @test (A[tf, :] = 2 * ones(m1, n); B[tf, :] = 2 * ones(m1, n); A.values == B)
+    @test (A[tf, (:b, :c)] = 3 * ones(m1, 2); B[tf, [2, 3]] = 3 * ones(m1, 2); A.values == B)
+    @test (A[tf, tf2] = 4 * ones(m1, n1); B[tf, tf2] = 4 * ones(m1, n1); A.values == B)
     copyto!(B, copyto!(A, rand(m, n)))
     # view
-    @test (v = view(A, tf); v.parent isa Matrix && size(v) == (m1, n) && v == B[tf,:])
-    @test (v = view(A, tf, :); v.parent isa Matrix && size(v) == (m1, n) && v == B[tf,:])
-    @test (v = view(A, tf, (:a,:d)); v.parent isa Matrix && size(v) == (m1, 2) && v == B[tf,[1,4]])
-    @test (v = view(A, tf, tf2); v.parent isa Matrix && size(v) == (m1, n1) && v == B[tf,tf2])
+    @test (v = view(A, tf); v.parent isa Matrix && size(v) == (m1, n) && v == B[tf, :])
+    @test (v = view(A, tf, :); v.parent isa Matrix && size(v) == (m1, n) && v == B[tf, :])
+    @test (v = view(A, tf, (:a, :d)); v.parent isa Matrix && size(v) == (m1, 2) && v == B[tf, [1, 4]])
+    @test (v = view(A, tf, tf2); v.parent isa Matrix && size(v) == (m1, n1) && v == B[tf, tf2])
     # broadcast arithmetic
     tmp = rand(m1, n)
-    @test (A[tf] .+ 1 == B[tf,:] .+ 1)
-    @test (A[tf] .+ 1tmp == B[tf,:] .+ 1tmp)
-    @test (A[tf] .+ 1tmp[1:1,:] == B[tf,:] .+ 1tmp[1:1,:])
-    @test (A[tf] .+ 1tmp[:,1:1] == B[tf,:] .+ 1tmp[:,1:1])
-    @test (A[tf] .+ 1tmp[:,1] == B[tf,:] .+ 1tmp[:,1])
+    @test (A[tf] .+ 1 == B[tf, :] .+ 1)
+    @test (A[tf] .+ 1tmp == B[tf, :] .+ 1tmp)
+    @test (A[tf] .+ 1tmp[1:1, :] == B[tf, :] .+ 1tmp[1:1, :])
+    @test (A[tf] .+ 1tmp[:, 1:1] == B[tf, :] .+ 1tmp[:, 1:1])
+    @test (A[tf] .+ 1tmp[:, 1] == B[tf, :] .+ 1tmp[:, 1])
     tmp = rand(m1, n)
-    @test (A[tf,:] .+ 2 == B[tf,:] .+ 2)
-    @test (A[tf,:] .+ 2tmp == B[tf,:] .+ 2tmp)
-    @test (A[tf,:] .+ 2tmp[1:1,:] == B[tf,:] .+ 2tmp[1:1,:])
-    @test (A[tf,:] .+ 2tmp[:,1:1] == B[tf,:] .+ 2tmp[:,1:1])
-    @test (A[tf,:] .+ 2tmp[:,1] == B[tf,:] .+ 2tmp[:,1])
+    @test (A[tf, :] .+ 2 == B[tf, :] .+ 2)
+    @test (A[tf, :] .+ 2tmp == B[tf, :] .+ 2tmp)
+    @test (A[tf, :] .+ 2tmp[1:1, :] == B[tf, :] .+ 2tmp[1:1, :])
+    @test (A[tf, :] .+ 2tmp[:, 1:1] == B[tf, :] .+ 2tmp[:, 1:1])
+    @test (A[tf, :] .+ 2tmp[:, 1] == B[tf, :] .+ 2tmp[:, 1])
     tmp = rand(m1, 3)
-    @test (A[tf,(:a, :d, :c)] .+ 3 == B[tf,[1,4,3]] .+ 3)
-    @test (A[tf,(:a, :d, :c)] .+ 3tmp == B[tf,[1,4,3]] .+ 3tmp)
-    @test (A[tf,(:a, :d, :c)] .+ 3tmp[1:1,:] == B[tf,[1,4,3]] .+ 3tmp[1:1,:])
-    @test (A[tf,(:a, :d, :c)] .+ 3tmp[:,1:1] == B[tf,[1,4,3]] .+ 3tmp[:,1:1])
-    @test (A[tf,(:a, :d, :c)] .+ 3tmp[:,1] == B[tf,[1,4,3]] .+ 3tmp[:,1])
+    @test (A[tf, (:a, :d, :c)] .+ 3 == B[tf, [1, 4, 3]] .+ 3)
+    @test (A[tf, (:a, :d, :c)] .+ 3tmp == B[tf, [1, 4, 3]] .+ 3tmp)
+    @test (A[tf, (:a, :d, :c)] .+ 3tmp[1:1, :] == B[tf, [1, 4, 3]] .+ 3tmp[1:1, :])
+    @test (A[tf, (:a, :d, :c)] .+ 3tmp[:, 1:1] == B[tf, [1, 4, 3]] .+ 3tmp[:, 1:1])
+    @test (A[tf, (:a, :d, :c)] .+ 3tmp[:, 1] == B[tf, [1, 4, 3]] .+ 3tmp[:, 1])
     tmp = rand(m1, n1)
-    @test (A[tf,tf2] .+ 4 == B[tf,tf2] .+ 4)
-    @test (A[tf,tf2] .+ 4tmp == B[tf,tf2] .+ 4tmp)
-    @test (A[tf,tf2] .+ 4tmp[1:1,:] == B[tf,tf2] .+ 4tmp[1:1,:])
-    @test (A[tf,tf2] .+ 4tmp[:,1:1] == B[tf,tf2] .+ 4tmp[:,1:1])
-    @test (A[tf,tf2] .+ 4tmp[:,1] == B[tf,tf2] .+ 4tmp[:,1])
+    @test (A[tf, tf2] .+ 4 == B[tf, tf2] .+ 4)
+    @test (A[tf, tf2] .+ 4tmp == B[tf, tf2] .+ 4tmp)
+    @test (A[tf, tf2] .+ 4tmp[1:1, :] == B[tf, tf2] .+ 4tmp[1:1, :])
+    @test (A[tf, tf2] .+ 4tmp[:, 1:1] == B[tf, tf2] .+ 4tmp[:, 1:1])
+    @test (A[tf, tf2] .+ 4tmp[:, 1] == B[tf, tf2] .+ 4tmp[:, 1])
     # broadcast assignment
     copyto!(B, copyto!(A, rand(m, n)))
     tmp = rand(m1, n)
-    @test (A[tf] .+= 1; B[tf,:] .+= 1; A.values == B)
-    @test (A[tf] .+= 1tmp; B[tf,:] .+= 1tmp; A.values == B)
-    @test (A[tf] .+= 1tmp[1:1,:]; B[tf,:] .+= 1tmp[1:1,:]; A.values == B)
-    @test (A[tf] .+= 1tmp[:,1:1]; B[tf,:] .+= 1tmp[:,1:1]; A.values == B)
-    @test (A[tf] .+= 1tmp[:,1]; B[tf,:] .+= 1tmp[:,1]; A.values == B)
+    @test (A[tf] .+= 1; B[tf, :] .+= 1; A.values == B)
+    @test (A[tf] .+= 1tmp; B[tf, :] .+= 1tmp; A.values == B)
+    @test (A[tf] .+= 1tmp[1:1, :]; B[tf, :] .+= 1tmp[1:1, :]; A.values == B)
+    @test (A[tf] .+= 1tmp[:, 1:1]; B[tf, :] .+= 1tmp[:, 1:1]; A.values == B)
+    @test (A[tf] .+= 1tmp[:, 1]; B[tf, :] .+= 1tmp[:, 1]; A.values == B)
     tmp = rand(m1, n)
-    @test (A[tf,:] .+= 2; B[tf,:] .+= 2; A.values == B)
-    @test (A[tf,:] .+= 2tmp; B[tf,:] .+= 2tmp; A.values == B)
-    @test (A[tf,:] .+= 2tmp[1:1,:]; B[tf,:] .+= 2tmp[1:1,:]; A.values == B)
-    @test (A[tf,:] .+= 2tmp[:,1:1]; B[tf,:] .+= 2tmp[:,1:1]; A.values == B)
-    @test (A[tf,:] .+= 2tmp[:,1]; B[tf,:] .+= 2tmp[:,1]; A.values == B)
+    @test (A[tf, :] .+= 2; B[tf, :] .+= 2; A.values == B)
+    @test (A[tf, :] .+= 2tmp; B[tf, :] .+= 2tmp; A.values == B)
+    @test (A[tf, :] .+= 2tmp[1:1, :]; B[tf, :] .+= 2tmp[1:1, :]; A.values == B)
+    @test (A[tf, :] .+= 2tmp[:, 1:1]; B[tf, :] .+= 2tmp[:, 1:1]; A.values == B)
+    @test (A[tf, :] .+= 2tmp[:, 1]; B[tf, :] .+= 2tmp[:, 1]; A.values == B)
     tmp = rand(m1, 3)
-    @test (A[tf,(:d,:a,:c)] .+= 3; B[tf,[4,1,3]] .+= 3; A.values == B)
-    @test (A[tf,(:d,:a,:c)] .+= 3tmp; B[tf,[4,1,3]] .+= 3tmp; A.values == B)
-    @test (A[tf,(:d,:a,:c)] .+= 3tmp[1:1,:]; B[tf,[4,1,3]] .+= 3tmp[1:1,:]; A.values == B)
-    @test (A[tf,(:d,:a,:c)] .+= 3tmp[:,1:1]; B[tf,[4,1,3]] .+= 3tmp[:,1:1]; A.values == B)
-    @test (A[tf,(:d,:a,:c)] .+= 3tmp[:,1]; B[tf,[4,1,3]] .+= 3tmp[:,1]; A.values == B)
+    @test (A[tf, (:d, :a, :c)] .+= 3; B[tf, [4, 1, 3]] .+= 3; A.values == B)
+    @test (A[tf, (:d, :a, :c)] .+= 3tmp; B[tf, [4, 1, 3]] .+= 3tmp; A.values == B)
+    @test (A[tf, (:d, :a, :c)] .+= 3tmp[1:1, :]; B[tf, [4, 1, 3]] .+= 3tmp[1:1, :]; A.values == B)
+    @test (A[tf, (:d, :a, :c)] .+= 3tmp[:, 1:1]; B[tf, [4, 1, 3]] .+= 3tmp[:, 1:1]; A.values == B)
+    @test (A[tf, (:d, :a, :c)] .+= 3tmp[:, 1]; B[tf, [4, 1, 3]] .+= 3tmp[:, 1]; A.values == B)
     tmp = rand(m1, n1)
-    @test (A[tf,tf2] .+= 4; B[tf,tf2] .+= 4; A.values == B)
-    @test (A[tf,tf2] .+= 4tmp; B[tf,tf2] .+= 4tmp; A.values == B)
-    @test (A[tf,tf2] .+= 4tmp[1:1,:]; B[tf,tf2] .+= 4tmp[1:1,:]; A.values == B)
-    @test (A[tf,tf2] .+= 4tmp[:,1:1]; B[tf,tf2] .+= 4tmp[:,1:1]; A.values == B)
-    @test (A[tf,tf2] .+= 4tmp[:,1]; B[tf,tf2] .+= 4tmp[:,1]; A.values == B)
-    
+    @test (A[tf, tf2] .+= 4; B[tf, tf2] .+= 4; A.values == B)
+    @test (A[tf, tf2] .+= 4tmp; B[tf, tf2] .+= 4tmp; A.values == B)
+    @test (A[tf, tf2] .+= 4tmp[1:1, :]; B[tf, tf2] .+= 4tmp[1:1, :]; A.values == B)
+    @test (A[tf, tf2] .+= 4tmp[:, 1:1]; B[tf, tf2] .+= 4tmp[:, 1:1]; A.values == B)
+    @test (A[tf, tf2] .+= 4tmp[:, 1]; B[tf, tf2] .+= 4tmp[:, 1]; A.values == B)
+
     # access with a single bool vector that is the same length as all of A
     sg = rand(Bool, length(A))
     k = sum(sg)
@@ -887,16 +887,62 @@ end
     x3[1:2:10, [1, 3]] .= 7.0
     @test x3.values == mat5
 
-    begin
-        dA = rand(36,3)
-        A = MVTSeries(2020M1, (:a, :b, :c), copy(dA))
-        B = MVTSeries(2021M1, (:a, :c), ones(36, 2))
-        @test (A[2021M1:2021M12] .= B; true)
-        @test A[:,:b] ≈ dA[:,2]
-        @test A[2020M1:2020M12,:] ≈ dA[1:12,:]
-        @test A[2022M1:2022M12,:] ≈ dA[25:36,:]
-        @test A[2021M1:2021M12,:a] ≈ ones(12)
-        @test A[2021M1:2021M12,:c] ≈ ones(12)
+    for F = (Quarterly{3}, Monthly, HalfYearly{2})
+        N = ppy(F)
+        dA = rand(3N, 3)
+        start = MIT{F}(2020, 1)
+        A = MVTSeries(start, (:a, :b, :c), copy(dA))
+        B = MVTSeries(start, (:a, :c), ones(3N, 2))
+        foo = N+1:2N
+        sfoo = rangeof(A)[foo]
+        _!foo = setdiff(1:size(dA, 1), foo)
+        _!sfoo = setdiff(rangeof(A), sfoo)
+        @test (A[sfoo] .= B; true)
+        @test A[sfoo, :a] ≈ ones(N)
+        @test A[sfoo, :b] ≈ dA[foo, 2]
+        @test A[sfoo, :c] ≈ ones(N)
+        @test A[_!sfoo, :] ≈ dA[_!foo, :]
+
+        C = MVTSeries(sfoo, (:a, :b), 7 .+ rand(length(foo), 2))
+        Ctests = (v=[:a, :b], w=setdiff([:a, :b], v)) -> begin
+            isempty(v) || @test A[sfoo, v] ≈ C.values[:, indexin(v, [:a, :b])]
+            isempty(w) || @test A[sfoo, w] ≈ dA[foo, indexin(w, [:a, :b, :c])]
+            @test A[sfoo, :c] ≈ dA[foo, 3]
+            @test A[_!sfoo, :] ≈ dA[_!foo, :]
+        end
+
+        # explicit variables throw BoundsError if missing from the rhs
+        @test_throws BoundsError A[[:a, :b, :c]] .= C
+
+        A .= dA
+        A[[:a, :b]] .= C
+        Ctests()
+        A .= dA
+        A .= C
+        Ctests()
+        A .= dA
+        A[:, :] .= C
+        Ctests()
+        A .= dA
+        A[:, [:a, :b]] .= C
+        Ctests()
+        A .= dA
+        A[:, :a] .= C
+        Ctests([:a])
+        A .= dA
+        A[:, [:b]] .= C
+        Ctests([:b])
+
+        # explicit ranges throw BoundsError if missing from the rhs
+        @test_throws BoundsError A[-2 .+ sfoo, [:a, :c]] .= TSeries(sfoo, 16)
+        @test_throws BoundsError A[rangeof(A), [:a, :c]] .= TSeries(sfoo, 16)
+        A .= dA
+        A[[:a, :c]] .= TSeries(sfoo, 16)
+        @test all(A[sfoo, [:a, :c]] .== 16)
+        A .= dA
+        A[:, [:a, :c]] .= TSeries(sfoo, 16)
+        @test all(A[sfoo, [:a, :c]] .== 16)
+
     end
 
 end
@@ -1032,24 +1078,24 @@ end
         @test rangeof(shifted_x2) == 0U:2U
         @test shifted_x2.values == x2.values
         @test rangeof(shifted_x2) == rangeof(shifted_x2.a) == rangeof(shifted_x2.b)
-        
+
         @test lead(x2) == shift(x2, 1)
         @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test lag(x2) == shift(x2, -1)
         @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
-        
+
         x2 = copy(x2_orig)
         shift!(x2, 1)
         @test rangeof(x2) == 0U:2U
         @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test x2.values == x2_orig.values
-        
+
         x2 = copy(x2_orig)
         lead!(x2)
         @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
         @test rangeof(x2) == 0U:2U
         @test x2.values == x2_orig.values
-        
+
         x2 = copy(x2_orig)
         lag!(x2)
         @test rangeof(x2) == rangeof(x2.a) == rangeof(x2.b)
@@ -1365,7 +1411,7 @@ using OrderedCollections
     ts = MVTSeries(2020Q1, (:y1, :y2), randn(10, 2))
     res1 = mapslices(x -> x .+ 1, ts, dims=1)
     @test res1 isa MVTSeries && axes(res1) == axes(ts)
-    @test res1.y1.values == res1.values[:,1]
+    @test res1.y1.values == res1.values[:, 1]
     res_matrix = copy(ts.values) .+ 1
     res_mvts = MVTSeries(rangeof(ts), colnames(ts), res_matrix)
     @test mapslices(x -> x .+ 1, ts, dims=1) == res_mvts
@@ -1406,8 +1452,8 @@ end
 
 @testset "hcat 2" begin
     A = MVTSeries(2000Y, (:a, :b, :c), rand(8, 3))
-    B = MVTSeries(1998Y, (:x, :y, ), rand(6, 2))
-    C = MVTSeries(2002Y, (:m, :n, ), rand(11, 2))
+    B = MVTSeries(1998Y, (:x, :y,), rand(6, 2))
+    C = MVTSeries(2002Y, (:m, :n,), rand(11, 2))
     # test for bug that makes the rangeof the result equal to the first, rather than the span of all
     @test rangeof(hcat(A, B)) == rangeof(hcat(B, A))
     # make sure keyword arguments are taken into account when computing the range
@@ -1501,13 +1547,13 @@ end
     @test A === rename_columns!(A; prefix="O_", replace=("Q__" => "", "_2" => ""), suffix=:_x)
     @test axes(A, 2) == [:O_a_x, :O_B_x, :O_c_x, :O_D_x, :O_E_x, :O_F_x, :O_G_x, :O_H_x]
 
-    @test A === rename_columns!(A; prefix="O_", )
+    @test A === rename_columns!(A; prefix="O_")
     @test axes(A, 2) == [:O_O_a_x, :O_O_B_x, :O_O_c_x, :O_O_D_x, :O_O_E_x, :O_O_F_x, :O_O_G_x, :O_O_H_x]
 
-    @test A === rename_columns!(A; suffix="_x", )
+    @test A === rename_columns!(A; suffix="_x")
     @test axes(A, 2) == [:O_O_a_x_x, :O_O_B_x_x, :O_O_c_x_x, :O_O_D_x_x, :O_O_E_x_x, :O_O_F_x_x, :O_O_G_x_x, :O_O_H_x_x]
 
-    @test A === rename_columns!(A; prefix=:O, suffix="x", )
+    @test A === rename_columns!(A; prefix=:O, suffix="x")
     @test axes(A, 2) == [:OO_O_a_x_xx, :OO_O_B_x_xx, :OO_O_c_x_xx, :OO_O_D_x_xx, :OO_O_E_x_xx, :OO_O_F_x_xx, :OO_O_G_x_xx, :OO_O_H_x_xx]
 
     Random.seed!(0x007)

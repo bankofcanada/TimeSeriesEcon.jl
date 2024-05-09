@@ -320,3 +320,6 @@ end
     end
 end
 
+function Base.Broadcast.dotview(x::MVTSeries, cols::_SymbolOneOrCollection)
+    return Base.Broadcast.dotview(x, :, cols)
+end
