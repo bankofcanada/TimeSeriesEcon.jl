@@ -226,6 +226,7 @@ _to_unitrange(x::MVTSeries) = rangeof(x)
 Base.size(x::MVTSeries) = size(_vals(x))
 Base.axes(x::MVTSeries) = (rangeof(x), [colnames(x)...])
 Base.axes1(x::MVTSeries) = rangeof(x)
+Base.parent(x::MVTSeries) = x.values
 
 const _MVTSAxes1 = AbstractUnitRange{<:MIT}
 const _MVTSAxes2 = Union{NTuple{N,Symbol},Vector{Symbol}} where {N}
