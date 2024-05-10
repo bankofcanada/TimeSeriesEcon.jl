@@ -179,6 +179,17 @@ function Base.Broadcast.materialize!(::MVTSeriesStyle, dest, bc::Base.Broadcast.
     return copyto!(dest, Base.Broadcast.instantiate(bc1))
 end
 
+function Base.Broadcast.materialize!(::MVTSeriesStyle, dest::SubArray{T,N,M}, bc::Base.Broadcast.Broadcasted{Style}) where {T,N,M<:MVTSeries,Style<:Union{MVTSeriesStyle,TSeriesStyle}}
+    return copyto!(dest, Base.Broadcast.instantiate(bc))
+end
+
+function Base.Broadcast.materialize!(::MVTSeriesStyle, dest::SubArray{T,N,M}, bc::Base.Broadcast.Broadcasted{Style}) where {Style,T,N,M<:MVTSeries}
+    inds = _mvts_sub_axes(dest.indices..., dest.parent, bc.axes)
+    dest = SubArray{T,N,M,typeof(inds),false}(dest.parent, inds, 0, 0)
+    bc1 = Base.Broadcast.Broadcasted{Style}(bc.f, bc.args, axes(dest))
+    return copyto!(dest, Base.Broadcast.instantiate(bc1))
+end
+
 
 function Base.copyto!(dest::AbstractArray, bc::Base.Broadcast.Broadcasted{Nothing,_MVTSAxesType})
     rng, nms = bc.axes
@@ -186,22 +197,16 @@ function Base.copyto!(dest::AbstractArray, bc::Base.Broadcast.Broadcasted{Nothin
     copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
 end
 
-function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing,<:_MVTSAxesType}) where {T}
+function Base.copyto!(dest::SubArray{T,N,M}, bc::Base.Broadcast.Broadcasted{Nothing,<:Union{_MVTSAxesType,_TSAxesType}}) where {T,N,M<:MVTSeries}
+    inds = _mvts_sub_axes(dest.indices..., dest.parent, bc.axes)
+    dest = SubArray{T,N,M,typeof(inds),false}(dest.parent, inds, 0, 0)
     bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, mvts_unwrap_args(dest.indices, bc.args), map(Base.axes1, dest.indices))
     copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
 end
 
-function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing,<:_TSAxesType}) where {T}
-    bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, mvts_unwrap_args(dest.indices, bc.args), map(Base.axes1, dest.indices))
-    # bc1 = Base.Broadcast.Broadcasted{Nothing}(bc.f, ts_unwrap_args((dest.indices[1],), bc.args), map(Base.axes1, dest.indices))
-    copyto!(dest, Base.Broadcast.preprocess(dest, bc1))
-end
-
-function Base.copyto!(dest::SubArray{T,2,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing}) where {T}
+function Base.copyto!(dest::SubArray{T,N,<:MVTSeries}, bc::Base.Broadcast.Broadcasted{Nothing}) where {T,N}
     copyto!(view(dest.parent, dest.indices...), Base.Broadcast.preprocess(dest, bc))
 end
-
-
 
 function Base.copyto!(dest::MVTSeries, bc::Base.Broadcast.Broadcasted{Nothing})
     dest_rng, dest_nms = axes(dest)
@@ -262,10 +267,28 @@ end
 
 Base.OneTo{T}(r::Base.OneTo{<:Duration}) where {T<:Integer} = Base.OneTo{T}(T(r.stop))
 
+@inline _mvts_sub_axes(rng::_MITOneOrVector, cols::_SymbolOneOrCollection, ::MVTSeries, ::Any=nothing) = (rng, cols)
+@inline _mvts_sub_axes(rng::Colon, cols::_SymbolOneOrCollection, M::MVTSeries, ::Any=nothing) = (rangeof(M), cols)
+@inline _mvts_sub_axes(rng::Colon, cols::_SymbolOneOrCollection, M::MVTSeries, X::_TSAxesType) = (intersect(rangeof(M), X[1]), cols)
+@inline _mvts_sub_axes(rng::Colon, cols::_SymbolOneOrCollection, M::MVTSeries, X::_MVTSAxesType) = (intersect(rangeof(M), X[1]), cols)
+@inline _mvts_sub_axes(rng::_MITOneOrVector, cols::Colon, M::MVTSeries, ::Any=nothing) = (rng, collect(colnames((M))))
+@inline _mvts_sub_axes(rng::_MITOneOrVector, cols::Colon, M::MVTSeries, X::_MVTSAxesType) = (rng, collect(intersect(colnames(M), X[2])))
+@inline _mvts_sub_axes(rng::Colon, cols::Colon, M::MVTSeries, ::Any=nothing) = Base.axes(M)
+@inline _mvts_sub_axes(rng::Colon, cols::Colon, M::MVTSeries, X::_TSAxesType) = ((r, c) = axes(M); (intersect(r, X[1]), c))
+@inline _mvts_sub_axes(rng::Colon, cols::Colon, M::MVTSeries, X::_MVTSAxesType) = ((r, c) = axes(M); (intersect(r, X[1]), collect(intersect(c, X[2]))))
 
-function Base.Broadcast.dotview(x::MVTSeries, rng::AbstractVector{<:MIT}, ::Colon=Colon())
-    return Base.Broadcast.dotview(x, rng, axes(x, 2))
-end
+# # Base.axes(S::SubArray{T,N,M}) where {T,N,M<:MVTSeries} = (@inline; _mvts_sub_axes(S.parent, S.indices...))
+# @generated function _mvts_sub_axes(M::MVTSeries, rng, cols)
+#     I = rng <: Colon ? :(axes(M, 1)) : :rng
+#     J = cols <: Colon ? :(axes(M, 2)) : :cols
+#     return :(($I, $J))
+# end
+
+# function Base.Broadcast.dotview(x::MVTSeries, rng::AbstractVector{<:MIT}, ::Colon=Colon())
+#     # return Base.Broadcast.dotview(x, rng, axes(x, 2))
+#     # return view(x, rng, :)
+#     return SubArray(x, (rng, :))
+# end
 
 function Base.Broadcast.dotview(x::MVTSeries, rng::TSeries{F,Bool}, cols::Union{Colon,_SymbolOneOrCollection}=Colon()) where {F<:Frequency}
     return Base.Broadcast.dotview(x, findall(rng), cols)
@@ -283,17 +306,20 @@ function Base.Broadcast.dotview(x::MVTSeries, I::AbstractVector{Bool}, J::Union{
     return Base.Broadcast.dotview(x, rangeof(x)[I], J)
 end
 
-# function Base.Broadcast.dotview(x::MVTSeries, rng::Union{MIT, AbstractUnitRange{<:MIT}}, cols::_SymbolOneOrCollection)
-#     return Base.maybeview(x, rng, cols)
-# end
+@inline Base.Broadcast.dotview(x::MVTSeries, I::_MITOneOrVector) = Base.Broadcast.dotview(x, I, :)
 
-@generated function Base.Broadcast.dotview(x::MVTSeries, rng::_MITOneOrVector, cols::_SymbolOneOrCollection)
+@generated function Base.Broadcast.dotview(x::MVTSeries, rng::Union{Colon,_MITOneOrVector}, cols::Union{Colon,_SymbolOneOrCollection})
     if cols == Symbol
         return :(SubArray(x, (rng, [cols,])))
     elseif cols <: NTuple
+        return :(SubArray(x, (rng, collect(cols))))
+    elseif cols <: AbstractSet
         return :(SubArray(x, (rng, collect(cols))))
     else
         return :(SubArray(x, (rng, cols)))
     end
 end
 
+function Base.Broadcast.dotview(x::MVTSeries, cols::_SymbolOneOrCollection)
+    return Base.Broadcast.dotview(x, :, cols)
+end
