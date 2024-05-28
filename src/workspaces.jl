@@ -95,7 +95,13 @@ rangeof(w::AbstractWorkspace; method=intersect) = (
     iterable = (v for v in values(w) if applicable(rangeof, v));
     mapreduce(rangeof, method, iterable)
 )
-_to_unitrange(x::AbstractWorkspace) = rangeof(x)
+
+# _to_unitrange is only used in the implementation of rangeof_span, which requires union of ranges. 
+_to_unitrange(x::AbstractWorkspace) = rangeof_span(
+    Iterators.map(
+        _to_unitrange, values(x)
+    )...
+)
 
 _has_frequencyof(::Type{<:AbstractWorkspace}) = true
 _has_frequencyof(::T) where {T} = _has_frequencyof(T)
