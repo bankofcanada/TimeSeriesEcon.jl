@@ -294,3 +294,17 @@ end
 
     @test compare(map(sum, w), Workspace(keys(w) .=> map(sum, values(w))), quiet=true)
 end
+
+@testset "rangeof_span(Workspace)" begin
+    w = Workspace(
+        a = 2020Q1:2025Q3,
+        b = zeros(2019Q1:2023Q2),
+        c = [2018Q1, 2021Q2],
+        d = MVTSeries(1992Q2, (:a,:b), ones(30, 2)),
+        e = Workspace(
+            a = TSeries(1995Q3+2, rand(22))
+        )
+    )
+    @test rangeof_span(w) isa UnitRange
+    @test rangeof_span(w) == 1992Q2:2025Q3
+end
