@@ -873,7 +873,7 @@ export rangeof_span
 
 _to_unitrange(x::MIT) = UnitRange(x, x)
 _to_unitrange(x::AbstractUnitRange{<:MIT}) = x
-_to_unitrange(x::AbstractArray{<:MIT}) = UnitRange(extrema(x)...)
+_to_unitrange(x::AbstractArray{<:MIT}) = isempty(x) ? x : UnitRange(extrema(x)...)
 _to_unitrange(x) = applicable(rangeof, x) ? rangeof(x) : 1:0
 
 rangeof_span() = 1U:0U
