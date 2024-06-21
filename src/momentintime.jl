@@ -865,8 +865,11 @@ Base.step(rng::UnitRange{<:MIT}) = convert(Int, 1)
 """
     rangeof_span(args...)
 
-Construct and return a `UnitRange{MIT{F}}` instance that contains the ranges of all arguments.
-All arguments must be ranges of `MIT`` or `MIT` instances of the same frequency `F`.
+Construct a `UnitRange{MIT{F}}` that is the union of the ranges of all
+arguments. All arguments must be `MIT`s, ranges of `MIT`s, or things that have
+`rangeof()` methods, such as `TSeries`, `MVTSeries`. Attempting to mix
+frequencies is an error, that is, frequencies will not be `fconvert()`ed
+implicitly.
 """
 function rangeof_span end
 export rangeof_span
