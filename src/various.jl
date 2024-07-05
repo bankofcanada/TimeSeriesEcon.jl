@@ -107,10 +107,10 @@ end
 #### merge! and merge
 
 @inline Base.empty!(w::Workspace) = (empty!(w._c); w)
-@inline Base.merge!(w::Workspace, others::Union{Workspace,<:AbstractDict}...) = (
-    merge!(_c(w), map(_c, others)...);
-    w
-)
+function Base.merge!(w::Workspace, others::Union{Workspace, AbstractDict}...) 
+    merge!(_c(w), Iterators.map(_c ∘ _dict_to_workspace, others)...);
+    return w
+end
 @inline Base.merge(w::Workspace, others::Union{Workspace,<:AbstractDict}...) = merge!(Workspace(), w, others...)
 
 #### compare and @compare 

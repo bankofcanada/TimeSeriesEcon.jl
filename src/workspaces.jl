@@ -37,9 +37,12 @@ end
 _c(w::AbstractWorkspace) = getfield(w, :_c)
 
 _dict_to_workspace(x) = x
-_dict_to_workspace(x::AbstractDict) = Workspace(x)
+_dict_to_workspace(x::AbstractDict) = Workspace(x; recursive=true)
 function Workspace(fromdict::AbstractDict; recursive=false)
     w = Workspace()
+    if Base.haslength(fromdict)
+        Base.sizehint!(_c(w), length(fromdict))
+    end
     convert_value = recursive ? _dict_to_workspace : identity
     for (key, value) in fromdict
         w[Symbol(key)] = convert_value(value)

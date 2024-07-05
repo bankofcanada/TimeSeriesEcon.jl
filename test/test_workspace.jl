@@ -11,6 +11,13 @@
     @test (work1 = TimeSeriesEcon._dict_to_workspace(dict1); work1.a == 1; true)
     # if unsure just return the input
     @test (work1 = TimeSeriesEcon._dict_to_workspace("a" => 1); work1 == "a" => 1; true)
+    
+    # make sure recursive works when converting Dict to Workspace
+    w = Workspace(Dict("w"=>Dict("w"=>Dict("w" => Dict("a" => 1)))))
+    @test w isa Workspace && w.w isa Dict
+    w = Workspace(Dict("w"=>Dict("w"=>Dict("w" => Dict("a" => 1)))), recursive=true)
+    @test w isa Workspace && w.w isa Workspace && w.w.w isa Workspace &&  w.w.w.w isa Workspace && w.w.w.w.a == 1
+
     # Create a new workspace
     let work1 = Workspace()
         work1.a = 1
@@ -241,11 +248,14 @@ end
 
 @testset "merge" begin
     a = Workspace(a=6, b=7, q=8)
+    ka = copy(keys(a))
     @test (empty!(a); isempty(a))
     a = Workspace(a=6, b=7, q=8)
-    @test (merge!(a, Workspace(z=12)); Set(keys(a)) == Set((:a, :b, :q, :z)))
+    @test (merge!(a, Workspace(z=12)); keys(a) == union(ka, (:z,)) && a.z == 12)
     a = Workspace(a=6, b=7, q=8)
-    @test (b = merge(a, Workspace(z=12)); Set(keys(a)) == Set((:a, :b, :q)) && Set(keys(b)) == Set((:a, :b, :q, :z)))
+    @test (b = merge(a, Workspace(z=12)); keys(a) == ka && keys(b) == union(ka, (:z,)) && b.z == 12)
+    # Make sure merge works with dicts with string keys too
+    @test (b = merge(a, Workspace(z=12)); keys(a) == ka && keys(b) == union(ka, (:z,)) && b.z == 12)
 end
 
 @testset "copyto!W2MV" begin
