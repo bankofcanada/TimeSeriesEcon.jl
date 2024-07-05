@@ -248,7 +248,7 @@ end
 
 @testset "merge" begin
     a = Workspace(a=6, b=7, q=8)
-    ka = copy(keys(a))
+    ka = Set(keys(a))
     @test (empty!(a); isempty(a))
     a = Workspace(a=6, b=7, q=8)
     @test (merge!(a, Workspace(z=12)); keys(a) == union(ka, (:z,)) && a.z == 12)
