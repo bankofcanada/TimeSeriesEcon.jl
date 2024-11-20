@@ -18,7 +18,8 @@ jobs:
   # This workflow contains a single job called "build"
   build:
 
-    strategy: 
+    strategy:
+      fail-fast: false
       matrix:
         julia-version: ["1.9", "lts", "1"]
         julia-arch: [x64]

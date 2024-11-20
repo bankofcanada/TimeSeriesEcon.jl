@@ -115,8 +115,9 @@ end
 # easy access to internals. 
 _vals(x::MVTSeries) = getfield(x, :values)
 _cols(x::MVTSeries) = getfield(x, :columns)
+_col_nocheck(x::MVTSeries, col::Symbol) = get(_cols(x), col, nothing)
 function _col(x::MVTSeries, col::Symbol)
-    ret = get(getfield(x, :columns), col, nothing)
+    ret = _col_nocheck(x, col)
     @boundscheck (ret === nothing && Base.throw_boundserror(x, [col,]))
     return ret
 end
@@ -1010,5 +1011,11 @@ end
 (_rc::_RenameColumns{Nothing,P,Nothing})(x::Symbol) where {P<:AbstractString} = Symbol(_rc.prefix, string(x))
 (_rc::_RenameColumns{Nothing,Nothing,S})(x::Symbol) where {S<:AbstractString} = Symbol(string(x), _rc.suffix)
 (_rc::_RenameColumns{Nothing,P,S})(x::Symbol) where {P<:AbstractString,S<:AbstractString} = Symbol(_rc.prefix, string(x), _rc.suffix)
+
+
+#################################################
+
+Base.isassigned(x::MVTSeries, i::Integer...) = isassigned(x.values, i...)
+Base.isassigned(x::MVTSeries, d::MIT, n::Symbol) = (col = _col_nocheck(x, n); col !== nothing && isassigned(col, d))
 
 
