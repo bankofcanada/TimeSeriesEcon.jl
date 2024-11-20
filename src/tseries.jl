@@ -322,10 +322,10 @@ function _ind_range_check(x, rng::OrdinalRange{<:MIT})
     return (start, stop)
 end
 
+_ts_values_inds_nocheck(x, d::MIT) = (fi = firstindex(x.values); fi + oftype(fi, d - firstdate(x)))
 function _ts_values_inds(t, rng::MIT)
     @boundscheck checkbounds(t, rng)
-    fi = firstindex(t.values)
-    return fi + oftype(fi, rng - firstdate(t))
+    return _ts_values_inds_nocheck(t, rng)
 end
 _ts_values_inds(t, rng::AbstractUnitRange{<:MIT}) = UnitRange(_ind_range_check(t, rng)...)
 function _ts_values_inds(t, rng::StepRange{<:MIT})
@@ -528,5 +528,12 @@ Base.diff(x::TSeries{BDaily}, k::Integer=-1; skip_all_nans::Bool=false, skip_hol
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
 end
+
+#################################################
+
+Base.isassigned(x::TSeries, i::Integer...) = isassigned(x.values, i...)
+Base.isassigned(x::TSeries, d::MIT) = mixed_freq_error(x, d)
+Base.isassigned(x::TSeries{F}, d::MIT{F}) where {F<:Frequency} = isassigned(x.values, _ts_values_inds_nocheck(x, d))
+
 
 

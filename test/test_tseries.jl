@@ -892,3 +892,19 @@ end
     @test istypenan(missing) == true
     @test istypenan(2) == false
 end
+
+@testset "isassigned" begin
+    x = TSeries(2000Q1:2002Q1)
+    for i = 1:length(x)
+        @test isassigned(x, i)
+    end
+    @test !isassigned(x, 0)
+    @test !isassigned(x, length(x)+1)
+    for d in rangeof(x)
+        @test isassigned(x, d)
+    end
+    @test !isassigned(x, firstdate(x)-1)
+    @test !isassigned(x, lastdate(x)+1)
+    @test_throws ArgumentError isassigned(x, 2000M1)
+    @test_throws ArgumentError isassigned(x, 2000Y)
+end
