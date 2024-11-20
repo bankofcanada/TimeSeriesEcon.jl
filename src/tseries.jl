@@ -322,10 +322,10 @@ function _ind_range_check(x, rng::OrdinalRange{<:MIT})
     return (start, stop)
 end
 
+_ts_values_inds_nocheck(x, d::MIT) = (fi = firstindex(x.values); fi + oftype(fi, d - firstdate(x)))
 function _ts_values_inds(t, rng::MIT)
     @boundscheck checkbounds(t, rng)
-    fi = firstindex(t.values)
-    return fi + oftype(fi, rng - firstdate(t))
+    return _ts_values_inds_nocheck(t, rng)
 end
 _ts_values_inds(t, rng::AbstractUnitRange{<:MIT}) = UnitRange(_ind_range_check(t, rng)...)
 function _ts_values_inds(t, rng::StepRange{<:MIT})
@@ -480,9 +480,9 @@ function Base.copyto!(dest::TSeries{F}, drng::AbstractUnitRange{MIT{F}}, src::TS
     return dest
 end
 
-function Base.copyto!(dest::TSeries{F}, drng::AbstractVector{MIT{F}}, src::TSeries{F}) where {F<:Frequency} 
+function Base.copyto!(dest::TSeries{F}, drng::AbstractVector{MIT{F}}, src::TSeries{F}) where {F<:Frequency}
     fullindex = rangeof_span(dest, drng)
-    resize!(dest, fullindex)    
+    resize!(dest, fullindex)
     copyto!(view(dest, drng), view(src, drng))
     return dest
 end
@@ -495,7 +495,7 @@ function Base.view(t::TSeries{F}, I::AbstractUnitRange{MIT{F}}) where {F<:Freque
     return TSeries(I, view(t.values, _ts_values_inds(t, I)))
 end
 
-# stepranges
+# StepRange
 function Base.view(t::TSeries{F}, I::AbstractVector{MIT{F}}) where {F<:Frequency}
     view(t.values, _ts_values_inds(t, I))
 end
@@ -505,7 +505,7 @@ function Base.view(t::TSeries, I::AbstractUnitRange{TI}) where {TI<:Base.BitInte
     TSeries(firstdate(t) + first(I) - one(TI), view(t.values, I))
 end
 
-# stepranges
+# StepRange
 function Base.view(t::TSeries, I::AbstractVector{<:Base.BitInteger})
     view(t.values, I)
 end
@@ -523,10 +523,24 @@ given is the same as `k=-1`, which matches the standard definition of first
 difference.
 """
 Base.diff(x::TSeries, k::Integer=-1) = x - lag(x, -k)
-Base.diff(x::TSeries{BDaily}, k::Integer=-1; skip_all_nans::Bool=false, skip_holidays::Bool=false, holidays_map::Union{Nothing,TSeries{BDaily}}=nothing) = x - lag(x, -k; skip_all_nans=skip_all_nans, skip_holidays=skip_holidays, holidays_map=holidays_map)
+function Base.diff(x::TSeries{BDaily}, k::Integer=-1;
+    skip_all_nans::Bool=false,
+    skip_holidays::Bool=false,
+    holidays_map::Union{TSeries{BDaily},Nothing}=nothing)
+
+    return x - lag(x, -k; skip_all_nans, skip_holidays, holidays_map)
+end
 
 function Base.vcat(x::TSeries, args::AbstractVector...)
     return TSeries(firstdate(x), vcat(_vals(x), args...))
 end
+
+#################################################
+
+Base.isassigned(x::TSeries, i::Integer...) = isassigned(x.values, i...)
+Base.isassigned(x::TSeries, d::MIT) = mixed_freq_error(x, d)
+Base.isassigned(x::TSeries{F}, d::MIT{F}) where {F<:Frequency} =
+    isassigned(x.values, _ts_values_inds_nocheck(x, d))
+
 
 

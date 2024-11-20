@@ -47,7 +47,7 @@
     @test (MVTSeries(20Q1, :a, zeros(5,)); true)
     @test (MVTSeries(1U:5U, :a, zeros(5,)); true)
 
-    # contruct with named arguments
+    # construct with named arguments
     let x = MVTSeries(2020Q1:2021Q1;
             hex=TSeries(2019Q1, collect(Float64, 1:20)),
             why=zeros(5),
@@ -55,7 +55,7 @@
         @test x.hex isa TSeries
         @test x isa MVTSeries
         @test rangeof(x) == 2020Q1:2021Q1
-        # provided tseries is truncated to MVTSeries range
+        # provided TSeries is truncated to MVTSeries range
         @test rangeof(x.hex) == 2020Q1:2021Q1
         @test x.hex.values == collect(5.0:9.0)
     end
@@ -355,7 +355,7 @@ end
     @test A[tf, :] == B[tf, :]
     @test A[tf, (:a, :c)] == B[tf, [1, 3]]
     @test A[tf, tf2] == B[tf, tf2]
-    # setinex
+    # setindex
     @test (A[tf] = ones(m1, n); B[tf, :] = ones(m1, n); A.values == B)
     @test (A[tf, :] = 2 * ones(m1, n); B[tf, :] = 2 * ones(m1, n); A.values == B)
     @test (A[tf, (:b, :c)] = 3 * ones(m1, 2); B[tf, [2, 3]] = 3 * ones(m1, 2); A.values == B)
@@ -635,7 +635,7 @@ end
     @test rangeof(x2 .+ MVTSeries(20Q4, (:a, :b), [collect(1:10) collect(11:20)])) == 20Q4:22Q2
     @test rangeof(MVTSeries(20Q4, (:a, :b), [collect(1:10) collect(11:20)]) .+ x2) == 20Q4:22Q2
 
-    # when ranges don't overlap we get a tseries with a broken range
+    # when ranges don't overlap we get a TSeries with a broken range
     @test rangeof(x2 .+ MVTSeries(30Q1, (:a, :b), [collect(1:10) collect(11:20)])) == 30Q1:29Q4
 
 
@@ -643,8 +643,8 @@ end
     bcStyle = TimeSeriesEcon.MVTSeriesStyle{Quarterly{3}}()
     @test Base.Broadcast.BroadcastStyle(bcStyle, TimeSeriesEcon.MVTSeriesStyle{Quarterly{3}}()) == bcStyle
 
-    bcasted = Base.Broadcast.Broadcasted{TimeSeriesEcon.MVTSeriesStyle{Monthly}}(Monthly, (1,))
-    @test_throws DimensionMismatch Base.similar(bcasted, Float64)
+    b_casted = Base.Broadcast.Broadcasted{TimeSeriesEcon.MVTSeriesStyle{Monthly}}(Monthly, (1,))
+    @test_throws DimensionMismatch Base.similar(b_casted, Float64)
 
     @test 1U:4U isa TimeSeriesEcon._MVTSAxes1
     @test (:a,) isa TimeSeriesEcon._MVTSAxes2
@@ -677,7 +677,7 @@ end
     @test x_axes1 .+ TSeries(2U:5U, collect(1:4)) isa MVTSeries #should maybe throw an error?
     @test TSeries(2U:5U, collect(1:4)) .+ x_axes1 isa MVTSeries #should maybe throw an error?
     @test TSeries(2U:5U, collect(1:4)) .+ x_axes4 isa MVTSeries #should maybe throw an error?
-    @test Base.Broadcast.check_broadcast_shape(axes1, ()) == nothing # should maybe throw an error
+    @test Base.Broadcast.check_broadcast_shape(axes1, ()) === nothing # should maybe throw an error
 
     # preprocess
     extruded = [21 31
@@ -704,7 +704,7 @@ end
     mat3 = [7.0 7.0; 2.0 12.0; 7.0 7.0; 4.0 14.0; 7.0 7.0; 6.0 16.0; 7.0 7.0; 8.0 18.0; 7.0 7.0; 10.0 20.0]
 
     ##################################################################################################
-    # broadcasting assignment of a Number using steprange index
+    # broadcasting assignment of a Number using StepRange index
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
     x3[20Q1:2:22Q2] .= 7.0
     @test x3.values == mat3
@@ -717,7 +717,7 @@ end
     x3[1:2:10, :] .+= 0.0
     @test x3.values == mat3
 
-    # direct assignment of a Matrix using steprange index
+    # direct assignment of a Matrix using StepRange index
     mat4 = ones(5, 2) .* 7
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
     x3[20Q1:2:22Q2] = mat4
@@ -731,7 +731,7 @@ end
     x3[1:2:10, :] += 0.0 * mat4
     @test x3.values == mat3
 
-    # broadcasting assignment of a Matrix using steprange index
+    # broadcasting assignment of a Matrix using StepRange index
     mat4 = ones(5, 2) .* 7
     x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
     x3[20Q1:2:22Q2] .= mat4
@@ -780,7 +780,7 @@ end
         x3[first_index, second_index...] .+= 0.0
         @test x3.values == mat3
 
-        # direct assignment of a Matrix using steprange index
+        # direct assignment of a Matrix using StepRange index
         mat4 = ones(5, 2) .* 7
         x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
         x3[first_index, second_index...] = mat4
@@ -788,7 +788,7 @@ end
         x3[first_index, second_index...] += 0.0 * mat4
         @test x3.values == mat3
 
-        # broadcasting assignment of a Matrix using steprange index
+        # broadcasting assignment of a Matrix using StepRange index
         mat4 = ones(5, 2) .* 7
         x3 = MVTSeries(20Q1, (:a, :b), [collect(1.0:10) collect(11.0:20)])
         x3[first_index, second_index...] .= mat4
@@ -977,7 +977,7 @@ end
     @test LinearIndices(x)[:, 1] == collect(1:10)
     @test LinearIndices(x)[:, 2] == collect(11:20)
 
-    ## multiplication and devision
+    ## multiplication and division
     x2 = MVTSeries(1U:3U, (:a, :b))
     x2.a = collect(1:3)
     x2.b = collect(4:6)
@@ -1033,7 +1033,7 @@ end
     @test maximum(x2) == 6
     @test prod(x2) == factorial(6)
 
-    addSix(x) = x + 6
+    addSix = (x) -> x + 6
     @test sum(addSix, x2) == sum(y3)
     @test minimum(addSix, x2) == minimum(y3)
     @test maximum(addSix, x2) == maximum(y3)
@@ -1044,32 +1044,22 @@ end
     @test sum(x2, dims=1)[2] == 15
     for func in (:sum, :prod, :minimum, :maximum)
         @eval begin
-            x2 = MVTSeries(1U:3U, (:a, :b))
-            x2.a = collect(1:3)
-            x2.b = collect(4:6)
+            @test size($func($x2, dims=1)) == (1, 2)
 
-            y3 = MVTSeries(1U:3U, (:a, :b))
-            y3.a = collect(7:9)
-            y3.b = collect(10:12)
+            @test size($func($x2, dims=2)) == (3,)
+            @test $func($x2, dims=2) isa TSeries
+            @test rangeof($func($x2, dims=2)) == 1U:3U
 
-            @test size($func(x2, dims=1)) == (1, 2)
-
-            @test size($func(x2, dims=2)) == (3,)
-            @test $func(x2, dims=2) isa TSeries
-            @test rangeof($func(x2, dims=2)) == 1U:3U
-
-            @test size($func(x2, dims=3)) == (3, 2)
-            @test $func(x2, dims=3) == x2.values
+            @test size($func($x2, dims=3)) == (3, 2)
+            @test $func($x2, dims=3) == $(x2.values)
 
             # higher dimension go to the highest available
-            @test $func(x2, dims=10) == $func(x2, dims=3)
+            @test $func($x2, dims=10) == $func($x2, dims=3)
 
-            addSix(x) = x + 6
-            @test $func(addSix, x2) == $func(y3)
-            @test $func(addSix, x2, dims=1) == $func(y3, dims=1)
-            @test $func(addSix, x2, dims=2) == $func(y3, dims=2)
-            @test $func(addSix, x2, dims=3) == $func(y3, dims=3)
-
+            @test $func($addSix, $x2) == $func($y3)
+            for d in (1,2,3)
+                @test $func($addSix, $x2, dims=d) == $func($y3, dims=d)
+            end
         end
     end
 
@@ -1573,5 +1563,17 @@ end
 
     @test_throws ArgumentError rename_columns!(A, Symbol[])
 
+end
+
+@testset "isassigned" begin
+    a = rand(4,2)
+    b = MVTSeries(2020Q1, (:A, :B), a)
+    for i = -1:6, j = -1:4
+        @test isassigned(b, i, j) == isassigned(b.values, i, j)  # there is a bug in Julia 1.9, but that's not for us to fix. 
+        @test isassigned(b, 2020Q1 + i - 1, :A) == isassigned(b.A, i)
+        @test isassigned(b, 2020Q1 + i - 1, :B) == isassigned(b.B, i)
+        @test isassigned(b, 2020Q1 + i - 1, :C) == false
+    end
+    @test_throws ArgumentError isassigned(b, 2020M2, :A)
 end
 

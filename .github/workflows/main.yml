@@ -18,9 +18,10 @@ jobs:
   # This workflow contains a single job called "build"
   build:
 
-    strategy: 
+    strategy:
+      fail-fast: false
       matrix:
-        julia-version: ["1.7", "1.8", "1.9"]
+        julia-version: ["1.9", "lts", "1"]
         julia-arch: [x64]
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
@@ -30,7 +31,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Setup Julia environment
         # You may pin to the exact commit or the version.
