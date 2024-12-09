@@ -130,6 +130,8 @@ end
         @test first(rng) <= m <= last(rng)
         @test rng[i] == m
     end
+    @test rng[begin] == first(rng)
+    @test rng[end] == last(rng)
     @test_throws ArgumentError 2020Q1:2020M12
 
     @test rangeof_span(3U:5U, 4U:6U) === 3U:6U
@@ -138,16 +140,20 @@ end
     # step ranges
     sr1 = 1Q1:1Q3-1Q1:4Q4
     @test length(sr1) == 8
+    # @test length(sr1) isa Int
     @test step(sr1) == 2
+    # @test step(sr1) isa Int
     @test first(sr1) == 1Q1
     @test last(sr1) == 4Q3
+    @test sr1[begin] == first(sr1) && sr1[end] == last(sr1)
     @test collect(sr1) == [1Q1, 1Q3, 2Q1, 2Q3, 3Q1, 3Q3, 4Q1, 4Q3]
-
+    
     sr2 = 1Q1:2:4Q4
     @test length(sr2) == 8
     @test step(sr2) == 2
     @test first(sr2) == 1Q1
     @test last(sr2) == 4Q3
+    @test sr2[begin] == first(sr1) && sr1[end] == last(sr1)
     @test collect(sr2) == [1Q1, 1Q3, 2Q1, 2Q3, 3Q1, 3Q3, 4Q1, 4Q3]
 
     @test_throws ArgumentError 1Q2:2:5U

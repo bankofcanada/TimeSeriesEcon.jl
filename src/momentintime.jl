@@ -861,6 +861,8 @@ Base.:(:)(start::MIT{F}, step::Duration{F}, stop::MIT{F}) where {F<:Frequency} =
 
 Base.length(rng::UnitRange{<:MIT}) = convert(Int, last(rng) - first(rng) + 1)
 Base.step(rng::UnitRange{<:MIT}) = convert(Int, 1)
+Base.length(rng::StepRange{<:MIT}) = length(StepRange{Int,Int}(rng.start,rng.step,rng.stop))
+Base.step(rng::StepRange{<:MIT}) = step(StepRange{Int,Int}(rng.start,rng.step,rng.stop))
 
 """
     rangeof_span(args...)
