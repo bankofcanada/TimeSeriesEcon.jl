@@ -324,6 +324,16 @@ Base.one(::Union{MIT,Duration,Type{<:MIT},Type{<:Duration}}) = Int(1)
 # In the special case of YPFrequency we want the year to be the whole part and the period to be the fractional part. 
 (T::Type{<:AbstractFloat})(x::MIT{<:YPFrequency{N}}) where N = convert(T, ((y, p) = mit2yp(x); y + (p - 1) / N))
 Base.promote_rule(::Type{<:MIT}, ::Type{T}) where T <: AbstractFloat = T
+(T::Type{<:AbstractFloat})(x::Duration) = convert(T, Int(x))
+(T::Type{<:AbstractFloat})(x::Duration{<:YPFrequency{N}}) where {N} = convert(T, Int(x) / N)
+
+# needed for plot math
+Base.:(/)(a::Duration, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
+Base.:(/)(a::MIT, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
+Base.:(/)(a::Duration{F}, b::Duration{F}) where {F<:Frequency} = Int(a) / Int(b)
+Base.:(/)(a::MIT{F}, b::Duration{F}) where {F<:Frequency} = (a - MIT{F}(0)) / b
+Base.promote_rule(::Type{<:Duration}, ::Type{T}) where {T<:AbstractFloat} = T
+
 
 # ----------------------------------------
 # 2.2 MIT{T} vector and dict support
@@ -412,3 +422,5 @@ Base.union(l::UnitRange{MIT{F}}, r::UnitRange{MIT{F}}) where F <: Frequency = mi
 #------------------------------
 # sort!() a list of MITs
 Base.sort!(a::AbstractVector{<:MIT}, args...; kwargs...) = (sort!(reinterpret(Int, a), args...; kwargs...); a)
+
+

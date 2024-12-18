@@ -276,15 +276,14 @@ Base.fill(v, shape::Tuple{UnitRange{<:MIT}, NTuple{N,Symbol}}) where {N} = fill(
 # Empty (0 variables) from range
 function MVTSeries(rng::UnitRange{<:MIT}; args...)
     isempty(args) && return MVTSeries(rng, ())
-    keys, values = zip(args...)
     # figure out the element type
-    ET = mapreduce(eltype, Base.promote_eltype, values)
+    ET = Base.promote_eltype(values(args)...)
     MVTSeries(ET, rng; args...)
 end
 
 function MVTSeries(; args...)
     isempty(args) && return MVTSeries(1U)
-    keys, values = zip(args...)
+    _, values = zip(args...)
     # range is the union of all ranges
     rng = mapreduce(rangeof, union, filter(v -> applicable(rangeof, v), values))
     return MVTSeries(rng; args...)
@@ -530,7 +529,7 @@ Base.view(x::MVTSeries, I...) = view(_vals(x), I...)
 Base.view(x::MVTSeries, ::Colon, J::_SymbolOneOrCollection) = view(x, axes(x, 1), J)
 Base.view(x::MVTSeries, I::_MITOneOrRange, ::Colon) = view(x, I, axes(x, 2))
 Base.view(x::MVTSeries, ::Colon, ::Colon) = view(x, axes(x, 1), axes(x, 2))
-function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection) where {F<:Frequency}
+function Base.view(x::MVTSeries, I::_MITOneOrRange, J::_SymbolOneOrCollection) 
     @boundscheck checkbounds(x, I)
     @boundscheck checkbounds(x, J)
     start, stop = _ind_range_check(x, I)
