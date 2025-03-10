@@ -308,20 +308,23 @@ end
     end
     
     # test with file argument
-    xts = X13.series(inventories, title="Monthly Inventory")
-    spec = X13.newspec(xts)
-    X13.transform!(spec; func=:log, save=:all)
-    X13.estimate!(spec, file=abspath(pathof(TimeSeriesEcon),"..","..", "data","reg1.mdl"), save=:all, fix=:all)
-    res = X13.run(spec; verbose=false, load=:all);
-    for key in (:a1, :b1, :ref, :a3)
-        @test res.series[key] isa Union{TSeries,MVTSeries}
+    if length(abspath(pathof(TimeSeriesEcon),"..","..", "data","reg1.mdl")) < 124
+        xts = X13.series(inventories, title="Monthly Inventory")
+        spec = X13.newspec(xts)
+        X13.transform!(spec; func=:log, save=:all)
+        X13.estimate!(spec, file=abspath(pathof(TimeSeriesEcon),"..","..", "data","reg1.mdl"), save=:all, fix=:all)
+        res = X13.run(spec; verbose=false, load=:all);
+        for key in (:a1, :b1, :ref, :a3)
+            @test res.series[key] isa Union{TSeries,MVTSeries}
+        end
+        for key in (:itr, :rts, :acf, :pcf, :sp0, :spr)
+            @test res.tables[key] isa AbstractWorkspace
+        end
+        for key in (:est, :lks, :mdl, :udg)
+            @test res.other[key] isa AbstractWorkspace
+        end
     end
-    for key in (:itr, :rts, :acf, :pcf, :sp0, :spr)
-        @test res.tables[key] isa AbstractWorkspace
-    end
-    for key in (:est, :lks, :mdl, :udg)
-        @test res.other[key] isa AbstractWorkspace
-    end
+    
 end
 
 @testset "X13 Force run" begin
@@ -845,23 +848,25 @@ end
     end
 
     # Manual example 1, but with file argument
-    ts = TSeries(1976M1, mvsales[50:250])
-    xts = X13.series(ts, title="Monthly Sales")
-    spec = X13.newspec(xts)
-    X13.transform!(spec; func=:log, save=:all)
-    X13.regression!(spec; variables=[:td, :seasonal], save=:all)
-    X13.pickmdl!(spec, file=abspath(pathof(TimeSeriesEcon),"..","..", "data","pickmdl.mdl"), mode=:fcst)
-    X13.estimate!(spec, save=:all)
-    X13.x11!(spec; save=:all)
-    res = X13.run(spec; verbose=false, load=:all);
-    for key in (:a1, :a18, :a2, :a3, :b1, :b10, :b11, :b13, :b17, :b2, :b20, :b3, :b5, :b6, :b7, :b8, :c1, :c10, :c11, :c13, :c17, :c2, :c20, :c4, :c5, :c6, :c7, :d1, :d10, :d11, :d12, :d13, :d16, :d18, :d2, :d4, :d5, :d6, :d7, :d8, :d9, :e1, :e11, :e18, :e2, :e3, :e5, :e6, :e7, :e8, :f1, :paf, :pe5, :pe6, :pe7, :pe8, :pir, :psf, :ref, :rmx, :rrs, :rsd, :tad, :td, :trn, :fct, :ftr)
-        @test res.series[key] isa Union{TSeries,MVTSeries}
-    end
-    for key in (:acm, :d8b, :rcm, :rts, :ac2, :acf, :pcf, :sp0, :sp1, :sp2, :spr, :st0, :st1, :st2, :str)
-        @test res.tables[key] isa AbstractWorkspace
-    end
-    for key in (:est, :lks, :mdl, :udg)
-        @test res.other[key] isa AbstractWorkspace
+    if length(abspath(pathof(TimeSeriesEcon),"..","..", "data","pickmdl.mdl")) < 124
+        ts = TSeries(1976M1, mvsales[50:250])
+        xts = X13.series(ts, title="Monthly Sales")
+        spec = X13.newspec(xts)
+        X13.transform!(spec; func=:log, save=:all)
+        X13.regression!(spec; variables=[:td, :seasonal], save=:all)
+        X13.pickmdl!(spec, file=abspath(pathof(TimeSeriesEcon),"..","..", "data","pickmdl.mdl"), mode=:fcst)
+        X13.estimate!(spec, save=:all)
+        X13.x11!(spec; save=:all)
+        res = X13.run(spec; verbose=false, load=:all);
+        for key in (:a1, :a18, :a2, :a3, :b1, :b10, :b11, :b13, :b17, :b2, :b20, :b3, :b5, :b6, :b7, :b8, :c1, :c10, :c11, :c13, :c17, :c2, :c20, :c4, :c5, :c6, :c7, :d1, :d10, :d11, :d12, :d13, :d16, :d18, :d2, :d4, :d5, :d6, :d7, :d8, :d9, :e1, :e11, :e18, :e2, :e3, :e5, :e6, :e7, :e8, :f1, :paf, :pe5, :pe6, :pe7, :pe8, :pir, :psf, :ref, :rmx, :rrs, :rsd, :tad, :td, :trn, :fct, :ftr)
+            @test res.series[key] isa Union{TSeries,MVTSeries}
+        end
+        for key in (:acm, :d8b, :rcm, :rts, :ac2, :acf, :pcf, :sp0, :sp1, :sp2, :spr, :st0, :st1, :st2, :str)
+            @test res.tables[key] isa AbstractWorkspace
+        end
+        for key in (:est, :lks, :mdl, :udg)
+            @test res.other[key] isa AbstractWorkspace
+        end
     end
 
 end

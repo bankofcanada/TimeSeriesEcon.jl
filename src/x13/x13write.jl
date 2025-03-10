@@ -35,6 +35,10 @@ function impose_line_length!(s::Vector{<:AbstractString}, limit=132-8, delve=tru
             end
             s1 = "$(join(splitstring[1:best_split_index], splitchar))$(splitchar)"
             s2 = "        $(join(splitstring[best_split_index+1:end], splitchar))"
+            if length(s1) == 8 && strip(s1) == "" && length(s2) > limit
+                # prevent infinite recursion
+                throw(ArgumentError("Could not split the following line into components shorter than $(limit). Please shorten the argument length:\n$(s2)"))
+            end
             s[counter] = s1
             insert!(s,counter+1,s2)
         end
