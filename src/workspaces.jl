@@ -72,6 +72,10 @@ function Base.eltype(w::AbstractWorkspace)
     end
     return Pair{Symbol,ET}
 end
+function Base.eltype(w::AbstractWorkspace)
+    ET = isempty(w) ? Any : reduce(Base.promote_typeof, values(w))
+    return Pair{Symbol,ET}
+end
 
 Base.push!(w::AbstractWorkspace, args...; kwargs...) = (push!(_c(w), args..., (k => v for (k, v) in kwargs)...); w)
 Base.delete!(w::AbstractWorkspace, args...; kwargs...) = (delete!(_c(w), args...; kwargs...); w)
