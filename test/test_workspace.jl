@@ -318,3 +318,26 @@ end
     @test rangeof_span(w) isa UnitRange
     @test rangeof_span(w) == 1992Q2:2025Q3
 end
+
+@testset "eltype workspace" begin
+    w1 = Workspace()
+    @test eltype(w1) == Pair{Symbol,Any}
+    
+    w2 = Workspace()
+    w2.ts1 = TSeries(2020Q1, randn(10))
+    w2.ts2 = TSeries(2020Q2, randn(10))
+    @test eltype(w2) == Pair{Symbol, TSeries{Quarterly{3}, Float64, Vector{Float64}}}
+
+    w3 = Workspace()
+    w3.ts1 = TSeries(2020Q1, randn(10))
+    w3.a = 22.2
+    w3.b = 2022Y
+    @test eltype(w3) == Pair{Symbol,Any}
+
+    w4 = Workspace()
+    w4.ts1 = TSeries(2020Q1, randn(10))
+    w4.ts2 = TSeries(2020M2, randn(10))
+    @test eltype(w4) == Pair{Symbol, TSeries{F, Float64, Vector{Float64}} where F<:Frequency}
+    @test eltype(w4) <: Pair{Symbol, <:TSeries}
+
+end
