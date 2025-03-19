@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2025, Bank of Canada
 # All rights reserved.
 
 @testset "workspace" begin
@@ -320,9 +320,12 @@ end
 end
 
 @testset "eltype workspace" begin
-    w1 = Workspace()
-    @test eltype(w1) == Pair{Symbol,Any}
+    w0 = Workspace()
+    @test eltype(w0) == Pair{Symbol,Any}
     
+    w1 = Workspace(b = TSeries(2023M1, [500.0, 600.0]))
+    @test eltype(w1) == Pair{Symbol, TSeries{Monthly, Float64, Vector{Float64}}}
+
     w2 = Workspace()
     w2.ts1 = TSeries(2020Q1, randn(10))
     w2.ts2 = TSeries(2020Q2, randn(10))

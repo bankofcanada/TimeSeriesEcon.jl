@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2025, Bank of Canada
 # All rights reserved.
 
 # 
@@ -65,7 +65,7 @@ MacroTools.@forward Workspace._c (Base.isempty, Base.keys, Base.haskey, Base.val
 MacroTools.@forward Workspace._c (Base.iterate, Base.get, Base.get!,)
 
 function Base.eltype(w::AbstractWorkspace)
-    ET = isempty(w) ? Any : reduce(Base.promote_typeof, values(w))
+    ET = length(w) > 0 ? mapreduce(typeof, Base.promote_type, values(w)) : Any
     return Pair{Symbol,ET}
 end
 
