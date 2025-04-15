@@ -128,4 +128,6 @@ end
 
 include("dataecon/DataEcon.jl")
 
+include("tables.jl")
+
 end
