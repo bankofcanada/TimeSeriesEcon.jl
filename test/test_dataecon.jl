@@ -357,11 +357,13 @@ end
 # test emptying the File
 @testset "DE empty!" begin
     DE.opendaec(test_file) do de
-        @test !isempty(DE.readdb(de))
+        @test !isempty(de)
+        @test_throws DE.DEError empty!(de)  # cannot truncate when readonly
     end
+    @test_throws Exception DE.opendaec(test_file; truncate=true)
     DE.opendaec(test_file, write=true) do de
         @test (empty!(de); true)
-        @test isempty(DE.readdb(de))
+        @test isempty(de)
     end
     @test isempty(DE.readdb(test_file))
 end

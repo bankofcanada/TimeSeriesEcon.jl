@@ -143,6 +143,8 @@ Delete all objects in the given open .daec file.
 """
 Base.empty!(de::DEFile) = (I._check(C.de_truncate(de)); de)
 
+Base.isempty(de::DEFile) = (catalog_size(de, root_id) == 0)
+
 #############################################################################
 # objects
 
