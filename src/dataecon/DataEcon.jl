@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2023, Bank of Canada
+# Copyright (c) 2020-2025, Bank of Canada
 # All rights reserved.
 
 module DataEcon
@@ -71,14 +71,23 @@ end
 Base.unsafe_convert(::Type{C.de_file}, de::DEFile) = isopen(de) ? de.handle[] : throw(ArgumentError("File is closed."))
 
 """
-    de = opendaec(fname)
-    opendaec(fname) do de
+    de = opendaec(fname; readonly::Bool)
+
+    opendaec(fname; readonly, truncate) do de
         ...
     end
 
 Open the .daec file named in the given `fname` string and return an instance of
 [`DEFile`](@ref). The version with the do-block automatically closes the file.
-Otherwise, call [`closedaec!`](@ref).
+When using the stand-alone version, make sure to call [`closedaec!`](@ref).
+
+Keyword argument `readonly` defaults to `true`. 
+
+Keyword argument `append` defaults to `true` and results in new data being added 
+to the contents that may already be in the file. If set to `false`, the file will
+be emptied of all its contents (if any) immediately after opening. It is an
+error to call with `readonly=true` and `append=false` at the same time.
+
 """
 function opendaec end
 
@@ -88,14 +97,19 @@ function _do_open(C_open, args...)
     return handle
 end
 
-function opendaec(fname::AbstractString; readonly=true, write=!readonly)
+function opendaec(fname::AbstractString;
+    readonly::Bool=true, write::Bool=!readonly,
+    append::Bool=true, truncate::Bool=!append
+)
+    truncate && !write && error("Cannot truncate a readonly file.")
     fname = string(fname)
-    open_func = _do_open(write ? C.de_open : C.de_open_readonly, fname)
-    return DEFile(open_func, fname)
+    handle = _do_open(write ? C.de_open : C.de_open_readonly, fname)
+    truncate && return empty!(DEFile(handle, fname))
+    return DEFile(handle, fname)
 end
 
-function opendaec(f::Function, fname::AbstractString; readonly=true, write=!readonly)
-    de = opendaec(fname; readonly, write)
+function opendaec(f::Function, fname::AbstractString; kwargs...)
+    de = opendaec(fname; kwargs...)
     try
         f(de)
     finally
@@ -499,6 +513,8 @@ end
 """
     writedb(de, [parent,] data)
 
+    writedb(file, [parent], data; [append])
+
 Write the given `data` into the given .daec file `de`. If parent catalog is
 specified (as a path or id), then the data is written in it, otherwise it is
 written in the root catalog.
@@ -509,6 +525,10 @@ sub-catalog recursively. All other values are written as objects of class
 
 Any values that cannot be resolved as one of the object classes are skipped,
 with an error message issued accordingly, without throwing an exception.
+
+The destination can be given as file path, in which case the file will be open
+for writing and closed after writing completes. Keyword argument `append`
+controls whether or not the file will be emptied before writing in it.
 
 See [`write_data`](@ref).
 """
@@ -525,8 +545,8 @@ end
 # variations
 writedb(de::DEFile, data::Workspace) = writedb(de, root_id, data)
 writedb(de::DEFile, parent::AbstractString, data::Workspace) = writedb(de, find_fullpath(de, string(parent)), data)
-function writedb(file::AbstractString, args...)
-    opendaec(file, write=true) do de
+function writedb(file::AbstractString, args...; append::Bool=true, truncate::Bool=!append)
+    opendaec(file; write=true, truncate) do de
         writedb(de, args...)
     end
 end
@@ -586,7 +606,7 @@ function readdb(de::DEFile, name::AbstractString)
     read_data(de, oid)
 end
 function readdb(file::AbstractString, args...)
-    opendaec(file, readonly=true) do de
+    opendaec(file; readonly=true) do de
         readdb(de, args...)
     end
 end
