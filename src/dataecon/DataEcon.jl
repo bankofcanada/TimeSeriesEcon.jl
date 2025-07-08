@@ -6,9 +6,10 @@ module DataEcon
 using Dates
 
 export DEError
-export DEFile, opendaec, closedaec!, truncatedaec
+export DEFile, opendaec, opendaecmem, closedaec!, truncatedaec
 export root_id, find_fullpath, find_object, delete_object
-export get_attribute, set_attribute, get_fullpath
+export get_attribute, set_attribute, get_all_attributes, get_fullpath
+export new_catalog, list_catalog, search_catalog, catalog_size
 export store_scalar, load_scalar
 export store_tseries, load_tseries
 export store_mvtseries, load_mvtseries
@@ -153,12 +154,13 @@ function closedaec!(de::DEFile)
 end
 
 """
-    Base.empty!(de::DEFile)
+    truncatedaec(de::DEFile)
 
-Delete all objects in the given open .daec file. 
+Reset a daec file to a state as if it were just created.
 """
-Base.empty!(de::DEFile) = (I._check(C.de_truncate(de)); de)
+truncatedaec(de::DEFile) = (I._check(C.de_truncate(de)); de)
 
+Base.empty!(de::DEFile) = truncatedaec(de)
 Base.isempty(de::DEFile) = (catalog_size(de, root_id) == 0)
 
 #############################################################################
@@ -218,9 +220,7 @@ find_object(de::DEFile, pid::C.obj_id_t, name::StrOrSym, dne_error::Bool=true) =
 function find_object(de::DEFile, pid::C.obj_id_t, name::String, dne_error::Bool=true)
     id = Ref{C.obj_id_t}()
     rc = C.de_find_object(de, pid, name, id)
-    if dne_error == false && rc == C.DE_OBJ_DNE
-        return missing
-    end
+    dne_error == false && rc == C.DE_OBJ_DNE && return missing
     I._check(rc)
     return id[]
 end
@@ -236,7 +236,7 @@ object is a catalog, all objects in it are also deleted, including all nested
 catalogs are deleted recursively. 
 
 It is an error, and impossible, to delete the "/" (`root_id`) catalog. If you want to 
-delete all objects in a file, use [`truncatedaec`](@ref)
+delete all objects in a file, use `Base.empty!(de)`
 
 """
 function delete_object(de::DEFile, id::C.obj_id_t)

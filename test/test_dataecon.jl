@@ -5,49 +5,51 @@ using Dates
 using Random
 using LinearAlgebra
 
+using TimeSeriesEcon.DataEcon
 DE = TimeSeriesEcon.DataEcon
+
 test_file = "test.daec"
 rm(test_file, force=true)
 rm(test_file * "-journal", force=true)
 
 @testset "DE file" begin
     global de
-    @test_throws DE.DEError DE.opendaec(test_file, readonly=true)
-    de = DE.opendaec(test_file, write=true)
+    @test_throws DEError opendaec(test_file, readonly=true)
+    de = opendaec(test_file, write=true)
     @test isopen(de)
-    @test (DE.closedaec!(de); true)
+    @test (closedaec!(de); true)
     @test !isopen(de)
-    @test (de = DE.opendaec(test_file, readonly=true); isopen(de))
-    @test (DE.closedaec!(de); !isopen(de))
-    de = DE.opendaec(test_file, write=true)
+    @test (de = opendaec(test_file, readonly=true); isopen(de))
+    @test (closedaec!(de); !isopen(de))
+    de = opendaec(test_file, write=true)
 
     # test find_object throws exception or returns missing
-    @test_throws DE.DEError DE.find_object(de, DE.root_id, "nosuchobject")
-    @test ismissing(DE.find_object(de, DE.root_id, "nosuchobject", false))
+    @test_throws DEError find_object(de, root_id, "nosuchobject")
+    @test ismissing(find_object(de, root_id, "nosuchobject", false))
 
     dm = nothing
-    @test (dm = DE.opendaecmem(); isopen(dm))
-    @test (DE.closedaec!(dm); !isopen(dm))
+    @test (dm = opendaecmem(); isopen(dm))
+    @test (closedaec!(dm); !isopen(dm))
 
     # test get_fullpath works
-    @test DE.get_fullpath(de, DE.root_id) == "/"
+    @test get_fullpath(de, root_id) == "/"
 
     # test writing an un-supported type shows a message, but doesn't throw.
     let UnsupportedType = Val{0}
-        @test_logs (:error, r".*Failed to write.*of type.*\..*"i) DE.writedb(de, Workspace(a=UnsupportedType()))
-        @test isempty(DE.readdb(de))
+        @test_logs (:error, r".*Failed to write.*of type.*\..*"i) writedb(de, Workspace(a=UnsupportedType()))
+        @test isempty(readdb(de))
     end
 
     @test begin
-        id = DE.new_catalog(de, "scalars")
-        id == DE.find_fullpath(de, "/scalars")
+        id = new_catalog(de, "scalars")
+        id == find_fullpath(de, "/scalars")
     end
-    @test isempty(DE.readdb(de, :scalars))
+    @test isempty(readdb(de, :scalars))
 
 end
 
 @testset "DE errors" begin
-    @test_throws ArgumentError DE.store_scalar(de, :err, Val(0))
+    @test_throws ArgumentError store_scalar(de, :err, Val(0))
 end
 
 function _check_attributes(name, value, attr, has_jtype, has_jeltype)
@@ -113,24 +115,24 @@ end
     has_jtype = [:ns1, :f3, :c1, :cd1, :cd2]
     has_jeltype = []
 
-    pid = DE.find_fullpath(de, cata, false)
+    pid = find_fullpath(de, cata, false)
     if ismissing(pid)
-        pid = DE.new_catalog(de, cata)
+        pid = new_catalog(de, cata)
     end
 
     # we can write them 
     for (name, value) in pairs(db)
         id = -1
-        @test (id = DE.store_scalar(de, pid, name, value); true)
-        @test id == DE.find_fullpath(de, "/$cata/$name")
-        attr = DE.get_all_attributes(de, "/$cata/$name")
+        @test (id = store_scalar(de, pid, name, value); true)
+        @test id == find_fullpath(de, "/$cata/$name")
+        attr = get_all_attributes(de, "/$cata/$name")
         _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_scalar(de, pid, name)); true)
+        @test (push!(ldb, name => load_scalar(de, pid, name)); true)
     end
 
     # they are equal
@@ -142,19 +144,19 @@ end
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_scalar(de, "/$cata/$name")); true)
+        @test (push!(ldb, name => load_scalar(de, "/$cata/$name")); true)
     end
 
     # list_catalog returns what we expect
     begin
-        @test isempty(DE.list_catalog(de; quiet=true, recursive=false))
-        @test length(db) == DE.catalog_size(de, cata)
-        lst = DE.list_catalog(de, "/$cata"; quiet=true)
+        @test isempty(list_catalog(de; quiet=true, recursive=false))
+        @test length(db) == catalog_size(de, cata)
+        lst = list_catalog(de, "/$cata"; quiet=true)
         @test length(lst) == length(db)
         for k in keys(db)
             @test "/$cata/$k" in lst
         end
-        lst = DE.list_catalog(de; quiet=true)
+        lst = list_catalog(de; quiet=true)
         @test length(lst) == length(db)
         for k in keys(db)
             @test "/$cata/$k" in lst
@@ -168,8 +170,8 @@ end
     @test @compare map(typeof, db) map(typeof, ldb) quiet
 
     # delete + recursive delete 
-    @test (DE.delete_object(de, "scalars"); true)
-    @test ismissing(DE.find_fullpath(de, "scalars", false))
+    @test (delete_object(de, "scalars"); true)
+    @test ismissing(find_fullpath(de, "scalars", false))
 
 end
 
@@ -198,24 +200,24 @@ end
     has_jtype = [:b1]
     has_jeltype = [:vs2, :nv1, :nv5, :nv6, :nv7, :b1]
 
-    pid = DE.find_fullpath(de, "/$cata", false)
+    pid = find_fullpath(de, "/$cata", false)
     if ismissing(pid)
-        pid = DE.new_catalog(de, cata)
+        pid = new_catalog(de, cata)
     end
 
     # we can write them 
     for (name, value) in pairs(db)
         id = -1
-        @test (id = DE.store_tseries(de, pid, name, value); true)
-        @test id == DE.find_fullpath(de, "/$cata/$name")
-        attr = DE.get_all_attributes(de, "/$cata/$name")
+        @test (id = store_tseries(de, pid, name, value); true)
+        @test id == find_fullpath(de, "/$cata/$name")
+        attr = get_all_attributes(de, "/$cata/$name")
         _check_attributes(name, value, attr, has_jtype, has_jeltype)
     end
 
     ldb = Workspace()
     # we can read them from (pid,name)
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_tseries(de, pid, name)); true)
+        @test (push!(ldb, name => load_tseries(de, pid, name)); true)
     end
 
     # they are equal
@@ -227,7 +229,7 @@ end
     ldb = Workspace()
     # we can read them from full path
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_tseries(de, "/$cata/$name")); true)
+        @test (push!(ldb, name => load_tseries(de, "/$cata/$name")); true)
     end
 
     # they are equal
@@ -257,9 +259,9 @@ end
         herl=Hermitian(rand(ComplexF32, 8, 8), :L),
     )
 
-    pid = DE.find_fullpath(de, "/2d", false)
+    pid = find_fullpath(de, "/2d", false)
     if ismissing(pid)
-        pid = DE.new_catalog(de, "2d")
+        pid = new_catalog(de, "2d")
     end
 
     # excluding special matrices from these two 
@@ -269,15 +271,15 @@ end
     # we can write them 
     for (name, value) in pairs(db)
         id = -1
-        @test (id = DE.store_mvtseries(de, pid, name, value); true)
-        @test id == DE.find_fullpath(de, "/2d/$name")
-        attr = DE.get_all_attributes(de, "/2d/$name")
+        @test (id = store_mvtseries(de, pid, name, value); true)
+        @test id == find_fullpath(de, "/2d/$name")
+        attr = get_all_attributes(de, "/2d/$name")
         if value isa LinearAlgebra.AdjOrTrans
             # special check for special matrices
-            @test ismissing(DE.get_attribute(de, "/2d/$name", "jtype"))
+            @test ismissing(get_attribute(de, "/2d/$name", "jtype"))
         elseif value isa Union{Diagonal,LinearAlgebra.HermOrSym}
             # special check for special matrices
-            @test DE.get_attribute(de, "/2d/$name", "jtype") == string(nameof(typeof(value)))
+            @test get_attribute(de, "/2d/$name", "jtype") == string(nameof(typeof(value)))
         else
             # standard check for "non-special" matrices
             _check_attributes(name, value, attr, has_jtype, has_jeltype)
@@ -287,7 +289,7 @@ end
     ldb = Workspace()
     # we can read them 
     for name in keys(db)
-        @test (push!(ldb, name => DE.load_mvtseries(de, pid, name)); true)
+        @test (push!(ldb, name => load_mvtseries(de, pid, name)); true)
     end
 
     # they are equal
@@ -302,8 +304,8 @@ end
     end
 end
 
-DE.new_catalog(de, "speedtest")
-DE.closedaec!(de)
+new_catalog(de, "speedtest")
+closedaec!(de)
 
 @testset "DE speed" begin
 
@@ -335,7 +337,7 @@ DE.closedaec!(de)
     end
 
     tm = time()
-    DE.writedb(test_file, "/speedtest", db)
+    writedb(test_file, "/speedtest", db)
     tm = time() - tm
     @info "write time: $tm"
     if tm > 15
@@ -343,7 +345,7 @@ DE.closedaec!(de)
     end
 
     tm = time()
-    ldb = DE.readdb(test_file, "/speedtest")
+    ldb = readdb(test_file, "/speedtest")
     tm = time() - tm
     @info "read time: $tm"
     if tm > 15
@@ -356,30 +358,30 @@ end
 
 # test emptying the File
 @testset "DE empty!" begin
-    DE.opendaec(test_file) do de
+    opendaec(test_file) do de
         @test !isempty(de)
-        @test_throws DE.DEError empty!(de)  # cannot truncate when readonly
+        @test_throws DEError empty!(de)  # cannot truncate when readonly
     end
-    @test_throws Exception DE.opendaec(test_file; truncate=true)
-    DE.opendaec(test_file, write=true) do de
+    @test_throws Exception opendaec(test_file; truncate=true)
+    opendaec(test_file, write=true) do de
         @test (empty!(de); true)
         @test isempty(de)
     end
-    @test isempty(DE.readdb(test_file))
+    @test isempty(readdb(test_file))
 end
 
 # clean up after ourselves
-DE.closedaec!(de)  # should be closed already, but just in case
+closedaec!(de)  # should be closed already, but just in case
 rm(test_file, force=true)
 
 @testset "DE show" begin
-    @test_throws DE.DEError DE.opendaec("/this/path/does/not/exist.daec")
+    @test_throws DEError opendaec("/this/path/does/not/exist.daec")
     Core.eval(DE.I, :(debug_libdaec = :debug))
     @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*"i) begin
         try
-            DE.opendaec("/this/path/does/not/exist.daec")
+            opendaec("/this/path/does/not/exist.daec")
         catch err
-            if err isa DE.DEError
+            if err isa DEError
                 @error "$err"
             else
                 rethrow()
@@ -389,9 +391,9 @@ rm(test_file, force=true)
     Core.eval(DE.I, :(debug_libdaec = :nodebug))
     @test_logs (:error, r".*DE\(\d+\) SQLite3: unable to open database file.*"i) begin
         try
-            DE.opendaec("/this/path/does/not/exist.daec")
+            opendaec("/this/path/does/not/exist.daec")
         catch err
-            if err isa DE.DEError
+            if err isa DEError
                 @error "$err"
             else
                 rethrow()
