@@ -21,12 +21,28 @@ using ..MacroTools
 include("C.jl")
 
 function __init__()
-    # make sure the loaded library is the same version as the one that generated our C.jl 
-    version = VersionNumber(unsafe_string(C.de_version()))
-    if version != VersionNumber(C.DE_VERSION)
-        throw(ErrorException("DataEcon library version $(version) does not match expected version $(C.DE_VERSION)."))
+    # === make sure the version of the loaded library and 
+    #     the one that generated our C.jl are compatible 
+    # version of loaded library
+    lv = VersionNumber(unsafe_string(C.de_version()))
+    # version of DataEcon/include/daec.h used when C.jl was generated
+    hv = VersionNumber(C.DE_VERSION)
+    # N.B. we have an issue with v0.3.2, which is labelled as a patch release,
+    # but in fact contains a breaking change so, starting with 0.4 we use semantic
+    # compatibility, and up to 0.3.x versions must match exactly
+
+    if lv <= v"0.3.2"
+        lv == hv && return
+    else
+        if (lv.major == hv.major)
+            if lv.major == 0
+                lv.minor == hv.minor && lv.patch >= hv.patch && return
+            else
+                lv.minor >= hv.minor && return
+            end
+        end
     end
-    return
+    @error "DataEcon_jll $lv is incompatible. Required version is $hv."
 end
 
 const VERSION = VersionNumber(C.DE_VERSION)
