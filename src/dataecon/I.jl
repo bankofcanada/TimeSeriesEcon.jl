@@ -467,6 +467,18 @@ end
 
 
 #############################################################################
+# helpers for when overwrite=true 
+
+import ..delete_object
+import ..find_object
+
+function _overwrite_object(de::DEFile{true}, pid::C.obj_id_t, name::AbstractString)
+    id = find_object(de, pid, name, true)
+    id === missing || delete_object(de, id)
+end
+_overwrite_object(de::DEFile{false}, pid::C.obj_id_t, name::AbstractString) = false
+
+#############################################################################
 # helpers for writedb
 
 import ..new_catalog

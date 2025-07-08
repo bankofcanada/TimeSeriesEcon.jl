@@ -370,9 +370,24 @@ end
     @test isempty(readdb(test_file))
 end
 
-# clean up after ourselves
-closedaec!(de)  # should be closed already, but just in case
-rm(test_file, force=true)
+@testset "DE overwrite" begin
+    opendaec(test_file, write=true, overwrite=false) do de
+        @test (store_scalar(de, :hello, "hello"); true)
+        @test_throws DEError store_scalar(de, :hello, "hello")
+        @test (new_catalog(de, :newcat); true)
+        @test_throws DEError new_catalog(de, :newcat)
+        @test (store_tseries(de, :newseries, [1,2,3,4]); true)
+        @test_throws DEError store_tseries(de, :newseries, [1,2,3,4])
+        @test (store_mvtseries(de, :newdata, [1 2 3; 4 5 6]); true)
+        @test_throws DEError store_mvtseries(de, :newdata, [3 4; 8 9])
+    end
+    opendaec(test_file, write=true, overwrite=true) do de
+        @test (store_scalar(de, :hello, "hello"); true)
+        @test (new_catalog(de, :newcat); true)
+        @test (store_tseries(de, :newseries, [1,2,3,4]); true)
+        @test (store_mvtseries(de, :newdata, [1 2 3; 4 5 6]); true)
+    end
+end
 
 @testset "DE show" begin
     @test_throws DEError opendaec("/this/path/does/not/exist.daec")
@@ -400,9 +415,20 @@ rm(test_file, force=true)
             end
         end
     end
+    closedaec!(de)
     @test_logs (:info, r".*DEFile:.*\(closed\).*"i) @info "$de"
-
+    opendaec(test_file; overwrite=false) do de
+        @test_logs (:info, r".*DEFile:.*"i) @info "$de"
+    end
+    opendaec(test_file; overwrite=true) do de
+        @test_logs (:info, r".*DEFile:.*\(overwrite\).*"i) @info "$de"
+    end
 end
+
+# clean up after ourselves
+closedaec!(de)  # should be closed already, but just in case
+rm(test_file, force=true)
+rm(test_file * "-journal", force=true)
 
 ##################################################################################################
 

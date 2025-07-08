@@ -57,7 +57,7 @@ const VERSION = VersionNumber(C.DE_VERSION)
 An instance of a *.daec file. Usually there's no need to create instances
 directly. Use [`opendaec`](@ref) and [`closedaec!`](@ref).
 """
-struct DEFile
+struct DEFile{O}
     handle::Ref{C.de_file}
     fname::String
 end
@@ -74,6 +74,8 @@ function writedb end
 function readdb end
 function set_attribute end
 function get_attribute end
+function delete_object end
+function find_object end
 
 include("I.jl")
 using .I
@@ -81,30 +83,45 @@ using .I
 const StrOrSym = Union{Symbol,AbstractString}
 
 Base.isopen(de::DEFile) = de.handle[] != C_NULL
-function Base.show(io::IO, de::DEFile)
-    summary(io, de)
-    print(io, ": \"", de.fname, isopen(de) ? "\"" : "\" (closed)")
+function Base.show(io::IO, de::DEFile{OVERWRITE}) where OVERWRITE
+    print(io, "DEFile: \"", de.fname, "\"")
+    if isopen(de) 
+        OVERWRITE && print(io, " (overwrite)")
+    else
+        print(io, " (closed)")
+    end
 end
 Base.unsafe_convert(::Type{C.de_file}, de::DEFile) = isopen(de) ? de.handle[] : throw(ArgumentError("File is closed."))
 
 """
-    de = opendaec(fname; readonly::Bool)
+    de = opendaec(fname; [readonly, append, overwrite])
 
-    opendaec(fname; readonly, truncate) do de
+    opendaec(fname; [readonly, append]) do de
         ...
     end
 
 Open the .daec file named in the given `fname` string and return an instance of
 [`DEFile`](@ref). The version with the do-block automatically closes the file.
-When using the stand-alone version, make sure to call [`closedaec!`](@ref).
+When using the stand-alone version, make sure to call [`closedaec!`](@ref). See
+also [`opendaecmem`](@ref)
 
-Keyword argument `readonly` defaults to `true`. 
+Keyword argument `readonly` defaults to `true`.
 
-Keyword argument `append` defaults to `true` and results in new data being added 
-to the contents that may already be in the file. If set to `false`, the file will
-be emptied of all its contents (if any) immediately after opening. It is an
+Keyword argument `write` is the opposite of `readonly`. If both are set, `write`
+takes precedence.
+
+Keyword argument `append` defaults to `true` and results in new data being added
+to the contents that may already be in the file. If set to `false`, the file
+will be emptied of all its contents (if any) immediately after opening. It is an
 error to call with `readonly=true` and `append=false` at the same time.
 
+Keyword argument `truncate` is the opposite of `append`. If both are set,
+`truncate` takes precedence.
+
+Keyword argument `overwrite` controls what happens if storing an object with a
+name that already exists in the file. If `overwrite` is set to `true`, the
+existing object is deleted and the new object is written. Default is `false`,
+which causes an error in this case.
 """
 function opendaec end
 
@@ -116,13 +133,15 @@ end
 
 function opendaec(fname::AbstractString;
     readonly::Bool=true, write::Bool=!readonly,
-    append::Bool=true, truncate::Bool=!append
+    append::Bool=true, truncate::Bool=!append,
+    overwrite::Bool=false   # a safer default
 )
     truncate && !write && error("Cannot truncate a readonly file.")
     fname = string(fname)
     handle = _do_open(write ? C.de_open : C.de_open_readonly, fname)
-    truncate && return empty!(DEFile(handle, fname))
-    return DEFile(handle, fname)
+    de = DEFile{overwrite}(handle, fname)
+    truncate && empty!(de)
+    return de
 end
 
 function opendaec(f::Function, fname::AbstractString; kwargs...)
@@ -134,9 +153,16 @@ function opendaec(f::Function, fname::AbstractString; kwargs...)
     end
 end
 
-function opendaecmem()
+"""
+    de = opendaecmem(; [readonly, append, overwrite])
+
+Open a daec file in memory. Keyword arguments `readonly` and `append` are
+ignored, since in-memory databases always start empty and writable. Keyword
+argument `overwrite` acts the same as in [`opendaec`](@ref).
+"""
+function opendaecmem(; overwrite::Bool=false)
     handle = _do_open(C.de_open_memory)
-    return DEFile(handle, ":memory:")
+    return DEFile{overwrite}(handle, ":memory:")
 end
 
 """
@@ -347,6 +373,7 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function store_scalar(de::DEFile, pid::C.obj_id_t, name::String, value)
+    I._overwrite_object(de, pid, name)
     # the value to be written
     val = I._to_de_scalar_val(value)
     val_type = I._to_de_scalar_type(val)
@@ -415,6 +442,7 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function store_tseries(de::DEFile, pid::C.obj_id_t, name::String, value)
+    I._overwrite_object(de, pid, name)
     ax_id = I._get_axis_of(de, value, 1)
     return I._store_array(de, pid, name, (ax_id,), value)
 end
@@ -436,6 +464,7 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function store_mvtseries(de::DEFile, pid::C.obj_id_t, name::String, value)
+    I._overwrite_object(de, pid, name)
     ax1_id = I._get_axis_of(de, value, 1)
     ax2_id = I._get_axis_of(de, value, 2)
     return I._store_array(de, pid, name, (ax1_id, ax2_id), value)
@@ -507,6 +536,7 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function new_catalog(de::DEFile, pid::C.obj_id_t, name::String)
+    I._overwrite_object(de, pid, name)
     id = Ref{C.obj_id_t}()
     I._check(C.de_new_catalog(de, pid, name, id))
     return id[]
