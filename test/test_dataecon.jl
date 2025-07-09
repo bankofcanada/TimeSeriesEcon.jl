@@ -304,6 +304,30 @@ end
     end
 end
 
+@testset "DE nd arrays" begin
+    pid = find_fullpath(de, "/nd", false)
+    ismissing(pid) || delete_object(de, pid)
+    pid = new_catalog(de, "/nd")
+    db = Workspace(
+        one = rand(2),
+        two = rand(2,1),
+        three = rand(2,1,1),
+        four = rand(2,1,1,1),
+        five = rand(2,1,1,1,1),
+    )
+    
+    for (name, value) in pairs(db)
+        id = -1
+        @test (id = store_ndtseries(de, pid, name, value); true)
+        @test id == find_fullpath(de, "/nd/$name")
+        attr = get_all_attributes(de, "/nd/$name")
+        _check_attributes(name, value, attr, [], [])
+    end
+
+    @test_throws DEError store_ndtseries(de, pid, "error", rand(2,1,1,1,1,1))
+
+end
+
 new_catalog(de, "speedtest")
 closedaec!(de)
 

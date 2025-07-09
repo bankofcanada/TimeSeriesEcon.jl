@@ -264,37 +264,38 @@ _to_de_array(value) = throw(ArgumentError("Unable to write value of type $(typeo
 _to_de_array(::AbstractUnitRange) = _de_array_data(; eltype=C.type_none, obj_type=C.type_range, nbytes=0, val=C_NULL)
 
 # handle any vector or matrix
-_to_de_array(value::AbstractVecOrMat) = _to_de_array(Val(isempty(value)), value)
+_to_de_array(value::AbstractArray) = _to_de_array(Val(isempty(value)), value)
 
 _eltypefreq(::Type{ET}) where {ET<:MIT} = (; eltype=C.type_date, elfreq=_to_de_scalar_freq(frequencyof(ET)))
 _eltypefreq(::Type{ET}) where {ET<:Duration} = (; eltype=C.type_signed, elfreq=_to_de_scalar_freq(frequencyof(ET)))
 _eltypefreq(::Type{ET}) where {ET} = (; eltype=_to_de_scalar_type(ET), elfreq=C.freq_none)
 
+_plain_array_type(N) = begin
+    N == 1 && return C.type_vector
+    N == 2 && return C.type_matrix
+    return C.type_tensor
+end
+
 # empty array
-_to_de_array(::Val{true}, value::AbstractVecOrMat{ET}) where {ET} = _de_array_data(;
-    _eltypefreq(ET)...,
-    obj_type=ndims(value) == 1 ? C.type_vector : C.type_matrix,
-    nbytes=0,
-    val=C_NULL
-)
+_to_de_array(::Val{true}, value::AbstractVecOrMat{ET}) where {ET} = _de_array_data(; _eltypefreq(ET)...,
+    obj_type=_plain_array_type(ndims(value)), nbytes=0, val=C_NULL)
 
 # Arrays of numbers
-function _to_de_array(::Val{false}, value::VecOrMat{ET}) where {ET<:Number}
+function _to_de_array(::Val{false}, value::Array{ET}) where {ET<:Number}
     val = value
     nbytes = length(value) * _to_de_scalar_nbytes(ET)
-    return _de_array_data(; _eltypefreq(ET)...,
-        obj_type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
+    return _de_array_data(; _eltypefreq(ET)..., obj_type=_plain_array_type(ndims(value)), nbytes, val)
 end
 _to_de_array(::Val{false}, value::AbstractMatrix{ET}) where {ET<:Number} = _to_de_array(Val(false), Matrix{ET}(value))
 
 # Arrays of strings
-_to_de_array(::Val{false}, value::AbstractVecOrMat{ET}) where {ET<:StrOrSym} = _to_de_array(Val(false), map(string, value))
-function _to_de_array(::Val{false}, value::VecOrMat{String})
+_to_de_array(::Val{false}, value::AbstractArray{ET}) where {ET<:StrOrSym} = _to_de_array(Val(false), map(string, value))
+function _to_de_array(::Val{false}, value::Array{String})
     nel = length(value)
     nbytes = sum(length, value) + nel
     val = Vector{UInt8}(undef, nbytes)
     _check(C.de_pack_strings(value, nel, val, Ref(nbytes)))
-    return _de_array_data(; eltype=C.type_string, obj_type=ndims(value) == 1 ? C.type_vector : C.type_matrix, nbytes, val)
+    return _de_array_data(; eltype=C.type_string, obj_type=_plain_array_type(ndims(value)), nbytes, val)
 end
 
 # handle bit array -- we must expand it to Array{Bool}
@@ -333,13 +334,36 @@ end
 @inline _store_type(::Val{C.type_matrix}, ::T) where {T<:LinearAlgebra.AdjOrTrans} = ""
 # default Julia type for C.MVTSeries is MVTSeries
 @inline _store_type(::Val{C.type_mvtseries}, ::MVTSeries) = ""
+# Array is the default Julia type for C.type_tensor
+@inline _store_type(::Val{C.type_tensor}, ::Array) = ""
 
 _do_store_array(::Val{1}, args...) = C.de_store_tseries(args...)
 _do_store_array(::Val{2}, args...) = C.de_store_mvtseries(args...)
-# function _do_store_array(v::Val{N}, args...) where {N}
-#     @nospecialize v
-#     error("Can't store  $(N)d array.")
-# end
+
+for N = 3:C.DE_MAX_AXES
+    local ax_syms = [Symbol(:ax, i, :_id) for i = 1:N]
+    @eval begin
+        C.de_store_ndtseries(de, pid, name, obj_type, eltype, elfreq, $(ax_syms...), nbytes, value, id) =
+            C.de_store_ndtseries(de, pid, name, obj_type, eltype, elfreq, $N, [$(ax_syms...),], nbytes, value, id)
+    end
+end
+function _do_store_array(::Val{N}, args...) where N
+    #! N.B. we create methods of C.de_store_ndtseries up to DE_MAX_AXES
+    #! This means that if the caller passes an array with more dimensions
+    #! they will get a MethodError, not a DEError DE_BAD_NUM_AXES. 
+    #! To remedy this we manually set the error status of the daec library
+    #! and then throw a DEError.
+    #! THIS HACK IS TOO LOW LEVEL - DO BETTER
+
+    if N > C.DE_MAX_AXES
+        # N.B. set_error is an internal function in libdaec.so
+        _check(ccall((:set_error, C.libdaec), Cint,
+            (Cint, Ptr{Cchar}, Ptr{Cchar}, Cint),
+            C.DE_BAD_NUM_AXES, "I._do_store_array", @__FILE__, @__LINE__))
+    end
+    C.de_store_ndtseries(args...)
+end
+
 import ..set_attribute
 import ..get_attribute
 # _store_array(de::DEFile, pid::C.obj_id_t, name::String, axes::NTuple{M,C.axis_id_t}, value::AbstractArray{ET,N}) where {ET,N,M} = error("Dimension mismatch: $(N)d array with $M axes.")
@@ -473,7 +497,7 @@ import ..delete_object
 import ..find_object
 
 function _overwrite_object(de::DEFile{true}, pid::C.obj_id_t, name::AbstractString)
-    id = find_object(de, pid, name, true)
+    id = find_object(de, pid, name, false)
     id === missing || delete_object(de, id)
 end
 _overwrite_object(de::DEFile{false}, pid::C.obj_id_t, name::AbstractString) = false
@@ -485,6 +509,7 @@ import ..new_catalog
 import ..store_scalar
 import ..store_tseries
 import ..store_mvtseries
+import ..store_ndtseries
 import ..writedb
 
 const StoreAsScalarType = Union{Symbol,AbstractString,Number,Dates.Date,Dates.DateTime}
@@ -494,6 +519,7 @@ _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::StoreAsScalarTyp
 # _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::NTuple) = store_tseries(de, pid, string(name), value)
 _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::AbstractVector) = store_tseries(de, pid, string(name), value)
 _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::AbstractMatrix) = store_mvtseries(de, pid, string(name), value)
+_write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, value::AbstractArray{T,N}) where {T,N} = store_ndtseries(de, pid, string(name), value)
 function _write_data(de::DEFile, pid::C.obj_id_t, name::StrOrSym, data::Workspace)
     pid = new_catalog(de, pid, string(name))
     return writedb(de, pid, data)

@@ -13,6 +13,7 @@ export new_catalog, list_catalog, search_catalog, catalog_size
 export store_scalar, load_scalar
 export store_tseries, load_tseries
 export store_mvtseries, load_mvtseries
+export store_ndtseries, load_ndtseries
 export writedb, write_data
 export readdb, read_data
 
@@ -68,8 +69,10 @@ function store_scalar end
 function load_scalar end
 function store_tseries end
 function store_mvtseries end
+function store_ndtseries end
 function load_tseries end
 function load_mvtseries end
+function load_ndtseries end
 function writedb end
 function readdb end
 function set_attribute end
@@ -85,7 +88,7 @@ const StrOrSym = Union{Symbol,AbstractString}
 Base.isopen(de::DEFile) = de.handle[] != C_NULL
 function Base.show(io::IO, de::DEFile{OVERWRITE}) where OVERWRITE
     print(io, "DEFile: \"", de.fname, "\"")
-    if isopen(de) 
+    if isopen(de)
         OVERWRITE && print(io, " (overwrite)")
     else
         print(io, " (closed)")
@@ -470,6 +473,47 @@ function store_mvtseries(de::DEFile, pid::C.obj_id_t, name::String, value)
     return I._store_array(de, pid, name, (ax1_id, ax2_id), value)
 end
 
+"""
+    store_ndtseries(de, fullpath, value)
+    store_ndtseries(de, parent, name, value)
+
+Create a new object with class `class_ndtseries` and write the given `value` for
+it in the .daec file `de`. The new object can be given either as a full path, or
+as a parent and a name separately. The value must be one of the Julia types that
+can be stored as a nd array, for example `Array{T,N}`. Note that `N` must not be
+greater than 5 (the current value or `DE_MAX_AXES` in "daec.h"). For N = 1 or 2,
+the call is redirected to [`store_tseries`](@ref) or [`store__mvtseries`](@ref)
+recpectively.
+
+If the new object is named as a full path, all catalogs must already exist. This
+is the case also if given as parent and name separately - the parent must be
+either the full path to, or the id of, a catalog that already exists.
+
+It is an error to name an object that already exists. In such case, call
+[`delete_object`](@ref) and try again.
+"""
+function store_ndtseries end
+
+function _store_ndtseries_body(N)
+    ret = Expr(:block)
+    push!(ret.args, :(I._overwrite_object(de, pid, name)))
+    ax_sym = Vector{Symbol}(undef, N)
+    for i = 1:N
+        ax_sym[i] = Symbol(:ax, i, :_id)
+        push!(ret.args, :($(ax_sym[i]) = I._get_axis_of(de, value, $i)))
+    end
+    push!(ret.args, :(I._store_array(de, pid, name, ($(ax_sym...),), value)))
+    return ret
+end
+
+@generated function store_ndtseries(de::DEFile, pid::C.obj_id_t, name::String, value::AbstractArray{T,N}) where {T,N}
+    # if N > C.DE_MAX_AXES
+    #     return :(error("Maximum number of dimensions supported by DataEcon library is $(C.DE_MAX_AXES)"))
+    # else
+        return _store_ndtseries_body(N)
+    # end
+end
+
 # ###############   read tseries
 
 """
@@ -694,8 +738,8 @@ set_attribute(de::DEFile, pid::C.obj_id_t, name::String, attr_name, attr_val) = 
 get_all_attributes(de::DEFile, pid::C.obj_id_t, name::String; delim="‖") = get_all_attributes(de, find_object(de, pid, name); delim=string(delim))
 
 for (funcs, iargs, ikwargs) in (
-    ((:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data, :new_catalog), (), ()),
-    ((:store_scalar, :store_tseries, :store_mvtseries, :write_data), (:value,), ()),
+    ((:load_scalar, :load_tseries, :load_mvtseries, :load_ndtseries, :delete_object, :read_data, :new_catalog), (), ()),
+    ((:store_scalar, :store_tseries, :store_mvtseries, :store_ndtseries, :write_data), (:value,), ()),
     ((:get_attribute,), (:attr_name,), ()),
     ((:set_attribute,), (:attr_name, :attr_val,), ()),
     ((:get_all_attributes,), (), (Expr(:kw, :delim, "‖"),)),
