@@ -409,6 +409,7 @@ end
 # dispatcher
 _from_de_array(arr::C.tseries_t) = _from_de_array(arr, Val(arr.object.obj_type), Val(arr.axis.ax_type))
 _from_de_array(arr::C.mvtseries_t) = _from_de_array(arr, Val(arr.object.obj_type), Val(arr.axis1.ax_type), Val(arr.axis2.ax_type))
+_from_de_array(arr::C.ndtseries_t) = _from_de_array(arr, Val(arr.object.obj_type), (Val(ax.ax_type) for ax in arr.axis)...)
 
 # handle type_range
 _from_de_array(arr::C.tseries_t, ::Val{C.type_range}, ::Val{C.axis_plain}) = 1:arr.axis.length
@@ -431,6 +432,14 @@ function _from_de_array(arr::C.mvtseries_t, ::Val{C.type_matrix}, ::Val{C.axis_p
     d1 = arr.axis1.length
     d2 = arr.axis2.length
     return reshape(_do_load_array_data(arr, Val(d1 * d2)), d1, d2)
+end
+
+# handle type_tensor
+_valsym(::Val{AT}) where AT = string(AT)
+_from_de_array(::C.ndtseries_t, ::Val{C.type_tensor}, AT::Val...) = error("Cannot load an N-d array with these axes types: $(join((_valsym(at) for at in AT), ", ")) ")
+function _from_de_array(arr::C.ndtseries_t, ::Val{C.type_tensor}, ::Val{C.axis_plain}...)
+    dims = [ax.length for ax in arr.axis if ax.id > 0]
+    return reshape(_do_load_array_data(arr, Val(prod(dims))), dims...)
 end
 
 function _do_load_array_data(arr, ::Val{0})
@@ -544,6 +553,7 @@ end
 import ..load_scalar
 import ..load_tseries
 import ..load_mvtseries
+import ..load_ndtseries
 import ..readdb
 
 function _read_data(de::DEFile, id::C.obj_id_t)
@@ -554,6 +564,7 @@ end
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_scalar}) = load_scalar(de, id)
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_tseries}) = load_tseries(de, id)
 _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_mvtseries}) = load_mvtseries(de, id)
+_read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_ndtseries}) = load_ndtseries(de, id)
 function _read_data(de::DEFile, id::C.obj_id_t, ::Val{C.class_catalog})
     search = Ref{C.de_search}()
     _check(C.de_list_catalog(de, id, search))

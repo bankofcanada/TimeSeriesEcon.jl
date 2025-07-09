@@ -560,6 +560,28 @@ function load_mvtseries(de::DEFile, id::C.obj_id_t)
     return I._to_julia_array(de, id, arr[])
 end
 
+"""
+    load_ndtseries(de, id)
+    load_ndtseries(de, fullpath)
+    load_ndtseries(de, parent, name)
+
+Load an object of class `class_ndtseries` from the given .daec file `de`.
+
+The object can be specified by its id, or by its full name. The full name can be
+given as a fullpath or as a parent and a name separately. IF given separately,
+the parent can be specified as an id or fullpath.
+
+Throws an exception if the object doesn't exist, or if the object's class is not
+`class_ndtseries`.
+
+The return value is a Julia object of an appropriate type.
+"""
+function load_ndtseries(de::DEFile, id::C.obj_id_t)
+    arr = Ref{C.ndtseries_t}()
+    I._check(C.de_load_ndtseries(de, id, arr))
+    return I._to_julia_array(de, id, arr[])
+end
+
 #############################################################################
 # catalogs
 
@@ -728,7 +750,7 @@ read_data(de::DEFile, id::C.obj_id_t) = I._read_data(de, id)
 #############################################################################
 # closing remarks :)
 
-for func in (:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data)
+for func in (:load_scalar, :load_tseries, :load_mvtseries, :load_ndtseries, :delete_object, :read_data)
     @eval begin
         $func(de::DEFile, pid::C.obj_id_t, name::String) = $func(de, find_object(de, pid, name))
     end

@@ -314,6 +314,8 @@ end
         three = rand(2,1,1),
         four = rand(2,1,1,1),
         five = rand(2,1,1,1,1),
+        str = ["a";"b";"c";;;"x";"y";"z";;;;],
+        sym = [:x;:y;:z;;;:c;:b;:a;;;;]
     )
     
     for (name, value) in pairs(db)
@@ -321,10 +323,18 @@ end
         @test (id = store_ndtseries(de, pid, name, value); true)
         @test id == find_fullpath(de, "/nd/$name")
         attr = get_all_attributes(de, "/nd/$name")
-        _check_attributes(name, value, attr, [], [])
+        _check_attributes(name, value, attr, [], [:sym])
     end
 
     @test_throws DEError store_ndtseries(de, pid, "error", rand(2,1,1,1,1,1))
+
+    ldb = Workspace()
+    # we can read them 
+    for name in keys(db)
+        @test (push!(ldb, name => read_data(de, pid, name)); true)
+    end
+
+    @test @compare db ldb quiet
 
 end
 
@@ -410,6 +420,10 @@ end
         @test (new_catalog(de, :newcat); true)
         @test (store_tseries(de, :newseries, [1,2,3,4]); true)
         @test (store_mvtseries(de, :newdata, [1 2 3; 4 5 6]); true)
+        @test (store_scalar(de, :byebye, "byebye"); true)
+        @test (new_catalog(de, :newdog); true)
+        @test (store_tseries(de, "/newdog/newseries", [1,2,3,4]); true)
+        @test (store_mvtseries(de, "/newdog/newdata", [1 2 3; 4 5 6]); true)
     end
 end
 
