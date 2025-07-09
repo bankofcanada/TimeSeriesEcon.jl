@@ -363,15 +363,15 @@ function de_finalize_search(search)
     ccall((:de_finalize_search, libdaec), Cint, (de_search,), search)
 end
 
-const DE_VERSION = "0.3.2"
+const DE_VERSION = "0.4.0"
 
-const DE_VERNUM = 0x0320
+const DE_VERNUM = 0x0400
 
 const DE_VER_MAJOR = 0
 
-const DE_VER_MINOR = 3
+const DE_VER_MINOR = 4
 
-const DE_VER_REVISION = 2
+const DE_VER_REVISION = 0
 
 const DE_VER_SUBREVISION = 0
 
