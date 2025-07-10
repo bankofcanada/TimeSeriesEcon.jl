@@ -21,7 +21,7 @@ X13as_jll = "6c9beba9-e00a-580e-a2fe-633c5dfe81b1"
 
 [compat]
 CEnum = "0.4"
-DataEcon_jll = "0.3.1"
+DataEcon_jll = "0.4"
 Dates = "1.7"
 Distributed = "1.7"
 LinearAlgebra = "1.7"

@@ -21,30 +21,31 @@ function de_clear_error()
     ccall((:de_clear_error, libdaec), Cint, ())
 end
 
-@cenum var"##Ctag#328"::Int32 begin
+@cenum var"##Ctag#241"::Int32 begin
     DE_SUCCESS = 0
     DE_ERR_ALLOC = -1000
     DE_BAD_AXIS_TYPE = -999
-    DE_BAD_CLASS = -998
-    DE_BAD_TYPE = -997
-    DE_BAD_ELTYPE = -996
-    DE_BAD_ELTYPE_NONE = -995
-    DE_BAD_ELTYPE_DATE = -994
-    DE_BAD_NAME = -993
-    DE_BAD_FREQ = -992
-    DE_SHORT_BUF = -991
-    DE_OBJ_DNE = -990
-    DE_AXIS_DNE = -989
-    DE_ARG = -988
-    DE_NO_OBJ = -987
-    DE_EXISTS = -986
-    DE_BAD_OBJ = -985
-    DE_NULL = -984
-    DE_DEL_ROOT = -983
-    DE_MIS_ATTR = -982
-    DE_INEXACT = -981
-    DE_RANGE = -980
-    DE_INTERNAL = -979
+    DE_BAD_NUM_AXES = -998
+    DE_BAD_CLASS = -997
+    DE_BAD_TYPE = -996
+    DE_BAD_ELTYPE = -995
+    DE_BAD_ELTYPE_NONE = -994
+    DE_BAD_ELTYPE_DATE = -993
+    DE_BAD_NAME = -992
+    DE_BAD_FREQ = -991
+    DE_SHORT_BUF = -990
+    DE_OBJ_DNE = -989
+    DE_AXIS_DNE = -988
+    DE_ARG = -987
+    DE_NO_OBJ = -986
+    DE_EXISTS = -985
+    DE_BAD_OBJ = -984
+    DE_NULL = -983
+    DE_DEL_ROOT = -982
+    DE_MIS_ATTR = -981
+    DE_INEXACT = -980
+    DE_RANGE = -979
+    DE_INTERNAL = -978
 end
 
 const de_file = Ptr{Cvoid}
@@ -76,6 +77,8 @@ end
     class_tseries = 2
     class_matrix = 3
     class_mvtseries = 3
+    class_tensor = 4
+    class_ndtseries = 4
     class_any = -1
 end
 
@@ -96,6 +99,9 @@ end
     type_matrix = 20
     type_mvtseries = 21
     type_other_2d = 22
+    type_tensor = 30
+    type_ndtseries = 31
+    type_other_nd = 32
     type_any = -1
 end
 
@@ -283,8 +289,8 @@ end
 
 const vector_t = tseries_t
 
-function de_store_tseries(de, pid, name, type, eltype, elfreq, axis_id, nbytes, value, id)
-    ccall((:de_store_tseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, frequency_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, elfreq, axis_id, nbytes, value, id)
+function de_store_tseries(de, pid, name, obj_type, eltype, elfreq, axis_id, nbytes, value, id)
+    ccall((:de_store_tseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, frequency_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, obj_type, eltype, elfreq, axis_id, nbytes, value, id)
 end
 
 function de_load_tseries(de, id, tseries)
@@ -303,12 +309,32 @@ end
 
 const matrix_t = mvtseries_t
 
-function de_store_mvtseries(de, pid, name, type, eltype, elfreq, axis1_id, axis2_id, nbytes, value, id)
-    ccall((:de_store_mvtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, frequency_t, axis_id_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, type, eltype, elfreq, axis1_id, axis2_id, nbytes, value, id)
+function de_store_mvtseries(de, pid, name, obj_type, eltype, elfreq, axis1_id, axis2_id, nbytes, value, id)
+    ccall((:de_store_mvtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, frequency_t, axis_id_t, axis_id_t, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, obj_type, eltype, elfreq, axis1_id, axis2_id, nbytes, value, id)
 end
 
 function de_load_mvtseries(de, id, mvtseries)
     ccall((:de_load_mvtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{mvtseries_t}), de, id, mvtseries)
+end
+
+struct ndtseries_t
+    object::object_t
+    eltype::type_t
+    elfreq::frequency_t
+    naxes::Int64
+    axis::NTuple{5, axis_t}
+    nbytes::Int64
+    value::Ptr{Cvoid}
+end
+
+const tensor_t = ndtseries_t
+
+function de_store_ndtseries(de, pid, name, obj_type, eltype, elfreq, naxes, axis_ids, nbytes, value, id)
+    ccall((:de_store_ndtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{Cchar}, type_t, type_t, frequency_t, Int64, Ptr{axis_id_t}, Int64, Ptr{Cvoid}, Ptr{obj_id_t}), de, pid, name, obj_type, eltype, elfreq, naxes, axis_ids, nbytes, value, id)
+end
+
+function de_load_ndtseries(de, id, ndtseries)
+    ccall((:de_load_ndtseries, libdaec), Cint, (de_file, obj_id_t, Ptr{ndtseries_t}), de, id, ndtseries)
 end
 
 function de_pack_strings(strvec, length, buffer, bufsize)
@@ -337,16 +363,18 @@ function de_finalize_search(search)
     ccall((:de_finalize_search, libdaec), Cint, (de_search,), search)
 end
 
-const DE_VERSION = "0.3.1"
+const DE_VERSION = "0.4.0"
 
-const DE_VERNUM = 0x0310
+const DE_VERNUM = 0x0400
 
 const DE_VER_MAJOR = 0
 
-const DE_VER_MINOR = 3
+const DE_VER_MINOR = 4
 
-const DE_VER_REVISION = 1
+const DE_VER_REVISION = 0
 
 const DE_VER_SUBREVISION = 0
+
+const DE_MAX_AXES = 5
 
 end # module

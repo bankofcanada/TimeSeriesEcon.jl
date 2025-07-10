@@ -6,12 +6,14 @@ module DataEcon
 using Dates
 
 export DEError
-export DEFile, opendaec, closedaec!, truncatedaec
+export DEFile, opendaec, opendaecmem, closedaec!, truncatedaec
 export root_id, find_fullpath, find_object, delete_object
-export get_attribute, set_attribute, get_fullpath
+export get_attribute, set_attribute, get_all_attributes, get_fullpath
+export new_catalog, list_catalog, search_catalog, catalog_size
 export store_scalar, load_scalar
 export store_tseries, load_tseries
 export store_mvtseries, load_mvtseries
+export store_ndtseries, load_ndtseries
 export writedb, write_data
 export readdb, read_data
 
@@ -21,12 +23,28 @@ using ..MacroTools
 include("C.jl")
 
 function __init__()
-    # make sure the loaded library is the same version as the one that generated our C.jl 
-    version = VersionNumber(unsafe_string(C.de_version()))
-    if version != VersionNumber(C.DE_VERSION)
-        throw(ErrorException("DataEcon library version $(version) does not match expected version $(C.DE_VERSION)."))
+    # === make sure the version of the loaded library and 
+    #     the one that generated our C.jl are compatible 
+    # version of loaded library
+    lv = VersionNumber(unsafe_string(C.de_version()))
+    # version of DataEcon/include/daec.h used when C.jl was generated
+    hv = VersionNumber(C.DE_VERSION)
+    # N.B. we have an issue with v0.3.2, which is labelled as a patch release,
+    # but in fact contains a breaking change so, starting with 0.4 we use semantic
+    # compatibility, and up to 0.3.x versions must match exactly
+
+    if lv <= v"0.3.2"
+        lv == hv && return
+    else
+        if (lv.major == hv.major)
+            if lv.major == 0
+                lv.minor == hv.minor && lv.patch >= hv.patch && return
+            else
+                lv.minor >= hv.minor && return
+            end
+        end
     end
-    return
+    @error "DataEcon_jll $lv is incompatible. Required version is $hv."
 end
 
 const VERSION = VersionNumber(C.DE_VERSION)
@@ -40,7 +58,7 @@ const VERSION = VersionNumber(C.DE_VERSION)
 An instance of a *.daec file. Usually there's no need to create instances
 directly. Use [`opendaec`](@ref) and [`closedaec!`](@ref).
 """
-struct DEFile
+struct DEFile{O}
     handle::Ref{C.de_file}
     fname::String
 end
@@ -51,12 +69,16 @@ function store_scalar end
 function load_scalar end
 function store_tseries end
 function store_mvtseries end
+function store_ndtseries end
 function load_tseries end
 function load_mvtseries end
+function load_ndtseries end
 function writedb end
 function readdb end
 function set_attribute end
 function get_attribute end
+function delete_object end
+function find_object end
 
 include("I.jl")
 using .I
@@ -64,30 +86,45 @@ using .I
 const StrOrSym = Union{Symbol,AbstractString}
 
 Base.isopen(de::DEFile) = de.handle[] != C_NULL
-function Base.show(io::IO, de::DEFile)
-    summary(io, de)
-    print(io, ": \"", de.fname, isopen(de) ? "\"" : "\" (closed)")
+function Base.show(io::IO, de::DEFile{OVERWRITE}) where OVERWRITE
+    print(io, "DEFile: \"", de.fname, "\"")
+    if isopen(de)
+        OVERWRITE && print(io, " (overwrite)")
+    else
+        print(io, " (closed)")
+    end
 end
 Base.unsafe_convert(::Type{C.de_file}, de::DEFile) = isopen(de) ? de.handle[] : throw(ArgumentError("File is closed."))
 
 """
-    de = opendaec(fname; readonly::Bool)
+    de = opendaec(fname; [readonly, append, overwrite])
 
-    opendaec(fname; readonly, truncate) do de
+    opendaec(fname; [readonly, append]) do de
         ...
     end
 
 Open the .daec file named in the given `fname` string and return an instance of
 [`DEFile`](@ref). The version with the do-block automatically closes the file.
-When using the stand-alone version, make sure to call [`closedaec!`](@ref).
+When using the stand-alone version, make sure to call [`closedaec!`](@ref). See
+also [`opendaecmem`](@ref)
 
-Keyword argument `readonly` defaults to `true`. 
+Keyword argument `readonly` defaults to `true`.
 
-Keyword argument `append` defaults to `true` and results in new data being added 
-to the contents that may already be in the file. If set to `false`, the file will
-be emptied of all its contents (if any) immediately after opening. It is an
+Keyword argument `write` is the opposite of `readonly`. If both are set, `write`
+takes precedence.
+
+Keyword argument `append` defaults to `true` and results in new data being added
+to the contents that may already be in the file. If set to `false`, the file
+will be emptied of all its contents (if any) immediately after opening. It is an
 error to call with `readonly=true` and `append=false` at the same time.
 
+Keyword argument `truncate` is the opposite of `append`. If both are set,
+`truncate` takes precedence.
+
+Keyword argument `overwrite` controls what happens if storing an object with a
+name that already exists in the file. If `overwrite` is set to `true`, the
+existing object is deleted and the new object is written. Default is `false`,
+which causes an error in this case.
 """
 function opendaec end
 
@@ -99,13 +136,15 @@ end
 
 function opendaec(fname::AbstractString;
     readonly::Bool=true, write::Bool=!readonly,
-    append::Bool=true, truncate::Bool=!append
+    append::Bool=true, truncate::Bool=!append,
+    overwrite::Bool=false   # a safer default
 )
     truncate && !write && error("Cannot truncate a readonly file.")
     fname = string(fname)
     handle = _do_open(write ? C.de_open : C.de_open_readonly, fname)
-    truncate && return empty!(DEFile(handle, fname))
-    return DEFile(handle, fname)
+    de = DEFile{overwrite}(handle, fname)
+    truncate && empty!(de)
+    return de
 end
 
 function opendaec(f::Function, fname::AbstractString; kwargs...)
@@ -117,9 +156,16 @@ function opendaec(f::Function, fname::AbstractString; kwargs...)
     end
 end
 
-function opendaecmem()
+"""
+    de = opendaecmem(; [readonly, append, overwrite])
+
+Open a daec file in memory. Keyword arguments `readonly` and `append` are
+ignored, since in-memory databases always start empty and writable. Keyword
+argument `overwrite` acts the same as in [`opendaec`](@ref).
+"""
+function opendaecmem(; overwrite::Bool=false)
     handle = _do_open(C.de_open_memory)
-    return DEFile(handle, ":memory:")
+    return DEFile{overwrite}(handle, ":memory:")
 end
 
 """
@@ -137,12 +183,13 @@ function closedaec!(de::DEFile)
 end
 
 """
-    Base.empty!(de::DEFile)
+    truncatedaec(de::DEFile)
 
-Delete all objects in the given open .daec file. 
+Reset a daec file to a state as if it were just created.
 """
-Base.empty!(de::DEFile) = (I._check(C.de_truncate(de)); de)
+truncatedaec(de::DEFile) = (I._check(C.de_truncate(de)); de)
 
+Base.empty!(de::DEFile) = truncatedaec(de)
 Base.isempty(de::DEFile) = (catalog_size(de, root_id) == 0)
 
 #############################################################################
@@ -202,9 +249,7 @@ find_object(de::DEFile, pid::C.obj_id_t, name::StrOrSym, dne_error::Bool=true) =
 function find_object(de::DEFile, pid::C.obj_id_t, name::String, dne_error::Bool=true)
     id = Ref{C.obj_id_t}()
     rc = C.de_find_object(de, pid, name, id)
-    if dne_error == false && rc == C.DE_OBJ_DNE
-        return missing
-    end
+    dne_error == false && rc == C.DE_OBJ_DNE && return missing
     I._check(rc)
     return id[]
 end
@@ -220,7 +265,7 @@ object is a catalog, all objects in it are also deleted, including all nested
 catalogs are deleted recursively. 
 
 It is an error, and impossible, to delete the "/" (`root_id`) catalog. If you want to 
-delete all objects in a file, use [`truncatedaec`](@ref)
+delete all objects in a file, use `Base.empty!(de)`
 
 """
 function delete_object(de::DEFile, id::C.obj_id_t)
@@ -331,6 +376,7 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function store_scalar(de::DEFile, pid::C.obj_id_t, name::String, value)
+    I._overwrite_object(de, pid, name)
     # the value to be written
     val = I._to_de_scalar_val(value)
     val_type = I._to_de_scalar_type(val)
@@ -399,6 +445,7 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function store_tseries(de::DEFile, pid::C.obj_id_t, name::String, value)
+    I._overwrite_object(de, pid, name)
     ax_id = I._get_axis_of(de, value, 1)
     return I._store_array(de, pid, name, (ax_id,), value)
 end
@@ -420,9 +467,51 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function store_mvtseries(de::DEFile, pid::C.obj_id_t, name::String, value)
+    I._overwrite_object(de, pid, name)
     ax1_id = I._get_axis_of(de, value, 1)
     ax2_id = I._get_axis_of(de, value, 2)
     return I._store_array(de, pid, name, (ax1_id, ax2_id), value)
+end
+
+"""
+    store_ndtseries(de, fullpath, value)
+    store_ndtseries(de, parent, name, value)
+
+Create a new object with class `class_ndtseries` and write the given `value` for
+it in the .daec file `de`. The new object can be given either as a full path, or
+as a parent and a name separately. The value must be one of the Julia types that
+can be stored as a nd array, for example `Array{T,N}`. Note that `N` must not be
+greater than 5 (the current value or `DE_MAX_AXES` in "daec.h"). For N = 1 or 2,
+the call is redirected to [`store_tseries`](@ref) or [`store__mvtseries`](@ref)
+recpectively.
+
+If the new object is named as a full path, all catalogs must already exist. This
+is the case also if given as parent and name separately - the parent must be
+either the full path to, or the id of, a catalog that already exists.
+
+It is an error to name an object that already exists. In such case, call
+[`delete_object`](@ref) and try again.
+"""
+function store_ndtseries end
+
+function _store_ndtseries_body(N)
+    ret = Expr(:block)
+    push!(ret.args, :(I._overwrite_object(de, pid, name)))
+    ax_sym = Vector{Symbol}(undef, N)
+    for i = 1:N
+        ax_sym[i] = Symbol(:ax, i, :_id)
+        push!(ret.args, :($(ax_sym[i]) = I._get_axis_of(de, value, $i)))
+    end
+    push!(ret.args, :(I._store_array(de, pid, name, ($(ax_sym...),), value)))
+    return ret
+end
+
+@generated function store_ndtseries(de::DEFile, pid::C.obj_id_t, name::String, value::AbstractArray{T,N}) where {T,N}
+    # if N > C.DE_MAX_AXES
+    #     return :(error("Maximum number of dimensions supported by DataEcon library is $(C.DE_MAX_AXES)"))
+    # else
+        return _store_ndtseries_body(N)
+    # end
 end
 
 # ###############   read tseries
@@ -471,6 +560,28 @@ function load_mvtseries(de::DEFile, id::C.obj_id_t)
     return I._to_julia_array(de, id, arr[])
 end
 
+"""
+    load_ndtseries(de, id)
+    load_ndtseries(de, fullpath)
+    load_ndtseries(de, parent, name)
+
+Load an object of class `class_ndtseries` from the given .daec file `de`.
+
+The object can be specified by its id, or by its full name. The full name can be
+given as a fullpath or as a parent and a name separately. IF given separately,
+the parent can be specified as an id or fullpath.
+
+Throws an exception if the object doesn't exist, or if the object's class is not
+`class_ndtseries`.
+
+The return value is a Julia object of an appropriate type.
+"""
+function load_ndtseries(de::DEFile, id::C.obj_id_t)
+    arr = Ref{C.ndtseries_t}()
+    I._check(C.de_load_ndtseries(de, id, arr))
+    return I._to_julia_array(de, id, arr[])
+end
+
 #############################################################################
 # catalogs
 
@@ -491,6 +602,7 @@ It is an error to name an object that already exists. In such case, call
 [`delete_object`](@ref) and try again.
 """
 function new_catalog(de::DEFile, pid::C.obj_id_t, name::String)
+    I._overwrite_object(de, pid, name)
     id = Ref{C.obj_id_t}()
     I._check(C.de_new_catalog(de, pid, name, id))
     return id[]
@@ -638,7 +750,7 @@ read_data(de::DEFile, id::C.obj_id_t) = I._read_data(de, id)
 #############################################################################
 # closing remarks :)
 
-for func in (:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data)
+for func in (:load_scalar, :load_tseries, :load_mvtseries, :load_ndtseries, :delete_object, :read_data)
     @eval begin
         $func(de::DEFile, pid::C.obj_id_t, name::String) = $func(de, find_object(de, pid, name))
     end
@@ -648,8 +760,8 @@ set_attribute(de::DEFile, pid::C.obj_id_t, name::String, attr_name, attr_val) = 
 get_all_attributes(de::DEFile, pid::C.obj_id_t, name::String; delim="‖") = get_all_attributes(de, find_object(de, pid, name); delim=string(delim))
 
 for (funcs, iargs, ikwargs) in (
-    ((:load_scalar, :load_tseries, :load_mvtseries, :delete_object, :read_data, :new_catalog), (), ()),
-    ((:store_scalar, :store_tseries, :store_mvtseries, :write_data), (:value,), ()),
+    ((:load_scalar, :load_tseries, :load_mvtseries, :load_ndtseries, :delete_object, :read_data, :new_catalog), (), ()),
+    ((:store_scalar, :store_tseries, :store_mvtseries, :store_ndtseries, :write_data), (:value,), ()),
     ((:get_attribute,), (:attr_name,), ()),
     ((:set_attribute,), (:attr_name, :attr_val,), ()),
     ((:get_all_attributes,), (), (Expr(:kw, :delim, "‖"),)),
