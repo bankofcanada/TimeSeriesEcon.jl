@@ -32,6 +32,7 @@ module TimeSeriesEcon
 using MacroTools
 using RecipesBase
 using OrderedCollections
+import Tables
 
 # standard library
 using LinearAlgebra
@@ -85,6 +86,8 @@ include("workspaces.jl")
 include("serialize.jl")
 
 include("various.jl")
+
+include("tables.jl")
 
 include("linalg.jl")
 
