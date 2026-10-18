@@ -421,6 +421,11 @@ function Base.setproperty!(x::MVTSeries, name::Symbol, val)
         rng = intersect(rangeof(col), rangeof(vcol))
         return copyto!(col, rng, vcol)
     else
+        # explicit check needed post Julia 1.13, as assignment into a view
+        # works even if there are excess elements
+        if val isa AbstractArray && length(val) != length(col)
+            throw(DimensionMismatch("Cannot assign $(length(val)) elements to destination of length $(length(col))"))
+        end
         return col.values[:] = val
     end
 end

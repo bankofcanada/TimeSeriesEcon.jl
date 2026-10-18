@@ -197,7 +197,7 @@ MIT{YPFrequency{1}}(x::Int) = MIT{Yearly{12}}(x)
 MIT{YPFrequency{2}}(x::Int) = MIT{HalfYearly{6}}(x)
 MIT{YPFrequency{4}}(x::Int) = MIT{Quarterly{3}}(x)
 MIT{YPFrequency{12}}(x::Int) = MIT{Monthly}(x)
-Int(x::MIT) = reinterpret(Int, x)
+Base.Int(x::MIT) = reinterpret(Int, x)
 
 Duration{F}(x::Int) where {F<:Frequency} = reinterpret(Duration{F}, x)
 Duration{Yearly}(x::Int) = Duration{Yearly{12}}(x)
@@ -208,7 +208,7 @@ Duration{YPFrequency{1}}(x::Int) = Duration{Yearly{12}}(x)
 Duration{YPFrequency{2}}(x::Int) = Duration{HalfYearly{6}}(x)
 Duration{YPFrequency{4}}(x::Int) = Duration{Quarterly{3}}(x)
 Duration{YPFrequency{12}}(x::Int) = Duration{Monthly}(x)
-Int(x::Duration) = reinterpret(Int, x)
+Base.Int(x::Duration) = reinterpret(Int, x)
 
 
 # -------------------------
