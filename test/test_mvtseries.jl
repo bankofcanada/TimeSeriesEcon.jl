@@ -184,6 +184,15 @@ end
         @test_throws DimensionMismatch sd.a = ones(length(sd.a) + 5)
         @test_throws DimensionMismatch sd.a = ones(length(sd.a) - 1)
         @test_throws DimensionMismatch sd.a = 1.0:(length(sd.a)+1)
+        # part of a column
+        rs = rangeof(sd)[begin:begin+3]
+        @test_throws DimensionMismatch sd.a[rs] = ones(5)
+        @test_throws DimensionMismatch sd.a[rs] = ones(3)
+        @test_throws DimensionMismatch sd.a[1:4] = ones(5)
+        @test_throws DimensionMismatch view(sd.a, rs)[1:4] = ones(5)
+        sd.a[rs] = 1.0:4.0
+        @test sd.a[rs].values == 1.0:4.0
+        sd.a = zeros(size(dta, 1))
         # strided (non-contiguous) column storage
         sds = MVTSeries(2020Q1, (:a, :b), view(zeros(8, 2), 1:2:8, :))
         @test_throws DimensionMismatch sds.a = ones(5)
