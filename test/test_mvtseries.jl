@@ -512,6 +512,10 @@ end
     # we can do dot operations with matrices of identical size
     @test x .+ 3 .* x.values == 4x
 
+    # Julia 1.14 takes the element type of the result from `eachindex(bc)`
+    bc = Broadcast.instantiate(Broadcast.broadcasted(+, x, 1))
+    @test eachindex(bc) == CartesianIndices(size(x))
+
     # with matrixes of wrong size we get a DimensionMismatch
     @test_throws DimensionMismatch x .+ x.values[begin+1:end-1, :]
     @test_throws DimensionMismatch x .+ x.values[:, [1, 1, 1]]
