@@ -382,6 +382,13 @@ end
     w7 = Workspace(a=Any[2020Q2:2020Q1], b=Any[2020Q2:2020Q1, 2020Q1], h=Dict("r" => 2020Q2:2020Q1))
     expected7 = Dict("a" => ["2020Q2:2020Q1"], "b" => ["2020Q2:2020Q1", "2020Q1"], "h" => Dict("r" => "2020Q2:2020Q1"))
     @test TOML.parse(sprint(io -> TOML.print(io, w7))) == expected7
+    # what the conversion function returns is converted too
+    w8 = Workspace(t=(2020Q1, 2020Q2), n=(a=1, m=2020Q1), s=:x)
+    conv(x::Tuple) = collect(x)
+    conv(x::NamedTuple) = Dict(string(k) => v for (k, v) in pairs(x))
+    conv(x::Symbol) = Workspace(m=2020Q3)
+    @test TOML.parse(sprint(io -> TOML.print(conv, io, w8))) ==
+          Dict("t" => ["2020Q1", "2020Q2"], "n" => Dict("a" => 1, "m" => "2020Q1"), "s" => Dict("m" => "2020Q3"))
     # a conversion function does not apply to nested workspaces
     w5 = Workspace(a=1, n=Workspace(s=:hello, m=2020Q1))
     @test TOML.parse(sprint(io -> TOML.print(string, io, w5))) == Dict("a" => 1, "n" => Dict("s" => "hello", "m" => "2020Q1"))
