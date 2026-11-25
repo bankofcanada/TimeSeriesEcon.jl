@@ -99,7 +99,7 @@ function cleanedvalues(t::TSeries{BDaily}; skip_all_nans::Bool=false, skip_holid
     elseif skip_all_nans
         return filter(x -> !isnan(x), t.values)
     elseif skip_holidays
-        h_map = TimeSeriesEcon.getoption(:bdaily_holidays_map)
+        h_map = getoption(:bdaily_holidays_map)
         if !(h_map isa TSeries{BDaily})
             throw(ArgumentError("The holidays map stored in :bdaily_holidays_map is not a TSeries it is a $(typeof(h_map)). \n You may need to load one with TimeSeriesEcon.set_holidays_map()."))
         end
@@ -199,7 +199,12 @@ Base.setindex!(t::TSeries, v::Number, i::Int) = (setindex!(t.values, v, i); t)
 Base.getindex(t::TSeries, i::AbstractRange{Int}) = getindex(t.values, i)
 Base.getindex(t::TSeries, i::AbstractArray{Int}) = getindex(t.values, values(i))
 Base.getindex(t::TSeries, i::AbstractArray{Bool}) = getindex(t.values, values(i))
-Base.setindex!(t::TSeries, v, i::AbstractRange{Int}) = (setindex!(t.values, v, i); t)
+# Check the length explicitly. Julia 1.11.0 through 1.13.2 skip the shape check when
+# assigning into a view with a range, unless run with --check-bounds=yes (fixed upstream
+# in JuliaLang/julia#63428); the values of an MVTSeries column are a view.
+_check_length(v, n) = v isa AbstractArray && length(v) != n &&
+    throw(DimensionMismatch("tried to assign $(length(v)) elements to $n destinations"))
+Base.setindex!(t::TSeries, v, i::AbstractRange{Int}) = (_check_length(v, length(i)); setindex!(t.values, v, i); t)
 Base.setindex!(t::TSeries, v, i::AbstractArray{Int}) = (setindex!(t.values, v, values(i)); t)
 Base.setindex!(t::TSeries, v, i::AbstractArray{Bool}) = (setindex!(t.values, v, values(i)); t)
 Base.setindex!(t::TSeries, v::TSeries, i::AbstractArray{Bool}) = (setindex!(t.values, v[rangeof(t)[values(i)]], values(i)); t)
@@ -373,7 +378,9 @@ function Base.setindex!(t::TSeries{F}, vec::AbstractVector{<:Number}, rng::Abstr
         # !! resize!() doesn't work for TSeries out of the box. we implement it below. 
         resize!(t, rangeof_span(t_rng, rng))
     end
-    setindex!(t.values, vec, _ts_values_inds(t, rng))
+    inds = _ts_values_inds(t, rng)
+    _check_length(vec, length(inds))
+    setindex!(t.values, vec, inds)
 end
 
 Base.setindex!(t::TSeries{F1}, src::TSeries{F2}, rng::AbstractVector{MIT{F3}}) where {F1<:Frequency,F2<:Frequency,F3<:Frequency} = mixed_freq_error(t, src, rng)

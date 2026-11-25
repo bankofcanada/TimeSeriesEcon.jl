@@ -3,13 +3,13 @@
 
 module DataEcon
 
-using Dates
+using Dates: Dates
 
 export DEError
 export DEFile, opendaec, opendaecmem, closedaec!, truncatedaec
 export root_id, find_fullpath, find_object, delete_object
 export get_attribute, set_attribute, get_all_attributes, get_fullpath
-export new_catalog, list_catalog, search_catalog, catalog_size
+export new_catalog, list_catalog, catalog_size
 export store_scalar, load_scalar
 export store_tseries, load_tseries
 export store_mvtseries, load_mvtseries
@@ -18,7 +18,7 @@ export writedb, write_data
 export readdb, read_data
 
 using ..TimeSeriesEcon
-using ..MacroTools
+using ..MacroTools: MacroTools
 
 include("C.jl")
 
@@ -482,7 +482,7 @@ it in the .daec file `de`. The new object can be given either as a full path, or
 as a parent and a name separately. The value must be one of the Julia types that
 can be stored as a nd array, for example `Array{T,N}`. Note that `N` must not be
 greater than 5 (the current value or `DE_MAX_AXES` in "daec.h"). For N = 1 or 2,
-the call is redirected to [`store_tseries`](@ref) or [`store__mvtseries`](@ref)
+the call is redirected to [`store_tseries`](@ref) or [`store_mvtseries`](@ref)
 recpectively.
 
 If the new object is named as a full path, all catalogs must already exist. This

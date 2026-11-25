@@ -29,18 +29,18 @@ and functionality necessary to work with macroeconomic discrete time models.
 module TimeSeriesEcon
 
 # other packages
-using MacroTools
-using RecipesBase
-using OrderedCollections
+using MacroTools: MacroTools, @capture
+using RecipesBase: RecipesBase, @recipe, @series
+using OrderedCollections: OrderedCollections, LittleDict, OrderedDict, OrderedSet
 
 # standard library
-using LinearAlgebra
-using Statistics
-using Serialization
-using Distributed
+using LinearAlgebra: LinearAlgebra, Adjoint, I
+using Statistics: Statistics, cor, cov, median, quantile, std, stdm, var, varm
+using Serialization: Serialization, AbstractSerializer, deserialize, serialize
+using Distributed: Distributed
 import Dates
-import Dates: Date, Month, Quarter, Year, Week, Day, dayofweek, dayofmonth, dayofyear, dayofquarter, dayname, week
-using TOML
+import Dates: Date, Month, Day, dayofweek, dayofyear, dayname, week
+using TOML: TOML
 
 include("options.jl")
 

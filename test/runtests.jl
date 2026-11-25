@@ -22,3 +22,6 @@ if !Sys.isapple() && !Sys.iswindows()
 end
 
 include("test_dataecon.jl")
+
+include("aqua.jl")
+include("explicit_imports.jl")

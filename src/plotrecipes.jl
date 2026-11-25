@@ -2,7 +2,6 @@
 # All rights reserved.
 
 
-using RecipesBase
 
 #
 # We add an argument `range`. if not given, the full range of the series will be

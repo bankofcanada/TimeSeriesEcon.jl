@@ -182,6 +182,22 @@ end
         @test sum(abs, sd.a.values) == 0
         @test_throws DimensionMismatch sd.a[:] = ones(length(sd.a) + 5)
         @test_throws DimensionMismatch sd.a = ones(length(sd.a) + 5)
+        @test_throws DimensionMismatch sd.a = ones(length(sd.a) - 1)
+        @test_throws DimensionMismatch sd.a = 1.0:(length(sd.a)+1)
+        # part of a column
+        rs = rangeof(sd)[begin:begin+3]
+        @test_throws DimensionMismatch sd.a[rs] = ones(5)
+        @test_throws DimensionMismatch sd.a[rs] = ones(3)
+        @test_throws DimensionMismatch sd.a[1:4] = ones(5)
+        @test_throws DimensionMismatch view(sd.a, rs)[1:4] = ones(5)
+        sd.a[rs] = 1.0:4.0
+        @test sd.a[rs].values == 1.0:4.0
+        sd.a = zeros(size(dta, 1))
+        # strided (non-contiguous) column storage
+        sds = MVTSeries(2020Q1, (:a, :b), view(zeros(8, 2), 1:2:8, :))
+        @test_throws DimensionMismatch sds.a = ones(5)
+        sds.a = 1.0:4.0
+        @test sds.a.values == 1.0:4.0
         # access to rows by MIT
         sd[:] = dta[:]
         @test sd[2000Q1] isa Vector{Float64}
@@ -346,6 +362,9 @@ end
     # access with a Bool vectors that are the same length as the axes of A    
     tf = rand(Bool, m)  # for the rows
     tf2 = rand(Bool, n) # for the columns
+    # at least one of each, since the tests below index into the selection
+    tf[rand(1:m)] = true
+    tf2[rand(1:n)] = true
     tstf = TSeries(rangeof(A), tf)
     m1 = sum(tf)
     n1 = sum(tf2)
@@ -492,6 +511,10 @@ end
 
     # we can do dot operations with matrices of identical size
     @test x .+ 3 .* x.values == 4x
+
+    # Julia 1.14 takes the element type of the result from `eachindex(bc)`
+    bc = Broadcast.instantiate(Broadcast.broadcasted(+, x, 1))
+    @test eachindex(bc) == CartesianIndices(size(x))
 
     # with matrixes of wrong size we get a DimensionMismatch
     @test_throws DimensionMismatch x .+ x.values[begin+1:end-1, :]

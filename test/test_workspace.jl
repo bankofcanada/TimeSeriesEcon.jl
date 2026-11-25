@@ -344,3 +344,54 @@ end
     @test eltype(w4) <: Pair{Symbol, <:TSeries}
 
 end
+
+@testset "TOML.print(Workspace)" begin
+    TOML = TimeSeriesEcon.TOML
+    w = Workspace(a=1, b="x", c=Workspace(d=2.0))
+    expected = Dict("a" => 1, "b" => "x", "c" => Dict("d" => 2.0))
+    @test TOML.parse(sprint(io -> TOML.print(io, w))) == expected
+    @test TOML.parse(sprint(io -> TOML.print(io, w; sorted=true))) == expected
+    # with a conversion function for values TOML cannot represent
+    w2 = Workspace(a=1, s=:hello)
+    @test TOML.parse(sprint(io -> TOML.print(string, io, w2))) == Dict("a" => 1, "s" => "hello")
+    @test TOML.parse(sprint(io -> TOML.print(string, io, w2; sorted=true))) == Dict("a" => 1, "s" => "hello")
+    # an explicit `nothing` conversion function means "no conversion"
+    @test TOML.parse(sprint(io -> TOML.print(nothing, io, w))) == expected
+    # the forms without `io` print to stdout
+    capture(f) = mktemp() do path, io
+        redirect_stdout(f, io)
+        flush(io)
+        read(path, String)
+    end
+    @test TOML.parse(capture(() -> TOML.print(w))) == expected
+    @test TOML.parse(capture(() -> TOML.print(nothing, w))) == expected
+    @test TOML.parse(capture(() -> TOML.print(string, w2))) == Dict("a" => 1, "s" => "hello")
+    # MITs are written as strings (TOML has no type for them), also in nested workspaces
+    w3 = Workspace(m=2020Q1, r=2020Q1:2020Q4, v=[2020M1, 2021M1], d=2020Q4 - 2020Q1, n=Workspace(u=5U))
+    expected3 = Dict("m" => "2020Q1", "r" => "2020Q1:2020Q4", "v" => ["2020M1", "2021M1"], "d" => 3,
+        "n" => Dict("u" => "5U"))
+    @test TOML.parse(sprint(io -> TOML.print(io, w3))) == expected3
+    # MITs inside other values
+    w6 = Workspace(a=Any[2020Q1, 1], h=Dict("m" => 2020Q1, "x" => 1.5), aa=[[2020Q1], [2020Q2]],
+        t=TSeries(1U, [2020Q1, 2020Q2]), s=2020Q1:2:2020Q4, e=MIT{Quarterly}[], f=[1.0, 2.0])
+    expected6 = Dict("a" => Any["2020Q1", 1], "h" => Dict("m" => "2020Q1", "x" => 1.5),
+        "aa" => [["2020Q1"], ["2020Q2"]], "t" => ["2020Q1", "2020Q2"], "s" => ["2020Q1", "2020Q3"],
+        "e" => Any[], "f" => [1.0, 2.0])
+    @test TOML.parse(sprint(io -> TOML.print(io, w6))) == expected6
+    # an empty range is a string too, with or without other MITs next to it
+    w7 = Workspace(a=Any[2020Q2:2020Q1], b=Any[2020Q2:2020Q1, 2020Q1], h=Dict("r" => 2020Q2:2020Q1))
+    expected7 = Dict("a" => ["2020Q2:2020Q1"], "b" => ["2020Q2:2020Q1", "2020Q1"], "h" => Dict("r" => "2020Q2:2020Q1"))
+    @test TOML.parse(sprint(io -> TOML.print(io, w7))) == expected7
+    # what the conversion function returns is converted too
+    w8 = Workspace(t=(2020Q1, 2020Q2), n=(a=1, m=2020Q1), s=:x)
+    conv(x::Tuple) = collect(x)
+    conv(x::NamedTuple) = Dict(string(k) => v for (k, v) in pairs(x))
+    conv(x::Symbol) = Workspace(m=2020Q3)
+    @test TOML.parse(sprint(io -> TOML.print(conv, io, w8))) ==
+          Dict("t" => ["2020Q1", "2020Q2"], "n" => Dict("a" => 1, "m" => "2020Q1"), "s" => Dict("m" => "2020Q3"))
+    # a conversion function does not apply to nested workspaces
+    w5 = Workspace(a=1, n=Workspace(s=:hello, m=2020Q1))
+    @test TOML.parse(sprint(io -> TOML.print(string, io, w5))) == Dict("a" => 1, "n" => Dict("s" => "hello", "m" => "2020Q1"))
+    w4 = Workspace(m=2020Q1, s=:hello)
+    @test TOML.parse(sprint(io -> TOML.print(string, io, w4; sorted=true))) == Dict("m" => "2020Q1", "s" => "hello")
+end

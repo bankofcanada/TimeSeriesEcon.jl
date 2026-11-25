@@ -15,29 +15,34 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 X13as_jll = "6c9beba9-e00a-580e-a2fe-633c5dfe81b1"
 
 [compat]
+Aqua = "0.8.18"
 CEnum = "0.4"
 DataEcon_jll = "0.4"
 Dates = "1.7"
 Distributed = "1.7"
+ExplicitImports = "1.15"
 LinearAlgebra = "1.7"
 MacroTools = "0.5"
-OrderedCollections = "1.4"
+OrderedCollections = "1.4, 2.0.2"
 Random = "1.7"
 RecipesBase = "1.0"
 Serialization = "1.7"
 Statistics = "1.7"
 Suppressor = "0.2"
 TOML = "1.0"
-X13as_jll = "1.1.60"
-julia = "1.7"
+Test = "1"
+X13as_jll = "=1.1.60"
+julia = "1.10"
 
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
+Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Aqua", "ExplicitImports", "Suppressor", "Test"]

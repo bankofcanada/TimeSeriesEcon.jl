@@ -330,12 +330,41 @@ function reindex(w::Workspace, pair::Pair{<:MIT,<:MIT}; copy=false)
 end
 
 ###########################
+# TOML has no type for MITs, and its printer writes an MIT as an integer (`MIT <: Signed`)
+# without calling the conversion function, which gives invalid TOML (`m = 2020Q1`). So
+# MITs are written as strings: "2020Q1", and a range "2020Q1:2020Q4". Reading the file
+# back gives these strings.
+_toml(a) = a
+_toml(m::MIT) = string(m)
+_toml(r::AbstractUnitRange{<:MIT}) = string(r)
+# also inside arrays and dictionaries (a `TSeries` of MITs becomes a vector of strings)
+function _toml(v::AbstractVector)
+    _hasmit(v) || return v
+    out = Any[]   # not a comprehension, which would keep the MIT axes of a `TSeries`
+    for x in v
+        push!(out, _toml(x))
+    end
+    return identity.(out)
+end
+_toml(d::AbstractDict) = _hasmit(d) ? OrderedDict(k => _toml(x) for (k, x) in d) : d
+_hasmit(a) = false
+_hasmit(::MIT) = true
+_hasmit(::AbstractUnitRange{<:MIT}) = true   # also when empty
+_hasmit(::AbstractVector{<:AbstractFloat}) = false
+_hasmit(v::AbstractVector) = any(_hasmit, v)
+_hasmit(d::AbstractDict) = any(_hasmit, values(d))
 _w(a) = a
-_w(w::Workspace) = w._c
-TOML.print(w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, w._c; sorted, by)
-TOML.print(io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, io, w._c; sorted, by)
-TOML.print(f::TOML.Internals.Printer.MbyFunc, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f ∘ _w, io, w._c; sorted, by)
-TOML.print(f::TOML.Internals.Printer.MbyFunc, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(f ∘ _w, w._c; sorted, by)
+_w(w::Workspace) = OrderedDict{Symbol,Any}(k => _toml(v) for (k, v) in w._c)
+# the user's conversion function is for values TOML cannot represent; nested workspaces
+# are converted here (the printer calls the function for them too), and what the function
+# returns is converted like any other value
+_wf(f::Function) = x -> x isa Workspace ? _w(x) : _toml(_w(f(x)))
+TOML.print(w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, _w(w); sorted, by)
+TOML.print(io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_w, io, _w(w); sorted, by)
+TOML.print(f::Function, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_wf(f), io, _w(w); sorted, by)
+TOML.print(f::Function, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(_wf(f), _w(w); sorted, by)
+TOML.print(::Nothing, io::IO, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(io, w; sorted, by)
+TOML.print(::Nothing, w::Workspace; sorted::Bool=false, by=identity) = TOML.print(w; sorted, by)
 
 
 ## isyearly, isquarterly, isweekly, ismonthly
@@ -416,9 +445,9 @@ end
 function clean_old_frequencies!(ws::Workspace)
     for (key, val) in ws
         if val isa Workspace
-            TimeSeriesEcon.clean_old_frequencies!(val)
+            clean_old_frequencies!(val)
         else
-            ws[key] = TimeSeriesEcon.clean_old_frequencies(val)
+            ws[key] = clean_old_frequencies(val)
         end
     end
 end

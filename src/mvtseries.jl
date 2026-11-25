@@ -1,7 +1,6 @@
 # Copyright (c) 2020-2024, Bank of Canada
 # All rights reserved.
 
-using OrderedCollections
 
 # -------------------------------------------------------------------------------
 # MVTSeries -- multivariate TSeries
@@ -144,7 +143,7 @@ function cleanedvalues(mvts::MVTSeries{BDaily}; skip_all_nans::Bool=false, skip_
         end
         return mvts.values[valid_rows_matrix[:, 2], :]
     elseif skip_holidays
-        h_map = TimeSeriesEcon.getoption(:bdaily_holidays_map)
+        h_map = getoption(:bdaily_holidays_map)
         if !(h_map isa TSeries{BDaily})
             throw(ArgumentError("The holidays map stored in :bdaily_holidays_map is not a TSeries it is a $(typeof(h_map)). \n You may need to load one with TimeSeriesEcon.set_holidays_map()."))
         end
@@ -421,6 +420,12 @@ function Base.setproperty!(x::MVTSeries, name::Symbol, val)
         rng = intersect(rangeof(col), rangeof(vcol))
         return copyto!(col, rng, vcol)
     else
+        # Check the length explicitly. Julia 1.11.0 through 1.13.2 skip the shape
+        # check when assigning into a view, unless run with --check-bounds=yes
+        # (fixed upstream in JuliaLang/julia#63428).
+        if val isa AbstractArray && length(val) != length(col.values)
+            throw(DimensionMismatch("cannot assign $(length(val)) values to column $name of length $(length(col.values))"))
+        end
         return col.values[:] = val
     end
 end

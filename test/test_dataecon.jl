@@ -8,7 +8,8 @@ using LinearAlgebra
 using TimeSeriesEcon.DataEcon
 DE = TimeSeriesEcon.DataEcon
 
-test_file = "test.daec"
+# a fresh directory, so test runs in parallel (other Julia versions, CI jobs) do not collide
+test_file = joinpath(mktempdir(), "test.daec")
 rm(test_file, force=true)
 rm(test_file * "-journal", force=true)
 

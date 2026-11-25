@@ -28,7 +28,9 @@ function Base.similar(bc::Broadcast.Broadcasted{<:MVTSeriesStyle}, ::Type{ElType
     end
 end
 
-@inline Base.Broadcast._eachindex(t::_MVTSAxesType) = CartesianIndices(map(length, t))
+@inline Base.Broadcast._eachindex(t::_MVTSAxesType) = CartesianIndices(map(length, t))   # Julia 1.10
+# Julia 1.14 computes the element type of the result from `eachindex(bc)`
+@inline Base.eachindex(bc::Broadcast.Broadcasted{<:MVTSeriesStyle}) = CartesianIndices(map(length, axes(bc)))
 
 #----------------------
 # two MVTSeries

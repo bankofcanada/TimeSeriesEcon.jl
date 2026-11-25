@@ -197,7 +197,7 @@ MIT{YPFrequency{1}}(x::Int) = MIT{Yearly{12}}(x)
 MIT{YPFrequency{2}}(x::Int) = MIT{HalfYearly{6}}(x)
 MIT{YPFrequency{4}}(x::Int) = MIT{Quarterly{3}}(x)
 MIT{YPFrequency{12}}(x::Int) = MIT{Monthly}(x)
-Int(x::MIT) = reinterpret(Int, x)
+Base.Int(x::MIT) = reinterpret(Int, x)
 
 Duration{F}(x::Int) where {F<:Frequency} = reinterpret(Duration{F}, x)
 Duration{Yearly}(x::Int) = Duration{Yearly{12}}(x)
@@ -208,7 +208,7 @@ Duration{YPFrequency{1}}(x::Int) = Duration{Yearly{12}}(x)
 Duration{YPFrequency{2}}(x::Int) = Duration{HalfYearly{6}}(x)
 Duration{YPFrequency{4}}(x::Int) = Duration{Quarterly{3}}(x)
 Duration{YPFrequency{12}}(x::Int) = Duration{Monthly}(x)
-Int(x::Duration) = reinterpret(Int, x)
+Base.Int(x::Duration) = reinterpret(Int, x)
 
 
 # -------------------------
@@ -780,8 +780,8 @@ Base.flipsign(x::Duration{F}, y::Duration{F}) where {F<:Frequency} = flipsign(In
 Base.flipsign(x::MIT{F}, y::MIT{F}) where {F<:Frequency} = flipsign(Int(x), Int(y))
 
 # needed for plot math
-Base.:(/)(a::Duration, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
-Base.:(/)(a::MIT, b::Duration) = TimeSeriesEcon.mixed_freq_error(a, b)
+Base.:(/)(a::Duration, b::Duration) = mixed_freq_error(a, b)
+Base.:(/)(a::MIT, b::Duration) = mixed_freq_error(a, b)
 Base.:(/)(a::Duration{F}, b::Duration{F}) where {F<:Frequency} = Int(a) / Int(b)
 Base.:(/)(a::MIT{F}, b::Duration{F}) where {F<:Frequency} = (a - MIT{F}(0)) / b
 Base.promote_rule(::Type{<:Duration}, ::Type{T}) where {T<:AbstractFloat} = T

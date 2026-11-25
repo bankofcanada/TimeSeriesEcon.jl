@@ -4,9 +4,9 @@
 module X13
 
 using TimeSeriesEcon
-using MacroTools
-using OrderedCollections
-using X13as_jll
+using MacroTools: MacroTools
+using OrderedCollections: OrderedCollections, OrderedDict
+using X13as_jll: X13as_jll
 
 """A workspace which displays assuming its entries are equal-length vectors."""
 struct WorkspaceTable <: AbstractWorkspace

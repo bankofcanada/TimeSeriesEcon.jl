@@ -4,8 +4,8 @@
 # This module contains functions that are internal
 module I
 
-using LinearAlgebra
-using Dates
+using LinearAlgebra: LinearAlgebra, Diagonal, diag
+using Dates: Dates, DateTime
 
 using ..C
 using ..TimeSeriesEcon

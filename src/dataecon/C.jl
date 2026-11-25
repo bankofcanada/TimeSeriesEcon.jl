@@ -1,9 +1,9 @@
 module C
 
-using DataEcon_jll
+using DataEcon_jll: DataEcon_jll, libdaec
 export DataEcon_jll
 
-using CEnum
+using CEnum: CEnum, @cenum
 
 function de_version()
     ccall((:de_version, libdaec), Ptr{Cchar}, ())
